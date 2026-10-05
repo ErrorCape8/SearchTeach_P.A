@@ -8,6 +8,7 @@ public class User {
 
 	@Id
 	private String id;
+	private String passwordHash;
 
 	public String getId() {
 		return id;
@@ -15,5 +16,13 @@ public class User {
 
 	public void setId(String id) {
 		this.id = id;
+	}
+
+	public String getPasswordHash() {
+		return passwordHash;
+	}
+
+	public void setPasswordHash(String passwordHash) {
+		this.passwordHash = passwordHash;
 	}
 }
