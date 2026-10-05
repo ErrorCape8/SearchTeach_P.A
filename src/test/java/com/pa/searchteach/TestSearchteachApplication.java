@@ -5,7 +5,7 @@ import org.springframework.boot.SpringApplication;
 public class TestSearchteachApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.from(SearchTeachApplication::main).with(TestcontainersConfiguration.class).run(args);
+		SpringApplication.from(SearchteachApplication::main).with(TestcontainersConfiguration.class).run(args);
 	}
 
 }

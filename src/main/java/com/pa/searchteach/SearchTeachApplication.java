@@ -4,9 +4,9 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class SearchTeachApplication {
+public class SearchteachApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(SearchTeachApplication.class, args);
+		SpringApplication.run(SearchteachApplication.class, args);
 	}
 }
