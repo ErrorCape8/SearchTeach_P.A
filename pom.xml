@@ -27,7 +27,7 @@
 		<url/>
 	</scm>
 	<properties>
-		<java.version>27</java.version>
+		<java.version>26</java.version>
 		<jjwt.version>0.12.6</jjwt.version>
 		<bucket4j.version>8.10.1</bucket4j.version>
 		<mapstruct.version>1.6.3</mapstruct.version>
