@@ -28,9 +28,16 @@ public class GlobalExceptionHandler {
 				.map(error -> error.getField())
 				.findFirst()
 				.orElse("");
-		String message = "identifier".equals(field)
-				? "La identificación debe tener entre 6 y 10 dígitos numéricos."
-				: "La contraseña debe tener entre 8 y 72 caracteres.";
+		String message = switch (field) {
+			case "identifier" -> "La identificación debe tener entre 6 y 10 dígitos numéricos.";
+			case "password" -> "La contraseña debe tener entre 8 y 72 caracteres.";
+			case "studentId" -> "El identificador del estudiante es obligatorio.";
+			case "teacherId" -> "El identificador del docente es obligatorio.";
+			case "startDate" -> "La fecha de inicio es obligatoria.";
+			case "endDate" -> "La fecha de finalización es obligatoria.";
+			case "status" -> "El estado de la tutoría es obligatorio.";
+			default -> "La solicitud contiene un campo obligatorio inválido.";
+		};
 		return ResponseEntity.badRequest().body(new ApiError(message, true, 0));
 	}
 
