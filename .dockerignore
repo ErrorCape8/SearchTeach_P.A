@@ -1,0 +1,10 @@
+.git
+.vscode
+.env
+.env.*
+!.env.example
+target
+build
+flutter
+.dart_tool
+.idea
