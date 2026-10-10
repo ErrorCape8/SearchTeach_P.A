@@ -145,7 +145,7 @@ class _BrandPanel extends StatelessWidget {
             Text(
               'Conecta con tutores y estudiantes de tu institución y agenda tutorías en minutos.',
               style: TextStyle(
-                  color: Colors.white.withOpacity(.8),
+                  color: Colors.white.withValues(alpha: .8),
                   fontSize: 18,
                   height: 1.4),
             ),
@@ -160,7 +160,7 @@ class _BrandPanel extends StatelessWidget {
                 'Asistencia y estadísticas en un solo lugar.'),
             const Spacer(),
             Text('© ${DateTime.now().year} SearchTeach',
-                style: TextStyle(color: Colors.white.withOpacity(.6))),
+                style: TextStyle(color: Colors.white.withValues(alpha: .6))),
           ],
         ),
       ]),
@@ -171,7 +171,7 @@ class _BrandPanel extends StatelessWidget {
         width: s,
         height: s,
         decoration: BoxDecoration(
-            shape: BoxShape.circle, color: Colors.white.withOpacity(o)),
+            shape: BoxShape.circle, color: Colors.white.withValues(alpha: o)),
       );
 }
 
@@ -187,7 +187,7 @@ class _Feature extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-                color: Colors.white.withOpacity(.12),
+                color: Colors.white.withValues(alpha: .12),
                 borderRadius: BorderRadius.circular(12)),
             child: Icon(icon, color: Colors.white),
           ),
@@ -201,7 +201,7 @@ class _Feature extends StatelessWidget {
                       fontWeight: FontWeight.w700,
                       fontSize: 16)),
               Text(subtitle,
-                  style: TextStyle(color: Colors.white.withOpacity(.75))),
+                  style: TextStyle(color: Colors.white.withValues(alpha: .75))),
             ]),
           ),
         ]),
