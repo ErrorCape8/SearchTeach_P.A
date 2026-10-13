@@ -16,7 +16,10 @@ This starts the backend with Docker Compose, opens Flutter Web in Chrome at
 `http://localhost:5001`, and launches the Windows desktop app. Flutter
 dependencies must be installed first with `flutter pub get` from this directory.
 For the Windows target, enable Windows Developer Mode so Flutter can create the
-required symlinks.
+required symlinks. The backend image is rebuilt on each launch while reusing
+Docker's build cache, so source changes do not require manually clearing caches.
+The Android Gradle configuration also limits build memory and reuses its build
+cache.
 
 To start only one frontend, use `.\start-searchteach.ps1 -Frontend web` or
 `.\start-searchteach.ps1 -Frontend windows`. The backend API is at

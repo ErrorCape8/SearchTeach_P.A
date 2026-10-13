@@ -14,7 +14,7 @@ if (Test-Path $shortFlutterPath) {
     $flutterPath = $shortFlutterPath
 }
 
-docker compose --project-directory $projectRoot up -d app
+docker compose --project-directory $projectRoot up -d --build app
 if ($LASTEXITCODE -ne 0) {
     throw 'Could not start the SearchTeach backend with Docker Compose.'
 }

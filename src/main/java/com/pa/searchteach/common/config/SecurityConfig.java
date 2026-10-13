@@ -49,6 +49,7 @@ public class SecurityConfig {
 				.authorizeHttpRequests(requests -> requests
 						.requestMatchers("/api/auth/**", "/error", "/swagger-ui/**",
 								"/swagger-ui.html", "/v3/api-docs/**").permitAll()
+						.requestMatchers("/api/direccion/**").hasRole("DIRECTOR")
 						.anyRequest().authenticated())
 				.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
 				.build();
@@ -81,7 +82,9 @@ public class SecurityConfig {
 	}
 
 	@Bean
-	JwtAuthenticationFilter jwtAuthenticationFilter(JwtService jwtService) {
-		return new JwtAuthenticationFilter(jwtService);
+	JwtAuthenticationFilter jwtAuthenticationFilter(
+			JwtService jwtService,
+			@Value("${app.auth.director-ids:}") String directorIds) {
+		return new JwtAuthenticationFilter(jwtService, directorIds);
 	}
 }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'features/auth/login_page.dart';
 import 'features/auth/register_page.dart';
+import 'features/dashboard/dashboard_page.dart';
 
 final _router = GoRouter(
   initialLocation: '/login',
@@ -11,7 +12,7 @@ final _router = GoRouter(
     GoRoute(path: '/register', builder: (_, __) => const RegisterPage()),
     GoRoute(
       path: '/home',
-      builder: (_, __) => const Scaffold(body: Center(child: Text('Home'))),
+      builder: (_, __) => const DashboardPage(),
     ),
   ],
 );

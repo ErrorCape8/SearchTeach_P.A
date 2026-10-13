@@ -1,6 +1,7 @@
 package com.pa.searchteach.auth.filter;
 
 import com.pa.searchteach.auth.service.JwtService;
+import com.pa.searchteach.users.model.Role;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -14,14 +15,23 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
 	private final JwtService jwtService;
+	private final Set<String> directorIds;
 
-	public JwtAuthenticationFilter(JwtService jwtService) {
+	public JwtAuthenticationFilter(JwtService jwtService, String directorIds) {
 		this.jwtService = jwtService;
+		this.directorIds = Arrays.stream(directorIds.split(","))
+				.map(identifier -> identifier == null ? "" : identifier.trim())
+				.filter(identifier -> !identifier.isEmpty())
+				.collect(Collectors.toUnmodifiableSet());
 	}
 
 	@Override
@@ -54,9 +64,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 			return;
 		}
 
+		List<SimpleGrantedAuthority> authorities = new ArrayList<>();
+		authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
+		if (directorIds.contains(identifier)) {
+			authorities.add(new SimpleGrantedAuthority("ROLE_" + Role.DIRECTOR.name()));
+		}
 		UsernamePasswordAuthenticationToken authentication =
-				new UsernamePasswordAuthenticationToken(identifier, null,
-						List.of(new SimpleGrantedAuthority("ROLE_USER")));
+				new UsernamePasswordAuthenticationToken(identifier, null, authorities);
 		authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 		SecurityContextHolder.getContext().setAuthentication(authentication);
 		filterChain.doFilter(request, response);
