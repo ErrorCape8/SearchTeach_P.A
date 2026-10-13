@@ -13,13 +13,12 @@ services:
     environment:
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env to a private value of at least 32 bytes}
       JWT_EXPIRATION_SECONDS: ${JWT_EXPIRATION_SECONDS:-900}
-      DIRECTOR_IDS: ${DIRECTOR_IDS:-}
       MONGODB_URI: ${MONGODB_URI:-mongodb://mongodb:27017/Searchteach}
       SPRING_DATA_REDIS_URL: ${SPRING_DATA_REDIS_URL:-redis://redis:6379}
       JAVA_TOOL_OPTIONS: "-Xms128m -Xmx512m"
 
   mongodb:
-    image: mongo:8.0
+    image: mongo:8.3
     restart: unless-stopped
     command: ["mongod", "--wiredTigerCacheSizeGB", "0.5"]
     ports:

@@ -82,9 +82,7 @@ public class SecurityConfig {
 	}
 
 	@Bean
-	JwtAuthenticationFilter jwtAuthenticationFilter(
-			JwtService jwtService,
-			@Value("${app.auth.director-ids:}") String directorIds) {
-		return new JwtAuthenticationFilter(jwtService, directorIds);
+	JwtAuthenticationFilter jwtAuthenticationFilter(JwtService jwtService) {
+		return new JwtAuthenticationFilter(jwtService);
 	}
 }

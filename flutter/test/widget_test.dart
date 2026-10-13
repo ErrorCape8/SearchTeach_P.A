@@ -35,6 +35,14 @@ void main() {
               tutoriasProgramadas: 3,
               tasaAsistencia: 75,
               historialSemanal: [],
+              tutoriasPorMateria: [
+                SubjectTutoringSummary(
+                  materia: 'Cálculo I',
+                  totalTutorias: 5,
+                  tutoriasRealizadas: 4,
+                  tasaAsistencia: 75,
+                ),
+              ],
             ),
           ),
         ],
@@ -45,16 +53,50 @@ void main() {
 
     expect(find.text('12'), findsOneWidget);
     expect(find.text('75.0%'), findsOneWidget);
+    expect(find.text('Satisfacción'), findsOneWidget);
+    expect(find.text('Sin datos'), findsOneWidget);
+    await tester.drag(find.byType(ListView).first, const Offset(0, -440));
+    await tester.pumpAndSettle();
     expect(find.text('Tutorías por semana'), findsOneWidget);
+    expect(find.text('Asistencia por materia'), findsOneWidget);
+    expect(find.text('Cálculo I'), findsOneWidget);
 
     await tester.tap(find.text('Calidad'));
     await tester.pumpAndSettle();
     expect(find.text('Calidad de las tutorías'), findsOneWidget);
-    expect(find.textContaining('al menos 5 respuestas'), findsOneWidget);
+    expect(find.text('Calificaciones anónimas'), findsOneWidget);
+    expect(find.text('Aún no hay evaluaciones registradas.'), findsOneWidget);
 
     await tester.tap(find.text('Pronóstico'));
     await tester.pumpAndSettle();
-    expect(find.text('Pronóstico'), findsWidgets);
-    expect(find.textContaining('modelo predictivo validado'), findsOneWidget);
+    expect(find.text('Pronóstico de tutorías'), findsOneWidget);
+    expect(find.text('Estimación orientativa'), findsNothing);
+    expect(
+        find.textContaining('Aún no hay actividad suficiente'), findsOneWidget);
+    await tester.tap(find.text('Próximas 4 semanas'));
+    await tester.pumpAndSettle();
+    expect(find.text('Próximas 4 semanas'), findsOneWidget);
+  });
+
+  test('weekly reference uses the last four completed weeks', () {
+    final now = DateTime.now();
+    final currentMonday = DateTime(now.year, now.month, now.day)
+        .subtract(Duration(days: now.weekday - DateTime.monday));
+    final history = List.generate(4, (index) {
+      final weekStart = currentMonday.subtract(Duration(days: 7 * (4 - index)));
+      return WeeklyTutoringCount(
+        semanaInicio: weekStart,
+        total: index + 1,
+      );
+    });
+
+    final reference = WeeklyTutoringReference.fromHistory(
+      history,
+      today: now,
+    );
+
+    expect(reference?.average, 2.5);
+    expect(reference?.minimum, 1);
+    expect(reference?.maximum, 4);
   });
 }

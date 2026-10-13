@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.pa.searchteach.dashboard.dto.DashboardSummary;
+import com.pa.searchteach.dashboard.dto.SubjectTutoringSummary;
 import com.pa.searchteach.dashboard.dto.WeeklyTutoringCount;
 import com.pa.searchteach.tutorias.modelo.EstadoTutoria;
 import com.pa.searchteach.tutorias.modelo.Tutoria;
@@ -47,7 +48,53 @@ public class DirectorDashboardService {
 				realizadas,
 				programadas,
 				tasaAsistencia,
-				obtenerHistorialSemanal());
+				obtenerHistorialSemanal(),
+				obtenerResumenPorMateria());
+	}
+
+	private List<SubjectTutoringSummary> obtenerResumenPorMateria() {
+		AggregationOperation match = context -> new Document(
+				"$match",
+				new Document("materia", new Document("$type", "string").append("$ne", "")));
+		AggregationOperation group = context -> new Document(
+				"$group",
+				new Document("_id", "$materia")
+						.append("totalTutorias", new Document("$sum", 1))
+						.append("tutoriasRealizadas", new Document(
+								"$sum",
+								new Document("$cond", List.of(
+										new Document("$eq", List.of("$estado", EstadoTutoria.REALIZADA.name())),
+										1,
+										0))))
+						.append("asistenciasRegistradas", new Document(
+								"$sum",
+								new Document("$cond", List.of(
+										new Document("$in", List.of("$asistio", List.of(true, false))),
+										1,
+										0))))
+						.append("asistencias", new Document(
+								"$sum",
+								new Document("$cond", List.of(
+										new Document("$eq", List.of("$asistio", true)),
+										1,
+										0)))));
+		Aggregation aggregation = Aggregation.newAggregation(
+				match,
+				group,
+				Aggregation.sort(org.springframework.data.domain.Sort.by("_id")));
+		List<SubjectAttendanceCount> results = mongoTemplate
+				.aggregate(aggregation, "tutorias", SubjectAttendanceCount.class)
+				.getMappedResults();
+
+		return results.stream()
+				.map(result -> new SubjectTutoringSummary(
+						result.id(),
+						result.totalTutorias(),
+						result.tutoriasRealizadas(),
+						result.asistenciasRegistradas() == 0
+								? null
+								: result.asistencias() * 100.0 / result.asistenciasRegistradas()))
+				.toList();
 	}
 
 	private long contarPorEstado(EstadoTutoria estado) {
@@ -112,5 +159,13 @@ public class DirectorDashboardService {
 	}
 
 	private record DailyTutoringCount(@Id String id, long total) {
+	}
+
+	private record SubjectAttendanceCount(
+			@Id String id,
+			long totalTutorias,
+			long tutoriasRealizadas,
+			long asistenciasRegistradas,
+			long asistencias) {
 	}
 }

@@ -1,6 +1,7 @@
 package com.pa.searchteach.auth.filter;
 
 import com.pa.searchteach.auth.service.JwtService;
+import com.pa.searchteach.users.model.Role;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockFilterChain;
@@ -20,24 +21,23 @@ class JwtAuthenticationFilterTest {
 	}
 
 	@Test
-	void grantsDirectorAuthorityToConfiguredIdentifier() throws Exception {
-		assertAuthorityFor("00123456", " 00987654, 00123456 ", "ROLE_DIRECTOR");
+	void grantsDirectorAuthorityFromSignedTokenRole() throws Exception {
+		assertAuthorityFor("00123456", Role.DIRECTOR, "ROLE_DIRECTOR");
 	}
 
 	@Test
-	void doesNotGrantDirectorAuthorityToUnconfiguredIdentifier() throws Exception {
-		assertAuthorityFor("00123456", "00987654", "ROLE_USER");
+	void doesNotGrantDirectorAuthorityToUserToken() throws Exception {
+		assertAuthorityFor("00123456", Role.USER, "ROLE_USER");
 	}
 
 	private void assertAuthorityFor(
-			String identifier, String configuredDirectorIds, String expectedAuthority)
+			String identifier, Role role, String expectedAuthority)
 			throws Exception {
 		JwtService jwtService = new JwtService(JWT_SECRET, 900);
-		JwtAuthenticationFilter filter =
-				new JwtAuthenticationFilter(jwtService, configuredDirectorIds);
+		JwtAuthenticationFilter filter = new JwtAuthenticationFilter(jwtService);
 		MockHttpServletRequest request = new MockHttpServletRequest();
 		request.setServletPath("/api/direccion/dashboard");
-		request.addHeader("Authorization", "Bearer " + jwtService.createToken(identifier));
+		request.addHeader("Authorization", "Bearer " + jwtService.createToken(identifier, role));
 
 		filter.doFilter(
 				request,

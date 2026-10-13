@@ -67,7 +67,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
           const SizedBox(height: 8),
           Text(
             _step == 0
-                ? 'Escribe tu documento para confirmar que eres estudiante o tutor.'
+                ? 'Escribe tu documento para confirmar que tienes una cuenta autorizada.'
                 : 'Crea una contraseña para tu cuenta.',
             textAlign: TextAlign.center,
             style: const TextStyle(color: Color(0xFF5B6270)),

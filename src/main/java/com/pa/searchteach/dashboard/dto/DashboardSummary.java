@@ -7,5 +7,6 @@ public record DashboardSummary(
 		long tutoriasRealizadas,
 		long tutoriasProgramadas,
 		Double tasaAsistencia,
-		List<WeeklyTutoringCount> historialSemanal) {
+		List<WeeklyTutoringCount> historialSemanal,
+		List<SubjectTutoringSummary> tutoriasPorMateria) {
 }

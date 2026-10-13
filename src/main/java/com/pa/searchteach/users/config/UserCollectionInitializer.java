@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 public class UserCollectionInitializer implements ApplicationRunner {
 
 	private static final String USERS_COLLECTION = "users";
+	private static final String COORDINATORS_COLLECTION = "coordinators";
 
 	private final MongoTemplate mongoTemplate;
 
@@ -20,6 +21,9 @@ public class UserCollectionInitializer implements ApplicationRunner {
 	public void run(ApplicationArguments args) {
 		if (!mongoTemplate.collectionExists(USERS_COLLECTION)) {
 			mongoTemplate.createCollection(USERS_COLLECTION);
+		}
+		if (!mongoTemplate.collectionExists(COORDINATORS_COLLECTION)) {
+			mongoTemplate.createCollection(COORDINATORS_COLLECTION);
 		}
 	}
 }

@@ -2,6 +2,7 @@ package com.pa.searchteach.auth.service;
 
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import com.pa.searchteach.users.model.Role;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -29,10 +30,11 @@ public class JwtService {
 		this.expirationSeconds = expirationSeconds;
 	}
 
-	public String createToken(String identifier) {
+	public String createToken(String identifier, Role role) {
 		Instant issuedAt = Instant.now();
 		return Jwts.builder()
 				.subject(identifier)
+				.claim("role", role.name())
 				.issuedAt(Date.from(issuedAt))
 				.expiration(Date.from(issuedAt.plusSeconds(expirationSeconds)))
 				.signWith(signingKey)
@@ -46,6 +48,16 @@ public class JwtService {
 				.parseSignedClaims(token)
 				.getPayload()
 				.getSubject();
+	}
+
+	public Role getRole(String token) {
+		String role = Jwts.parser()
+				.verifyWith(signingKey)
+				.build()
+				.parseSignedClaims(token)
+				.getPayload()
+				.get("role", String.class);
+		return role == null ? Role.USER : Role.valueOf(role);
 	}
 
 	public long getExpirationSeconds() {

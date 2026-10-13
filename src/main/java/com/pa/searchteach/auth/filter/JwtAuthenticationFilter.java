@@ -16,22 +16,14 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
 	private final JwtService jwtService;
-	private final Set<String> directorIds;
 
-	public JwtAuthenticationFilter(JwtService jwtService, String directorIds) {
+	public JwtAuthenticationFilter(JwtService jwtService) {
 		this.jwtService = jwtService;
-		this.directorIds = Arrays.stream(directorIds.split(","))
-				.map(identifier -> identifier == null ? "" : identifier.trim())
-				.filter(identifier -> !identifier.isEmpty())
-				.collect(Collectors.toUnmodifiableSet());
 	}
 
 	@Override
@@ -51,8 +43,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 		}
 
 		String identifier;
+		Role role;
 		try {
-			identifier = jwtService.getSubject(authorization.substring(7));
+			String token = authorization.substring(7);
+			identifier = jwtService.getSubject(token);
+			role = jwtService.getRole(token);
 		} catch (JwtException | IllegalArgumentException exception) {
 			SecurityContextHolder.clearContext();
 			response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
@@ -66,8 +61,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
 		List<SimpleGrantedAuthority> authorities = new ArrayList<>();
 		authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
-		if (directorIds.contains(identifier)) {
-			authorities.add(new SimpleGrantedAuthority("ROLE_" + Role.DIRECTOR.name()));
+		if (role == Role.DIRECTOR) {
+			authorities.add(new SimpleGrantedAuthority("ROLE_" + role.name()));
 		}
 		UsernamePasswordAuthenticationToken authentication =
 				new UsernamePasswordAuthenticationToken(identifier, null, authorities);

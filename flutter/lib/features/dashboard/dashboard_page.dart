@@ -38,7 +38,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('SearchTeach', style: TextStyle(fontSize: 18)),
+            const Text('Hola, Dirección', style: TextStyle(fontSize: 18)),
             Text(
               _titles[_selectedTab],
               style: const TextStyle(fontSize: 12, color: Color(0xFFDCD0F6)),
@@ -141,11 +141,34 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                   ),
                 ],
               ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: _MetricCard(
+                      title: 'Satisfacción',
+                      value: 'Sin datos',
+                      icon: Icons.star_outline,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              _ForecastPreview(
+                history: data.historialSemanal,
+                onTap: () => setState(() => _selectedTab = 2),
+              ),
               const SizedBox(height: 22),
               _SectionCard(
                 title: 'Tutorías por semana',
                 subtitle: 'Últimas 10 semanas',
                 child: _WeeklyChart(data.historialSemanal),
+              ),
+              const SizedBox(height: 18),
+              _SectionCard(
+                title: 'Asistencia por materia',
+                subtitle: 'Indicador basado en asistencias registradas',
+                child: _SubjectSummaryList(data.tutoriasPorMateria),
               ),
               const SizedBox(height: 12),
               const _InfoNote(
@@ -157,23 +180,46 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
         ),
       );
 
-  Widget _quality() => const _ComingSoonPage(
-        icon: Icons.verified_outlined,
-        title: 'Calidad de las tutorías',
-        description:
-            'Esta versión todavía no recoge calificaciones ni comentarios. '
-            'Se habilitará cuando se defina el flujo de evaluación anónima.',
-        note:
-            'Para proteger la privacidad, las evaluaciones futuras se mostrarán solo en grupos con al menos 5 respuestas.',
+  Widget _quality() => ref.watch(directorDashboardProvider).when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, _) => _errorState(error),
+        data: (data) => ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            const Text(
+              'Calidad de las tutorías',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: _ink),
+            ),
+            const SizedBox(height: 5),
+            const Text(
+              'Seguimiento de asistencia por materia. Las calificaciones todavía no están disponibles.',
+              style: TextStyle(color: _muted),
+            ),
+            const SizedBox(height: 16),
+            _SectionCard(
+              title: 'Materias',
+              subtitle: 'Asistencia y tutorías registradas',
+              child: _SubjectSummaryList(data.tutoriasPorMateria),
+            ),
+            const SizedBox(height: 16),
+            const _SectionCard(
+              title: 'Calificaciones anónimas',
+              subtitle: 'Satisfacción de estudiantes y docentes',
+              child: _EvaluationEmptyState(),
+            ),
+            const SizedBox(height: 16),
+            const _InfoNote(
+              text:
+                  'Las tutorías no almacenan calificaciones ni comentarios. Para preservar el anonimato, los resultados futuros solo se mostrarán al alcanzar el mínimo de respuestas definido.',
+            ),
+          ],
+        ),
       );
 
-  Widget _forecast() => const _ComingSoonPage(
-        icon: Icons.insights_outlined,
-        title: 'Pronóstico',
-        description:
-            'Aún no hay un modelo predictivo validado. Por ahora, el inicio muestra el historial real de tutorías por semana.',
-        note:
-            'No se mostrarán proyecciones hasta tener suficiente historial y validar cómo se calcula el rango estimado.',
+  Widget _forecast() => ref.watch(directorDashboardProvider).when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, _) => _errorState(error),
+        data: (data) => _ForecastPage(dashboard: data),
       );
 
   Widget _profile() => _ProfilePage(
@@ -206,7 +252,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
             const SizedBox(height: 8),
             Text(
               isForbidden
-                  ? 'Esta cuenta no está habilitada como directora. Solicita al administrador que configure su identificador.'
+                  ? 'Esta cuenta no está registrada como coordinadora. Solicita al administrador que autorice su cédula en MongoDB.'
                   : 'Verifica que el servidor esté activo e inténtalo de nuevo.',
               textAlign: TextAlign.center,
               style: const TextStyle(color: _muted),
@@ -233,7 +279,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
   }
 }
 
-const _titles = ['Panel institucional', 'Evaluaciones', 'Historial', 'Cuenta'];
+const _titles = ['Panel institucional', 'Calidad', 'Pronóstico', 'Perfil'];
 
 class _MetricCard extends StatelessWidget {
   const _MetricCard({
@@ -302,6 +348,39 @@ class _SectionCard extends StatelessWidget {
       );
 }
 
+class _ForecastPreview extends StatelessWidget {
+  const _ForecastPreview({required this.history, required this.onTap});
+
+  final List<WeeklyTutoringCount> history;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final reference = WeeklyTutoringReference.fromHistory(history);
+    return Card(
+      margin: EdgeInsets.zero,
+      child: ListTile(
+        onTap: onTap,
+        leading: const CircleAvatar(
+          backgroundColor: Color(0xFFEDE6FA),
+          child: Icon(Icons.insights_outlined, color: _purple),
+        ),
+        title: const Text(
+          'Próxima semana',
+          style: TextStyle(fontWeight: FontWeight.w700, color: _ink),
+        ),
+        subtitle: Text(
+          reference == null
+              ? 'Se requieren 4 semanas completas con actividad'
+              : 'Referencia: ~${reference.average.round()} tutorías · promedio reciente',
+          style: const TextStyle(color: _muted, fontSize: 12),
+        ),
+        trailing: const Icon(Icons.chevron_right, color: _muted),
+      ),
+    );
+  }
+}
+
 class _WeeklyChart extends StatelessWidget {
   const _WeeklyChart(this.weeks);
 
@@ -360,6 +439,198 @@ class _WeeklyChart extends StatelessWidget {
   }
 }
 
+class _SubjectSummaryList extends StatelessWidget {
+  const _SubjectSummaryList(this.subjects);
+
+  final List<SubjectTutoringSummary> subjects;
+
+  @override
+  Widget build(BuildContext context) {
+    if (subjects.isEmpty) {
+      return const Text(
+        'Todavía no hay tutorías registradas por materia.',
+        style: TextStyle(color: _muted),
+      );
+    }
+
+    return Column(
+      children: [
+        for (var index = 0; index < subjects.length; index++) ...[
+          if (index > 0) const Divider(height: 20),
+          _SubjectSummaryRow(subject: subjects[index]),
+        ],
+      ],
+    );
+  }
+}
+
+class _SubjectSummaryRow extends StatelessWidget {
+  const _SubjectSummaryRow({required this.subject});
+
+  final SubjectTutoringSummary subject;
+
+  @override
+  Widget build(BuildContext context) {
+    final rate = subject.tasaAsistencia;
+    return Row(
+      children: [
+        const CircleAvatar(
+          radius: 18,
+          backgroundColor: Color(0xFFEDE6FA),
+          child: Icon(Icons.menu_book_outlined, size: 18, color: _purple),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                subject.materia,
+                style: const TextStyle(fontWeight: FontWeight.w700, color: _ink),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                '${subject.totalTutorias} tutorías · ${subject.tutoriasRealizadas} realizadas',
+                style: const TextStyle(fontSize: 11, color: _muted),
+              ),
+              if (rate != null) ...[
+                const SizedBox(height: 7),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(5),
+                  child: LinearProgressIndicator(
+                    value: (rate / 100).clamp(0.0, 1.0).toDouble(),
+                    minHeight: 5,
+                    backgroundColor: const Color(0xFFEDECF2),
+                    color: _purple,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(width: 10),
+        Text(
+          rate == null ? 'Sin datos' : '${rate.toStringAsFixed(0)}%',
+          style: const TextStyle(color: _purple, fontWeight: FontWeight.w800),
+        ),
+      ],
+    );
+  }
+}
+
+class _EvaluationEmptyState extends StatelessWidget {
+  const _EvaluationEmptyState();
+
+  @override
+  Widget build(BuildContext context) => const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.rate_review_outlined, color: _purple, size: 28),
+          SizedBox(height: 10),
+          Text(
+            'Aún no hay evaluaciones registradas.',
+            style: TextStyle(fontWeight: FontWeight.w700, color: _ink),
+          ),
+          SizedBox(height: 4),
+          Text(
+            'No se muestran promedios ni comentarios hasta contar con respuestas reales.',
+            style: TextStyle(fontSize: 12, color: _muted),
+          ),
+        ],
+      );
+}
+
+class _ForecastPage extends StatefulWidget {
+  const _ForecastPage({required this.dashboard});
+
+  final DirectorDashboard dashboard;
+
+  @override
+  State<_ForecastPage> createState() => _ForecastPageState();
+}
+
+class _ForecastPageState extends State<_ForecastPage> {
+  int _horizonWeeks = 1;
+
+  @override
+  Widget build(BuildContext context) {
+    final reference =
+        WeeklyTutoringReference.fromHistory(widget.dashboard.historialSemanal);
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        const Text(
+          'Pronóstico de tutorías',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: _ink),
+        ),
+        const SizedBox(height: 5),
+        const Text(
+          'Referencia basada en actividad observada, no en un modelo predictivo.',
+          style: TextStyle(color: _muted),
+        ),
+        const SizedBox(height: 16),
+        SegmentedButton<int>(
+          segments: const [
+            ButtonSegment(value: 1, label: Text('Próxima semana')),
+            ButtonSegment(value: 4, label: Text('Próximas 4 semanas')),
+          ],
+          selected: {_horizonWeeks},
+          onSelectionChanged: (selection) {
+            setState(() => _horizonWeeks = selection.first);
+          },
+        ),
+        const SizedBox(height: 16),
+        if (reference != null) ...[
+          _SectionCard(
+            title: 'Estimación orientativa',
+            subtitle: 'Promedio de las últimas 4 semanas completas',
+            child: Column(
+              children: [
+                Text(
+                  '~${(reference.average * _horizonWeeks).round()}',
+                  style: const TextStyle(
+                    color: _purple,
+                    fontSize: 38,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                Text(
+                  _horizonWeeks == 1
+                      ? 'tutorías para la próxima semana'
+                      : 'tutorías en las próximas 4 semanas',
+                  style: const TextStyle(color: _muted),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Rango observado: ${reference.minimum * _horizonWeeks}–${reference.maximum * _horizonWeeks}',
+                  style: const TextStyle(color: _ink, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+        ] else
+          const _InfoNote(
+            text:
+                'Aún no hay actividad suficiente en las últimas 4 semanas completas para calcular una referencia.',
+          ),
+        _SectionCard(
+          title: 'Histórico de tutorías',
+          subtitle: 'Cada barra representa una semana registrada',
+          child: _WeeklyChart(widget.dashboard.historialSemanal),
+        ),
+        const SizedBox(height: 16),
+        const _InfoNote(
+          text:
+              'La cifra usa el promedio de las últimas 4 semanas completas. El rango muestra los valores mínimo y máximo observados en esas semanas; no es un intervalo de confianza ni una garantía.',
+        ),
+      ],
+    );
+  }
+
+}
+
 class _InfoNote extends StatelessWidget {
   const _InfoNote({required this.text});
 
@@ -375,43 +646,6 @@ class _InfoNote extends StatelessWidget {
           padding: const EdgeInsets.all(14),
           child: Text(text, style: const TextStyle(color: _purple, fontSize: 12)),
         ),
-      );
-}
-
-class _ComingSoonPage extends StatelessWidget {
-  const _ComingSoonPage({
-    required this.icon,
-    required this.title,
-    required this.description,
-    required this.note,
-  });
-
-  final IconData icon;
-  final String title;
-  final String description;
-  final String note;
-
-  @override
-  Widget build(BuildContext context) => ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          const SizedBox(height: 28),
-          Icon(icon, size: 54, color: _purple),
-          const SizedBox(height: 16),
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: _ink),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            description,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: _muted, height: 1.45),
-          ),
-          const SizedBox(height: 22),
-          _InfoNote(text: note),
-        ],
       );
 }
 

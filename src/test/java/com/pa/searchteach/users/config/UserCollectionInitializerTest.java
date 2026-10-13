@@ -21,14 +21,17 @@ class UserCollectionInitializerTest {
 		initializer.run(new DefaultApplicationArguments(new String[0]));
 
 		verify(mongoTemplate).createCollection("users");
+		verify(mongoTemplate).createCollection("coordinators");
 	}
 
 	@Test
 	void leavesExistingUsersCollectionUntouched() {
 		when(mongoTemplate.collectionExists("users")).thenReturn(true);
+		when(mongoTemplate.collectionExists("coordinators")).thenReturn(true);
 
 		initializer.run(new DefaultApplicationArguments(new String[0]));
 
 		verify(mongoTemplate, never()).createCollection("users");
+		verify(mongoTemplate, never()).createCollection("coordinators");
 	}
 }
