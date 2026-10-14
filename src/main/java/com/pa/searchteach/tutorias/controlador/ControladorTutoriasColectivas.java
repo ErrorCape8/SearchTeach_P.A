@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.pa.searchteach.tutorias.dto.InformeAvanceSolicitud;
 import com.pa.searchteach.tutorias.dto.ProyectoAsignadoDocente;
+import com.pa.searchteach.tutorias.dto.ProyectoAulaDisponible;
 import com.pa.searchteach.tutorias.dto.TutoriaColectivaConAvance;
 import com.pa.searchteach.tutorias.dto.TutoriaColectivaSolicitud;
 import com.pa.searchteach.tutorias.modelo.InformeAvanceProyecto;
@@ -13,6 +14,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -61,6 +63,29 @@ public class ControladorTutoriasColectivas {
 	@GetMapping("/api/coordinacion/tutorias-colectivas")
 	public List<TutoriaColectiva> listarParaCoordinacion() {
 		return servicio.listarParaCoordinacion();
+	}
+
+	@GetMapping("/api/estudiante/tutorias-colectivas/espacios")
+	public List<ProyectoAulaDisponible> listarEspaciosParaEstudiante(
+			@AuthenticationPrincipal String estudianteId) {
+		return servicio.listarEspaciosParaEstudiante(estudianteId);
+	}
+
+	@PostMapping("/api/estudiante/tutorias-colectivas/{tutoriaId}/proyectos/{proyectoId}/inscripcion")
+	@ResponseStatus(HttpStatus.OK)
+	public ProyectoAulaDisponible inscribirEstudiante(
+			@PathVariable String tutoriaId,
+			@PathVariable String proyectoId,
+			@AuthenticationPrincipal String estudianteId) {
+		return servicio.inscribirEstudiante(tutoriaId, proyectoId, estudianteId);
+	}
+
+	@DeleteMapping("/api/estudiante/tutorias-colectivas/{tutoriaId}/proyectos/{proyectoId}/inscripcion")
+	public ProyectoAulaDisponible desistirEstudiante(
+			@PathVariable String tutoriaId,
+			@PathVariable String proyectoId,
+			@AuthenticationPrincipal String estudianteId) {
+		return servicio.desistirEstudiante(tutoriaId, proyectoId, estudianteId);
 	}
 
 	@GetMapping("/api/coordinacion/informes")

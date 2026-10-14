@@ -6,6 +6,8 @@ class StudentTutoringView extends StatefulWidget {
     required this.focusSection,
     required this.focusRequest,
     required this.onEnroll,
+    required this.onProjectEnrollment,
+    required this.onLeaveGroupSession,
     required this.onAction,
     required this.onShowMessage,
     super.key,
@@ -15,6 +17,8 @@ class StudentTutoringView extends StatefulWidget {
   final String? focusSection;
   final int focusRequest;
   final Future<void> Function(AvailableTutor tutor) onEnroll;
+  final Future<void> Function(ClassroomProjectSpace space) onProjectEnrollment;
+  final Future<void> Function(StudentGroupSession session) onLeaveGroupSession;
   final Future<void> Function(StudentTutoring tutoring, String action) onAction;
   final void Function(String message) onShowMessage;
 
@@ -27,6 +31,13 @@ class _StudentTutoringViewState extends State<StudentTutoringView> {
   String _query = '';
   String _career = 'Todas';
   String _semester = 'Todos';
+
+  @override
+  void initState() {
+    super.initState();
+    final studentCareer = widget.data.profile.career.trim();
+    if (studentCareer.isNotEmpty) _career = studentCareer;
+  }
 
   @override
   void didUpdateWidget(covariant StudentTutoringView oldWidget) {
@@ -71,16 +82,16 @@ class _StudentTutoringViewState extends State<StudentTutoringView> {
           const SizedBox(height: 20),
           _MenuTile(
             icon: Icons.search,
-            title: 'Sesiones disponibles',
+            title: 'Tutorías retroalimentativas',
             subtitle:
-                'Busca tutores por nombre, identificación o disponibilidad.',
+                'Encuentra un tutor y solicita acompañamiento para una materia.',
             onTap: () => setState(() => _section = 'disponibles'),
           ),
           _MenuTile(
-            icon: Icons.person_add_alt_1_outlined,
-            title: 'Solicitar tutoría',
-            subtitle: 'Elige un tutor y envía tu solicitud de inscripción.',
-            onTap: () => setState(() => _section = 'solicitar'),
+            icon: Icons.groups_outlined,
+            title: 'Tutorías de proyectos de aula',
+            subtitle: 'Inscríbete o desiste de un espacio de tu tecnología.',
+            onTap: () => setState(() => _section = 'proyectos'),
           ),
           _MenuTile(
             icon: Icons.pending_actions_outlined,
@@ -105,13 +116,13 @@ class _StudentTutoringViewState extends State<StudentTutoringView> {
 
   Widget _sectionHeader() {
     final content = switch (_section) {
-      'disponibles' => (
-          'Sesiones disponibles',
+      'disponibles' || 'solicitar' => (
+          'Tutorías retroalimentativas',
           'Explora la disponibilidad publicada por los tutores.'
         ),
-      'solicitar' => (
-          'Inscribirse en una tutoría',
-          'Selecciona un horario y envía tu solicitud al tutor.'
+      'proyectos' => (
+          'Tutorías de proyectos de aula',
+          'Inscríbete en el espacio de tu tecnología y semestre.'
         ),
       'solicitudes' => (
           'Mis solicitudes',
@@ -128,6 +139,8 @@ class _StudentTutoringViewState extends State<StudentTutoringView> {
       case 'disponibles':
       case 'solicitar':
         return _availableTutors();
+      case 'proyectos':
+        return _projectSpaces();
       case 'solicitudes':
         return _tutoringList(
           widget.data.tutorings.where((t) =>
@@ -136,12 +149,7 @@ class _StudentTutoringViewState extends State<StudentTutoringView> {
           emptyMessage: 'Al inscribirte, tus solicitudes aparecerán aquí.',
         );
       case 'sesiones':
-        return _tutoringList(
-          widget.data.tutorings
-              .where((t) => t.status == 'PROGRAMADA' || t.status == 'EN_CURSO'),
-          emptyTitle: 'No tienes sesiones programadas',
-          emptyMessage: 'Las tutorías confirmadas aparecerán en esta sección.',
-        );
+        return _sessionsList();
       default:
         return _tutoringList(
           widget.data.tutorings
@@ -155,8 +163,10 @@ class _StudentTutoringViewState extends State<StudentTutoringView> {
   Widget _availableTutors() {
     final careers = {
       'Todas',
+      if (_career != 'Todas') _career,
       ...widget.data.tutors
-          .map((tutor) => tutor.career)
+          .expand(
+              (tutor) => tutor.careers.isEmpty ? [tutor.career] : tutor.careers)
           .where((v) => v.isNotEmpty)
     }.toList()
       ..sort();
@@ -176,7 +186,9 @@ class _StudentTutoringViewState extends State<StudentTutoringView> {
           .toLowerCase()
           .contains(_query.trim().toLowerCase());
       return matchesQuery &&
-          (_career == 'Todas' || tutor.career == _career) &&
+          (_career == 'Todas' ||
+              tutor.careers.contains(_career) ||
+              tutor.career == _career) &&
           (_semester == 'Todos' || '${tutor.semester}' == _semester);
     }).toList();
     return ListView(
@@ -232,6 +244,98 @@ class _StudentTutoringViewState extends State<StudentTutoringView> {
               onEnroll: () => widget.onEnroll(tutor),
             ),
           ),
+      ],
+    );
+  }
+
+  Widget _projectSpaces() {
+    final career = widget.data.profile.career.trim();
+    final spaces = widget.data.projectSpaces
+        .where((space) => career.isEmpty || space.career == career)
+        .toList()
+      ..sort((a, b) => a.semester.compareTo(b.semester));
+    if (spaces.isEmpty) {
+      return const Center(
+        child: _EmptyCard(
+          icon: Icons.groups_outlined,
+          title: 'No hay proyectos de aula disponibles',
+          message:
+              'Cuando coordinación cree un espacio para tu tecnología aparecerá aquí.',
+        ),
+      );
+    }
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
+      itemCount: spaces.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      itemBuilder: (context, index) {
+        final space = spaces[index];
+        final full = space.enrolledCount >= 4;
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Semestre ${space.semester}',
+                    style: const TextStyle(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 6),
+                Text(space.name),
+                Text(space.career, style: const TextStyle(color: _muted)),
+                const SizedBox(height: 8),
+                Text(
+                    'Docente: ${space.teacherId} · ${space.enrolledCount}/4 inscritos'),
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: FilledButton.tonal(
+                    onPressed: !space.enrolled && full
+                        ? null
+                        : () => widget.onProjectEnrollment(space),
+                    child: Text(space.enrolled
+                        ? 'Desistir de esta tutoría'
+                        : full
+                            ? 'Cupo completo'
+                            : 'Inscribirme'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _sessionsList() {
+    final legacy = widget.data.tutorings
+        .where((t) => t.status == 'PROGRAMADA' || t.status == 'EN_CURSO');
+    if (widget.data.groupSessions.isEmpty && legacy.isEmpty) {
+      return const _EmptyCard(
+        icon: Icons.event_note_outlined,
+        title: 'No tienes sesiones programadas',
+        message:
+            'Las tutorías grupales en las que te inscribas aparecerán aquí.',
+      );
+    }
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
+      children: [
+        if (widget.data.groupSessions.isNotEmpty) ...[
+          const Padding(
+            padding: EdgeInsets.only(bottom: 10),
+            child: Text('Tutorías grupales',
+                style: TextStyle(fontWeight: FontWeight.w700, color: _navy)),
+          ),
+          ...widget.data.groupSessions.map((session) => _GroupSessionCard(
+                session: session,
+                onLeave: () => widget.onLeaveGroupSession(session),
+              )),
+        ],
+        ...legacy.map((tutoring) => _TutoringCard(
+              tutoring: tutoring,
+              onCancel: () => widget.onAction(tutoring, 'cancelar'),
+            )),
       ],
     );
   }
@@ -304,4 +408,3 @@ class _MenuTile extends StatelessWidget {
         ),
       );
 }
-

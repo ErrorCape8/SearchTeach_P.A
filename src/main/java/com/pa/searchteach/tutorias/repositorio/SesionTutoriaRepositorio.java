@@ -10,4 +10,7 @@ public interface SesionTutoriaRepositorio extends MongoRepository<SesionTutoria,
 	List<SesionTutoria> findByDocenteId(String docenteId);
 
 	List<SesionTutoria> findByEstudianteIdsContaining(String estudianteId);
+
+	List<SesionTutoria> findByDocenteIdAndFechaInicioAndMateriaIgnoreCase(
+			String docenteId, java.time.LocalDateTime fechaInicio, String materia);
 }

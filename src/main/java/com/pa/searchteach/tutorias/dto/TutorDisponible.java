@@ -1,5 +1,8 @@
 package com.pa.searchteach.tutorias.dto;
 
+import java.util.List;
+import com.pa.searchteach.tutorias.modelo.MateriaHorario;
+
 public record TutorDisponible(
 		String docenteId,
 		String nombre,
@@ -9,5 +12,7 @@ public record TutorDisponible(
 		String horaInicio,
 		String horaFin,
 		String modalidad,
-		String ubicacion) {
+		String ubicacion,
+		List<String> carreras,
+		List<MateriaHorario> materias) {
 }

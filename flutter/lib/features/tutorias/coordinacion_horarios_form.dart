@@ -3,17 +3,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api_client.dart';
+import '../../core/career_catalog.dart';
 import 'coordinacion_horarios_models.dart';
 
 class CoordinacionHorariosFormPage extends ConsumerStatefulWidget {
   const CoordinacionHorariosFormPage({
     required this.teacher,
     this.existing,
+    this.subjectSuggestions = const [],
     super.key,
   });
 
   final Teacher teacher;
   final TutorSchedule? existing;
+  final List<String> subjectSuggestions;
 
   @override
   ConsumerState<CoordinacionHorariosFormPage> createState() =>
@@ -25,6 +28,9 @@ class _CoordinacionHorariosFormPageState
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _career;
   late final TextEditingController _location;
+  late final TextEditingController _subjectEntry;
+  late List<ScheduleSubject> _subjects;
+  final Set<String> _sharedCareers = {};
   late int _semester;
   late String _day;
   late String _modality;
@@ -39,6 +45,8 @@ class _CoordinacionHorariosFormPageState
     final schedule = widget.existing;
     _career = TextEditingController(text: schedule?.carrera ?? '');
     _location = TextEditingController(text: schedule?.ubicacion ?? '');
+    _subjectEntry = TextEditingController();
+    _subjects = [...?schedule?.materias];
     _semester = schedule?.semestre ?? 1;
     _day = schedule?.dia ?? 'Lunes';
     _modality = schedule?.modalidad ?? 'Presencial';
@@ -51,6 +59,7 @@ class _CoordinacionHorariosFormPageState
   void dispose() {
     _career.dispose();
     _location.dispose();
+    _subjectEntry.dispose();
     super.dispose();
   }
 
@@ -77,6 +86,10 @@ class _CoordinacionHorariosFormPageState
   }
 
   Future<void> _save() async {
+    if (!careerCatalog.contains(_career.text.trim())) {
+      setState(() => _error = 'Indica la carrera o selecciona una tecnología.');
+      return;
+    }
     if (!_formKey.currentState!.validate()) return;
     if (_formatTime(_end).compareTo(_formatTime(_start)) <= 0) {
       setState(() => _error =
@@ -113,6 +126,28 @@ class _CoordinacionHorariosFormPageState
     }
   }
 
+  void _addSubject() {
+    final name = _subjectEntry.text.trim();
+    if (name.isEmpty) return;
+    if (_subjects
+        .any((subject) => subject.nombre.toLowerCase() == name.toLowerCase())) {
+      setState(() => _error = 'Esa materia ya está agregada.');
+      return;
+    }
+    setState(() {
+      _subjects.add(ScheduleSubject(
+        nombre: name,
+        carreras: {
+          if (_career.text.trim().isNotEmpty) _career.text.trim(),
+          ..._sharedCareers,
+        }.toList(),
+      ));
+      _subjectEntry.clear();
+      _sharedCareers.clear();
+      _error = null;
+    });
+  }
+
   Map<String, Object> _requestBody() => {
         'carrera': _career.text.trim(),
         'semestre': _semester,
@@ -121,6 +156,14 @@ class _CoordinacionHorariosFormPageState
         'horaFin': _formatTime(_end),
         'modalidad': _modality,
         'ubicacion': _location.text.trim(),
+        'materias': _subjects.map((subject) {
+          final careers = {...subject.carreras, _career.text.trim()}
+            ..removeWhere((career) => career.isEmpty);
+          return ScheduleSubject(
+            nombre: subject.nombre,
+            carreras: careers.toList(),
+          ).toJson();
+        }).toList(),
       };
 
   @override
@@ -166,16 +209,121 @@ class _CoordinacionHorariosFormPageState
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          TextFormField(
-                            controller: _career,
-                            decoration: const InputDecoration(
-                              labelText: 'Carrera',
-                              border: OutlineInputBorder(),
+                          Autocomplete<String>(
+                            initialValue: TextEditingValue(text: _career.text),
+                            optionsBuilder: (value) {
+                              final query = value.text.trim().toLowerCase();
+                              if (query.isEmpty) return careerCatalog;
+                              return careerCatalog.where((career) =>
+                                  career.toLowerCase().contains(query));
+                            },
+                            onSelected: (career) => setState(() {
+                              _career.text = career;
+                            }),
+                            fieldViewBuilder:
+                                (context, controller, focusNode, onSubmitted) =>
+                                    TextField(
+                              controller: controller,
+                              focusNode: focusNode,
+                              onChanged: (value) {
+                                _career.text = value;
+                                setState(() {});
+                              },
+                              decoration: const InputDecoration(
+                                labelText: 'Tecnología / carrera',
+                                hintText: 'Escribe para ver sugerencias',
+                                border: OutlineInputBorder(),
+                              ),
                             ),
-                            validator: (value) =>
-                                value == null || value.trim().isEmpty
-                                    ? 'Indica la carrera.'
-                                    : null,
+                          ),
+                          const SizedBox(height: 14),
+                          const Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text('Materias que dicta',
+                                style: TextStyle(fontWeight: FontWeight.w700)),
+                          ),
+                          const SizedBox(height: 8),
+                          Autocomplete<String>(
+                            optionsBuilder: (value) {
+                              final options = {
+                                ...suggestedSubjects,
+                                ...widget.subjectSuggestions,
+                                ..._subjects.map((subject) => subject.nombre),
+                              };
+                              final query = value.text.trim().toLowerCase();
+                              return options.where((subject) =>
+                                  subject.toLowerCase().contains(query));
+                            },
+                            onSelected: (subject) =>
+                                _subjectEntry.text = subject,
+                            fieldViewBuilder:
+                                (context, controller, focusNode, onSubmitted) =>
+                                    TextField(
+                              controller: controller,
+                              focusNode: focusNode,
+                              onChanged: (value) => _subjectEntry.text = value,
+                              decoration: const InputDecoration(
+                                labelText: 'Materia',
+                                hintText: 'Escribe para ver sugerencias',
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton.icon(
+                              onPressed: _addSubject,
+                              icon: const Icon(Icons.add),
+                              label: const Text('Agregar materia'),
+                            ),
+                          ),
+                          if (_subjects.isNotEmpty) ...[
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 4,
+                              children: [
+                                for (final subject in _subjects)
+                                  InputChip(
+                                    label: Text(
+                                      '${subject.nombre} · ${subject.carreras.length > 1 ? 'Compartida' : 'Exclusiva'}',
+                                    ),
+                                    tooltip: subject.carreras.length > 1
+                                        ? 'Compartida con ${subject.carreras.where((career) => career != _career.text.trim()).join(', ')}'
+                                        : 'Exclusiva de ${subject.carreras.first}',
+                                    onDeleted: () => setState(() =>
+                                        _subjects.removeWhere((item) =>
+                                            item.nombre == subject.nombre)),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                          ],
+                          Text(
+                            'Si la materia también pertenece a otras tecnologías, selecciónalas:',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                          const SizedBox(height: 4),
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 0,
+                            children: [
+                              for (final career in careerCatalog.where(
+                                  (career) => career != _career.text.trim()))
+                                FilterChip(
+                                  label:
+                                      Text(career.split(' ').skip(2).join(' ')),
+                                  tooltip: career,
+                                  selected: _sharedCareers.contains(career),
+                                  onSelected: (selected) => setState(() {
+                                    if (selected) {
+                                      _sharedCareers.add(career);
+                                    } else {
+                                      _sharedCareers.remove(career);
+                                    }
+                                  }),
+                                ),
+                            ],
                           ),
                           const SizedBox(height: 14),
                           DropdownButtonFormField<int>(

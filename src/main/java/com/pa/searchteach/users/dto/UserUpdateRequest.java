@@ -6,6 +6,7 @@ public class UserUpdateRequest {
 	private String telefono;
 	private String rol;
 	private String estado;
+	private String carrera;
 	private String nuevaContrasena;
 
 	public UserUpdateRequest() {
@@ -58,6 +59,14 @@ public class UserUpdateRequest {
 
 	public void setEstado(String estado) {
 		this.estado = estado;
+	}
+
+	public String getCarrera() {
+		return carrera;
+	}
+
+	public void setCarrera(String carrera) {
+		this.carrera = carrera;
 	}
 
 	public String getNuevaContrasena() {

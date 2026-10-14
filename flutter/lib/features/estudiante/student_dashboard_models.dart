@@ -9,6 +9,7 @@ class StudentProfile {
     required this.email,
     required this.phone,
     required this.role,
+    this.career = '',
   });
 
   final String id;
@@ -16,6 +17,7 @@ class StudentProfile {
   final String email;
   final String phone;
   final String role;
+  final String career;
 
   factory StudentProfile.fromJson(Map<String, dynamic> json) => StudentProfile(
         id: _string(json['id']),
@@ -23,6 +25,7 @@ class StudentProfile {
         email: _string(json['correo']),
         phone: _string(json['telefono']),
         role: _string(json['rol']),
+        career: _string(json['carrera']),
       );
 }
 
@@ -37,6 +40,8 @@ class AvailableTutor {
     required this.endTime,
     required this.modality,
     required this.location,
+    this.careers = const [],
+    this.subjects = const [],
   });
 
   final String teacherId;
@@ -48,6 +53,8 @@ class AvailableTutor {
   final String endTime;
   final String modality;
   final String location;
+  final List<String> careers;
+  final List<AvailableSubject> subjects;
 
   factory AvailableTutor.fromJson(Map<String, dynamic> json) => AvailableTutor(
         teacherId: _string(json['docenteId']),
@@ -60,6 +67,29 @@ class AvailableTutor {
         endTime: _string(json['horaFin']),
         modality: _string(json['modalidad']),
         location: _string(json['ubicacion']),
+        careers: json['carreras'] is List
+            ? (json['carreras'] as List).whereType<String>().toList()
+            : [_string(json['carrera'])],
+        subjects: json['materias'] is List
+            ? (json['materias'] as List)
+                .whereType<Map<String, dynamic>>()
+                .map(AvailableSubject.fromJson)
+                .toList()
+            : const [],
+      );
+}
+
+class AvailableSubject {
+  const AvailableSubject({required this.name, required this.careers});
+  final String name;
+  final List<String> careers;
+
+  factory AvailableSubject.fromJson(Map<String, dynamic> json) =>
+      AvailableSubject(
+        name: _string(json['nombre']),
+        careers: json['carreras'] is List
+            ? (json['carreras'] as List).whereType<String>().toList()
+            : const [],
       );
 }
 
@@ -105,11 +135,94 @@ class StudentDashboardData {
     required this.profile,
     required this.tutors,
     required this.tutorings,
+    this.projectSpaces = const [],
+    this.groupSessions = const [],
   });
 
   final StudentProfile profile;
   final List<AvailableTutor> tutors;
   final List<StudentTutoring> tutorings;
+  final List<ClassroomProjectSpace> projectSpaces;
+  final List<StudentGroupSession> groupSessions;
+}
+
+class StudentGroupSession {
+  const StudentGroupSession({
+    required this.id,
+    required this.teacherId,
+    required this.subject,
+    required this.technology,
+    required this.technologies,
+    required this.semester,
+    required this.start,
+    required this.end,
+    required this.studentCount,
+  });
+
+  final String id;
+  final String teacherId;
+  final String subject;
+  final String technology;
+  final List<String> technologies;
+  final int semester;
+  final DateTime? start;
+  final DateTime? end;
+  final int studentCount;
+
+  factory StudentGroupSession.fromJson(Map<String, dynamic> json) =>
+      StudentGroupSession(
+        id: _string(json['id']),
+        teacherId: _string(json['docenteId']),
+        subject: _string(json['materia'], fallback: 'Tutoría'),
+        technology: _string(json['tecnologia']),
+        technologies: json['tecnologias'] is List
+            ? (json['tecnologias'] as List).whereType<String>().toList()
+            : const [],
+        semester:
+            json['semestre'] is num ? (json['semestre'] as num).toInt() : 0,
+        start: _date(json['fechaInicio']),
+        end: _date(json['fechaFin']),
+        studentCount: json['estudianteIds'] is List
+            ? (json['estudianteIds'] as List).length
+            : 1,
+      );
+}
+
+class ClassroomProjectSpace {
+  const ClassroomProjectSpace({
+    required this.tutoringId,
+    required this.projectId,
+    required this.name,
+    required this.teacherId,
+    required this.career,
+    required this.semester,
+    required this.enrolledCount,
+    required this.enrolled,
+  });
+
+  final String tutoringId;
+  final String projectId;
+  final String name;
+  final String teacherId;
+  final String career;
+  final int semester;
+  final int enrolledCount;
+  final bool enrolled;
+
+  factory ClassroomProjectSpace.fromJson(Map<String, dynamic> json) =>
+      ClassroomProjectSpace(
+        tutoringId: _string(json['tutoriaColectivaId']),
+        projectId: _string(json['proyectoId']),
+        name: _string(json['nombre'], fallback: 'Proyecto de aula'),
+        teacherId: _string(json['docenteResponsableId']),
+        career: _string(json['tecnologia']),
+        semester:
+            json['semestre'] is num ? (json['semestre'] as num).toInt() : 0,
+        enrolledCount: json['estudiantesInscritos'] is num
+            ? (json['estudiantesInscritos'] as num).toInt()
+            : 0,
+        enrolled: json['inscrito'] == true,
+      );
 }
 
 final studentDashboardProvider =
@@ -118,13 +231,24 @@ final studentDashboardProvider =
   final profileRequest = dio.get<Map<String, dynamic>>('/api/usuarios/perfil');
   final tutorsRequest = dio.get<List<dynamic>>('/api/tutorias/disponibles');
   final tutoringsRequest = dio.get<List<dynamic>>('/api/tutorias');
-  await Future.wait<Object>([profileRequest, tutorsRequest, tutoringsRequest]);
+  final projectsRequest =
+      dio.get<List<dynamic>>('/api/estudiante/tutorias-colectivas/espacios');
+  final groupSessionsRequest = dio.get<List<dynamic>>('/api/tutorias/grupales');
+  await Future.wait<Object>([
+    profileRequest,
+    tutorsRequest,
+    tutoringsRequest,
+    projectsRequest,
+    groupSessionsRequest
+  ]);
   final profileJson = (await profileRequest).data;
   if (profileJson == null) {
     throw const FormatException('El servidor devolvió un perfil vacío.');
   }
   final tutorsJson = (await tutorsRequest).data ?? const [];
   final tutoringsJson = (await tutoringsRequest).data ?? const [];
+  final projectsJson = (await projectsRequest).data ?? const [];
+  final groupSessionsJson = (await groupSessionsRequest).data ?? const [];
   final profile = StudentProfile.fromJson(profileJson);
   final tutors = tutorsJson
       .whereType<Map<String, dynamic>>()
@@ -136,16 +260,43 @@ final studentDashboardProvider =
       .map(StudentTutoring.fromJson)
       .where((tutoring) => tutoring.studentId == profile.id)
       .toList();
+  final projectSpaces = projectsJson
+      .whereType<Map<String, dynamic>>()
+      .map(ClassroomProjectSpace.fromJson)
+      .toList();
+  final groupSessions = groupSessionsJson
+      .whereType<Map<String, dynamic>>()
+      .map(StudentGroupSession.fromJson)
+      .toList();
   return StudentDashboardData(
     profile: profile,
     tutors: tutors,
     tutorings: tutorings,
+    projectSpaces: projectSpaces,
+    groupSessions: groupSessions,
   );
 });
 
+Future<void> enrollInClassroomProject({
+  required Dio dio,
+  required ClassroomProjectSpace space,
+}) async {
+  await dio.post<void>(
+    '/api/estudiante/tutorias-colectivas/${space.tutoringId}/proyectos/${space.projectId}/inscripcion',
+  );
+}
+
+Future<void> leaveClassroomProject({
+  required Dio dio,
+  required ClassroomProjectSpace space,
+}) async {
+  await dio.delete<void>(
+    '/api/estudiante/tutorias-colectivas/${space.tutoringId}/proyectos/${space.projectId}/inscripcion',
+  );
+}
+
 Future<void> enrollInTutoring({
   required Dio dio,
-  required StudentProfile student,
   required AvailableTutor tutor,
   required String subject,
   required DateTime start,
@@ -181,17 +332,21 @@ Future<void> enrollInTutoring({
         'El horario seleccionado no alcanza para una tutoría de una hora.');
   }
   await dio.post<void>(
-    '/api/tutorias',
+    '/api/tutorias/grupales/inscripcion',
     data: {
-      'estudianteId': student.id,
       'docenteId': tutor.teacherId,
       'materia': subject.trim(),
       'modalidad': _apiModality(tutor.modality),
       'fechaInicio': startAt.toIso8601String(),
       'fechaFin': endAt.toIso8601String(),
+      'semestre': tutor.semester,
     },
   );
 }
+
+Future<void> leaveGroupTutoring(
+        {required Dio dio, required String sessionId}) =>
+    dio.delete<void>('/api/tutorias/grupales/$sessionId/inscripcion');
 
 Future<void> updateTutoring({
   required Dio dio,

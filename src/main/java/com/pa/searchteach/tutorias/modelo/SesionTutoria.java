@@ -22,7 +22,9 @@ public record SesionTutoria(
 		@NotNull LocalDateTime fechaFin,
 		@NotBlank String tecnologia,
 		@Positive int semestre,
-		@NotEmpty List<AsistenciaEstudiante> asistencias) {
+		@NotEmpty List<AsistenciaEstudiante> asistencias,
+		String materia,
+		List<@NotBlank String> tecnologias) {
 
 	public SesionTutoria {
 		if (docenteId == null || docenteId.isBlank()) {
@@ -49,6 +51,18 @@ public record SesionTutoria(
 			throw new IllegalArgumentException("Debe existir un registro de asistencia por estudiante.");
 		}
 		asistencias = List.copyOf(asistencias);
+		if (tecnologias == null || tecnologias.isEmpty()) {
+			tecnologias = List.of(tecnologia);
+		} else {
+			if (tecnologias.stream().anyMatch(item -> item == null || item.isBlank())) {
+				throw new IllegalArgumentException("Las tecnologías de la sesión deben ser válidas.");
+			}
+			tecnologias = tecnologias.stream().map(String::trim).distinct().toList();
+			if (!tecnologias.contains(tecnologia)) {
+				tecnologias = java.util.stream.Stream.concat(tecnologias.stream(), java.util.stream.Stream.of(tecnologia))
+						.distinct().toList();
+			}
+		}
 		Set<String> estudiantesConAsistencia = new HashSet<>();
 		for (AsistenciaEstudiante asistencia : asistencias) {
 			if (asistencia == null || !estudianteIds.contains(asistencia.estudianteId())
@@ -72,7 +86,26 @@ public record SesionTutoria(
 						.map(estudianteId -> new AsistenciaEstudiante(estudianteId, null))
 						.toList();
 		return new SesionTutoria(
-				null, docenteId, estudianteIds, fechaInicio, fechaFin, tecnologia, semestre, asistencias);
+				null, docenteId, estudianteIds, fechaInicio, fechaFin, tecnologia, semestre, asistencias,
+				null, List.of(tecnologia));
+	}
+
+	public static SesionTutoria crear(
+			String docenteId,
+			List<String> estudianteIds,
+			LocalDateTime fechaInicio,
+			LocalDateTime fechaFin,
+			String materia,
+			List<String> tecnologias,
+			String tecnologiaPrincipal,
+			int semestre) {
+		List<AsistenciaEstudiante> asistencias = estudianteIds == null
+				? List.of()
+				: estudianteIds.stream()
+						.map(estudianteId -> new AsistenciaEstudiante(estudianteId, null))
+						.toList();
+		return new SesionTutoria(null, docenteId, estudianteIds, fechaInicio, fechaFin,
+				tecnologiaPrincipal, semestre, asistencias, materia, tecnologias);
 	}
 
 	public SesionTutoria registrarAsistencia(String estudianteId, boolean asistio) {
@@ -93,6 +126,34 @@ public record SesionTutoria(
 				fechaFin,
 				tecnologia,
 				semestre,
-				asistenciasActualizadas);
+				asistenciasActualizadas,
+				materia,
+				tecnologias);
+	}
+
+	public SesionTutoria inscribir(String estudianteId, String tecnologiaEstudiante) {
+		if (estudianteIds.contains(estudianteId)) return this;
+		if (estudianteIds.size() >= 5) {
+			throw new IllegalArgumentException("La sesiÃ³n ya alcanzÃ³ su cupo de cinco estudiantes.");
+		}
+		List<String> nuevosEstudiantes = java.util.stream.Stream
+				.concat(estudianteIds.stream(), java.util.stream.Stream.of(estudianteId)).toList();
+		List<AsistenciaEstudiante> nuevasAsistencias = java.util.stream.Stream
+				.concat(asistencias.stream(), java.util.stream.Stream.of(new AsistenciaEstudiante(estudianteId, null)))
+				.toList();
+		List<String> nuevasTecnologias = java.util.stream.Stream
+				.concat(tecnologias.stream(), java.util.stream.Stream.of(tecnologiaEstudiante))
+				.distinct().toList();
+		return new SesionTutoria(id, docenteId, nuevosEstudiantes, fechaInicio, fechaFin,
+				tecnologia, semestre, nuevasAsistencias, materia, nuevasTecnologias);
+	}
+
+	public SesionTutoria desistir(String estudianteId) {
+		List<String> nuevosEstudiantes = estudianteIds.stream()
+				.filter(actual -> !actual.equals(estudianteId)).toList();
+		List<AsistenciaEstudiante> nuevasAsistencias = asistencias.stream()
+				.filter(actual -> !actual.estudianteId().equals(estudianteId)).toList();
+		return new SesionTutoria(id, docenteId, nuevosEstudiantes, fechaInicio, fechaFin,
+				tecnologia, semestre, nuevasAsistencias, materia, tecnologias);
 	}
 }

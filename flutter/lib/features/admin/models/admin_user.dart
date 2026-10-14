@@ -6,6 +6,7 @@ class AdminUser {
     required this.telefono,
     required this.rol,
     required this.estado,
+    this.carrera = '',
   });
 
   final String id;
@@ -14,6 +15,7 @@ class AdminUser {
   final String telefono;
   final String rol;
   final String estado;
+  final String carrera;
 
   bool get isActivo => estado.trim().toLowerCase() == 'activo';
   bool get isRevocado => estado.trim().toLowerCase() == 'revocado';
@@ -25,6 +27,7 @@ class AdminUser {
     String? telefono,
     String? rol,
     String? estado,
+    String? carrera,
   }) {
     return AdminUser(
       id: id ?? this.id,
@@ -33,6 +36,7 @@ class AdminUser {
       telefono: telefono ?? this.telefono,
       rol: rol ?? this.rol,
       estado: estado ?? this.estado,
+      carrera: carrera ?? this.carrera,
     );
   }
 
@@ -53,6 +57,7 @@ class AdminUser {
       telefono: readValue('telefono'),
       rol: readValue('rol'),
       estado: readValue('estado'),
+      carrera: readValue('carrera'),
     );
   }
 
@@ -64,6 +69,7 @@ class AdminUser {
       'telefono': telefono,
       'rol': rol,
       'estado': estado,
+      'carrera': carrera,
     };
   }
 }

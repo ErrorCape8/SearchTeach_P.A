@@ -41,7 +41,7 @@ public class UserProfileController {
 		Coordinator coordinator = coordinatorRepository.findById(usuarioId)
 				.orElseThrow(() -> new NotFoundException("No se encontro el perfil del usuario."));
 		return new PerfilUsuarioResponse(
-				coordinator.getId(), "", "", valor(coordinator.getTelefono()), "Coordinador");
+				coordinator.getId(), "", "", valor(coordinator.getTelefono()), "Coordinador", "");
 	}
 
 	@PutMapping("/api/usuarios/perfil/telefono")
@@ -59,7 +59,7 @@ public class UserProfileController {
 		coordinator.setTelefono(solicitud.telefono().trim());
 		coordinatorRepository.save(coordinator);
 		return new PerfilUsuarioResponse(
-				coordinator.getId(), "", "", valor(coordinator.getTelefono()), "Coordinador");
+				coordinator.getId(), "", "", valor(coordinator.getTelefono()), "Coordinador", "");
 	}
 
 	@PutMapping("/api/usuarios/perfil/contrasena")
@@ -90,7 +90,7 @@ public class UserProfileController {
 	private PerfilUsuarioResponse respuesta(User user) {
 		return new PerfilUsuarioResponse(
 				user.getId(), valor(user.getNombre()), valor(user.getCorreo()),
-				valor(user.getTelefono()), valor(user.getRol()));
+				valor(user.getTelefono()), valor(user.getRol()), valor(user.getCarrera()));
 	}
 
 	private String valor(String value) {

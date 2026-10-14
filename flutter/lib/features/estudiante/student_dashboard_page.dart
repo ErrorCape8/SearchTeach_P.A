@@ -66,6 +66,8 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
                           focusSection: _focusTutoring,
                           focusRequest: _focusRequest,
                           onEnroll: (tutor) => _enroll(value, tutor),
+                          onProjectEnrollment: _toggleProjectEnrollment,
+                          onLeaveGroupSession: _leaveGroupSession,
                           onAction: _tutoringAction,
                           onShowMessage: _showMessage,
                         ),
@@ -141,7 +143,7 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
         context: context,
         builder: (dialogContext) => StatefulBuilder(
           builder: (context, setDialogState) => AlertDialog(
-            title: const Text('Inscribirse en una tutoría'),
+            title: const Text('Inscribirse en tutoría grupal'),
             content: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 420),
               child: Column(
@@ -151,12 +153,31 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
                   Text('${tutor.name} · ${tutor.day} '
                       '${tutor.startTime}–${tutor.endTime}'),
                   const SizedBox(height: 16),
-                  TextField(
-                    controller: subject,
-                    autofocus: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Materia o tema',
-                      border: OutlineInputBorder(),
+                  Autocomplete<String>(
+                    optionsBuilder: (value) {
+                      final studentCareer = data.profile.career.trim();
+                      final options = tutor.subjects
+                          .where((item) =>
+                              studentCareer.isEmpty ||
+                              item.careers.contains(studentCareer))
+                          .map((item) => item.name);
+                      final query = value.text.trim().toLowerCase();
+                      return options
+                          .where((name) => name.toLowerCase().contains(query));
+                    },
+                    onSelected: (value) => subject.text = value,
+                    fieldViewBuilder:
+                        (context, controller, focusNode, onSubmitted) =>
+                            TextField(
+                      controller: controller,
+                      focusNode: focusNode,
+                      autofocus: true,
+                      onChanged: (value) => subject.text = value,
+                      decoration: const InputDecoration(
+                        labelText: 'Materia o tema',
+                        hintText: 'Elige una materia que dicta el tutor',
+                        border: OutlineInputBorder(),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -191,6 +212,20 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
                     _showMessage('Escribe la materia o el tema de la tutoría.');
                     return;
                   }
+                  if (tutor.subjects.isNotEmpty) {
+                    final selectedSubject = tutor.subjects.where((item) =>
+                        item.name.toLowerCase() ==
+                        subject.text.trim().toLowerCase());
+                    final studentCareer = data.profile.career.trim();
+                    if (selectedSubject.isEmpty ||
+                        (studentCareer.isNotEmpty &&
+                            !selectedSubject.first.careers
+                                .contains(studentCareer))) {
+                      _showMessage(
+                          'Esa materia no está disponible para tu tecnología.');
+                      return;
+                    }
+                  }
                   if (_weekday(date) != tutor.day) {
                     _showMessage(
                         'Selecciona un ${tutor.day} para este horario.');
@@ -198,7 +233,7 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
                   }
                   Navigator.pop(dialogContext, true);
                 },
-                child: const Text('Enviar solicitud'),
+                child: const Text('Inscribirme'),
               ),
             ],
           ),
@@ -207,13 +242,12 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
       if (confirmed != true) return;
       await enrollInTutoring(
         dio: ref.read(dioProvider),
-        student: data.profile,
         tutor: tutor,
         subject: subject.text,
         start: date,
       );
       ref.invalidate(studentDashboardProvider);
-      _showMessage('Tu solicitud de tutoría fue enviada.');
+      _showMessage('Te inscribiste en la sesión grupal.');
     } on DioException catch (error) {
       _showMessage(_apiMessage(error));
     } on FormatException catch (error) {
@@ -237,6 +271,34 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
       _showMessage(action == 'cancelar'
           ? 'La tutoría fue cancelada.'
           : 'La propuesta de horario fue aceptada.');
+    } on DioException catch (error) {
+      _showMessage(_apiMessage(error));
+    }
+  }
+
+  Future<void> _toggleProjectEnrollment(ClassroomProjectSpace space) async {
+    try {
+      final dio = ref.read(dioProvider);
+      if (space.enrolled) {
+        await leaveClassroomProject(dio: dio, space: space);
+      } else {
+        await enrollInClassroomProject(dio: dio, space: space);
+      }
+      ref.invalidate(studentDashboardProvider);
+      _showMessage(space.enrolled
+          ? 'Saliste del espacio de proyecto de aula.'
+          : 'Te inscribiste en el proyecto de aula.');
+    } on DioException catch (error) {
+      _showMessage(_apiMessage(error));
+    }
+  }
+
+  Future<void> _leaveGroupSession(StudentGroupSession session) async {
+    try {
+      await leaveGroupTutoring(
+          dio: ref.read(dioProvider), sessionId: session.id);
+      ref.invalidate(studentDashboardProvider);
+      _showMessage('Saliste de la sesión grupal.');
     } on DioException catch (error) {
       _showMessage(_apiMessage(error));
     }
@@ -295,4 +357,3 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
     return 'No se pudo completar la solicitud. Inténtalo de nuevo.';
   }
 }
-

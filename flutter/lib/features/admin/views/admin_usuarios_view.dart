@@ -5,6 +5,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api_client.dart';
+import '../../../core/career_catalog.dart';
 import '../admin_controller.dart';
 import '../models/admin_user.dart';
 
@@ -66,7 +67,10 @@ class _AdminUsuariosViewState extends ConsumerState<AdminUsuariosView> {
     final row = <String>[];
     final cell = StringBuffer();
     var quoted = false;
-    final text = source.replaceFirst('\uFEFF', '').replaceAll('\r\n', '\n').replaceAll('\r', '\n');
+    final text = source
+        .replaceFirst('\uFEFF', '')
+        .replaceAll('\r\n', '\n')
+        .replaceAll('\r', '\n');
     for (var i = 0; i < text.length; i++) {
       final char = text[i];
       if (char == '"') {
@@ -107,12 +111,17 @@ class _AdminUsuariosViewState extends ConsumerState<AdminUsuariosView> {
       final record = <String, String>{
         for (var i = 0; i < headers.length; i++) headers[i]: values[i],
       };
+      record.putIfAbsent('carrera', () => '');
       final id = record['id']!;
       final email = record['correo']!.toLowerCase();
       final status = record['estado']!.toLowerCase();
+      final career = record['carrera']!.trim();
+      final role = record['rol']!.toLowerCase();
       if (!RegExp(r'^\d{6,10}$').hasMatch(id) ||
           !RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email) ||
           required.any((key) => record[key]!.isEmpty) ||
+          (career.isNotEmpty && !careerCatalog.contains(career)) ||
+          (role.contains('estudiante') && career.isEmpty) ||
           !const {'activo', 'revocado'}.contains(status) ||
           !ids.add(id) ||
           !emails.add(email)) {
@@ -192,8 +201,10 @@ class _AdminUsuariosViewState extends ConsumerState<AdminUsuariosView> {
                       selectedColor: const Color(0xFFEA580C),
                       backgroundColor: const Color(0xFFF1F4F9),
                       labelStyle: TextStyle(
-                        color: isSelected ? Colors.white : const Color(0xFF475569),
-                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                        color:
+                            isSelected ? Colors.white : const Color(0xFF475569),
+                        fontWeight:
+                            isSelected ? FontWeight.w700 : FontWeight.w500,
                       ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
@@ -204,7 +215,9 @@ class _AdminUsuariosViewState extends ConsumerState<AdminUsuariosView> {
                         ),
                       ),
                       onSelected: (_) {
-                        ref.read(adminControllerProvider.notifier).setFilter(opt);
+                        ref
+                            .read(adminControllerProvider.notifier)
+                            .setFilter(opt);
                         Navigator.pop(ctx);
                       },
                     );
@@ -245,19 +258,19 @@ class _AdminUsuariosViewState extends ConsumerState<AdminUsuariosView> {
                         .read(adminControllerProvider.notifier)
                         .setSearchQuery(val),
                     decoration: const InputDecoration(
-                          hintText: 'Buscar por nombre, correo o ID',
+                      hintText: 'Buscar por nombre, correo o ID',
                       hintStyle: TextStyle(
                         color: Color(0xFF8C95A6),
                         fontSize: 14,
                         fontWeight: FontWeight.w400,
                       ),
-                          prefixIcon: Icon(
-                            Icons.search_rounded,
-                            color: Color(0xFF8C95A6),
-                          ),
-                          border: InputBorder.none,
-                          isDense: true,
-                        ),
+                      prefixIcon: Icon(
+                        Icons.search_rounded,
+                        color: Color(0xFF8C95A6),
+                      ),
+                      border: InputBorder.none,
+                      isDense: true,
+                    ),
                     style: const TextStyle(
                       fontSize: 14,
                       color: Color(0xFF1E293B),
@@ -317,14 +330,16 @@ class _AdminUsuariosViewState extends ConsumerState<AdminUsuariosView> {
                     minimumSize: const Size(48, 48),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
-                      side: const BorderSide(color: Color(0xFFE5E7EB), width: 1.2),
+                      side: const BorderSide(
+                          color: Color(0xFFE5E7EB), width: 1.2),
                     ),
                   ),
                 ),
               ),
               const SizedBox(width: 8),
               Tooltip(
-                message: 'CSV con columnas: id, nombre, correo, telefono, rol, estado',
+                message:
+                    'CSV: id,nombre,correo,telefono,rol,estado,carrera; requerida para estudiantes',
                 child: IconButton(
                   onPressed: _importingUsers ? null : _importCsv,
                   icon: _importingUsers
@@ -340,7 +355,8 @@ class _AdminUsuariosViewState extends ConsumerState<AdminUsuariosView> {
                     minimumSize: const Size(48, 48),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
-                      side: const BorderSide(color: Color(0xFFE5E7EB), width: 1.2),
+                      side: const BorderSide(
+                          color: Color(0xFFE5E7EB), width: 1.2),
                     ),
                   ),
                 ),
@@ -377,33 +393,34 @@ class _AdminUsuariosViewState extends ConsumerState<AdminUsuariosView> {
                       ),
                     )
                   : users.isEmpty
-              ? const Center(
-                  child: Text(
-                    'No hay usuarios que coincidan con la búsqueda.',
-                    style: TextStyle(color: Color(0xFF8C95A6), fontSize: 14),
-                  ),
-                )
-              : ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
-                  itemCount: users.length,
-                  separatorBuilder: (_, __) => const Divider(
-                    height: 1,
-                    thickness: 1,
-                    color: Color(0xFFF1F5F9),
-                  ),
-                  itemBuilder: (context, index) {
-                    final user = users[index];
-                    return _UserListTile(
-                      user: user,
-                      onTap: () {
-                        // Al presionar un usuario lo deja editar
-                        ref
-                            .read(adminControllerProvider.notifier)
-                            .selectUser(user);
-                      },
-                    );
-                  },
-                ),
+                      ? const Center(
+                          child: Text(
+                            'No hay usuarios que coincidan con la búsqueda.',
+                            style: TextStyle(
+                                color: Color(0xFF8C95A6), fontSize: 14),
+                          ),
+                        )
+                      : ListView.separated(
+                          padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
+                          itemCount: users.length,
+                          separatorBuilder: (_, __) => const Divider(
+                            height: 1,
+                            thickness: 1,
+                            color: Color(0xFFF1F5F9),
+                          ),
+                          itemBuilder: (context, index) {
+                            final user = users[index];
+                            return _UserListTile(
+                              user: user,
+                              onTap: () {
+                                // Al presionar un usuario lo deja editar
+                                ref
+                                    .read(adminControllerProvider.notifier)
+                                    .selectUser(user);
+                              },
+                            );
+                          },
+                        ),
         ),
       ],
     );
@@ -484,6 +501,18 @@ class _UserListTile extends StatelessWidget {
                       color: Color(0xFF64748B),
                     ),
                   ),
+                  if (user.carrera.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      user.carrera,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        color: Color(0xFF8C95A6),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),

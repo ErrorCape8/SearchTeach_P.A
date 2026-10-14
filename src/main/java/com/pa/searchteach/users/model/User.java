@@ -14,11 +14,16 @@ public class User {
 	private String telefono;
 	private String rol;
 	private String estado;
+	private String carrera;
 
 	public User() {
 	}
 
 	public User(String id, String passwordHash, String nombre, String correo, String telefono, String rol, String estado) {
+		this(id, passwordHash, nombre, correo, telefono, rol, estado, "");
+	}
+
+	public User(String id, String passwordHash, String nombre, String correo, String telefono, String rol, String estado, String carrera) {
 		this.id = id;
 		this.passwordHash = passwordHash;
 		this.nombre = nombre;
@@ -26,6 +31,7 @@ public class User {
 		this.telefono = telefono;
 		this.rol = rol;
 		this.estado = estado;
+		this.carrera = carrera;
 	}
 
 	public String getId() {
@@ -82,5 +88,13 @@ public class User {
 
 	public void setEstado(String estado) {
 		this.estado = estado;
+	}
+
+	public String getCarrera() {
+		return carrera;
+	}
+
+	public void setCarrera(String carrera) {
+		this.carrera = carrera;
 	}
 }

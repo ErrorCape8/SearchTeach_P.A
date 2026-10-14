@@ -49,6 +49,43 @@ class _TutorCard extends StatelessWidget {
                     _detail(Icons.place_outlined, tutor.location),
                 ],
               ),
+              if (tutor.subjects.isNotEmpty) ...[
+                const SizedBox(height: 14),
+                const Text(
+                  'MATERIAS QUE DICTA',
+                  style: TextStyle(
+                    color: _muted,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: .5,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                for (final subject in tutor.subjects)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 5),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(child: Text(subject.name)),
+                        if (subject.careers.length > 1)
+                          Flexible(
+                            child: Text(
+                              'Compartida con ${subject.careers.where((career) => career != tutor.career).join(', ')}',
+                              textAlign: TextAlign.end,
+                              style:
+                                  const TextStyle(color: _muted, fontSize: 11),
+                            ),
+                          )
+                        else
+                          const Text(
+                            'Exclusiva',
+                            style: TextStyle(color: _muted, fontSize: 11),
+                          ),
+                      ],
+                    ),
+                  ),
+              ],
               const SizedBox(height: 15),
               Align(
                 alignment: Alignment.centerRight,
@@ -134,6 +171,48 @@ class _TutoringCard extends StatelessWidget {
                     ),
                 ]),
               ],
+            ],
+          ),
+        ),
+      );
+}
+
+class _GroupSessionCard extends StatelessWidget {
+  const _GroupSessionCard({required this.session, required this.onLeave});
+
+  final StudentGroupSession session;
+  final VoidCallback onLeave;
+
+  @override
+  Widget build(BuildContext context) => Card(
+        margin: const EdgeInsets.only(bottom: 12),
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(session.subject,
+                  style: const TextStyle(
+                      color: _navy, fontWeight: FontWeight.w800, fontSize: 16)),
+              const SizedBox(height: 6),
+              Text(
+                  'Docente ${session.teacherId} · Semestre ${session.semester}'),
+              if (session.start != null)
+                Text(_longDate(session.start!),
+                    style: const TextStyle(color: _muted)),
+              Text('Tecnologías: ${session.technologies.join(', ')}',
+                  style: const TextStyle(color: _muted)),
+              Text('${session.studentCount}/5 estudiantes inscritos',
+                  style: const TextStyle(color: _muted)),
+              const SizedBox(height: 10),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: onLeave,
+                  icon: const Icon(Icons.logout),
+                  label: const Text('Desistir'),
+                ),
+              ),
             ],
           ),
         ),

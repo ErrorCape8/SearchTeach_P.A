@@ -4,12 +4,17 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Locale;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
 
 import com.pa.searchteach.common.exception.NotFoundException;
 import com.pa.searchteach.tutorias.dto.DocenteCoordinacion;
 import com.pa.searchteach.tutorias.dto.HorarioTutorSolicitud;
 import com.pa.searchteach.tutorias.dto.TutorDisponible;
 import com.pa.searchteach.tutorias.modelo.HorarioTutor;
+import com.pa.searchteach.tutorias.modelo.MateriaHorario;
+import com.pa.searchteach.tutorias.modelo.CatalogoTecnologias;
 import com.pa.searchteach.tutorias.repositorio.HorarioTutorRepository;
 import com.pa.searchteach.users.model.User;
 import com.pa.searchteach.users.repository.UserRepository;
@@ -60,7 +65,9 @@ public class HorariosTutoresService {
 						horario.horaInicio(),
 						horario.horaFin(),
 						horario.modalidad(),
-						horario.ubicacion()))
+						horario.ubicacion(),
+						carrerasDe(horario),
+						horario.materias()))
 				.toList();
 	}
 
@@ -96,6 +103,23 @@ public class HorariosTutoresService {
 		}
 	}
 
+	public void validarMateria(String docenteId, String estudianteId, String materia) {
+		HorarioTutor horario = horarios.findByDocenteId(docenteId)
+				.orElseThrow(() -> new NotFoundException("El docente seleccionado no tiene horarios disponibles."));
+		if (horario.materias().isEmpty()) return;
+
+		User estudiante = usuarios.findById(estudianteId)
+				.orElseThrow(() -> new NotFoundException("No se encontrÃ³ el estudiante seleccionado."));
+		String carrera = valor(estudiante.getCarrera());
+		boolean disponible = horario.materias().stream()
+				.filter(item -> item.nombre().equalsIgnoreCase(valor(materia)))
+				.anyMatch(item -> item.carreras().stream().anyMatch(c -> c.equalsIgnoreCase(carrera)));
+		if (!disponible) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT,
+					"La materia no estÃ¡ disponible para la tecnologÃ­a del estudiante.");
+		}
+	}
+
 	public HorarioTutor crear(String docenteId, HorarioTutorSolicitud solicitud) {
 		User docente = obtenerDocente(docenteId);
 		if (horarios.findByDocenteId(docenteId).isPresent()) {
@@ -112,6 +136,9 @@ public class HorariosTutoresService {
 	}
 
 	private HorarioTutor construir(String id, String docenteId, HorarioTutorSolicitud solicitud) {
+		if (!CatalogoTecnologias.contiene(solicitud.carrera())) {
+			throw new IllegalArgumentException("Selecciona una tecnología del catálogo institucional.");
+		}
 		if (!DIAS.contains(solicitud.dia())) {
 			throw new IllegalArgumentException("Selecciona un día válido.");
 		}
@@ -125,6 +152,17 @@ public class HorariosTutoresService {
 				&& (solicitud.ubicacion() == null || solicitud.ubicacion().isBlank())) {
 			throw new IllegalArgumentException("Indica la ubicación para las sesiones presenciales.");
 		}
+		List<MateriaHorario> materias = solicitud.materias() == null ? List.of() : solicitud.materias();
+		Set<String> nombresMateria = new HashSet<>();
+		for (MateriaHorario materia : materias) {
+			if (materia == null || materia.nombre() == null || materia.nombre().isBlank()
+					|| materia.carreras() == null || materia.carreras().isEmpty()
+					|| materia.carreras().stream().anyMatch(carrera -> !CatalogoTecnologias.contiene(carrera))
+					|| materia.carreras().stream().noneMatch(carrera -> carrera.equalsIgnoreCase(solicitud.carrera().trim()))
+					|| !nombresMateria.add(materia.nombre().trim().toLowerCase(Locale.ROOT))) {
+				throw new IllegalArgumentException("Cada materia debe ser única y estar asociada a la tecnología del horario.");
+			}
+		}
 		return new HorarioTutor(
 				id,
 				docenteId,
@@ -135,7 +173,15 @@ public class HorariosTutoresService {
 				solicitud.horaFin(),
 				solicitud.modalidad(),
 				valor(solicitud.ubicacion()),
-				LocalDateTime.now());
+				LocalDateTime.now(),
+				materias);
+	}
+
+	private List<String> carrerasDe(HorarioTutor horario) {
+		List<String> carreras = new ArrayList<>();
+		carreras.add(horario.carrera());
+		horario.materias().forEach(materia -> carreras.addAll(materia.carreras()));
+		return carreras.stream().distinct().toList();
 	}
 
 	private User obtenerDocente(String docenteId) {

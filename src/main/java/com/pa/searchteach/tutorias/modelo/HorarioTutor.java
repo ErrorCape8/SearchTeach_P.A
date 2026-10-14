@@ -1,6 +1,7 @@
 package com.pa.searchteach.tutorias.modelo;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -19,5 +20,10 @@ public record HorarioTutor(
 		@NotBlank String horaFin,
 		@NotBlank String modalidad,
 		String ubicacion,
-		@NotNull LocalDateTime actualizadoEn) {
+		@NotNull LocalDateTime actualizadoEn,
+		List<MateriaHorario> materias) {
+
+	public HorarioTutor {
+		materias = materias == null ? List.of() : List.copyOf(materias);
+	}
 }

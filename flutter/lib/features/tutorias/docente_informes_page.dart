@@ -12,20 +12,23 @@ final _proyectosAsignadosProvider =
       .get<List<dynamic>>('/api/docente/tutorias-colectivas');
   final data = response.data;
   if (data == null) {
-    throw const FormatException('El servidor devolvió una lista vacía inválida.');
+    throw const FormatException(
+        'El servidor devolvió una lista vacía inválida.');
   }
   return data.map((entry) {
     if (entry is! Map<String, dynamic> ||
         entry['tutoriaColectivaId'] is! String ||
         entry['proyecto'] is! Map<String, dynamic>) {
-      throw const FormatException('Un proyecto asignado tiene datos inválidos.');
+      throw const FormatException(
+          'Un proyecto asignado tiene datos inválidos.');
     }
     final project = entry['proyecto'] as Map<String, dynamic>;
     if (project['proyectoId'] is! String ||
         project['nombre'] is! String ||
         project['tecnologia'] is! String ||
         project['semestre'] is! num) {
-      throw const FormatException('Los datos de un proyecto asignado están incompletos.');
+      throw const FormatException(
+          'Los datos de un proyecto asignado están incompletos.');
     }
     return _ProyectoAsignado(
       tutoriaColectivaId: entry['tutoriaColectivaId'] as String,
@@ -37,11 +40,39 @@ final _proyectosAsignadosProvider =
   }).toList(growable: false);
 });
 
+final _sesionesGrupalesDocenteProvider =
+    FutureProvider.autoDispose<List<_SesionGrupalDocente>>((ref) async {
+  final response = await ref
+      .read(dioProvider)
+      .get<List<dynamic>>('/api/tutorias/grupales/docente');
+  final data = response.data;
+  if (data == null) return const [];
+  return data.whereType<Map<String, dynamic>>().map((json) {
+    final students = json['estudianteIds'] is List
+        ? (json['estudianteIds'] as List).whereType<String>().toList()
+        : const <String>[];
+    final technologies = json['tecnologias'] is List
+        ? (json['tecnologias'] as List).whereType<String>().toList()
+        : const <String>[];
+    return _SesionGrupalDocente(
+      materia:
+          json['materia'] is String ? json['materia'] as String : 'Tutoría',
+      tecnologias: technologies,
+      estudiantes: students,
+      fechaInicio: json['fechaInicio'] is String
+          ? DateTime.tryParse(json['fechaInicio'] as String)
+          : null,
+      semestre: json['semestre'] is num ? (json['semestre'] as num).toInt() : 0,
+    );
+  }).toList(growable: false);
+});
+
 class DocenteInformesPage extends ConsumerStatefulWidget {
   const DocenteInformesPage({super.key});
 
   @override
-  ConsumerState<DocenteInformesPage> createState() => _DocenteInformesPageState();
+  ConsumerState<DocenteInformesPage> createState() =>
+      _DocenteInformesPageState();
 }
 
 class _DocenteInformesPageState extends ConsumerState<DocenteInformesPage> {
@@ -79,7 +110,8 @@ class _DocenteInformesPageState extends ConsumerState<DocenteInformesPage> {
       _score.clear();
       _observations.clear();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Informe de avance enviado al líder del programa.')),
+        const SnackBar(
+            content: Text('Informe de avance enviado al líder del programa.')),
       );
     } on DioException catch (error) {
       if (!mounted) return;
@@ -112,7 +144,8 @@ class _DocenteInformesPageState extends ConsumerState<DocenteInformesPage> {
         body: ref.watch(_proyectosAsignadosProvider).when(
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, _) => _ErrorContent(
-                message: 'No se pudieron cargar tus proyectos asignados: $error',
+                message:
+                    'No se pudieron cargar tus proyectos asignados: $error',
                 onRetry: () => ref.invalidate(_proyectosAsignadosProvider),
               ),
               data: (projects) => _buildProjects(context, projects),
@@ -123,111 +156,172 @@ class _DocenteInformesPageState extends ConsumerState<DocenteInformesPage> {
     BuildContext context,
     List<_ProyectoAsignado> projects,
   ) {
-    if (projects.isEmpty) {
+    final groupSessions = ref.watch(_sesionesGrupalesDocenteProvider);
+    if (projects.isEmpty && groupSessions.asData?.value.isEmpty == true) {
       return const Center(
         child: Padding(
           padding: EdgeInsets.all(24),
-          child: Text(
-            'No tienes proyectos asignados como docente de apoyo.',
-            textAlign: TextAlign.center,
-          ),
+          child: Text('No tienes proyectos ni tutorías grupales asignados.',
+              textAlign: TextAlign.center),
         ),
       );
     }
-    final selected = projects.any((project) => project.proyectoId == _selectedProjectId)
-        ? _selectedProjectId!
-        : projects.first.proyectoId;
-    final selectedProject =
-        projects.firstWhere((project) => project.proyectoId == selected);
+    final selected =
+        projects.any((project) => project.proyectoId == _selectedProjectId)
+            ? _selectedProjectId!
+            : projects.isEmpty
+                ? null
+                : projects.first.proyectoId;
+    final selectedProject = selected == null
+        ? null
+        : projects.firstWhere((project) => project.proyectoId == selected);
 
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        const Text(
-          'Reportar avance del proyecto',
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-        ),
+        const Text('Tutorías grupales',
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
-        const Text(
-          'Usa el mismo criterio de puntuación de 0 a 100 en cada informe para que el seguimiento sea comparable.',
+        groupSessions.when(
+          loading: () => const LinearProgressIndicator(),
+          error: (error, _) =>
+              Text('No se pudieron cargar las sesiones: $error'),
+          data: (sessions) => sessions.isEmpty
+              ? const Text(
+                  'No tienes sesiones grupales inscritas por estudiantes.')
+              : Column(
+                  children: sessions
+                      .map((session) =>
+                          _GroupSessionTeacherCard(session: session))
+                      .toList(growable: false),
+                ),
         ),
-        const SizedBox(height: 20),
-        DropdownButtonFormField<String>(
-          initialValue: selected,
-          decoration: const InputDecoration(
-            labelText: 'Proyecto asignado',
-            border: OutlineInputBorder(),
+        const Divider(height: 32),
+        if (projects.isEmpty)
+          const Text('No tienes proyectos asignados como docente de apoyo.')
+        else ...[
+          const Text(
+            'Reportar avance del proyecto',
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
           ),
-          items: projects
-              .map((project) => DropdownMenuItem(
-                    value: project.proyectoId,
-                    child: Text(
-                      '${project.nombre} · ${project.tecnologia} · semestre ${project.semestre}',
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ))
-              .toList(growable: false),
-          onChanged: (value) => setState(() => _selectedProjectId = value),
-        ),
-        const SizedBox(height: 16),
-        Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              TextFormField(
-                controller: _score,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Puntaje de avance (0–100)',
-                  border: OutlineInputBorder(),
+          const SizedBox(height: 8),
+          const Text(
+            'Usa el mismo criterio de puntuación de 0 a 100 en cada informe para que el seguimiento sea comparable.',
+          ),
+          const SizedBox(height: 20),
+          DropdownButtonFormField<String>(
+            initialValue: selected!,
+            decoration: const InputDecoration(
+              labelText: 'Proyecto asignado',
+              border: OutlineInputBorder(),
+            ),
+            items: projects
+                .map((project) => DropdownMenuItem(
+                      value: project.proyectoId,
+                      child: Text(
+                        '${project.nombre} · ${project.tecnologia} · semestre ${project.semestre}',
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ))
+                .toList(growable: false),
+            onChanged: (value) => setState(() => _selectedProjectId = value),
+          ),
+          const SizedBox(height: 16),
+          Form(
+            key: _formKey,
+            child: Column(
+              children: [
+                TextFormField(
+                  controller: _score,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Puntaje de avance (0–100)',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    final score = int.tryParse(value ?? '');
+                    return score == null || score < 0 || score > 100
+                        ? 'Ingresa un número entre 0 y 100.'
+                        : null;
+                  },
                 ),
-                validator: (value) {
-                  final score = int.tryParse(value ?? '');
-                  return score == null || score < 0 || score > 100
-                      ? 'Ingresa un número entre 0 y 100.'
-                      : null;
-                },
-              ),
-              const SizedBox(height: 14),
-              TextFormField(
-                controller: _observations,
-                minLines: 4,
-                maxLines: 7,
-                maxLength: 2000,
-                decoration: const InputDecoration(
-                  labelText: 'Observaciones del avance',
-                  border: OutlineInputBorder(),
-                  alignLabelWithHint: true,
+                const SizedBox(height: 14),
+                TextFormField(
+                  controller: _observations,
+                  minLines: 4,
+                  maxLines: 7,
+                  maxLength: 2000,
+                  decoration: const InputDecoration(
+                    labelText: 'Observaciones del avance',
+                    border: OutlineInputBorder(),
+                    alignLabelWithHint: true,
+                  ),
+                  validator: (value) => value == null || value.trim().isEmpty
+                      ? 'Describe brevemente el avance.'
+                      : null,
                 ),
-                validator: (value) => value == null || value.trim().isEmpty
-                    ? 'Describe brevemente el avance.'
-                    : null,
-              ),
-              if (_error != null) ...[
-                const SizedBox(height: 8),
-                Text(_error!, style: const TextStyle(color: Colors.red)),
+                if (_error != null) ...[
+                  const SizedBox(height: 8),
+                  Text(_error!, style: const TextStyle(color: Colors.red)),
+                ],
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: _saving ? null : () => _submit(selectedProject!),
+                    icon: _saving
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.send_outlined),
+                    label: const Text('Enviar informe'),
+                  ),
+                ),
               ],
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: _saving ? null : () => _submit(selectedProject),
-                  icon: _saving
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.send_outlined),
-                  label: const Text('Enviar informe'),
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
+        ],
       ],
     );
   }
+}
+
+class _SesionGrupalDocente {
+  const _SesionGrupalDocente({
+    required this.materia,
+    required this.tecnologias,
+    required this.estudiantes,
+    required this.fechaInicio,
+    required this.semestre,
+  });
+
+  final String materia;
+  final List<String> tecnologias;
+  final List<String> estudiantes;
+  final DateTime? fechaInicio;
+  final int semestre;
+}
+
+class _GroupSessionTeacherCard extends StatelessWidget {
+  const _GroupSessionTeacherCard({required this.session});
+
+  final _SesionGrupalDocente session;
+
+  @override
+  Widget build(BuildContext context) => Card(
+        child: ListTile(
+          leading: const Icon(Icons.groups_outlined),
+          title: Text(session.materia),
+          subtitle: Text(
+            'Semestre ${session.semestre} · ${session.tecnologias.join(', ')}\n'
+            'Estudiantes: ${session.estudiantes.join(', ')}\n'
+            '${session.fechaInicio?.toLocal() ?? 'Fecha no disponible'}',
+          ),
+          isThreeLine: true,
+        ),
+      );
 }
 
 class _ProyectoAsignado {

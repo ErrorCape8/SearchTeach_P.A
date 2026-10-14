@@ -200,6 +200,15 @@ class _TeacherCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final assigned = schedule != null;
+    final currentSchedule = schedule;
+    final subjectSummary = currentSchedule == null
+        ? ''
+        : currentSchedule.materias.map((subject) {
+            final sharedCareers = subject.carreras
+                .where((career) => career != currentSchedule.carrera)
+                .join(', ');
+            return '${subject.nombre} (${sharedCareers.isEmpty ? 'Exclusiva' : 'Compartida con $sharedCareers'})';
+          }).join(', ');
     return Card(
       color: Colors.white,
       elevation: 0,
@@ -251,8 +260,9 @@ class _TeacherCard extends StatelessWidget {
                 assigned
                     ? '${schedule!.carrera} · Semestre ${schedule!.semestre}\n'
                         '${schedule!.dia} · ${schedule!.horaInicio}–${schedule!.horaFin} · ${schedule!.modalidad}'
+                        '${subjectSummary.isEmpty ? '' : '\nMaterias: $subjectSummary'}'
                     : 'Aún no se ha registrado disponibilidad para este tutor.',
-                maxLines: 3,
+                maxLines: 5,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(color: _muted, height: 1.4),
               ),

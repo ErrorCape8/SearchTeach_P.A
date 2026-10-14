@@ -123,7 +123,8 @@ class AdminState {
           user.nombre.toLowerCase().contains(query) ||
           user.id.toLowerCase().contains(query) ||
           user.correo.toLowerCase().contains(query) ||
-          user.rol.toLowerCase().contains(query);
+          user.rol.toLowerCase().contains(query) ||
+          user.carrera.toLowerCase().contains(query);
 
       if (!matchesQuery) return false;
       if (filter == 'Todos') return true;
@@ -160,8 +161,7 @@ class AdminState {
       searchQuery: searchQuery ?? this.searchQuery,
       filter: filter ?? this.filter,
       stats: stats != null ? stats() : this.stats,
-      adminProfile:
-          adminProfile != null ? adminProfile() : this.adminProfile,
+      adminProfile: adminProfile != null ? adminProfile() : this.adminProfile,
       isLoadingUsers: isLoadingUsers ?? this.isLoadingUsers,
       isLoadingStats: isLoadingStats ?? this.isLoadingStats,
       isLoadingProfile: isLoadingProfile ?? this.isLoadingProfile,
@@ -169,8 +169,7 @@ class AdminState {
       usersError: usersError != null ? usersError() : this.usersError,
       statsError: statsError != null ? statsError() : this.statsError,
       profileError: profileError != null ? profileError() : this.profileError,
-      errorMessage:
-          errorMessage != null ? errorMessage() : this.errorMessage,
+      errorMessage: errorMessage != null ? errorMessage() : this.errorMessage,
     );
   }
 }
@@ -191,11 +190,13 @@ class AdminController extends StateNotifier<AdminState> {
           await _ref.read(dioProvider).get<List<dynamic>>('/api/admin/users');
       final data = response.data;
       if (data == null) {
-        throw const FormatException('El servidor no devolvió la lista de usuarios.');
+        throw const FormatException(
+            'El servidor no devolvió la lista de usuarios.');
       }
       final users = data.map((item) {
         if (item is! Map<String, dynamic>) {
-          throw const FormatException('El servidor devolvió un usuario inválido.');
+          throw const FormatException(
+              'El servidor devolvió un usuario inválido.');
         }
         return AdminUser.fromJson(item);
       }).toList(growable: false);
@@ -216,8 +217,9 @@ class AdminController extends StateNotifier<AdminState> {
   Future<void> loadStats() async {
     state = state.copyWith(isLoadingStats: true, statsError: () => null);
     try {
-      final response =
-          await _ref.read(dioProvider).get<Map<String, dynamic>>('/api/admin/stats');
+      final response = await _ref
+          .read(dioProvider)
+          .get<Map<String, dynamic>>('/api/admin/stats');
       final data = response.data;
       if (data == null) {
         throw const FormatException('El servidor no devolvió las métricas.');
@@ -305,13 +307,15 @@ class AdminController extends StateNotifier<AdminState> {
           'telefono': updated.telefono,
           'rol': updated.rol,
           'estado': updated.estado,
+          'carrera': updated.carrera,
           if (nuevaContrasena != null && nuevaContrasena.trim().isNotEmpty)
             'nuevaContrasena': nuevaContrasena.trim(),
         },
       );
       final data = response.data;
       if (data == null) {
-        throw const FormatException('El servidor no confirmó los cambios del usuario.');
+        throw const FormatException(
+            'El servidor no confirmó los cambios del usuario.');
       }
       final savedUser = AdminUser.fromJson(data);
       final users = List<AdminUser>.from(state.users);
@@ -346,15 +350,14 @@ class AdminController extends StateNotifier<AdminState> {
   Future<void> toggleUserAccess(AdminUser user) async {
     final nextState = user.isActivo ? 'Revocado' : 'Activo';
     try {
-      final response = await _ref
-          .read(dioProvider)
-          .patch<Map<String, dynamic>>(
-            '/api/admin/users/${user.id}/estado',
-            queryParameters: {'estado': nextState},
-          );
+      final response = await _ref.read(dioProvider).patch<Map<String, dynamic>>(
+        '/api/admin/users/${user.id}/estado',
+        queryParameters: {'estado': nextState},
+      );
       final data = response.data;
       if (data == null) {
-        throw const FormatException('El servidor no confirmó el cambio de acceso.');
+        throw const FormatException(
+            'El servidor no confirmó el cambio de acceso.');
       }
       final savedUser = AdminUser.fromJson(data);
       final users = List<AdminUser>.from(state.users);
@@ -362,9 +365,8 @@ class AdminController extends StateNotifier<AdminState> {
       if (index != -1) users[index] = savedUser;
       state = state.copyWith(
         users: users,
-        selectedUser: state.selectedUser?.id == savedUser.id
-            ? () => savedUser
-            : null,
+        selectedUser:
+            state.selectedUser?.id == savedUser.id ? () => savedUser : null,
       );
       await loadStats();
     } on DioException catch (error) {
@@ -376,15 +378,14 @@ class AdminController extends StateNotifier<AdminState> {
 
   Future<bool> updateAdminPhone(String phone) async {
     try {
-      final response = await _ref
-          .read(dioProvider)
-          .put<Map<String, dynamic>>(
-            '/api/admin/perfil/telefono',
-            data: {'telefono': phone},
-          );
+      final response = await _ref.read(dioProvider).put<Map<String, dynamic>>(
+        '/api/admin/perfil/telefono',
+        data: {'telefono': phone},
+      );
       final data = response.data;
       if (data == null) {
-        throw const FormatException('El servidor no confirmó el teléfono actualizado.');
+        throw const FormatException(
+            'El servidor no confirmó el teléfono actualizado.');
       }
       state = state.copyWith(
         adminProfile: () => AdminProfile.fromJson(data),

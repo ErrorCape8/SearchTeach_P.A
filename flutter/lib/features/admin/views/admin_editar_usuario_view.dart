@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/career_catalog.dart';
 import '../admin_controller.dart';
 import '../models/admin_user.dart';
 
@@ -24,6 +25,7 @@ class _AdminEditarUsuarioViewState
   late final TextEditingController _correoCtrl;
   late final TextEditingController _telefonoCtrl;
   late final TextEditingController _passCtrl;
+  late String _career;
 
   late String _selectedRol;
   late String _selectedEstado;
@@ -35,6 +37,7 @@ class _AdminEditarUsuarioViewState
     _correoCtrl = TextEditingController(text: widget.user.correo);
     _telefonoCtrl = TextEditingController(text: widget.user.telefono);
     _passCtrl = TextEditingController();
+    _career = widget.user.carrera;
 
     _selectedRol = widget.user.rol;
     _selectedEstado = widget.user.estado;
@@ -58,12 +61,24 @@ class _AdminEditarUsuarioViewState
   }
 
   Future<void> _guardar() async {
+    final selectedCareer = _career.trim();
+    final isStudent = _selectedRol.toLowerCase().contains('estudiante');
+    if ((isStudent && !careerCatalog.contains(selectedCareer)) ||
+        (selectedCareer.isNotEmpty &&
+            !careerCatalog.contains(selectedCareer))) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Selecciona una tecnología del catálogo.')),
+      );
+      return;
+    }
     final updated = widget.user.copyWith(
       nombre: _nombreCtrl.text.trim(),
       correo: _correoCtrl.text.trim(),
       telefono: _telefonoCtrl.text.trim(),
       rol: _selectedRol,
       estado: _selectedEstado,
+      carrera: selectedCareer,
     );
 
     final pass = _passCtrl.text.trim();
@@ -140,6 +155,31 @@ class _AdminEditarUsuarioViewState
           controller: _telefonoCtrl,
           hint: 'Número de teléfono',
           keyboardType: TextInputType.phone,
+        ),
+        const SizedBox(height: 18),
+
+        const _FieldLabel('TECNOLOGÍA / CARRERA'),
+        const SizedBox(height: 6),
+        Autocomplete<String>(
+          initialValue: TextEditingValue(text: _career),
+          optionsBuilder: (value) {
+            final query = value.text.trim().toLowerCase();
+            if (query.isEmpty) return careerCatalog;
+            return careerCatalog
+                .where((career) => career.toLowerCase().contains(query));
+          },
+          onSelected: (career) => setState(() => _career = career),
+          fieldViewBuilder: (context, controller, focusNode, onSubmitted) =>
+              TextField(
+            controller: controller,
+            focusNode: focusNode,
+            onChanged: (value) => _career = value,
+            decoration: const InputDecoration(
+              hintText: 'Escribe para ver tecnologías disponibles',
+              prefixIcon: Icon(Icons.school_outlined),
+              border: OutlineInputBorder(),
+            ),
+          ),
         ),
         const SizedBox(height: 18),
 

@@ -5,5 +5,6 @@ public record PerfilUsuarioResponse(
 		String nombre,
 		String correo,
 		String telefono,
-		String rol) {
+		String rol,
+		String carrera) {
 }

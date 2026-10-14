@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api_client.dart';
+import '../../core/career_catalog.dart';
 
 class CoordinacionTutoriasPage extends ConsumerStatefulWidget {
   const CoordinacionTutoriasPage({super.key});
@@ -18,7 +19,7 @@ class _CoordinacionTutoriasPageState
   final _formKey = GlobalKey<FormState>();
   final _leader = TextEditingController();
   final _supportTeachers = List.generate(5, (_) => TextEditingController());
-  final _projects = List.generate(5, (_) => _ProjectControllers());
+  final _projects = List.generate(6, (index) => _ProjectControllers(index + 1));
   bool _saving = false;
   String? _error;
   int _selectedSection = 0;
@@ -60,8 +61,10 @@ class _CoordinacionTutoriasPageState
           'docenteLiderId': _leader.text.trim(),
           'docentesApoyoIds': supportIds,
           'proyectos': List.generate(
-            5,
-            (index) => _projects[index].toJson(supportIds[index]),
+            6,
+            (index) => _projects[index].toJson(
+              index == 0 ? _leader.text.trim() : supportIds[index - 1],
+            ),
           ),
         },
       );
@@ -160,7 +163,7 @@ class _CoordinacionTutoriasPageState
                               ),
                               const SizedBox(height: 8),
                               const Text(
-                                'Asigna un docente líder, cinco docentes de apoyo y cinco proyectos con cuatro estudiantes cada uno.',
+                                'Asigna un docente líder y cinco docentes de apoyo para crear espacios de los semestres 1 al 6. Los estudiantes se inscribirán desde su cuenta.',
                               ),
                               const SizedBox(height: 20),
                               _textField(
@@ -175,9 +178,14 @@ class _CoordinacionTutoriasPageState
                                   'Identificación del docente',
                                 ),
                                 const SizedBox(height: 10),
+                              ],
+                              for (var index = 0; index < 6; index++) ...[
                                 _ProjectFields(
                                   number: index + 1,
                                   controllers: _projects[index],
+                                  responsibleLabel: index == 0
+                                      ? 'Docente líder'
+                                      : 'Docente de apoyo $index',
                                 ),
                                 const SizedBox(height: 18),
                               ],
@@ -256,16 +264,16 @@ class _CoordinacionTutoriasPageState
 }
 
 class _ProjectControllers {
+  _ProjectControllers(int semester) {
+    semestre.text = '$semester';
+  }
+
   final nombre = TextEditingController();
-  final estudiantes = List.generate(4, (_) => TextEditingController());
   final tecnologia = TextEditingController();
-  final semestre = TextEditingController(text: '1');
+  final semestre = TextEditingController();
 
   void dispose() {
     nombre.dispose();
-    for (final controller in estudiantes) {
-      controller.dispose();
-    }
     tecnologia.dispose();
     semestre.dispose();
   }
@@ -273,18 +281,21 @@ class _ProjectControllers {
   Map<String, Object> toJson(String responsableId) => {
         'nombre': nombre.text.trim(),
         'docenteResponsableId': responsableId,
-        'estudianteIds':
-            estudiantes.map((controller) => controller.text.trim()).toList(),
         'tecnologia': tecnologia.text.trim(),
         'semestre': int.parse(semestre.text.trim()),
       };
 }
 
 class _ProjectFields extends StatelessWidget {
-  const _ProjectFields({required this.number, required this.controllers});
+  const _ProjectFields({
+    required this.number,
+    required this.controllers,
+    required this.responsibleLabel,
+  });
 
   final int number;
   final _ProjectControllers controllers;
+  final String responsibleLabel;
 
   @override
   Widget build(BuildContext context) => Card(
@@ -294,39 +305,60 @@ class _ProjectFields extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Proyecto $number',
+                'Espacio del semestre $number',
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 10),
               _requiredField(controllers.nombre, 'Nombre del proyecto'),
               const SizedBox(height: 10),
-              for (var index = 0; index < 4; index++) ...[
-                _requiredField(
-                  controllers.estudiantes[index],
-                  'Identificación del estudiante ${index + 1}',
-                ),
-                const SizedBox(height: 10),
-              ],
+              Text('Responsable: $responsibleLabel'),
+              const SizedBox(height: 10),
               Row(
                 children: [
                   Expanded(
-                    child: _requiredField(controllers.tecnologia, 'Tecnología'),
+                    child: Autocomplete<String>(
+                      initialValue: TextEditingValue(
+                        text: controllers.tecnologia.text,
+                      ),
+                      optionsBuilder: (value) {
+                        final query = value.text.trim().toLowerCase();
+                        if (query.isEmpty) return careerCatalog;
+                        return careerCatalog.where(
+                            (career) => career.toLowerCase().contains(query));
+                      },
+                      onSelected: (career) =>
+                          controllers.tecnologia.text = career,
+                      fieldViewBuilder:
+                          (context, controller, focusNode, onSubmitted) =>
+                              TextFormField(
+                        controller: controller,
+                        focusNode: focusNode,
+                        onChanged: (value) =>
+                            controllers.tecnologia.text = value,
+                        decoration: const InputDecoration(
+                          labelText: 'Tecnología del proyecto',
+                          border: OutlineInputBorder(),
+                        ),
+                        validator: (value) => value == null ||
+                                !careerCatalog.contains(value.trim())
+                            ? 'Selecciona una tecnología del catálogo.'
+                            : null,
+                      ),
+                    ),
                   ),
                   const SizedBox(width: 10),
                   SizedBox(
                     width: 100,
                     child: TextFormField(
                       controller: controllers.semestre,
-                      keyboardType: TextInputType.number,
+                      readOnly: true,
                       decoration: const InputDecoration(
                         labelText: 'Semestre',
                         border: OutlineInputBorder(),
                       ),
                       validator: (value) {
                         final semester = int.tryParse(value ?? '');
-                        return semester == null || semester < 1
-                            ? 'Inválido'
-                            : null;
+                        return semester != number ? 'Inválido' : null;
                       },
                     ),
                   ),

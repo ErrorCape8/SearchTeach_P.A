@@ -8,6 +8,7 @@ import com.pa.searchteach.users.dto.UserCreateRequest;
 import com.pa.searchteach.users.dto.UserUpdateRequest;
 import com.pa.searchteach.users.model.User;
 import com.pa.searchteach.users.repository.UserRepository;
+import com.pa.searchteach.tutorias.modelo.CatalogoTecnologias;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -37,7 +38,7 @@ public class UserAdminController {
 	public List<UserResponse> listUsers() {
 		return userRepository.findAll().stream()
 				.map(u -> new UserResponse(u.getId(), u.getNombre(),
-						u.getCorreo(), u.getTelefono(), u.getRol(), u.getEstado()))
+						u.getCorreo(), u.getTelefono(), u.getRol(), u.getEstado(), u.getCarrera()))
 				.toList();
 	}
 
@@ -54,7 +55,9 @@ public class UserAdminController {
 			if (row == null || row.id() == null || !row.id().matches("[0-9]{6,10}")
 					|| blank(row.nombre()) || blank(row.correo()) || blank(row.telefono())
 					|| blank(row.rol()) || blank(row.estado())
+					|| (row.rol().toLowerCase(Locale.ROOT).contains("estudiante") && blank(row.carrera()))
 					|| !row.correo().matches("[^\\s@]+@[^\\s@]+\\.[^\\s@]+")
+					|| (!blank(row.carrera()) && !CatalogoTecnologias.contiene(row.carrera()))
 					|| !(row.estado().equalsIgnoreCase("Activo") || row.estado().equalsIgnoreCase("Revocado"))
 					|| !ids.add(row.id()) || !emails.add(row.correo().trim().toLowerCase(Locale.ROOT))) {
 				return invalidImport();
@@ -77,11 +80,12 @@ public class UserAdminController {
 		List<User> users = rows.stream().map(row -> new User(
 				row.id().trim(), null, row.nombre().trim(), row.correo().trim().toLowerCase(Locale.ROOT),
 				row.telefono().trim(), row.rol().trim(),
-				row.estado().equalsIgnoreCase("activo") ? "Activo" : "Revocado"))
+				row.estado().equalsIgnoreCase("activo") ? "Activo" : "Revocado",
+				row.carrera() == null ? "" : row.carrera().trim()))
 				.toList();
 		List<UserResponse> created = userRepository.saveAll(users).stream()
 				.map(u -> new UserResponse(u.getId(), u.getNombre(), u.getCorreo(),
-						u.getTelefono(), u.getRol(), u.getEstado()))
+						u.getTelefono(), u.getRol(), u.getEstado(), u.getCarrera()))
 				.toList();
 		return ResponseEntity.status(HttpStatus.CREATED).body(created);
 	}
@@ -100,7 +104,7 @@ public class UserAdminController {
 		User user = userRepository.findById(id)
 				.orElseThrow(() -> new NotFoundException("Usuario no encontrado con ID: " + id));
 		return ResponseEntity.ok(new UserResponse(user.getId(), user.getNombre(), user.getCorreo(),
-				user.getTelefono(), user.getRol(), user.getEstado()));
+				user.getTelefono(), user.getRol(), user.getEstado(), user.getCarrera()));
 	}
 
 	@PutMapping("/users/{id}")
@@ -116,13 +120,23 @@ public class UserAdminController {
 		if (request.getTelefono() != null) user.setTelefono(request.getTelefono());
 		if (request.getRol() != null) user.setRol(request.getRol());
 		if (request.getEstado() != null) user.setEstado(request.getEstado());
+		if (request.getCarrera() != null) {
+			if (!blank(request.getCarrera()) && !CatalogoTecnologias.contiene(request.getCarrera())) {
+				throw new IllegalArgumentException("Selecciona una tecnología del catálogo institucional.");
+			}
+			user.setCarrera(request.getCarrera().trim());
+		}
+		if (user.getRol() != null && user.getRol().toLowerCase(Locale.ROOT).contains("estudiante")
+				&& blank(user.getCarrera())) {
+			throw new IllegalArgumentException("Asigna una tecnología al estudiante antes de guardar.");
+		}
 		if (request.getNuevaContrasena() != null && !request.getNuevaContrasena().trim().isEmpty()) {
 			user.setPasswordHash(passwordEncoder.encode(request.getNuevaContrasena().trim()));
 		}
 
 		User saved = userRepository.save(user);
 		return ResponseEntity.ok(new UserResponse(saved.getId(), saved.getNombre(), saved.getCorreo(),
-				saved.getTelefono(), saved.getRol(), saved.getEstado()));
+				saved.getTelefono(), saved.getRol(), saved.getEstado(), saved.getCarrera()));
 	}
 
 	@PatchMapping("/users/{id}/estado")
@@ -138,7 +152,7 @@ public class UserAdminController {
 		}
 		User saved = userRepository.save(user);
 		return ResponseEntity.ok(new UserResponse(saved.getId(), saved.getNombre(), saved.getCorreo(),
-				saved.getTelefono(), saved.getRol(), saved.getEstado()));
+				saved.getTelefono(), saved.getRol(), saved.getEstado(), saved.getCarrera()));
 	}
 
 	@GetMapping("/stats")

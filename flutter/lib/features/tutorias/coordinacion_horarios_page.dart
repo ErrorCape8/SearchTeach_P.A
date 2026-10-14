@@ -93,7 +93,13 @@ class _CoordinacionHorariosPageState
   }
 
   List<String> get _careers {
-    final careers = _schedules.map((item) => item.carrera).toSet().toList()
+    final careers = _schedules
+        .expand((item) => [
+              item.carrera,
+              ...item.materias.expand((subject) => subject.carreras),
+            ])
+        .toSet()
+        .toList()
       ..sort();
     return ['Todas', ...careers];
   }
@@ -113,7 +119,11 @@ class _CoordinacionHorariosPageState
       final matchesText = query.isEmpty ||
           normalizeSearch(teacher.nombre).contains(query) ||
           normalizeSearch(teacher.id).contains(query);
-      final matchesCareer = _career == 'Todas' || schedule?.carrera == _career;
+      final matchesCareer = _career == 'Todas' ||
+          schedule?.carrera == _career ||
+          (schedule?.materias
+                  .any((subject) => subject.carreras.contains(_career)) ??
+              false);
       final matchesSemester =
           _semester == null || schedule?.semestre == _semester;
       return matchesText && matchesCareer && matchesSemester;
@@ -127,6 +137,11 @@ class _CoordinacionHorariosPageState
         builder: (_) => CoordinacionHorariosFormPage(
           teacher: teacher,
           existing: existing,
+          subjectSuggestions: _schedules
+              .expand((schedule) =>
+                  schedule.materias.map((subject) => subject.nombre))
+              .toSet()
+              .toList(growable: false),
         ),
       ),
     );
