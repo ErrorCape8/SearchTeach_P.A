@@ -31,14 +31,16 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         .read(authControllerProvider.notifier)
         .login(_id.text.trim(), _pass.text);
     if (ok && mounted) {
-      final role = await ref.read(authRepositoryProvider).currentRole();
-      if (!mounted) return;
-      context.go(switch (role) {
-        'ADMIN' => '/admin',
-        'COORDINATOR' => '/coordinacion',
-        'DIRECTOR' => '/home',
-        _ => '/docente',
-      });
+      try {
+        final route = await ref.read(authRepositoryProvider).landingRoute();
+        if (mounted) context.go(route);
+      } on AuthFailure catch (error) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(error.message)),
+          );
+        }
+      }
     }
   }
 

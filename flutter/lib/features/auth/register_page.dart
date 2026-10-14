@@ -37,13 +37,16 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
         .read(authControllerProvider.notifier)
         .register(_id.text.trim(), _pass.text);
     if (ok && mounted) {
-      final role = await ref.read(authRepositoryProvider).currentRole();
-      if (!mounted) return;
-      context.go(switch (role) {
-        'COORDINATOR' => '/coordinacion',
-        'DIRECTOR' => '/home',
-        _ => '/docente',
-      });
+      try {
+        final route = await ref.read(authRepositoryProvider).landingRoute();
+        if (mounted) context.go(route);
+      } on AuthFailure catch (error) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(error.message)),
+          );
+        }
+      }
     } else if (mounted) {
       // Si el documento no existe, el backend lo dice aquí: volvemos al paso 1.
       setState(() => _step = 0);

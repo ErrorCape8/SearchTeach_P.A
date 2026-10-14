@@ -8,6 +8,7 @@ import java.util.Locale;
 import com.pa.searchteach.common.exception.NotFoundException;
 import com.pa.searchteach.tutorias.dto.DocenteCoordinacion;
 import com.pa.searchteach.tutorias.dto.HorarioTutorSolicitud;
+import com.pa.searchteach.tutorias.dto.TutorDisponible;
 import com.pa.searchteach.tutorias.modelo.HorarioTutor;
 import com.pa.searchteach.tutorias.repositorio.HorarioTutorRepository;
 import com.pa.searchteach.users.model.User;
@@ -42,6 +43,57 @@ public class HorariosTutoresService {
 
 	public List<HorarioTutor> listarHorarios() {
 		return horarios.findAllByOrderByActualizadoEnDesc();
+	}
+
+	public List<TutorDisponible> listarDisponibles() {
+		var nombres = listarDocentes().stream()
+				.collect(java.util.stream.Collectors.toMap(
+						DocenteCoordinacion::id, DocenteCoordinacion::nombre));
+		return listarHorarios().stream()
+				.filter(horario -> nombres.containsKey(horario.docenteId()))
+				.map(horario -> new TutorDisponible(
+						horario.docenteId(),
+						nombres.get(horario.docenteId()),
+						horario.carrera(),
+						horario.semestre(),
+						horario.dia(),
+						horario.horaInicio(),
+						horario.horaFin(),
+						horario.modalidad(),
+						horario.ubicacion()))
+				.toList();
+	}
+
+	public void validarDisponibilidad(
+			String docenteId,
+			String modalidad,
+			LocalDateTime fechaInicio,
+			LocalDateTime fechaFin) {
+		User docente = obtenerDocente(docenteId);
+		if (docente.getEstado() != null && !docente.getEstado().isBlank()
+				&& !"Activo".equalsIgnoreCase(docente.getEstado())) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT,
+					"El docente seleccionado no está activo.");
+		}
+		HorarioTutor horario = horarios.findByDocenteId(docenteId)
+				.orElseThrow(() -> new NotFoundException(
+						"El docente seleccionado no tiene horarios disponibles."));
+		if (fechaInicio == null || fechaFin == null || !fechaFin.isAfter(fechaInicio)
+				|| !fechaInicio.toLocalDate().equals(fechaFin.toLocalDate())
+				|| !fechaInicio.isAfter(LocalDateTime.now())) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+					"Selecciona una fecha futura y un rango horario válido.");
+		}
+		String diaSolicitado = DIAS.get(fechaInicio.getDayOfWeek().getValue() - 1);
+		LocalTime inicioDisponible = LocalTime.parse(horario.horaInicio());
+		LocalTime finDisponible = LocalTime.parse(horario.horaFin());
+		if (!horario.dia().equals(diaSolicitado)
+				|| !modalidadNormalizada(horario.modalidad()).equals(modalidad)
+				|| fechaInicio.toLocalTime().isBefore(inicioDisponible)
+				|| fechaFin.toLocalTime().isAfter(finDisponible)) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT,
+					"La fecha o modalidad no coincide con el horario publicado por el docente.");
+		}
 	}
 
 	public HorarioTutor crear(String docenteId, HorarioTutorSolicitud solicitud) {
@@ -98,6 +150,10 @@ public class HorariosTutoresService {
 	private boolean esDocente(User user) {
 		return user.getRol() != null
 				&& user.getRol().toLowerCase(Locale.ROOT).contains("docente");
+	}
+
+	private String modalidadNormalizada(String modalidad) {
+		return modalidad.toUpperCase(Locale.ROOT).replace("Í", "I");
 	}
 
 	private String valor(String value) {

@@ -5,11 +5,14 @@ import java.util.List;
 import com.pa.searchteach.tutorias.dto.PropuestaHorario;
 import com.pa.searchteach.tutorias.dto.RegistroAsistencia;
 import com.pa.searchteach.tutorias.dto.SolicitudTutoria;
+import com.pa.searchteach.tutorias.dto.TutorDisponible;
 import com.pa.searchteach.tutorias.modelo.Tutoria;
 import com.pa.searchteach.tutorias.servicio.ServicioTutorias;
+import com.pa.searchteach.tutorias.servicio.HorariosTutoresService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -24,9 +27,18 @@ import org.springframework.web.bind.annotation.RestController;
 public class ControladorTutorias {
 
 	private final ServicioTutorias servicioTutorias;
+	private final HorariosTutoresService horariosTutoresService;
 
-	public ControladorTutorias(ServicioTutorias servicioTutorias) {
+	public ControladorTutorias(
+			ServicioTutorias servicioTutorias,
+			HorariosTutoresService horariosTutoresService) {
 		this.servicioTutorias = servicioTutorias;
+		this.horariosTutoresService = horariosTutoresService;
+	}
+
+	@GetMapping("/disponibles")
+	public List<TutorDisponible> listarDisponibles() {
+		return horariosTutoresService.listarDisponibles();
 	}
 
 	@PostMapping
@@ -34,6 +46,15 @@ public class ControladorTutorias {
 	public Tutoria solicitar(
 			@Valid @RequestBody SolicitudTutoria solicitud,
 			@AuthenticationPrincipal String usuarioId) {
+		if (usuarioId.equals(solicitud.docenteId())) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+					"No puedes inscribirte en una tutoría contigo mismo.");
+		}
+		horariosTutoresService.validarDisponibilidad(
+				solicitud.docenteId(),
+				solicitud.modalidad().name(),
+				solicitud.fechaInicio(),
+				solicitud.fechaFin());
 		return servicioTutorias.solicitar(solicitud, usuarioId);
 	}
 

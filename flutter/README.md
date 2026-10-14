@@ -62,9 +62,11 @@ exist in the `users` collection so those teachers can authenticate to submit
 their reports.
 
 After signing in, coordinator accounts open the tutor schedule manager,
-ordinary user accounts can submit reports only for projects assigned to their
-account, and program-leader accounts keep the institutional dashboard with a
-**Proyectos** tab for the collective reports and their trend.
+students open a responsive student dashboard, and program-leader accounts keep
+the institutional dashboard with a **Proyectos** tab for collective reports
+and their trend. A user whose academic role includes both student and teacher
+opens the student dashboard and can switch to the teacher reports view from
+their profile.
 
 Coordinator accounts open **Horarios de tutores** after signing in. The screen
 searches the active teacher directory by name or identification, filters saved
@@ -80,6 +82,15 @@ The Flutter schedule feature is split by responsibility: its page owns loading
 and filtering state, `coordinacion_horarios_form.dart` owns create/edit input,
 `coordinacion_horarios_widgets.dart` contains the responsive filters and cards,
 and `coordinacion_horarios_models.dart` parses the API data.
+
+The student dashboard uses the authenticated user's profile from
+`GET /api/usuarios/perfil`, tutor availability from
+`GET /api/tutorias/disponibles`, and the existing personal tutoring endpoints.
+Students can search available tutors by name or ID, filter by career and
+semester, and submit a tutoring request with **Inscribirse**. Profile responses
+contain only the signed-in user's ID, name, email, phone, and academic role.
+The dashboard separates its responsive page/shell, home/profile views, tutoring
+views, and API models.
 
 The **Pronóstico** view reports distinct enrolled students and recorded/
 confirmed attendance by subject, using tutoring records from MongoDB. It fits a

@@ -8,6 +8,7 @@ import 'features/dashboard/dashboard_page.dart';
 import 'features/tutorias/coordinacion_tutorias_page.dart';
 import 'features/tutorias/coordinacion_horarios_page.dart';
 import 'features/tutorias/docente_informes_page.dart';
+import 'features/estudiante/student_dashboard_page.dart';
 
 final _router = GoRouter(
   initialLocation: '/login',
@@ -29,6 +30,10 @@ final _router = GoRouter(
     GoRoute(
       path: '/docente',
       builder: (_, __) => const DocenteInformesPage(),
+    ),
+    GoRoute(
+      path: '/estudiante',
+      builder: (_, __) => const StudentDashboardPage(),
     ),
     GoRoute(
       path: '/admin',

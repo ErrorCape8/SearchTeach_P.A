@@ -69,6 +69,39 @@ class AuthRepository {
     return payload['role'] as String;
   }
 
+  Future<String> landingRoute() async {
+    final role = await currentRole();
+    switch (role) {
+      case 'ADMIN':
+        return '/admin';
+      case 'COORDINATOR':
+        return '/coordinacion';
+      case 'DIRECTOR':
+        return '/home';
+      case 'USER':
+        try {
+          final response = await _dio.get<Map<String, dynamic>>(
+            '/api/usuarios/perfil',
+          );
+          final profileRole = response.data?['rol'];
+          if (profileRole is! String || profileRole.trim().isEmpty) {
+            throw AuthFailure('La cuenta no tiene un perfil académico válido.');
+          }
+          final normalized = profileRole.toLowerCase();
+          if (normalized.contains('estudiante')) return '/estudiante';
+          if (normalized.contains('docente')) return '/docente';
+          throw AuthFailure('No reconocemos el rol académico de esta cuenta.');
+        } on DioException catch (error) {
+          debugPrint('PROFILE ERROR -> ${error.message}');
+          throw AuthFailure(
+            'No se pudo cargar el perfil de la cuenta. Inténtalo de nuevo.',
+          );
+        }
+      default:
+        throw AuthFailure('El rol de esta cuenta no es válido.');
+    }
+  }
+
   Future<void> logout() =>
       _ref.read(secureStorageProvider).delete(key: 'token');
 }
