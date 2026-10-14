@@ -137,11 +137,6 @@ class _CoordinacionHorariosPageState
         builder: (_) => CoordinacionHorariosFormPage(
           teacher: teacher,
           existing: existing,
-          subjectSuggestions: _schedules
-              .expand((schedule) =>
-                  schedule.materias.map((subject) => subject.nombre))
-              .toSet()
-              .toList(growable: false),
         ),
       ),
     );

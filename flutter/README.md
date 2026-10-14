@@ -91,7 +91,11 @@ screen.
 The Flutter schedule feature is split by responsibility: its page owns loading
 and filtering state, `coordinacion_horarios_form.dart` owns create/edit input,
 `coordinacion_horarios_widgets.dart` contains the responsive filters and cards,
-and `coordinacion_horarios_models.dart` parses the API data.
+and `coordinacion_horarios_models.dart` parses the API data. Subject choices
+come from the official six-semester curriculum for the selected technology.
+Shared subjects are automatically associated with every technology whose
+curriculum includes them; coordination no longer selects sharing careers
+manually. Each teacher can still be assigned up to two subjects.
 
 The student dashboard uses the authenticated user's profile from
 `GET /api/usuarios/perfil`, tutor availability from

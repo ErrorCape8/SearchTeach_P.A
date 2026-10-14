@@ -10,13 +10,11 @@ class CoordinacionHorariosFormPage extends ConsumerStatefulWidget {
   const CoordinacionHorariosFormPage({
     required this.teacher,
     this.existing,
-    this.subjectSuggestions = const [],
     super.key,
   });
 
   final Teacher teacher;
   final TutorSchedule? existing;
-  final List<String> subjectSuggestions;
 
   @override
   ConsumerState<CoordinacionHorariosFormPage> createState() =>
@@ -29,15 +27,20 @@ class _CoordinacionHorariosFormPageState
   late final TextEditingController _career;
   late final TextEditingController _location;
   late final TextEditingController _subjectEntry;
+  TextEditingController? _subjectFieldController;
   late List<ScheduleSubject> _subjects;
-  final Set<String> _sharedCareers = {};
+  List<ScheduleSubject> _catalogSubjects = const [];
+  String? _chosenSubject;
   late int _semester;
   late String _day;
   late String _modality;
   late TimeOfDay _start;
   late TimeOfDay _end;
   bool _saving = false;
+  bool _loadingSubjects = false;
+  int _subjectRequest = 0;
   String? _error;
+  String? _catalogError;
 
   @override
   void initState() {
@@ -47,12 +50,13 @@ class _CoordinacionHorariosFormPageState
     _location = TextEditingController(text: schedule?.ubicacion ?? '');
     _subjectEntry = TextEditingController();
     _subjects = [...?schedule?.materias];
-    _semester = schedule?.semestre ?? 1;
+    _semester = (schedule?.semestre ?? 1).clamp(1, 6);
     _day = schedule?.dia ?? 'Lunes';
     _modality = schedule?.modalidad ?? 'Presencial';
     _start =
         _readTime(schedule?.horaInicio, const TimeOfDay(hour: 8, minute: 0));
     _end = _readTime(schedule?.horaFin, const TimeOfDay(hour: 10, minute: 0));
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadSubjectCatalog());
   }
 
   @override
@@ -85,12 +89,76 @@ class _CoordinacionHorariosFormPageState
     setState(() => start ? _start = selected : _end = selected);
   }
 
+  Future<void> _loadSubjectCatalog() async {
+    final request = ++_subjectRequest;
+    final career = _career.text.trim();
+    if (!careerCatalog.contains(career)) {
+      if (mounted) {
+        setState(() {
+          _catalogSubjects = const [];
+          _catalogError = null;
+          _loadingSubjects = false;
+        });
+      }
+      return;
+    }
+    setState(() {
+      _loadingSubjects = true;
+      _catalogError = null;
+    });
+    try {
+      final response = await ref.read(dioProvider).get<List<dynamic>>(
+        '/api/coordinacion/horarios/materias',
+        queryParameters: {'carrera': career, 'semestre': _semester},
+      );
+      final data = response.data;
+      if (data == null) {
+        throw const FormatException('El servidor devolvió un catálogo vacío.');
+      }
+      final subjects = data.map((entry) {
+        if (entry is! Map<String, dynamic>) {
+          throw const FormatException('El catálogo de materias es inválido.');
+        }
+        return ScheduleSubject.fromJson(entry);
+      }).toList(growable: false);
+      if (!mounted || request != _subjectRequest) return;
+      setState(() {
+        _catalogSubjects = subjects;
+        _loadingSubjects = false;
+      });
+    } on DioException catch (error) {
+      if (!mounted || request != _subjectRequest) return;
+      setState(() {
+        _catalogError = apiError(error, 'No se pudieron cargar las materias.');
+        _loadingSubjects = false;
+      });
+    } on FormatException catch (error) {
+      if (!mounted || request != _subjectRequest) return;
+      setState(() {
+        _catalogError = error.message;
+        _loadingSubjects = false;
+      });
+    }
+  }
+
   Future<void> _save() async {
     if (!careerCatalog.contains(_career.text.trim())) {
       setState(() => _error = 'Indica la carrera o selecciona una tecnología.');
       return;
     }
+    if (_loadingSubjects || _catalogError != null) {
+      setState(() =>
+          _error = 'Espera a que cargue el catálogo oficial de materias.');
+      return;
+    }
     if (!_formKey.currentState!.validate()) return;
+    final validSubjects =
+        _catalogSubjects.map((subject) => subject.nombre).toSet();
+    if (_subjects.any((subject) => !validSubjects.contains(subject.nombre))) {
+      setState(() => _error =
+          'Quita las materias que no pertenecen al plan de estudios de esta carrera y semestre.');
+      return;
+    }
     if (_formatTime(_end).compareTo(_formatTime(_start)) <= 0) {
       setState(() => _error =
           'La hora de finalización debe ser posterior a la de inicio.');
@@ -127,8 +195,11 @@ class _CoordinacionHorariosFormPageState
   }
 
   void _addSubject() {
-    final name = _subjectEntry.text.trim();
-    if (name.isEmpty) return;
+    final name = _chosenSubject;
+    if (name == null) {
+      setState(() => _error = 'Selecciona una materia del plan de estudios.');
+      return;
+    }
     if (_subjects.length >= 2) {
       setState(() =>
           _error = 'Cada docente puede asignar como máximo dos materias.');
@@ -139,16 +210,18 @@ class _CoordinacionHorariosFormPageState
       setState(() => _error = 'Esa materia ya está agregada.');
       return;
     }
+    final matches = _catalogSubjects.where((subject) => subject.nombre == name);
+    final catalogSubject = matches.isEmpty ? null : matches.first;
+    if (catalogSubject == null) {
+      setState(
+          () => _error = 'La materia no pertenece al plan de estudios actual.');
+      return;
+    }
     setState(() {
-      _subjects.add(ScheduleSubject(
-        nombre: name,
-        carreras: {
-          if (_career.text.trim().isNotEmpty) _career.text.trim(),
-          ..._sharedCareers,
-        }.toList(),
-      ));
+      _subjects.add(catalogSubject);
       _subjectEntry.clear();
-      _sharedCareers.clear();
+      _subjectFieldController?.clear();
+      _chosenSubject = null;
       _error = null;
     });
   }
@@ -161,14 +234,7 @@ class _CoordinacionHorariosFormPageState
         'horaFin': _formatTime(_end),
         'modalidad': _modality,
         'ubicacion': _location.text.trim(),
-        'materias': _subjects.map((subject) {
-          final careers = {...subject.carreras, _career.text.trim()}
-            ..removeWhere((career) => career.isEmpty);
-          return ScheduleSubject(
-            nombre: subject.nombre,
-            carreras: careers.toList(),
-          ).toJson();
-        }).toList(),
+        'materias': _subjects.map((subject) => subject.toJson()).toList(),
       };
 
   @override
@@ -222,9 +288,16 @@ class _CoordinacionHorariosFormPageState
                               return careerCatalog.where((career) =>
                                   career.toLowerCase().contains(query));
                             },
-                            onSelected: (career) => setState(() {
-                              _career.text = career;
-                            }),
+                            onSelected: (career) {
+                              setState(() {
+                                _career.text = career;
+                                _catalogSubjects = const [];
+                                _chosenSubject = null;
+                                _subjectEntry.clear();
+                                _subjectFieldController?.clear();
+                              });
+                              _loadSubjectCatalog();
+                            },
                             fieldViewBuilder:
                                 (context, controller, focusNode, onSubmitted) =>
                                     TextField(
@@ -232,7 +305,8 @@ class _CoordinacionHorariosFormPageState
                               focusNode: focusNode,
                               onChanged: (value) {
                                 _career.text = value;
-                                setState(() {});
+                                _chosenSubject = null;
+                                _loadSubjectCatalog();
                               },
                               decoration: const InputDecoration(
                                 labelText: 'Tecnología / carrera',
@@ -248,32 +322,65 @@ class _CoordinacionHorariosFormPageState
                                 style: TextStyle(fontWeight: FontWeight.w700)),
                           ),
                           const SizedBox(height: 8),
-                          Autocomplete<String>(
-                            optionsBuilder: (value) {
-                              final options = {
-                                ...suggestedSubjects,
-                                ...widget.subjectSuggestions,
-                                ..._subjects.map((subject) => subject.nombre),
-                              };
-                              final query = value.text.trim().toLowerCase();
-                              return options.where((subject) =>
-                                  subject.toLowerCase().contains(query));
-                            },
-                            onSelected: (subject) =>
-                                _subjectEntry.text = subject,
-                            fieldViewBuilder:
-                                (context, controller, focusNode, onSubmitted) =>
-                                    TextField(
-                              controller: controller,
-                              focusNode: focusNode,
-                              onChanged: (value) => _subjectEntry.text = value,
-                              decoration: const InputDecoration(
-                                labelText: 'Materia',
-                                hintText: 'Escribe para ver sugerencias',
-                                border: OutlineInputBorder(),
+                          if (_loadingSubjects) const LinearProgressIndicator(),
+                          if (_catalogError != null)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: Text(
+                                _catalogError!,
+                                style: TextStyle(
+                                    color: Theme.of(context).colorScheme.error),
                               ),
                             ),
+                          Autocomplete<String>(
+                            optionsBuilder: (value) {
+                              final query = value.text.trim().toLowerCase();
+                              return _catalogSubjects
+                                  .map((subject) => subject.nombre)
+                                  .where((subject) =>
+                                      subject.toLowerCase().contains(query) &&
+                                      !_subjects.any((selected) =>
+                                          selected.nombre == subject));
+                            },
+                            onSelected: (subject) => setState(() {
+                              _subjectEntry.text = subject;
+                              _chosenSubject = subject;
+                            }),
+                            fieldViewBuilder:
+                                (context, controller, focusNode, onSubmitted) =>
+                                    Builder(
+                              builder: (context) {
+                                _subjectFieldController = controller;
+                                return TextField(
+                                  controller: controller,
+                                  focusNode: focusNode,
+                                  onChanged: (value) {
+                                    _subjectEntry.text = value;
+                                    if (value != _chosenSubject) {
+                                      _chosenSubject = null;
+                                    }
+                                  },
+                                  decoration: InputDecoration(
+                                    labelText: 'Materia',
+                                    hintText: _catalogSubjects.isEmpty
+                                        ? 'Selecciona primero carrera y semestre'
+                                        : 'Busca una materia del plan de estudios',
+                                    border: const OutlineInputBorder(),
+                                  ),
+                                );
+                              },
+                            ),
                           ),
+                          if (_catalogSubjects.isEmpty &&
+                              !_loadingSubjects &&
+                              _catalogError == null)
+                            const Padding(
+                              padding: EdgeInsets.only(top: 6),
+                              child: Text(
+                                'Elige una tecnología válida para consultar sus materias.',
+                                style: TextStyle(fontSize: 12),
+                              ),
+                            ),
                           const SizedBox(height: 8),
                           Align(
                             alignment: Alignment.centerRight,
@@ -309,32 +416,6 @@ class _CoordinacionHorariosFormPageState
                             ),
                             const SizedBox(height: 8),
                           ],
-                          Text(
-                            'Si la materia también pertenece a otras tecnologías, selecciónalas:',
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                          const SizedBox(height: 4),
-                          Wrap(
-                            spacing: 6,
-                            runSpacing: 0,
-                            children: [
-                              for (final career in careerCatalog.where(
-                                  (career) => career != _career.text.trim()))
-                                FilterChip(
-                                  label:
-                                      Text(career.split(' ').skip(2).join(' ')),
-                                  tooltip: career,
-                                  selected: _sharedCareers.contains(career),
-                                  onSelected: (selected) => setState(() {
-                                    if (selected) {
-                                      _sharedCareers.add(career);
-                                    } else {
-                                      _sharedCareers.remove(career);
-                                    }
-                                  }),
-                                ),
-                            ],
-                          ),
                           const SizedBox(height: 14),
                           DropdownButtonFormField<int>(
                             initialValue: _semester,
@@ -343,13 +424,20 @@ class _CoordinacionHorariosFormPageState
                               border: OutlineInputBorder(),
                             ),
                             items: [
-                              for (var item = 1; item <= 12; item++)
+                              for (var item = 1; item <= 6; item++)
                                 DropdownMenuItem(
                                     value: item, child: Text('$item')),
                             ],
                             onChanged: (value) {
                               if (value != null) {
-                                setState(() => _semester = value);
+                                setState(() {
+                                  _semester = value;
+                                  _catalogSubjects = const [];
+                                  _chosenSubject = null;
+                                  _subjectEntry.clear();
+                                  _subjectFieldController?.clear();
+                                });
+                                _loadSubjectCatalog();
                               }
                             },
                           ),

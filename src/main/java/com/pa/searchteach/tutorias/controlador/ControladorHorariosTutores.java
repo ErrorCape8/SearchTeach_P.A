@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.pa.searchteach.tutorias.dto.DocenteCoordinacion;
 import com.pa.searchteach.tutorias.dto.HorarioTutorSolicitud;
+import com.pa.searchteach.tutorias.modelo.MateriaHorario;
 import com.pa.searchteach.tutorias.modelo.HorarioTutor;
 import com.pa.searchteach.tutorias.servicio.HorariosTutoresService;
 import jakarta.validation.Valid;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -34,6 +36,13 @@ public class ControladorHorariosTutores {
 	@GetMapping("/api/coordinacion/horarios")
 	public List<HorarioTutor> listarHorarios() {
 		return servicio.listarHorarios();
+	}
+
+	@GetMapping("/api/coordinacion/horarios/materias")
+	public List<MateriaHorario> listarMaterias(
+			@RequestParam String carrera,
+			@RequestParam int semestre) {
+		return servicio.listarMaterias(carrera, semestre);
 	}
 
 	@PostMapping("/api/coordinacion/horarios/{docenteId}")

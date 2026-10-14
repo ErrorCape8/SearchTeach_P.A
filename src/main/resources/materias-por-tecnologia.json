@@ -1,0 +1,908 @@
+{
+  "Tecnología en Automatización Electrónica Industrial": {
+    "1": [
+      "Precálculo",
+      "Lenguaje de programación I",
+      "Fundamentos de automatización",
+      "Comunicación oral y escrita",
+      "Proyecto de vida"
+    ],
+    "2": [
+      "Física mecánica y laboratorio",
+      "Cálculo diferencial",
+      "Lenguajes de programación II",
+      "Sistemas digitales",
+      "Seminario investigativo",
+      "Deporte y cultura"
+    ],
+    "3": [
+      "Física eléctrica y laboratorio",
+      "Cálculo integral",
+      "Álgebra lineal",
+      "Estadística",
+      "Sistemas embebidos",
+      "Inglés I"
+    ],
+    "4": [
+      "Circuitos eléctricos",
+      "Mantenimiento eléctrico y electrónico I",
+      "Instrumentación industrial",
+      "Electiva libre sociohumanística I",
+      "Competencias ciudadanas",
+      "Inglés II"
+    ],
+    "5": [
+      "Mantenimiento eléctrico y electrónico II",
+      "Automatismos eléctricos",
+      "Sistemas de control industrial",
+      "Electrónica analógica",
+      "Electiva de profundización I",
+      "Electiva libre sociohumanística II",
+      "Inglés III"
+    ],
+    "6": [
+      "Electroneumática y electrohidráulica",
+      "Controladores programables",
+      "Comunicaciones industriales & HMI",
+      "Electiva de profundización II",
+      "Innovación & emprendimiento",
+      "Ambiente y desarrollo",
+      "Inglés IV"
+    ]
+  },
+  "Tecnología en Gestión del Talento Humano": {
+    "1": [
+      "Fundamentos de derecho",
+      "Fundamentos de administración",
+      "Contabilidad general",
+      "Proyecto de vida",
+      "Cultura y deporte",
+      "Matemática",
+      "Comunicación oral y escrita"
+    ],
+    "2": [
+      "Legislación empresarial",
+      "Proceso administrativo",
+      "Costos y presupuestos",
+      "Introducción a la Gestión del Talento Humano",
+      "Seminario investigativo",
+      "Economía general"
+    ],
+    "3": [
+      "Seguridad y salud en el trabajo",
+      "Tecnología aplicada",
+      "Estadística",
+      "Comportamiento organizacional",
+      "Matemáticas financieras",
+      "Macroeconomía",
+      "Inglés I"
+    ],
+    "4": [
+      "Ética",
+      "Atracción y selección de talento humano",
+      "Fundamentos de finanzas",
+      "Fundamentos de mercadeo",
+      "Electiva de profundización I",
+      "Inglés II"
+    ],
+    "5": [
+      "Desarrollo del talento humano",
+      "Sistemas de compensación",
+      "Nómina, registro y control de personal",
+      "Organización y métodos de trabajo",
+      "Electiva sociohumanística I",
+      "Electiva de profundización II",
+      "Inglés III"
+    ],
+    "6": [
+      "Ambiente y desarrollo",
+      "Innovación y emprendimiento",
+      "Medición de procesos de talento humano",
+      "Desarrollo organizacional",
+      "Electiva sociohumanística II",
+      "Electiva de profundización III",
+      "Inglés IV"
+    ]
+  },
+  "Tecnología en Gestión Contable": {
+    "1": [
+      "Contabilidad I",
+      "Fundamentos de derecho",
+      "Comunicación oral y escrita",
+      "Matemáticas",
+      "Sistemas de información I",
+      "Proyecto de vida",
+      "Cultura y deporte"
+    ],
+    "2": [
+      "Contabilidad II",
+      "Legislación comercial",
+      "Epistemología de la investigación",
+      "Sistemas de información II",
+      "Economía I",
+      "Fundamentos de administración"
+    ],
+    "3": [
+      "Contabilidad III",
+      "Legislación laboral",
+      "Seminario investigativo",
+      "Sistemas de información III",
+      "Economía II",
+      "Proceso administrativo",
+      "Inglés I"
+    ],
+    "4": [
+      "Contabilidad IV",
+      "Sociedades",
+      "Investigación contable",
+      "Estadística descriptiva",
+      "Aplicaciones contables I",
+      "Gestión del talento humano",
+      "Inglés II"
+    ],
+    "5": [
+      "Costos I",
+      "Legislación tributaria I",
+      "Auditoría I",
+      "Electiva de profundización I",
+      "Aplicaciones contables II",
+      "Electiva sociohumanística I",
+      "Inglés III"
+    ],
+    "6": [
+      "Costos II",
+      "Auditoría II",
+      "Electiva de profundización II",
+      "Aplicaciones contables III",
+      "Innovación y emprendimiento",
+      "Electiva sociohumanística II",
+      "Inglés IV"
+    ]
+  },
+  "Tecnología en Gestión Financiera": {
+    "1": [
+      "Fundamentos de derecho",
+      "Fundamentos de administración",
+      "Contabilidad general",
+      "Proyecto de vida",
+      "Comunicación oral y escrita",
+      "Matemáticas",
+      "Cultura y deporte"
+    ],
+    "2": [
+      "Legislación empresarial",
+      "Proceso administrativo",
+      "Costos y presupuestos",
+      "Contabilidad financiera",
+      "Seminario investigativo",
+      "Economía general",
+      "Inglés I"
+    ],
+    "3": [
+      "Legislación financiera",
+      "Tecnología aplicada",
+      "Análisis financiero",
+      "Matemáticas financieras",
+      "Macroeconomía",
+      "Inglés II"
+    ],
+    "4": [
+      "Ética",
+      "Finanzas corporativas de corto plazo",
+      "Evaluación financiera de proyectos",
+      "Fundamentos de mercadeo",
+      "Estadística",
+      "Electiva de profundización I",
+      "Inglés III"
+    ],
+    "5": [
+      "Talento humano",
+      "Finanzas de largo plazo",
+      "Mercado financiero",
+      "Organización y métodos de trabajo",
+      "Electiva sociohumanística I",
+      "Electiva de profundización II",
+      "Inglés IV"
+    ],
+    "6": [
+      "Ambiente y desarrollo",
+      "Innovación y emprendimiento",
+      "Finanzas internacionales",
+      "Mercado de derivados",
+      "Electiva sociohumanística II",
+      "Electiva de profundización III",
+      "Inglés V"
+    ]
+  },
+  "Tecnología en Gestión de Negocios Internacionales": {
+    "1": [
+      "Fundamentos de derecho",
+      "Fundamentos de administración",
+      "Contabilidad general",
+      "Proyecto de vida",
+      "Cultura y deporte",
+      "Matemáticas",
+      "Comunicación oral y escrita"
+    ],
+    "2": [
+      "Legislación empresarial",
+      "Proceso administrativo",
+      "Costos y presupuestos",
+      "Seminario investigativo",
+      "Introducción a los negocios internacionales",
+      "Economía general",
+      "Inglés I"
+    ],
+    "3": [
+      "Legislación para el comercio exterior",
+      "Tecnología aplicada",
+      "Internacionalización",
+      "Matemáticas financieras",
+      "Macroeconomía",
+      "Inglés II"
+    ],
+    "4": [
+      "Ética",
+      "Fundamentos de finanzas",
+      "Importaciones y exportaciones",
+      "Estadística",
+      "Fundamentos de mercadeo",
+      "Electiva de profundización I",
+      "Inglés III"
+    ],
+    "5": [
+      "Talento humano",
+      "Marketing internacional",
+      "Organización y métodos de trabajo",
+      "Electiva sociohumanística I",
+      "Electiva de profundización II",
+      "Inglés IV"
+    ],
+    "6": [
+      "Ambiente y desarrollo",
+      "Innovación y emprendimiento",
+      "Finanzas internacionales",
+      "DFI / SCM (logística internacional y cadena de suministro)",
+      "Electiva sociohumanística II",
+      "Electiva de profundización III",
+      "Inglés V"
+    ]
+  },
+  "Tecnología en Gestión Logística y Portuaria": {
+    "1": [
+      "Comunicación oral y escrita",
+      "Contabilidad general",
+      "Fundamentos de administración",
+      "Matemáticas",
+      "Fundamentos de derecho",
+      "Proyecto de vida",
+      "Cultura y deporte"
+    ],
+    "2": [
+      "Seminario investigativo",
+      "Costos y presupuestos",
+      "Proceso administrativo",
+      "Economía general",
+      "Fundamentos de logística",
+      "Inglés I"
+    ],
+    "3": [
+      "Tecnología aplicada",
+      "Estadística",
+      "Matemáticas financieras",
+      "Legislación empresarial",
+      "Macroeconomía",
+      "Fundamentos de operaciones portuarias",
+      "Inglés II"
+    ],
+    "4": [
+      "Ambiente y desarrollo",
+      "Gestión del talento humano",
+      "Organización y métodos de trabajo",
+      "Logística de aprovisionamiento",
+      "Electiva de profundización I",
+      "Inglés III"
+    ],
+    "5": [
+      "Fundamentos de mercadeo",
+      "Electiva sociohumanística I",
+      "Ética",
+      "Legislación marítima y aduanera",
+      "Logística de producción",
+      "Electiva de profundización II",
+      "Inglés IV"
+    ],
+    "6": [
+      "Electiva sociohumanística II",
+      "Innovación y emprendimiento",
+      "Fundamentos de finanzas",
+      "Gestión portuaria",
+      "Logística de distribución",
+      "Electiva de profundización III",
+      "Inglés V"
+    ]
+  },
+  "Tecnología en Gestión Turística y Hotelera": {
+    "1": [
+      "Comunicación oral y escrita",
+      "Contabilidad general",
+      "Fundamentos de administración",
+      "Matemática aplicada",
+      "Fundamentos de derecho",
+      "Proyecto de vida",
+      "Fundamentos y teoría turística y hotelera"
+    ],
+    "2": [
+      "Seminario investigativo",
+      "Costos I",
+      "Proceso administrativo",
+      "Economía general",
+      "Gestión de servicios de hospedaje",
+      "Cultura y deporte",
+      "Inglés I"
+    ],
+    "3": [
+      "Gestión de cocina nacional e internacional",
+      "Estadísticas",
+      "Sistemas de información",
+      "Macroeconomía",
+      "Legislación comercial",
+      "Patrimonio y espacio turístico",
+      "Inglés II"
+    ],
+    "4": [
+      "Matemáticas II",
+      "Matemáticas financieras",
+      "Énfasis I",
+      "Costos y presupuestos",
+      "Organización y métodos de trabajo",
+      "Diseño de productos turísticos",
+      "Inglés III"
+    ],
+    "5": [
+      "Fundamentos de finanzas",
+      "Ambiente y desarrollo",
+      "Énfasis II",
+      "Fundamentos de marketing turístico",
+      "Electiva I",
+      "Planeación turística",
+      "Inglés IV"
+    ],
+    "6": [
+      "Gestión del talento humano",
+      "Innovación y emprendimiento",
+      "Énfasis III",
+      "Composición de menús",
+      "Electiva II",
+      "Formulación y evaluación de proyectos turísticos",
+      "Legislación laboral",
+      "Inglés V"
+    ]
+  },
+  "Tecnología en Gestión de Redes de Computadores y Seguridad Informática": {
+    "1": [
+      "Introducción a las redes",
+      "Algoritmos y programación",
+      "Precálculo",
+      "Comunicación oral y escrita",
+      "Proyecto de vida",
+      "Ambiente y desarrollo"
+    ],
+    "2": [
+      "Redes de computadores",
+      "Cultura y deporte",
+      "Programación orientada a objetos",
+      "Cálculo diferencial",
+      "Física mecánica y laboratorio",
+      "Cisco"
+    ],
+    "3": [
+      "Fundamentos de seguridad informática",
+      "Estructuras de datos aplicadas",
+      "Estadística",
+      "Cálculo integral",
+      "Electiva libre sociohumanística I",
+      "Inglés I"
+    ],
+    "4": [
+      "Análisis de vulnerabilidades",
+      "Electrónica digital y de las comunicaciones",
+      "Desarrollo de software I",
+      "Bases de datos",
+      "Inglés II"
+    ],
+    "5": [
+      "Seguridad en redes y servicios",
+      "Desarrollo de software II",
+      "Seminario investigativo",
+      "Innovación y emprendimiento",
+      "Electiva de profundización I",
+      "Inglés III"
+    ],
+    "6": [
+      "Seguridad en sistemas operativos de red",
+      "Redes de servicios convergentes",
+      "Electiva libre sociohumanística II",
+      "Ingeniería de software",
+      "Competencias ciudadanas",
+      "Electiva de profundización II",
+      "Inglés IV"
+    ]
+  },
+  "Tecnología en Desarrollo de Software": {
+    "1": [
+      "Algoritmo y programación",
+      "Precálculo",
+      "Comunicación oral y escrita",
+      "Proyecto de vida",
+      "Ambiente y desarrollo"
+    ],
+    "2": [
+      "Programación I",
+      "Cultura y deporte",
+      "Álgebra lineal",
+      "Cálculo diferencial",
+      "Física mecánica y laboratorio",
+      "Electiva libre sociohumanística I"
+    ],
+    "3": [
+      "Programación II",
+      "Estadística",
+      "Cálculo integral",
+      "Física eléctrica y laboratorio",
+      "Seminario investigativo",
+      "Inglés I"
+    ],
+    "4": [
+      "Cálculo de varias variables",
+      "Estructuras de datos aplicada",
+      "Desarrollo de software I",
+      "Base de datos I",
+      "Electiva libre sociohumanística II",
+      "Comunicación de datos",
+      "Inglés II"
+    ],
+    "5": [
+      "Ecuaciones diferenciales",
+      "Bases de datos II",
+      "Desarrollo de software II",
+      "Visualización de datos I",
+      "Redes de computadores",
+      "Electiva I",
+      "Inglés III",
+      "Cisco"
+    ],
+    "6": [
+      "Matemáticas discretas",
+      "Minería de datos I",
+      "Ingeniería de software",
+      "Competencias ciudadanas",
+      "Innovación y emprendimiento",
+      "Electiva II",
+      "Inglés IV"
+    ]
+  },
+  "Tecnología en Seguridad e Higiene Ocupacional": {
+    "1": [
+      "Precálculo",
+      "Algoritmo",
+      "Química general y laboratorio",
+      "Introducción a la seguridad e higiene ocupacional",
+      "Elaboración e interpretación de planos",
+      "Comunicación oral y escrita",
+      "Proyecto de vida"
+    ],
+    "2": [
+      "Cálculo diferencial",
+      "Procesos industriales",
+      "Física mecánica y laboratorio",
+      "Legislación en seguridad y salud en el trabajo",
+      "Gestión de materiales y sustancias peligrosas",
+      "Cultura y deporte"
+    ],
+    "3": [
+      "Cálculo integral",
+      "Estadística",
+      "Física eléctrica y laboratorio",
+      "Higiene ocupacional I",
+      "Seguridad industrial I",
+      "Inglés I"
+    ],
+    "4": [
+      "Medicina preventiva y del trabajo",
+      "Estadística aplicada",
+      "Higiene ocupacional II",
+      "Seguridad industrial II",
+      "Administración general",
+      "Seminario investigativo",
+      "Inglés II"
+    ],
+    "5": [
+      "Innovación y emprendimiento",
+      "Ergonomía",
+      "Higiene ocupacional III",
+      "Sistemas de costeo",
+      "Electiva libre sociohumanística I",
+      "Electiva de profundización I",
+      "Inglés III"
+    ],
+    "6": [
+      "Competencia ciudadana",
+      "Gestión del talento humano",
+      "Ambiente y desarrollo",
+      "Seguridad industrial III",
+      "Electiva libre sociohumanística II",
+      "Electiva de profundización II",
+      "Inglés IV"
+    ]
+  },
+  "Tecnología en Producción Industrial": {
+    "1": [
+      "Precálculo",
+      "Algoritmo",
+      "Química general y laboratorio",
+      "Principios de los sistemas productivos",
+      "Proyecto de vida",
+      "Comunicación oral y escrita"
+    ],
+    "2": [
+      "Cálculo diferencial",
+      "Física mecánica y laboratorio",
+      "Ciencia de los materiales",
+      "Elaboración e interpretación de planos",
+      "Seminario investigativo",
+      "Cultura y deportes"
+    ],
+    "3": [
+      "Cálculo integral",
+      "Estadística",
+      "Física eléctrica y laboratorio",
+      "Procesos de manufactura",
+      "Electiva libre sociohumanística I",
+      "Inglés I"
+    ],
+    "4": [
+      "Sistemas de costeo",
+      "Álgebra lineal",
+      "Estudio del trabajo",
+      "Administración general",
+      "Ambiente y desarrollo",
+      "Electiva libre sociohumanística II",
+      "Inglés II"
+    ],
+    "5": [
+      "Mantenimiento industrial",
+      "Gestión de los sistemas ambientales y de seguridad y salud en el trabajo",
+      "Producción I",
+      "Electiva de énfasis I",
+      "Innovación y emprendimiento",
+      "Inglés III"
+    ],
+    "6": [
+      "Control estadístico de procesos",
+      "Gestión de red de abastecimiento",
+      "Producción II",
+      "Electiva de énfasis II",
+      "Competencia ciudadana",
+      "Inglés IV"
+    ]
+  },
+  "Tecnología en Control de Calidad": {
+    "1": [
+      "Precálculo",
+      "Algoritmo",
+      "Química general y laboratorio",
+      "Introducción a la calidad",
+      "Comunicación oral y escrita",
+      "Proyecto de vida"
+    ],
+    "2": [
+      "Cálculo diferencial",
+      "Álgebra lineal",
+      "Física mecánica y laboratorio",
+      "Química industrial y laboratorio",
+      "Seminario investigativo",
+      "Cultura y deporte"
+    ],
+    "3": [
+      "Cálculo integral",
+      "Estadística",
+      "Física eléctrica y laboratorio",
+      "Química analítica y laboratorio",
+      "Gestión de procesos empresariales",
+      "Inglés I"
+    ],
+    "4": [
+      "Estadística aplicada",
+      "Metrología y ensayo",
+      "Control de calidad I",
+      "Sistemas de gestión I",
+      "Electiva de profundización I",
+      "Inglés II"
+    ],
+    "5": [
+      "Procesos de manufactura",
+      "Evaluación económica de la calidad",
+      "Control de calidad II",
+      "Sistemas de gestión II",
+      "Electiva libre sociohumanística I",
+      "Electiva de profundización II",
+      "Inglés III"
+    ],
+    "6": [
+      "Competencia ciudadana",
+      "Ambiente y desarrollo",
+      "Auditoría de sistemas de gestión",
+      "Control estadístico de procesos",
+      "Innovación y emprendimiento",
+      "Electiva libre sociohumanística II",
+      "Electiva de profundización III",
+      "Inglés IV"
+    ]
+  },
+  "Tecnología de Plantas y Procesos Industriales": {
+    "1": [
+      "Precálculo",
+      "Química general y laboratorio",
+      "Algoritmo",
+      "Proyecto de vida",
+      "Comunicación oral y escrita",
+      "Medición de variables"
+    ],
+    "2": [
+      "Cálculo diferencial",
+      "Física mecánica y laboratorio",
+      "Álgebra lineal",
+      "Cultura y deporte",
+      "Procesos orgánicos"
+    ],
+    "3": [
+      "Cálculo integral",
+      "Física eléctrica y laboratorio",
+      "Seminario investigativo",
+      "Interpretación de planos de proceso",
+      "Balance de materia",
+      "Inglés I"
+    ],
+    "4": [
+      "Ecuaciones diferenciales",
+      "Gestión integral de procesos",
+      "Electiva de profundización I",
+      "Estadística",
+      "Termodinámica",
+      "Inglés II"
+    ],
+    "5": [
+      "Sistemas de control",
+      "Análisis del requerimiento energético",
+      "Electiva de profundización II",
+      "Electiva libre sociohumanística I",
+      "Mecánica de fluidos",
+      "Inglés III"
+    ],
+    "6": [
+      "Procesos industriales",
+      "Mantenimiento industrial",
+      "Innovación y emprendimiento",
+      "Electiva libre sociohumanística II",
+      "Competencias ciudadanas",
+      "Fundamentos de operaciones unitarias",
+      "Inglés IV"
+    ]
+  },
+  "Tecnología en Gestión Ambiental Industrial": {
+    "1": [
+      "Precálculo",
+      "Química general y laboratorio",
+      "Sistemas biológicos",
+      "Educación ambiental",
+      "Proyecto de vida",
+      "Comunicación oral y escrita",
+      "Cultura y deporte"
+    ],
+    "2": [
+      "Cálculo diferencial",
+      "Elaboración e interpretación de planos",
+      "Química ambiental e industrial",
+      "Biología aplicada",
+      "Seminario investigativo",
+      "Administración general"
+    ],
+    "3": [
+      "Microbiología",
+      "Cálculo integral",
+      "Física mecánica y laboratorio",
+      "Estadística",
+      "Análisis químico",
+      "Inglés I"
+    ],
+    "4": [
+      "Fisicoquímica",
+      "Cálculo de varias variables",
+      "Física eléctrica y laboratorio",
+      "Cartografía y topografía",
+      "Métodos estadísticos inferenciales y multivariables",
+      "Electiva libre sociohumanística I",
+      "Inglés II"
+    ],
+    "5": [
+      "Ecuaciones diferenciales",
+      "Balance de materia y energía",
+      "Monitoreo y control de la calidad del aire",
+      "Optativa I",
+      "Electiva libre sociohumanística II",
+      "Monitoreo y control de la calidad del agua",
+      "Inglés III"
+    ],
+    "6": [
+      "Manejo integral de residuos sólidos",
+      "Innovación y emprendimiento",
+      "Competencia ciudadana",
+      "Optativa II",
+      "Sistemas integrados de gestión",
+      "Fluidos",
+      "Inglés IV"
+    ]
+  },
+  "Tecnología en Gestión de Marketing": {
+    "1": [
+      "Fundamentos de derecho",
+      "Contabilidad general",
+      "Fundamentos de administración",
+      "Matemáticas",
+      "Comunicación oral y escrita",
+      "Proyecto de vida",
+      "Cultura y deporte"
+    ],
+    "2": [
+      "Economía general",
+      "Costos y presupuestos",
+      "Proceso administrativo",
+      "Fundamentos de marketing",
+      "Seminario investigativo",
+      "Inglés I"
+    ],
+    "3": [
+      "Legislación empresarial",
+      "Macroeconomía",
+      "Comportamiento del consumidor",
+      "Tecnología aplicada",
+      "Matemáticas financieras",
+      "Producto y precio",
+      "Inglés II"
+    ],
+    "4": [
+      "Ética",
+      "Investigación de mercados",
+      "Estadística",
+      "Electiva de profundización I",
+      "Retail y consumo",
+      "Distribución y logística",
+      "Inglés III"
+    ],
+    "5": [
+      "Talento humano",
+      "Organización y métodos de trabajo",
+      "Ambiente y desarrollo",
+      "Electiva de profundización II",
+      "Electiva sociohumanística I",
+      "Comunicación en marketing",
+      "Inglés IV"
+    ],
+    "6": [
+      "Fundamentos de finanzas",
+      "Innovación y emprendimiento",
+      "Electiva de profundización III",
+      "Electiva sociohumanística II",
+      "Marketing digital",
+      "Gestión de ventas",
+      "Inglés V"
+    ]
+  },
+  "Tecnología en Promoción Social": {
+    "1": [
+      "Psicología I",
+      "Fundamentos de sociología",
+      "Organización del Estado",
+      "Fundamentos de la promoción social",
+      "Herramientas tecnológicas",
+      "Comunicación oral y escrita",
+      "Proyecto de vida"
+    ],
+    "2": [
+      "Psicología II",
+      "Antropología y cultura",
+      "Problemáticas sociales del contexto",
+      "Intervención social con familias y grupos",
+      "Teorías de familia",
+      "Competencias ciudadanas",
+      "Deporte y cultura"
+    ],
+    "3": [
+      "Estadística para las ciencias sociales",
+      "Gestión ambiental",
+      "Proyectos sociales I",
+      "Organizaciones sociales y comunitarias",
+      "Políticas sociales",
+      "Seminario investigativo",
+      "Inglés I"
+    ],
+    "4": [
+      "Electiva sociohumanística I",
+      "Comunicación para la gestión comunitaria",
+      "Proyectos sociales II",
+      "Gestión comunitaria",
+      "Conflicto social",
+      "Investigación comunitaria",
+      "Inglés II"
+    ],
+    "5": [
+      "Electiva sociohumanística II",
+      "Desarrollo económico",
+      "Derechos Humanos",
+      "Estrategias didácticas y pedagógicas",
+      "Construcción de paz",
+      "Ética",
+      "Inglés III"
+    ],
+    "6": [
+      "Enfoque diferencial y de género",
+      "Prácticas",
+      "Cultura del emprendimiento",
+      "Pensamiento lógico",
+      "Inglés IV"
+    ]
+  },
+  "Tecnología en Construcciones Civiles": {
+    "1": [
+      "Precálculo",
+      "Química general y laboratorio",
+      "Algoritmo y programación",
+      "Construcciones civiles",
+      "Comunicación oral y escrita",
+      "Proyecto de vida"
+    ],
+    "2": [
+      "Cálculo diferencial",
+      "Física mecánica y laboratorio",
+      "Álgebra lineal",
+      "Elaboración e interpretación de planos",
+      "Cultura y deporte",
+      "Seminario investigativo"
+    ],
+    "3": [
+      "Cálculo integral",
+      "Física eléctrica y laboratorio",
+      "Estadística",
+      "Materiales, herramientas y equipos",
+      "Administración general",
+      "Inglés I"
+    ],
+    "4": [
+      "Ecuaciones diferenciales",
+      "Estática",
+      "Geología",
+      "Nuevos materiales",
+      "Topografía y geoinformación",
+      "Inglés II"
+    ],
+    "5": [
+      "Métodos constructivos y presupuestos",
+      "Mecánica de fluidos",
+      "Resistencia de materiales",
+      "Electiva de profundización I",
+      "Electiva libre sociohumanística I",
+      "Gestión del talento humano",
+      "Inglés III"
+    ],
+    "6": [
+      "Construcción sostenible",
+      "Hormigón",
+      "Geotecnia",
+      "Electiva de profundización II",
+      "Electiva libre sociohumanística II",
+      "Competencias ciudadanas",
+      "Inglés IV"
+    ]
+  }
+}

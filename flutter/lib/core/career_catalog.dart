@@ -17,12 +17,3 @@ const careerCatalog = <String>[
   'Tecnología en Promoción Social',
   'Tecnología en Construcciones Civiles',
 ];
-
-const suggestedSubjects = <String>[
-  'Matemáticas discretas',
-  'Estructuras de datos',
-  'Fundamentos de programación',
-  'Resistencia de materiales',
-  'Cálculo I',
-  'Inglés B1',
-];

@@ -13,6 +13,7 @@ import com.pa.searchteach.tutorias.dto.DocenteCoordinacion;
 import com.pa.searchteach.tutorias.dto.HorarioTutorSolicitud;
 import com.pa.searchteach.tutorias.dto.TutorDisponible;
 import com.pa.searchteach.tutorias.modelo.HorarioTutor;
+import com.pa.searchteach.tutorias.modelo.CatalogoMateriasTecnologia;
 import com.pa.searchteach.tutorias.modelo.MateriaHorario;
 import com.pa.searchteach.tutorias.modelo.CatalogoTecnologias;
 import com.pa.searchteach.tutorias.repositorio.HorarioTutorRepository;
@@ -50,6 +51,10 @@ public class HorariosTutoresService {
 		return horarios.findAllByOrderByActualizadoEnDesc();
 	}
 
+	public List<MateriaHorario> listarMaterias(String tecnologia, int semestre) {
+		return CatalogoMateriasTecnologia.listar(tecnologia, semestre);
+	}
+
 	public List<TutorDisponible> listarDisponibles() {
 		var nombres = listarDocentes().stream()
 				.collect(java.util.stream.Collectors.toMap(
@@ -67,7 +72,7 @@ public class HorariosTutoresService {
 						horario.modalidad(),
 						horario.ubicacion(),
 						carrerasDe(horario),
-						horario.materias()))
+						materiasCompartidas(horario)))
 				.toList();
 	}
 
@@ -114,9 +119,12 @@ public class HorariosTutoresService {
 		User estudiante = usuarios.findById(estudianteId)
 				.orElseThrow(() -> new NotFoundException("No se encontrÃ³ el estudiante seleccionado."));
 		String carrera = valor(estudiante.getCarrera());
-		boolean disponible = horario.materias().stream()
-				.filter(item -> item.nombre().equalsIgnoreCase(valor(materia)))
-				.anyMatch(item -> item.carreras().stream().anyMatch(c -> c.equalsIgnoreCase(carrera)));
+		boolean disponible = materiasCompartidas(horario).stream()
+				.filter(item -> CatalogoMateriasTecnologia.normalizar(item.nombre())
+						.equals(CatalogoMateriasTecnologia.normalizar(materia)))
+				.anyMatch(item -> item.carreras().stream()
+						.anyMatch(c -> CatalogoMateriasTecnologia.normalizar(c)
+								.equals(CatalogoMateriasTecnologia.normalizar(carrera))));
 		if (!disponible) {
 			throw new ResponseStatusException(HttpStatus.CONFLICT,
 					"La materia no estÃ¡ disponible para la tecnologÃ­a del estudiante.");
@@ -149,6 +157,9 @@ public class HorariosTutoresService {
 		if (!CatalogoTecnologias.contiene(solicitud.carrera())) {
 			throw new IllegalArgumentException("Selecciona una tecnología del catálogo institucional.");
 		}
+		if (solicitud.semestre() < 1 || solicitud.semestre() > 6) {
+			throw new IllegalArgumentException("El semestre debe estar entre 1 y 6.");
+		}
 		if (!DIAS.contains(solicitud.dia())) {
 			throw new IllegalArgumentException("Selecciona un día válido.");
 		}
@@ -167,14 +178,18 @@ public class HorariosTutoresService {
 			throw new IllegalArgumentException("Cada docente puede tener como máximo dos materias asignadas.");
 		}
 		Set<String> nombresMateria = new HashSet<>();
+		List<MateriaHorario> materiasCatalogo = new ArrayList<>();
 		for (MateriaHorario materia : materias) {
 			if (materia == null || materia.nombre() == null || materia.nombre().isBlank()
-					|| materia.carreras() == null || materia.carreras().isEmpty()
-					|| materia.carreras().stream().anyMatch(carrera -> !CatalogoTecnologias.contiene(carrera))
-					|| materia.carreras().stream().noneMatch(carrera -> carrera.equalsIgnoreCase(solicitud.carrera().trim()))
-					|| !nombresMateria.add(materia.nombre().trim().toLowerCase(Locale.ROOT))) {
-				throw new IllegalArgumentException("Cada materia debe ser única y estar asociada a la tecnología del horario.");
+					|| !CatalogoMateriasTecnologia.contiene(
+							solicitud.carrera(), solicitud.semestre(), materia.nombre())
+					|| !nombresMateria.add(CatalogoMateriasTecnologia.normalizar(materia.nombre()))) {
+				throw new IllegalArgumentException(
+						"Selecciona materias únicas del plan de estudios de la tecnología y semestre indicados.");
 			}
+			materiasCatalogo.add(new MateriaHorario(
+					materia.nombre().trim(),
+					CatalogoMateriasTecnologia.carrerasPara(materia.nombre())));
 		}
 		return new HorarioTutor(
 				id,
@@ -187,7 +202,18 @@ public class HorariosTutoresService {
 				solicitud.modalidad(),
 				valor(solicitud.ubicacion()),
 				LocalDateTime.now(),
-				materias);
+				materiasCatalogo);
+	}
+
+	private List<MateriaHorario> materiasCompartidas(HorarioTutor horario) {
+		return horario.materias().stream()
+				.map(materia -> {
+					List<String> carreras = CatalogoMateriasTecnologia.carrerasPara(materia.nombre());
+					return carreras.isEmpty()
+							? materia
+							: new MateriaHorario(materia.nombre(), carreras);
+				})
+				.toList();
 	}
 
 	private List<String> carrerasDe(HorarioTutor horario) {
