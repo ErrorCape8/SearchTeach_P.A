@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'brand_logo.dart';
 
 const kBlue = Color(0xFF1E3FA8);
 const kNavy = Color(0xFF14146B);
@@ -104,11 +105,11 @@ class _LogoPill extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
         decoration: BoxDecoration(
-          color: const Color(0xFFE8EAF6),
+          color: Colors.white,
           borderRadius: BorderRadius.circular(20),
         ),
         child: const Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(Icons.cast_for_education, color: kBlue),
+          BrandLogo(width: 48, height: 38),
           SizedBox(width: 10),
           Text('SEARCHTEACH',
               style: TextStyle(
@@ -241,10 +242,11 @@ InputDecoration fieldDecoration(String hint, {Widget? suffix}) =>
 
 class DarkButton extends StatelessWidget {
   const DarkButton(this.label,
-      {super.key, this.onPressed, this.loading = false});
+      {super.key, this.onPressed, this.loading = false, this.loadingLabel});
   final String label;
   final VoidCallback? onPressed;
   final bool loading;
+  final String? loadingLabel;
   @override
   Widget build(BuildContext context) => SizedBox(
         width: double.infinity,
@@ -256,11 +258,20 @@ class DarkButton extends StatelessWidget {
                   borderRadius: BorderRadius.circular(18))),
           onPressed: loading ? null : onPressed,
           child: loading
-              ? const SizedBox(
-                  width: 22,
-                  height: 22,
-                  child: CircularProgressIndicator(
-                      strokeWidth: 2, color: Colors.white))
+              ? Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(loadingLabel ?? 'Cargando...',
+                        style: const TextStyle(fontWeight: FontWeight.w600)),
+                  ],
+                )
               : Text(label,
                   style: const TextStyle(fontWeight: FontWeight.w600)),
         ),

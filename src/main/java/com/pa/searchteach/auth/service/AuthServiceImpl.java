@@ -124,6 +124,42 @@ public class AuthServiceImpl implements AuthService {
 	}
 
 	@Override
+	public void verifyRegistration(String identifier, String clientIp) {
+		attemptLimiter.assertAllowed(identifier, clientIp);
+
+		ItAdmin itAdmin = itAdminRepository != null
+				? itAdminRepository.findById(identifier).orElse(null)
+				: null;
+		LiderPrograma liderPrograma = itAdmin == null
+				? repositorioLiderPrograma.findById(identifier).orElse(null)
+				: null;
+		Coordinator legacyCoordinator = itAdmin == null && liderPrograma == null
+				? coordinatorRepository.findById(identifier).orElse(null)
+				: null;
+		User user = itAdmin == null && liderPrograma == null && legacyCoordinator == null
+				? userRepository.findById(identifier).orElse(null)
+				: null;
+
+		if (itAdmin == null && liderPrograma == null && legacyCoordinator == null && user == null) {
+			attemptLimiter.recordFailure(identifier, clientIp);
+			throw new AuthException(HttpStatus.NOT_FOUND,
+					"No encontramos una cuenta autorizada con ese documento. Verificalo e intentalo de nuevo.", true);
+		}
+
+		String passwordHash = itAdmin != null ? itAdmin.getPasswordHash()
+				: liderPrograma != null ? liderPrograma.getPasswordHash()
+						: legacyCoordinator != null ? legacyCoordinator.getPasswordHash()
+								: user.getPasswordHash();
+		if (passwordHash != null && !passwordHash.isBlank()) {
+			attemptLimiter.recordFailure(identifier, clientIp);
+			throw new AuthException(HttpStatus.CONFLICT,
+					"Esta cuenta ya tiene una contrasena. Inicia sesion para continuar.", false);
+		}
+
+		attemptLimiter.recordSuccess(identifier);
+	}
+
+	@Override
 	public AuthResponse login(String identifier, String password, String clientIp) {
 		attemptLimiter.assertAllowed(identifier, clientIp);
 		validatePasswordLength(password);

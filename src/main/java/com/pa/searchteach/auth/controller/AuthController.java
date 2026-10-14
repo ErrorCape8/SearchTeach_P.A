@@ -3,6 +3,7 @@ package com.pa.searchteach.auth.controller;
 import com.pa.searchteach.auth.dto.AuthResponse;
 import com.pa.searchteach.auth.dto.LoginRequest;
 import com.pa.searchteach.auth.dto.RegisterRequest;
+import com.pa.searchteach.auth.dto.VerifyRegistrationRequest;
 import com.pa.searchteach.auth.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -29,6 +30,14 @@ public class AuthController {
 			@Valid @RequestBody RegisterRequest request,
 			HttpServletRequest servletRequest) {
 		return authService.register(request.identifier(), request.password(), servletRequest.getRemoteAddr());
+	}
+
+	@PostMapping("/register/verify")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	public void verifyRegistration(
+			@Valid @RequestBody VerifyRegistrationRequest request,
+			HttpServletRequest servletRequest) {
+		authService.verifyRegistration(request.identifier(), servletRequest.getRemoteAddr());
 	}
 
 	@PostMapping("/login")

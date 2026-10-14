@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/widgets/brand_logo.dart';
 
 const kAdminOrange = Color(0xFFEA580C);
 const kAdminOrangeDark = Color(0xFFC2410C);
@@ -74,23 +75,14 @@ class AdminHeader extends StatelessWidget {
                   const SizedBox(width: 14),
                 ] else ...[
                   Container(
-                    width: 46,
-                    height: 46,
+                    width: 58,
+                    height: 48,
+                    padding: const EdgeInsets.all(3),
                     decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
-                      color: kAdminOrange,
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    alignment: Alignment.center,
-                    child: const Text(
-                      'AT',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 16,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
+                    child: const BrandLogo(),
                   ),
                   const SizedBox(width: 14),
                 ],

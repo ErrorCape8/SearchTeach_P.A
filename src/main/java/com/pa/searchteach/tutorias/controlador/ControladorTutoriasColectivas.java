@@ -57,4 +57,14 @@ public class ControladorTutoriasColectivas {
 	public List<TutoriaColectivaConAvance> listarParaLiderPrograma() {
 		return servicio.listarParaLiderPrograma();
 	}
+
+	@GetMapping("/api/coordinacion/tutorias-colectivas")
+	public List<TutoriaColectiva> listarParaCoordinacion() {
+		return servicio.listarParaCoordinacion();
+	}
+
+	@GetMapping("/api/coordinacion/informes")
+	public List<InformeAvanceProyecto> listarInformesParaCoordinacion() {
+		return servicio.listarInformesParaCoordinacion();
+	}
 }

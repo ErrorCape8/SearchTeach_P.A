@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/api_client.dart';
+import '../../core/widgets/brand_logo.dart';
 import '../auth/auth_repository.dart';
 import 'student_dashboard_models.dart';
 import 'student_dashboard_views.dart';

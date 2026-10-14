@@ -9,6 +9,7 @@ public class Coordinator {
 	@Id
 	private String id;
 	private String passwordHash;
+	private String telefono;
 
 	public String getId() {
 		return id;
@@ -24,5 +25,13 @@ public class Coordinator {
 
 	public void setPasswordHash(String passwordHash) {
 		this.passwordHash = passwordHash;
+	}
+
+	public String getTelefono() {
+		return telefono;
+	}
+
+	public void setTelefono(String telefono) {
+		this.telefono = telefono;
 	}
 }

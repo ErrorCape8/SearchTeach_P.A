@@ -165,6 +165,33 @@ class _AdminUsuariosViewState extends ConsumerState<AdminUsuariosView> {
                   ),
                 ),
               ),
+              const SizedBox(width: 8),
+              Tooltip(
+                message: 'Actualizar lista de usuarios',
+                child: IconButton(
+                  onPressed: state.isLoadingUsers
+                      ? null
+                      : () => ref
+                          .read(adminControllerProvider.notifier)
+                          .loadUsers(),
+                  icon: state.isLoadingUsers
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.refresh_rounded),
+                  style: IconButton.styleFrom(
+                    foregroundColor: const Color(0xFFEA580C),
+                    backgroundColor: Colors.white,
+                    minimumSize: const Size(48, 48),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: const BorderSide(color: Color(0xFFE5E7EB), width: 1.2),
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         ),

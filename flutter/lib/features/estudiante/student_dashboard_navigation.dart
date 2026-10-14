@@ -19,7 +19,7 @@ class _TopBar extends StatelessWidget {
           border: Border(bottom: BorderSide(color: Color(0xFFE4EAF1))),
         ),
         child: Row(children: [
-          const Icon(Icons.school, color: _blue, size: 28),
+          const BrandLogo(width: 42, height: 36),
           const SizedBox(width: 10),
           const Text('SearchTeach',
               style: TextStyle(

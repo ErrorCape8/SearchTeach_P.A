@@ -6,5 +6,7 @@ public interface AuthService {
 
 	AuthResponse register(String identifier, String password, String clientIp);
 
+	void verifyRegistration(String identifier, String clientIp);
+
 	AuthResponse login(String identifier, String password, String clientIp);
 }

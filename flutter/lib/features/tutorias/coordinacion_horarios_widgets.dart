@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'coordinacion_horarios_models.dart';
 
-const _brand = Color(0xFFEA580C);
+const _brand = Color(0xFFA9154F);
 const _muted = Color(0xFF64748B);
 
 class ScheduleSectionSelector extends StatelessWidget {
@@ -218,7 +218,7 @@ class _TeacherCard extends StatelessWidget {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFFF1E6),
+                    color: const Color(0xFFFCE7EF),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: const Icon(Icons.person_outline, color: _brand),

@@ -13,6 +13,9 @@ class AuthController extends AutoDisposeAsyncNotifier<void> {
   Future<bool> register(String id, String password) =>
       _run(() => ref.read(authRepositoryProvider).register(id, password));
 
+  Future<bool> verifyRegistration(String id) =>
+      _run(() => ref.read(authRepositoryProvider).verifyRegistration(id));
+
   /// Borra el error/cargando al entrar o salir de una pantalla.
   void reset() => state = const AsyncData(null);
 

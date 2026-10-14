@@ -25,6 +25,26 @@ class AuthRepository {
   Future<void> register(String identifier, String password) =>
       _authenticate('/api/auth/register', identifier, password);
 
+  Future<void> verifyRegistration(String identifier) async {
+    try {
+      await _dio.post<void>(
+        '/api/auth/register/verify',
+        data: {'identifier': identifier},
+      );
+    } on DioException catch (error) {
+      final data = error.response?.data;
+      if (data is Map && data['message'] is String) {
+        throw AuthFailure(
+          data['message'] as String,
+          retryAfterSeconds: (data['retryAfterSeconds'] ?? 0) as int,
+        );
+      }
+      throw AuthFailure(
+        'No se pudo conectar con el servidor (${error.requestOptions.uri.host}:${error.requestOptions.uri.port}).',
+      );
+    }
+  }
+
   Future<void> _authenticate(String path, String id, String pass) async {
     try {
       final res = await _dio.post(path, data: {

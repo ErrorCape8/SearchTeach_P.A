@@ -147,8 +147,11 @@ class _CoordinacionHorariosPageState
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        backgroundColor: const Color(0xFFF1F4F9),
+        backgroundColor: const Color(0xFFF3F5FA),
         appBar: AppBar(
+          backgroundColor: const Color(0xFFA9154F),
+          foregroundColor: Colors.white,
+          elevation: 0,
           title: const Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -168,6 +171,13 @@ class _CoordinacionHorariosPageState
             ),
             const SizedBox(width: 8),
           ],
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () => context.push('/coordinacion/tutorias-colectivas'),
+          backgroundColor: const Color(0xFFA9154F),
+          foregroundColor: Colors.white,
+          icon: const Icon(Icons.add),
+          label: const Text('Crear tutoría colectiva'),
         ),
         body: SafeArea(
           child: Center(

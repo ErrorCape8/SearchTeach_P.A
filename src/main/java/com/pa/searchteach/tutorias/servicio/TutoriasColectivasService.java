@@ -100,6 +100,16 @@ public class TutoriasColectivasService {
 				.toList();
 	}
 
+	public List<TutoriaColectiva> listarParaCoordinacion() {
+		return tutoriaColectivaRepositorio.findAll();
+	}
+
+	public List<InformeAvanceProyecto> listarInformesParaCoordinacion() {
+		return informeRepositorio.findAll().stream()
+				.sorted((a, b) -> b.fechaInforme().compareTo(a.fechaInforme()))
+				.toList();
+	}
+
 	public List<ProyectoAsignadoDocente> listarProyectosDeDocente(String docenteId) {
 		return tutoriaColectivaRepositorio.findAll().stream()
 				.flatMap(tutoria -> tutoria.proyectos().stream()

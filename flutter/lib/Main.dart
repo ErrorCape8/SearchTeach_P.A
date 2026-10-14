@@ -6,7 +6,7 @@ import 'features/auth/login_page.dart';
 import 'features/auth/register_page.dart';
 import 'features/dashboard/dashboard_page.dart';
 import 'features/tutorias/coordinacion_tutorias_page.dart';
-import 'features/tutorias/coordinacion_horarios_page.dart';
+import 'features/tutorias/coordinacion_dashboard_page.dart';
 import 'features/tutorias/docente_informes_page.dart';
 import 'features/estudiante/student_dashboard_page.dart';
 
@@ -21,7 +21,7 @@ final _router = GoRouter(
     ),
     GoRoute(
       path: '/coordinacion',
-      builder: (_, __) => const CoordinacionHorariosPage(),
+      builder: (_, __) => const CoordinacionDashboardPage(),
     ),
     GoRoute(
       path: '/coordinacion/tutorias-colectivas',
@@ -49,7 +49,13 @@ class App extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MaterialApp.router(
         title: 'SearchTeach',
-        theme: ThemeData(colorSchemeSeed: Colors.indigo, useMaterial3: true),
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: const Color(0xFFA9154F),
+            primary: const Color(0xFFA9154F),
+          ),
+          useMaterial3: true,
+        ),
         routerConfig: _router,
       );
 }
