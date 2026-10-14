@@ -16,7 +16,7 @@ class AdminUser {
   final String estado;
 
   bool get isActivo => estado.trim().toLowerCase() == 'activo';
-  bool get isRevocado => !isActivo;
+  bool get isRevocado => estado.trim().toLowerCase() == 'revocado';
 
   AdminUser copyWith({
     String? id,
@@ -37,13 +37,22 @@ class AdminUser {
   }
 
   factory AdminUser.fromJson(Map<String, dynamic> json) {
+    String readValue(String key) {
+      final value = json[key];
+      if (value == null) return '';
+      if (value is! String) {
+        throw FormatException('El dato de usuario "$key" no es válido.');
+      }
+      return value;
+    }
+
     return AdminUser(
-      id: json['id'] as String? ?? '',
-      nombre: json['nombre'] as String? ?? '',
-      correo: json['correo'] as String? ?? '',
-      telefono: json['telefono'] as String? ?? '',
-      rol: json['rol'] as String? ?? 'Estudiante',
-      estado: json['estado'] as String? ?? 'Activo',
+      id: readValue('id'),
+      nombre: readValue('nombre'),
+      correo: readValue('correo'),
+      telefono: readValue('telefono'),
+      rol: readValue('rol'),
+      estado: readValue('estado'),
     );
   }
 

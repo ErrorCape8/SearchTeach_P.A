@@ -8,6 +8,7 @@ import com.pa.searchteach.users.dto.UserUpdateRequest;
 import com.pa.searchteach.users.model.User;
 import com.pa.searchteach.users.repository.UserRepository;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,54 +21,21 @@ public class UserAdminController {
 	private final UserRepository userRepository;
 	private final ItAdminRepository itAdminRepository;
 	private final PasswordEncoder passwordEncoder;
-	private String adminPhone = "605 600 0000";
 
-	public UserAdminController(UserRepository userRepository, ItAdminRepository itAdminRepository, PasswordEncoder passwordEncoder) {
+	public UserAdminController(
+			UserRepository userRepository,
+			ItAdminRepository itAdminRepository,
+			PasswordEncoder passwordEncoder) {
 		this.userRepository = userRepository;
 		this.itAdminRepository = itAdminRepository;
 		this.passwordEncoder = passwordEncoder;
-		initDefaultUsersIfEmpty();
-	}
-
-	private void initDefaultUsersIfEmpty() {
-		try {
-			if (userRepository.count() == 0) {
-				List<User> defaults = List.of(
-						new User("1001", passwordEncoder.encode("12345678"), "Camilo Andres", "candres@comfenalco.edu.co", "3001234567", "Estudiante", "Activo"),
-						new User("1002", passwordEncoder.encode("12345678"), "Valentina Ruiz", "vruiz@comfenalco.edu.co", "3002345678", "Estudiante", "Activo"),
-						new User("1003", passwordEncoder.encode("12345678"), "Juan Pablo Mora", "jmora@comfenalco.edu.co", "3003456789", "Estudiante", "Activo"),
-						new User("1004", passwordEncoder.encode("12345678"), "Laura Martínez", "lmartinez@comfenalco.edu.co", "3004567890", "Docente", "Activo"),
-						new User("1005", passwordEncoder.encode("12345678"), "Carlos Chavarriaga", "cchavarriaga@comfenalco.edu.co", "3005678901", "Docente + Estudiante", "Activo"),
-						new User("1006", passwordEncoder.encode("12345678"), "Andrés Pérez", "aperez@comfenalco.edu.co", "3006789012", "Docente", "Revocado"),
-						new User("1007", passwordEncoder.encode("12345678"), "Sofía Rojas", "srojas@comfenalco.edu.co", "3007890123", "Docente", "Activo"),
-						new User("1008", passwordEncoder.encode("12345678"), "Ricardo Vélez", "rvelez@comfenalco.edu.co", "3008901234", "Coordinador", "Activo")
-				);
-				userRepository.saveAll(defaults);
-			}
-		} catch (Exception ignored) {
-		}
 	}
 
 	@GetMapping("/users")
 	public List<UserResponse> listUsers() {
-		List<User> users = userRepository.findAll();
-		if (users.isEmpty()) {
-			return List.of(
-					new UserResponse("1001", "Camilo Andres", "candres@comfenalco.edu.co", "3001234567", "Estudiante", "Activo"),
-					new UserResponse("1002", "Valentina Ruiz", "vruiz@comfenalco.edu.co", "3002345678", "Estudiante", "Activo"),
-					new UserResponse("1003", "Juan Pablo Mora", "jmora@comfenalco.edu.co", "3003456789", "Estudiante", "Activo"),
-					new UserResponse("1004", "Laura Martínez", "lmartinez@comfenalco.edu.co", "3004567890", "Docente", "Activo"),
-					new UserResponse("1005", "Carlos Chavarriaga", "cchavarriaga@comfenalco.edu.co", "3005678901", "Docente + Estudiante", "Activo"),
-					new UserResponse("1006", "Andrés Pérez", "aperez@comfenalco.edu.co", "3006789012", "Docente", "Revocado"),
-					new UserResponse("1007", "Sofía Rojas", "srojas@comfenalco.edu.co", "3007890123", "Docente", "Activo"),
-					new UserResponse("1008", "Ricardo Vélez", "rvelez@comfenalco.edu.co", "3008901234", "Coordinador", "Activo")
-			);
-		}
-		return users.stream()
-				.map(u -> new UserResponse(u.getId(), u.getNombre() != null ? u.getNombre() : u.getId(),
-						u.getCorreo(), u.getTelefono(),
-						u.getRol() != null ? u.getRol() : "Estudiante",
-						u.getEstado() != null ? u.getEstado() : "Activo"))
+		return userRepository.findAll().stream()
+				.map(u -> new UserResponse(u.getId(), u.getNombre(),
+						u.getCorreo(), u.getTelefono(), u.getRol(), u.getEstado()))
 				.toList();
 	}
 
@@ -119,50 +87,58 @@ public class UserAdminController {
 
 	@GetMapping("/stats")
 	public Map<String, Object> getStats() {
+		List<User> users = userRepository.findAll();
 		return Map.of(
-				"cuentasActivas", 1248,
-				"docentes", 86,
-				"suspendidos", 2,
-				"sincronizacion", "Última sincronización: 02 feb 2026 (+34 cuentas nuevas, 12 accesos revocados)."
+				"cuentasTotal", users.size(),
+				"cuentasActivas", users.stream()
+						.filter(user -> "Activo".equalsIgnoreCase(user.getEstado()))
+						.count(),
+				"docentes", users.stream()
+						.filter(user -> user.getRol() != null
+								&& user.getRol().toLowerCase(Locale.ROOT).contains("docente"))
+						.count(),
+				"suspendidos", users.stream()
+						.filter(user -> "Revocado".equalsIgnoreCase(user.getEstado()))
+						.count()
 		);
 	}
 
 	@GetMapping("/perfil")
-	public Map<String, String> getProfile() {
-		List<ItAdmin> admins = itAdminRepository.findAll();
-		if (!admins.isEmpty()) {
-			ItAdmin admin = admins.get(0);
-			return Map.of(
-					"nombre", admin.getNombre(),
-					"rol", admin.getRol(),
-					"telefono", admin.getTelefono(),
-					"correo", admin.getCorreo(),
-					"documento", admin.getId() != null ? admin.getId() : "—",
-					"programa", admin.getPrograma()
-			);
-		}
-		return Map.of(
-				"nombre", "Admin TI",
-				"rol", "Administrador",
-				"telefono", adminPhone,
-				"correo", "ti@comfenalco.edu.co",
-				"documento", "—",
-				"programa", "Tecnologías de la información"
-		);
+	public Map<String, String> getProfile(@AuthenticationPrincipal String adminId) {
+		ItAdmin admin = findAdmin(adminId);
+		Map<String, String> profile = new LinkedHashMap<>();
+		profile.put("nombre", valueOrEmpty(admin.getNombre()));
+		profile.put("rol", valueOrEmpty(admin.getRol()));
+		profile.put("telefono", valueOrEmpty(admin.getTelefono()));
+		profile.put("correo", valueOrEmpty(admin.getCorreo()));
+		profile.put("documento", valueOrEmpty(admin.getId()));
+		profile.put("programa", valueOrEmpty(admin.getPrograma()));
+		return profile;
 	}
 
 	@PutMapping("/perfil/telefono")
-	public Map<String, String> updatePhone(@RequestBody Map<String, String> body) {
+	public Map<String, String> updatePhone(
+			@RequestBody Map<String, String> body,
+			@AuthenticationPrincipal String adminId) {
 		String phone = body.get("telefono");
-		if (phone != null && !phone.trim().isEmpty()) {
-			this.adminPhone = phone.trim();
-			List<ItAdmin> admins = itAdminRepository.findAll();
-			if (!admins.isEmpty()) {
-				ItAdmin admin = admins.get(0);
-				admin.setTelefono(this.adminPhone);
-				itAdminRepository.save(admin);
-			}
+		if (phone == null || phone.isBlank()) {
+			throw new IllegalArgumentException("El teléfono es obligatorio.");
 		}
-		return getProfile();
+		ItAdmin admin = findAdmin(adminId);
+		admin.setTelefono(phone.trim());
+		itAdminRepository.save(admin);
+		return getProfile(adminId);
+	}
+
+	private ItAdmin findAdmin(String adminId) {
+		if (adminId == null || adminId.isBlank()) {
+			throw new IllegalArgumentException("No se pudo identificar al administrador.");
+		}
+		return itAdminRepository.findById(adminId)
+				.orElseThrow(() -> new NotFoundException("No se encontró el perfil de TI."));
+	}
+
+	private String valueOrEmpty(String value) {
+		return value == null ? "" : value;
 	}
 }

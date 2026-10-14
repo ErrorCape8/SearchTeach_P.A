@@ -7,100 +7,115 @@ class AdminInicioView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    ref.watch(adminControllerProvider);
+    final state = ref.watch(adminControllerProvider);
+    final stats = state.stats;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
       children: [
-        // Fila de 3 tarjetas de métricas
-        Row(
-          children: [
-            Expanded(
-              child: _MetricCard(
-                value: '1.248',
-                label: 'Cuentas activas',
+        if (state.statsError != null)
+          _LoadError(
+            message: state.statsError!,
+            onRetry: () => ref.read(adminControllerProvider.notifier).loadStats(),
+          )
+        else if (state.isLoadingStats || stats == null)
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.all(36),
+              child: CircularProgressIndicator(),
+            ),
+          )
+        else ...[
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final compact = constraints.maxWidth < 620;
+              final cards = [
+                _MetricCard(
+                  value: '${stats.cuentasTotal}',
+                  label: 'Cuentas totales',
+                ),
+                _MetricCard(
+                  value: '${stats.cuentasActivas}',
+                  label: 'Cuentas activas',
+                ),
+                _MetricCard(value: '${stats.docentes}', label: 'Docentes'),
+                _MetricCard(
+                  value: '${stats.suspendidos}',
+                  label: 'Suspendidos',
+                ),
+              ];
+              if (!compact) {
+                return Row(
+                  children: [
+                    for (var index = 0; index < cards.length; index++) ...[
+                      if (index > 0) const SizedBox(width: 12),
+                      Expanded(child: cards[index]),
+                    ],
+                  ],
+                );
+              }
+              return Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: cards
+                    .map(
+                      (card) => SizedBox(
+                        width: (constraints.maxWidth - 10) / 2,
+                        child: card,
+                      ),
+                    )
+                    .toList(),
+              );
+            },
+          ),
+          const SizedBox(height: 28),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFFE5E7EB)),
+            ),
+            child: Text(
+              'Resumen calculado a partir de ${stats.cuentasTotal} registros de usuarios en la base de datos.',
+              style: const TextStyle(
+                fontSize: 14,
+                height: 1.45,
+                color: Color(0xFF475569),
               ),
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _MetricCard(
-                value: '86',
-                label: 'Docentes',
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _MetricCard(
-                value: '2',
-                label: 'Suspendidos',
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 28),
-
-        // Sección Sincronización semestral
-        const Text(
-          'Sincronización semestral',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w800,
-            color: Color(0xFF1E293B),
           ),
-        ),
-        const SizedBox(height: 12),
-
-        // Tarjeta de sincronización
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.02),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Matrícula y vinculación con Registro y Control y Talento Humano. Se ejecuta automáticamente cada semestre.',
-                style: TextStyle(
-                  fontSize: 13,
-                  height: 1.45,
-                  color: Color(0xFF64748B),
-                ),
-              ),
-              const SizedBox(height: 14),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFF2E7),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: const Text(
-                  'Última sincronización: 02 feb 2026 (+34 cuentas nuevas, 12 accesos revocados).',
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF9A3412),
-                    height: 1.35,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+        ],
       ],
     );
   }
+}
+
+class _LoadError extends StatelessWidget {
+  const _LoadError({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(message, textAlign: TextAlign.center),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: onRetry,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Reintentar'),
+              ),
+            ],
+          ),
+        ),
+      );
 }
 
 class _MetricCard extends StatelessWidget {

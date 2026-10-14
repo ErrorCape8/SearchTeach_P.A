@@ -50,7 +50,7 @@ public class ItAdmin {
 	}
 
 	public String getNombre() {
-		return nombre != null && !nombre.isBlank() ? nombre : "Admin TI";
+		return nombre;
 	}
 
 	public void setNombre(String nombre) {
@@ -58,7 +58,7 @@ public class ItAdmin {
 	}
 
 	public String getCorreo() {
-		return correo != null && !correo.isBlank() ? correo : "ti@comfenalco.edu.co";
+		return correo;
 	}
 
 	public void setCorreo(String correo) {
@@ -66,7 +66,7 @@ public class ItAdmin {
 	}
 
 	public String getTelefono() {
-		return telefono != null && !telefono.isBlank() ? telefono : "605 600 0000";
+		return telefono;
 	}
 
 	public void setTelefono(String telefono) {
@@ -74,7 +74,7 @@ public class ItAdmin {
 	}
 
 	public String getPrograma() {
-		return programa != null && !programa.isBlank() ? programa : "Tecnologías de la información";
+		return programa;
 	}
 
 	public void setPrograma(String programa) {
@@ -82,7 +82,7 @@ public class ItAdmin {
 	}
 
 	public String getRol() {
-		return rol != null && !rol.isBlank() ? rol : "Administrador";
+		return rol;
 	}
 
 	public void setRol(String rol) {

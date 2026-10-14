@@ -117,3 +117,55 @@ class AdminBottomBar extends StatelessWidget {
     );
   }
 }
+
+class AdminSideNav extends StatelessWidget {
+  const AdminSideNav({
+    super.key,
+    required this.currentIndex,
+    required this.onTap,
+  });
+
+  final int currentIndex;
+  final ValueChanged<int> onTap;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        color: Colors.white,
+        alignment: Alignment.topCenter,
+        child: NavigationRail(
+          selectedIndex: currentIndex,
+          onDestinationSelected: onTap,
+          labelType: NavigationRailLabelType.all,
+          groupAlignment: -0.8,
+          backgroundColor: Colors.white,
+          indicatorColor: const Color(0xFFFFF1E6),
+          selectedIconTheme: const IconThemeData(color: Color(0xFFEA580C)),
+          unselectedIconTheme: const IconThemeData(color: Color(0xFF8C95A6)),
+          selectedLabelTextStyle: const TextStyle(
+            color: Color(0xFFEA580C),
+            fontWeight: FontWeight.w700,
+          ),
+          unselectedLabelTextStyle: const TextStyle(
+            color: Color(0xFF64748B),
+            fontWeight: FontWeight.w500,
+          ),
+          destinations: const [
+            NavigationRailDestination(
+              icon: Icon(Icons.home_outlined),
+              selectedIcon: Icon(Icons.home_rounded),
+              label: Text('Inicio'),
+            ),
+            NavigationRailDestination(
+              icon: Icon(Icons.people_alt_outlined),
+              selectedIcon: Icon(Icons.people_alt_rounded),
+              label: Text('Usuarios'),
+            ),
+            NavigationRailDestination(
+              icon: Icon(Icons.person_outline_rounded),
+              selectedIcon: Icon(Icons.person_rounded),
+              label: Text('Perfil'),
+            ),
+          ],
+        ),
+      );
+}

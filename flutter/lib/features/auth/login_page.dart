@@ -113,22 +113,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         TextStyle(color: kBlue, fontWeight: FontWeight.w700)),
               ),
             ]),
-            const SizedBox(height: 16),
-            Center(
-              child: TextButton.icon(
-                onPressed: () => context.go('/admin'),
-                icon: const Icon(Icons.admin_panel_settings_outlined,
-                    size: 18, color: Color(0xFFEA580C)),
-                label: const Text(
-                  'Acceso directo: Panel de TI (Admin)',
-                  style: TextStyle(
-                    color: Color(0xFFEA580C),
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                  ),
-                ),
-              ),
-            ),
           ],
         ),
       ),

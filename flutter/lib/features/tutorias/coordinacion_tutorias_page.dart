@@ -17,12 +17,12 @@ class _CoordinacionTutoriasPageState
     extends ConsumerState<CoordinacionTutoriasPage> {
   final _formKey = GlobalKey<FormState>();
   final _leader = TextEditingController();
-  final _supportTeachers =
-      List.generate(5, (_) => TextEditingController());
+  final _supportTeachers = List.generate(5, (_) => TextEditingController());
   final _projects = List.generate(5, (_) => _ProjectControllers());
   bool _saving = false;
   String? _error;
-  String? _createdSummary;
+  int _selectedSection = 0;
+  final List<String> _createdTutorias = [];
 
   @override
   void dispose() {
@@ -38,11 +38,13 @@ class _CoordinacionTutoriasPageState
 
   Future<void> _create() async {
     if (!_formKey.currentState!.validate()) return;
-    final supportIds = _supportTeachers.map((controller) => controller.text.trim()).toList();
+    final supportIds =
+        _supportTeachers.map((controller) => controller.text.trim()).toList();
     if (supportIds.toSet().length != supportIds.length ||
         supportIds.contains(_leader.text.trim())) {
       setState(() {
-        _error = 'El docente líder y los cinco docentes de apoyo deben ser distintos.';
+        _error =
+            'El docente líder y los cinco docentes de apoyo deben ser distintos.';
       });
       return;
     }
@@ -50,7 +52,6 @@ class _CoordinacionTutoriasPageState
     setState(() {
       _saving = true;
       _error = null;
-      _createdSummary = null;
     });
     try {
       final response = await ref.read(dioProvider).post<Map<String, dynamic>>(
@@ -66,7 +67,9 @@ class _CoordinacionTutoriasPageState
       );
       final body = response.data;
       if (body == null || body['id'] is! String || body['proyectos'] is! List) {
-        throw const FormatException('El servidor devolvió una tutoría incompleta.');
+        throw const FormatException(
+          'El servidor devolvió una tutoría incompleta.',
+        );
       }
       final projectIds = (body['proyectos'] as List)
           .map((project) => (project as Map<String, dynamic>)['proyectoId'])
@@ -74,9 +77,12 @@ class _CoordinacionTutoriasPageState
           .toList();
       if (!mounted) return;
       setState(() {
-        _createdSummary = 'Tutoría ${body['id']} creada. '
-            'Guarda estos identificadores para consultar sus proyectos: '
-            '${projectIds.join(', ')}';
+        _createdTutorias.insert(
+          0,
+          'Tutoría ${body['id']} creada. '
+          'Identificadores de proyectos: ${projectIds.join(', ')}',
+        );
+        _selectedSection = 1;
       });
     } on DioException catch (error) {
       if (!mounted) return;
@@ -112,55 +118,124 @@ class _CoordinacionTutoriasPageState
             ),
           ],
         ),
-        body: Form(
-          key: _formKey,
-          child: ListView(
-            padding: const EdgeInsets.all(20),
-            children: [
-              const Text(
-                'Crear acompañamiento colectivo',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Asigna un docente líder, cinco docentes de apoyo y cinco proyectos con cuatro estudiantes cada uno.',
-              ),
-              const SizedBox(height: 20),
-              _textField(_leader, 'Identificación del docente líder'),
-              const SizedBox(height: 12),
-              for (var index = 0; index < 5; index++) ...[
-                _sectionTitle('Docente de apoyo ${index + 1}'),
-                _textField(
-                  _supportTeachers[index],
-                  'Identificación del docente',
+        body: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1040),
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                  child: SegmentedButton<int>(
+                    segments: [
+                      const ButtonSegment(
+                        value: 0,
+                        icon: Icon(Icons.add_circle_outline),
+                        label: Text('Nueva tutoría'),
+                      ),
+                      ButtonSegment(
+                        value: 1,
+                        icon: const Icon(Icons.folder_outlined),
+                        label: Text('Creadas (${_createdTutorias.length})'),
+                      ),
+                    ],
+                    selected: {_selectedSection},
+                    onSelectionChanged: (selection) {
+                      setState(() => _selectedSection = selection.first);
+                    },
+                  ),
                 ),
-                const SizedBox(height: 10),
-                _ProjectFields(
-                  number: index + 1,
-                  controllers: _projects[index],
+                Expanded(
+                  child: _selectedSection == 0
+                      ? Form(
+                          key: _formKey,
+                          child: ListView(
+                            padding: const EdgeInsets.all(20),
+                            children: [
+                              const Text(
+                                'Crear acompañamiento colectivo',
+                                style: TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'Asigna un docente líder, cinco docentes de apoyo y cinco proyectos con cuatro estudiantes cada uno.',
+                              ),
+                              const SizedBox(height: 20),
+                              _textField(
+                                _leader,
+                                'Identificación del docente líder',
+                              ),
+                              const SizedBox(height: 12),
+                              for (var index = 0; index < 5; index++) ...[
+                                _sectionTitle('Docente de apoyo ${index + 1}'),
+                                _textField(
+                                  _supportTeachers[index],
+                                  'Identificación del docente',
+                                ),
+                                const SizedBox(height: 10),
+                                _ProjectFields(
+                                  number: index + 1,
+                                  controllers: _projects[index],
+                                ),
+                                const SizedBox(height: 18),
+                              ],
+                              if (_error != null)
+                                _MessageBox(message: _error!, isError: true),
+                              const SizedBox(height: 12),
+                              FilledButton.icon(
+                                onPressed: _saving ? null : _create,
+                                icon: _saving
+                                    ? const SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : const Icon(Icons.save_outlined),
+                                label: const Text('Crear tutoría colectiva'),
+                              ),
+                            ],
+                          ),
+                        )
+                      : _createdContent(),
                 ),
-                const SizedBox(height: 18),
               ],
-              if (_error != null)
-                _MessageBox(message: _error!, isError: true),
-              if (_createdSummary != null)
-                _MessageBox(message: _createdSummary!, isError: false),
-              const SizedBox(height: 12),
-              FilledButton.icon(
-                onPressed: _saving ? null : _create,
-                icon: _saving
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.save_outlined),
-                label: const Text('Crear tutoría colectiva'),
-              ),
-            ],
+            ),
           ),
         ),
       );
+
+  Widget _createdContent() {
+    if (_createdTutorias.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Text('Todavía no has creado tutorías colectivas.'),
+        ),
+      );
+    }
+    return ListView.separated(
+      padding: const EdgeInsets.all(20),
+      itemCount: _createdTutorias.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      itemBuilder: (context, index) => Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.groups_outlined, color: Colors.green),
+              const SizedBox(width: 12),
+              Expanded(child: Text(_createdTutorias[index])),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   Widget _sectionTitle(String title) => Padding(
         padding: const EdgeInsets.only(top: 12, bottom: 8),
@@ -170,9 +245,13 @@ class _CoordinacionTutoriasPageState
   Widget _textField(TextEditingController controller, String label) =>
       TextFormField(
         controller: controller,
-        decoration: InputDecoration(labelText: label, border: const OutlineInputBorder()),
-        validator: (value) =>
-            value == null || value.trim().isEmpty ? 'Este dato es obligatorio.' : null,
+        decoration: InputDecoration(
+          labelText: label,
+          border: const OutlineInputBorder(),
+        ),
+        validator: (value) => value == null || value.trim().isEmpty
+            ? 'Este dato es obligatorio.'
+            : null,
       );
 }
 
@@ -214,8 +293,10 @@ class _ProjectFields extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Proyecto $number',
-                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text(
+                'Proyecto $number',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 10),
               _requiredField(controllers.nombre, 'Nombre del proyecto'),
               const SizedBox(height: 10),
@@ -229,10 +310,7 @@ class _ProjectFields extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
-                    child: _requiredField(
-                      controllers.tecnologia,
-                      'Tecnología',
-                    ),
+                    child: _requiredField(controllers.tecnologia, 'Tecnología'),
                   ),
                   const SizedBox(width: 10),
                   SizedBox(
@@ -259,7 +337,10 @@ class _ProjectFields extends StatelessWidget {
         ),
       );
 
-  static Widget _requiredField(TextEditingController controller, String label) =>
+  static Widget _requiredField(
+    TextEditingController controller,
+    String label,
+  ) =>
       TextFormField(
         controller: controller,
         decoration: InputDecoration(

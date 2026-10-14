@@ -28,7 +28,10 @@ class AdminMainPage extends ConsumerWidget {
       switch (state.activeTab) {
         case 0:
           headerTitle = 'Panel de TI';
-          headerSubtitle = 'Administrador del sistema';
+          headerSubtitle = state.adminProfile?.nombre ??
+              (state.isLoadingProfile
+                  ? 'Cargando perfil…'
+                  : 'Perfil no disponible');
           break;
         case 1:
           headerTitle = 'Usuarios';
@@ -36,8 +39,11 @@ class AdminMainPage extends ConsumerWidget {
           break;
         case 2:
         default:
-          headerTitle = 'Admin TI';
-          headerSubtitle = 'Administrador';
+          headerTitle = state.adminProfile?.nombre ?? 'Perfil de TI';
+          headerSubtitle = state.adminProfile?.rol ??
+              (state.isLoadingProfile
+                  ? 'Cargando perfil…'
+                  : 'Perfil no disponible');
           break;
       }
     }
@@ -58,49 +64,83 @@ class AdminMainPage extends ConsumerWidget {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFEA580C),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 480),
-          child: Column(
-            children: [
-              // Cabecera naranja dinámica
-              AdminHeader(
-                title: headerTitle,
-                subtitle: headerSubtitle,
-                isEditing: isEditing,
-                onBack: () => notifier.clearSelectedUser(),
+      backgroundColor: const Color(0xFFF1F4F9),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final isWide = constraints.maxWidth >= 760;
+          final contentSurface = Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8F9FB),
+              borderRadius: BorderRadius.vertical(
+                top: Radius.circular(isWide ? 24 : 28),
               ),
-
-              // Cuerpo con esquinas superiores redondeadas (hoja blanca)
-              Expanded(
-                child: Container(
-                  width: double.infinity,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFF8F9FB),
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-                  ),
-                  clipBehavior: Clip.antiAlias,
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 200),
-                    child: KeyedSubtree(
-                      key: ValueKey(isEditing ? 'edit_${state.selectedUser?.id}' : 'tab_${state.activeTab}'),
-                      child: bodyContent,
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: isWide ? 1120 : double.infinity,
+                ),
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  child: KeyedSubtree(
+                    key: ValueKey(
+                      isEditing
+                          ? 'edit_${state.selectedUser?.id}'
+                          : 'tab_${state.activeTab}',
                     ),
+                    child: bodyContent,
                   ),
                 ),
               ),
+            ),
+          );
 
-              // Barra de navegación inferior
-              AdminBottomBar(
-                currentIndex: isEditing ? 1 : state.activeTab,
-                onTap: (index) {
-                  notifier.setTab(index);
-                },
+          return Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: isWide ? 1440 : 480,
               ),
-            ],
-          ),
-        ),
+              child: Column(
+                children: [
+                  AdminHeader(
+                    title: headerTitle,
+                    subtitle: headerSubtitle,
+                    isEditing: isEditing,
+                    onBack: () => notifier.clearSelectedUser(),
+                  ),
+                  Expanded(
+                    child: isWide
+                        ? Row(
+                            children: [
+                              AdminSideNav(
+                                currentIndex: isEditing ? 1 : state.activeTab,
+                                onTap: notifier.setTab,
+                              ),
+                              Expanded(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(20),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(24),
+                                    child: contentSurface,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          )
+                        : contentSurface,
+                  ),
+                  if (!isWide)
+                    AdminBottomBar(
+                      currentIndex: isEditing ? 1 : state.activeTab,
+                      onTap: notifier.setTab,
+                    ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }

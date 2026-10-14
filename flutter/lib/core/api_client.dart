@@ -27,7 +27,7 @@ final dioProvider = Provider<Dio>((ref) {
     headers: {'Content-Type': 'application/json'},
   ));
 
-  // Agrega el JWT a todas las llamadas protegidas (no a /api/auth/*).
+  // Agrega el JWT a todas las llamadas protegidas.
   dio.interceptors.add(InterceptorsWrapper(
     onRequest: (options, handler) async {
       if (!options.path.startsWith('/api/auth')) {

@@ -51,8 +51,9 @@ class _AdminEditarUsuarioViewState
 
   void _toggleAcceso() {
     setState(() {
-      _selectedEstado =
-          _selectedEstado.trim().toLowerCase() == 'activo' ? 'Revocado' : 'Activo';
+      _selectedEstado = _selectedEstado.trim().toLowerCase() == 'activo'
+          ? 'Revocado'
+          : 'Activo';
     });
   }
 
@@ -69,32 +70,45 @@ class _AdminEditarUsuarioViewState
     if (pass.isNotEmpty && pass.length < 8) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('La nueva contraseña debe tener al menos 8 caracteres.'),
+          content:
+              Text('La nueva contraseña debe tener al menos 8 caracteres.'),
           backgroundColor: Color(0xFFDC2626),
         ),
       );
       return;
     }
 
-    await ref.read(adminControllerProvider.notifier).updateUser(
+    final saved = await ref.read(adminControllerProvider.notifier).updateUser(
           updated,
           nuevaContrasena: pass.isNotEmpty ? pass : null,
         );
 
-    if (mounted) {
+    if (!mounted) return;
+    if (!saved) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Usuario actualizado con éxito.'),
-          backgroundColor: Color(0xFF16A34A),
+        SnackBar(
+          content: Text(ref.read(adminControllerProvider).errorMessage ??
+              'No se pudo guardar el usuario.'),
+          backgroundColor: const Color(0xFFDC2626),
           behavior: SnackBarBehavior.floating,
         ),
       );
-      widget.onDone();
+      return;
     }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Usuario actualizado con éxito.'),
+        backgroundColor: Color(0xFF16A34A),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+    widget.onDone();
   }
 
   @override
   Widget build(BuildContext context) {
+    final state = ref.watch(adminControllerProvider);
     final isActivo = _selectedEstado.trim().toLowerCase() == 'activo';
 
     return ListView(
@@ -251,7 +265,7 @@ class _AdminEditarUsuarioViewState
               child: SizedBox(
                 height: 48,
                 child: ElevatedButton(
-                  onPressed: _guardar,
+                  onPressed: state.isSaving ? null : _guardar,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFEA580C),
                     foregroundColor: Colors.white,
@@ -260,14 +274,23 @@ class _AdminEditarUsuarioViewState
                       borderRadius: BorderRadius.circular(14),
                     ),
                   ),
-                  child: const Text(
-                    'Guardar cambios',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
-                  ),
+                  child: state.isSaving
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Text(
+                          'Guardar cambios',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
                 ),
               ),
             ),
@@ -325,9 +348,7 @@ class _AdminEditarUsuarioViewState
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected
-              ? const Color(0xFFEA580C)
-              : const Color(0xFFF1F4F9),
+          color: isSelected ? const Color(0xFFEA580C) : const Color(0xFFF1F4F9),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(

@@ -1,17 +1,102 @@
-import 'package:flutter/foundation.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../core/api_client.dart';
 import 'models/admin_user.dart';
 
+class AdminStats {
+  const AdminStats({
+    required this.cuentasTotal,
+    required this.cuentasActivas,
+    required this.docentes,
+    required this.suspendidos,
+  });
+
+  final int cuentasTotal;
+  final int cuentasActivas;
+  final int docentes;
+  final int suspendidos;
+
+  factory AdminStats.fromJson(Map<String, dynamic> json) {
+    int readCount(String key) {
+      final value = json[key];
+      if (value is! num || value < 0) {
+        throw FormatException('El contador "$key" no es válido.');
+      }
+      return value.toInt();
+    }
+
+    return AdminStats(
+      cuentasTotal: readCount('cuentasTotal'),
+      cuentasActivas: readCount('cuentasActivas'),
+      docentes: readCount('docentes'),
+      suspendidos: readCount('suspendidos'),
+    );
+  }
+}
+
+class AdminProfile {
+  const AdminProfile({
+    required this.nombre,
+    required this.rol,
+    required this.telefono,
+    required this.correo,
+    required this.documento,
+    required this.programa,
+  });
+
+  final String nombre;
+  final String rol;
+  final String telefono;
+  final String correo;
+  final String documento;
+  final String programa;
+
+  factory AdminProfile.fromJson(Map<String, dynamic> json) {
+    String readValue(String key) {
+      final value = json[key];
+      if (value is! String) {
+        throw FormatException('El dato de perfil "$key" no es válido.');
+      }
+      return value;
+    }
+
+    return AdminProfile(
+      nombre: readValue('nombre'),
+      rol: readValue('rol'),
+      telefono: readValue('telefono'),
+      correo: readValue('correo'),
+      documento: readValue('documento'),
+      programa: readValue('programa'),
+    );
+  }
+
+  AdminProfile copyWith({String? telefono}) => AdminProfile(
+        nombre: nombre,
+        rol: rol,
+        telefono: telefono ?? this.telefono,
+        correo: correo,
+        documento: documento,
+        programa: programa,
+      );
+}
+
 class AdminState {
   const AdminState({
-    required this.users,
+    this.users = const [],
     this.selectedUser,
     this.activeTab = 0,
     this.searchQuery = '',
     this.filter = 'Todos',
-    this.adminPhone = '605 600 0000',
-    this.isLoading = false,
+    this.stats,
+    this.adminProfile,
+    this.isLoadingUsers = true,
+    this.isLoadingStats = true,
+    this.isLoadingProfile = true,
+    this.isSaving = false,
+    this.usersError,
+    this.statsError,
+    this.profileError,
     this.errorMessage,
   });
 
@@ -20,33 +105,36 @@ class AdminState {
   final int activeTab;
   final String searchQuery;
   final String filter;
-  final String adminPhone;
-  final bool isLoading;
+  final AdminStats? stats;
+  final AdminProfile? adminProfile;
+  final bool isLoadingUsers;
+  final bool isLoadingStats;
+  final bool isLoadingProfile;
+  final bool isSaving;
+  final String? usersError;
+  final String? statsError;
+  final String? profileError;
   final String? errorMessage;
 
   List<AdminUser> get filteredUsers {
-    return users.where((u) {
-      final matchesQuery = searchQuery.isEmpty ||
-          u.nombre.toLowerCase().contains(searchQuery.toLowerCase()) ||
-          u.correo.toLowerCase().contains(searchQuery.toLowerCase()) ||
-          u.rol.toLowerCase().contains(searchQuery.toLowerCase());
+    return users.where((user) {
+      final query = searchQuery.toLowerCase();
+      final matchesQuery = query.isEmpty ||
+          user.nombre.toLowerCase().contains(query) ||
+          user.id.toLowerCase().contains(query) ||
+          user.correo.toLowerCase().contains(query) ||
+          user.rol.toLowerCase().contains(query);
 
       if (!matchesQuery) return false;
-
       if (filter == 'Todos') return true;
-      if (filter == 'Activo') return u.isActivo;
-      if (filter == 'Revocado') return u.isRevocado;
-      if (filter == 'Estudiante') return u.rol.contains('Estudiante');
-      if (filter == 'Docente') return u.rol.contains('Docente');
-      if (filter == 'Coordinador') return u.rol.contains('Coordinador');
+      if (filter == 'Activo') return user.isActivo;
+      if (filter == 'Revocado') return user.isRevocado;
+      if (filter == 'Estudiante') return user.rol.contains('Estudiante');
+      if (filter == 'Docente') return user.rol.contains('Docente');
+      if (filter == 'Coordinador') return user.rol.contains('Coordinador');
       return true;
     }).toList();
   }
-
-  int get cuentasActivasCount => users.where((u) => u.isActivo).length;
-  int get docentesCount =>
-      users.where((u) => u.rol.toLowerCase().contains('docente')).length;
-  int get suspendidosCount => users.where((u) => u.isRevocado).length;
 
   AdminState copyWith({
     List<AdminUser>? users,
@@ -54,126 +142,144 @@ class AdminState {
     int? activeTab,
     String? searchQuery,
     String? filter,
-    String? adminPhone,
-    bool? isLoading,
+    AdminStats? Function()? stats,
+    AdminProfile? Function()? adminProfile,
+    bool? isLoadingUsers,
+    bool? isLoadingStats,
+    bool? isLoadingProfile,
+    bool? isSaving,
+    String? Function()? usersError,
+    String? Function()? statsError,
+    String? Function()? profileError,
     String? Function()? errorMessage,
   }) {
     return AdminState(
       users: users ?? this.users,
-      selectedUser:
-          selectedUser != null ? selectedUser() : this.selectedUser,
+      selectedUser: selectedUser != null ? selectedUser() : this.selectedUser,
       activeTab: activeTab ?? this.activeTab,
       searchQuery: searchQuery ?? this.searchQuery,
       filter: filter ?? this.filter,
-      adminPhone: adminPhone ?? this.adminPhone,
-      isLoading: isLoading ?? this.isLoading,
-      errorMessage: errorMessage != null ? errorMessage() : this.errorMessage,
+      stats: stats != null ? stats() : this.stats,
+      adminProfile:
+          adminProfile != null ? adminProfile() : this.adminProfile,
+      isLoadingUsers: isLoadingUsers ?? this.isLoadingUsers,
+      isLoadingStats: isLoadingStats ?? this.isLoadingStats,
+      isLoadingProfile: isLoadingProfile ?? this.isLoadingProfile,
+      isSaving: isSaving ?? this.isSaving,
+      usersError: usersError != null ? usersError() : this.usersError,
+      statsError: statsError != null ? statsError() : this.statsError,
+      profileError: profileError != null ? profileError() : this.profileError,
+      errorMessage:
+          errorMessage != null ? errorMessage() : this.errorMessage,
     );
   }
 }
 
 class AdminController extends StateNotifier<AdminState> {
-  AdminController(this._ref)
-      : super(AdminState(users: _initialSeedUsers)) {
+  AdminController(this._ref) : super(const AdminState()) {
     loadUsers();
+    loadStats();
+    loadProfile();
   }
 
   final Ref _ref;
 
-  static const List<AdminUser> _initialSeedUsers = [
-    AdminUser(
-      id: '1001',
-      nombre: 'Camilo Andres',
-      correo: 'candres@comfenalco.edu.co',
-      telefono: '300 123 4567',
-      rol: 'Estudiante',
-      estado: 'Activo',
-    ),
-    AdminUser(
-      id: '1002',
-      nombre: 'Valentina Ruiz',
-      correo: 'vruiz@comfenalco.edu.co',
-      telefono: '300 234 5678',
-      rol: 'Estudiante',
-      estado: 'Activo',
-    ),
-    AdminUser(
-      id: '1003',
-      nombre: 'Juan Pablo Mora',
-      correo: 'jmora@comfenalco.edu.co',
-      telefono: '300 345 6789',
-      rol: 'Estudiante',
-      estado: 'Activo',
-    ),
-    AdminUser(
-      id: '1004',
-      nombre: 'Laura Martínez',
-      correo: 'lmartinez@comfenalco.edu.co',
-      telefono: '300 456 7890',
-      rol: 'Docente',
-      estado: 'Activo',
-    ),
-    AdminUser(
-      id: '1005',
-      nombre: 'Carlos Chavarriaga',
-      correo: 'cchavarriaga@comfenalco.edu.co',
-      telefono: '300 567 8901',
-      rol: 'Docente + Estudiante',
-      estado: 'Activo',
-    ),
-    AdminUser(
-      id: '1006',
-      nombre: 'Andrés Pérez',
-      correo: 'aperez@comfenalco.edu.co',
-      telefono: '300 678 9012',
-      rol: 'Docente',
-      estado: 'Revocado',
-    ),
-    AdminUser(
-      id: '1007',
-      nombre: 'Sofía Rojas',
-      correo: 'srojas@comfenalco.edu.co',
-      telefono: '300 789 0123',
-      rol: 'Docente',
-      estado: 'Activo',
-    ),
-    AdminUser(
-      id: '1008',
-      nombre: 'Ricardo Vélez',
-      correo: 'rvelez@comfenalco.edu.co',
-      telefono: '300 890 1234',
-      rol: 'Coordinador',
-      estado: 'Activo',
-    ),
-  ];
-
   Future<void> loadUsers() async {
+    state = state.copyWith(isLoadingUsers: true, usersError: () => null);
     try {
-      final dio = _ref.read(dioProvider);
-      final res = await dio.get<List<dynamic>>('/api/admin/users');
-      if (res.data != null && res.data!.isNotEmpty) {
-        final fetched = res.data!
-            .map((item) => AdminUser.fromJson(item as Map<String, dynamic>))
-            .toList();
-        state = state.copyWith(users: fetched);
+      final response =
+          await _ref.read(dioProvider).get<List<dynamic>>('/api/admin/users');
+      final data = response.data;
+      if (data == null) {
+        throw const FormatException('El servidor no devolvió la lista de usuarios.');
       }
-    } catch (e) {
-      debugPrint('AdminController: usando datos iniciales locales ($e)');
+      final users = data.map((item) {
+        if (item is! Map<String, dynamic>) {
+          throw const FormatException('El servidor devolvió un usuario inválido.');
+        }
+        return AdminUser.fromJson(item);
+      }).toList(growable: false);
+      state = state.copyWith(users: users, isLoadingUsers: false);
+    } on DioException catch (error) {
+      state = state.copyWith(
+        isLoadingUsers: false,
+        usersError: () => _apiError(error),
+      );
+    } on FormatException catch (error) {
+      state = state.copyWith(
+        isLoadingUsers: false,
+        usersError: () => error.message,
+      );
     }
   }
 
+  Future<void> loadStats() async {
+    state = state.copyWith(isLoadingStats: true, statsError: () => null);
+    try {
+      final response =
+          await _ref.read(dioProvider).get<Map<String, dynamic>>('/api/admin/stats');
+      final data = response.data;
+      if (data == null) {
+        throw const FormatException('El servidor no devolvió las métricas.');
+      }
+      state = state.copyWith(
+        stats: () => AdminStats.fromJson(data),
+        isLoadingStats: false,
+      );
+    } on DioException catch (error) {
+      state = state.copyWith(
+        isLoadingStats: false,
+        statsError: () => _apiError(error),
+      );
+    } on FormatException catch (error) {
+      state = state.copyWith(
+        isLoadingStats: false,
+        statsError: () => error.message,
+      );
+    }
+  }
+
+  Future<void> loadProfile() async {
+    state = state.copyWith(isLoadingProfile: true, profileError: () => null);
+    try {
+      final response = await _ref
+          .read(dioProvider)
+          .get<Map<String, dynamic>>('/api/admin/perfil');
+      final data = response.data;
+      if (data == null) {
+        throw const FormatException('El servidor no devolvió el perfil de TI.');
+      }
+      state = state.copyWith(
+        adminProfile: () => AdminProfile.fromJson(data),
+        isLoadingProfile: false,
+      );
+    } on DioException catch (error) {
+      state = state.copyWith(
+        isLoadingProfile: false,
+        profileError: () => _apiError(error),
+      );
+    } on FormatException catch (error) {
+      state = state.copyWith(
+        isLoadingProfile: false,
+        profileError: () => error.message,
+      );
+    }
+  }
+
+  String _apiError(DioException error) {
+    final data = error.response?.data;
+    if (data is Map && data['message'] is String) {
+      return data['message'] as String;
+    }
+    return 'No se pudieron cargar los datos desde el servidor. Comprueba tu conexión e inténtalo de nuevo.';
+  }
+
   void setTab(int index) {
-    state = state.copyWith(
-      activeTab: index,
-      selectedUser: () => null,
-    );
+    state = state.copyWith(activeTab: index, selectedUser: () => null);
   }
 
   void selectUser(AdminUser user) {
-    state = state.copyWith(
-      selectedUser: () => user,
-      activeTab: 1, // En pestaña usuarios
-    );
+    state = state.copyWith(selectedUser: () => user, activeTab: 1);
   }
 
   void clearSelectedUser() {
@@ -189,71 +295,108 @@ class AdminController extends StateNotifier<AdminState> {
   }
 
   Future<bool> updateUser(AdminUser updated, {String? nuevaContrasena}) async {
-    state = state.copyWith(isLoading: true, errorMessage: () => null);
-
-    final currentUsers = List<AdminUser>.from(state.users);
-    final index = currentUsers.indexWhere((u) => u.id == updated.id);
-    if (index != -1) {
-      currentUsers[index] = updated;
-    } else {
-      currentUsers.add(updated);
-    }
-
-    state = state.copyWith(
-      users: currentUsers,
-      selectedUser: () => null, // Volver a la lista
-      isLoading: false,
-    );
-
-    // Intentar sincronizar con backend
+    state = state.copyWith(isSaving: true, errorMessage: () => null);
     try {
-      final dio = _ref.read(dioProvider);
-      await dio.put('/api/admin/users/${updated.id}', data: {
-        'nombre': updated.nombre,
-        'correo': updated.correo,
-        'telefono': updated.telefono,
-        'rol': updated.rol,
-        'estado': updated.estado,
-        if (nuevaContrasena != null && nuevaContrasena.trim().isNotEmpty)
-          'nuevaContrasena': nuevaContrasena.trim(),
-      });
-    } catch (e) {
-      debugPrint('Sincronización remota pendiente: $e');
+      final response = await _ref.read(dioProvider).put<Map<String, dynamic>>(
+        '/api/admin/users/${updated.id}',
+        data: {
+          'nombre': updated.nombre,
+          'correo': updated.correo,
+          'telefono': updated.telefono,
+          'rol': updated.rol,
+          'estado': updated.estado,
+          if (nuevaContrasena != null && nuevaContrasena.trim().isNotEmpty)
+            'nuevaContrasena': nuevaContrasena.trim(),
+        },
+      );
+      final data = response.data;
+      if (data == null) {
+        throw const FormatException('El servidor no confirmó los cambios del usuario.');
+      }
+      final savedUser = AdminUser.fromJson(data);
+      final users = List<AdminUser>.from(state.users);
+      final index = users.indexWhere((user) => user.id == savedUser.id);
+      if (index == -1) {
+        users.add(savedUser);
+      } else {
+        users[index] = savedUser;
+      }
+      state = state.copyWith(
+        users: users,
+        selectedUser: () => null,
+        isSaving: false,
+      );
+      await loadStats();
+      return true;
+    } on DioException catch (error) {
+      state = state.copyWith(
+        isSaving: false,
+        errorMessage: () => _apiError(error),
+      );
+      return false;
+    } on FormatException catch (error) {
+      state = state.copyWith(
+        isSaving: false,
+        errorMessage: () => error.message,
+      );
+      return false;
     }
-    return true;
   }
 
   Future<void> toggleUserAccess(AdminUser user) async {
     final nextState = user.isActivo ? 'Revocado' : 'Activo';
-    final updated = user.copyWith(estado: nextState);
-
-    final currentUsers = List<AdminUser>.from(state.users);
-    final index = currentUsers.indexWhere((u) => u.id == user.id);
-    if (index != -1) {
-      currentUsers[index] = updated;
-    }
-
-    state = state.copyWith(
-      users: currentUsers,
-      selectedUser: state.selectedUser?.id == user.id ? () => updated : null,
-    );
-
     try {
-      final dio = _ref.read(dioProvider);
-      await dio.patch('/api/admin/users/${user.id}/estado',
-          queryParameters: {'estado': nextState});
-    } catch (e) {
-      debugPrint('Sincronización remota estado: $e');
+      final response = await _ref
+          .read(dioProvider)
+          .patch<Map<String, dynamic>>(
+            '/api/admin/users/${user.id}/estado',
+            queryParameters: {'estado': nextState},
+          );
+      final data = response.data;
+      if (data == null) {
+        throw const FormatException('El servidor no confirmó el cambio de acceso.');
+      }
+      final savedUser = AdminUser.fromJson(data);
+      final users = List<AdminUser>.from(state.users);
+      final index = users.indexWhere((item) => item.id == savedUser.id);
+      if (index != -1) users[index] = savedUser;
+      state = state.copyWith(
+        users: users,
+        selectedUser: state.selectedUser?.id == savedUser.id
+            ? () => savedUser
+            : null,
+      );
+      await loadStats();
+    } on DioException catch (error) {
+      state = state.copyWith(errorMessage: () => _apiError(error));
+    } on FormatException catch (error) {
+      state = state.copyWith(errorMessage: () => error.message);
     }
   }
 
-  Future<void> updateAdminPhone(String phone) async {
-    state = state.copyWith(adminPhone: phone);
+  Future<bool> updateAdminPhone(String phone) async {
     try {
-      final dio = _ref.read(dioProvider);
-      await dio.put('/api/admin/perfil/telefono', data: {'telefono': phone});
-    } catch (e) {
-      debugPrint('Error guardando teléfono admin en backend: $e');
+      final response = await _ref
+          .read(dioProvider)
+          .put<Map<String, dynamic>>(
+            '/api/admin/perfil/telefono',
+            data: {'telefono': phone},
+          );
+      final data = response.data;
+      if (data == null) {
+        throw const FormatException('El servidor no confirmó el teléfono actualizado.');
+      }
+      state = state.copyWith(
+        adminProfile: () => AdminProfile.fromJson(data),
+        profileError: () => null,
+      );
+      return true;
+    } on DioException catch (error) {
+      state = state.copyWith(profileError: () => _apiError(error));
+      return false;
+    } on FormatException catch (error) {
+      state = state.copyWith(profileError: () => error.message);
+      return false;
     }
   }
 }

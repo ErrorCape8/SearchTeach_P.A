@@ -115,15 +115,19 @@ class _AdminUsuariosViewState extends ConsumerState<AdminUsuariosView> {
                         .read(adminControllerProvider.notifier)
                         .setSearchQuery(val),
                     decoration: const InputDecoration(
-                      hintText: 'Buscar por nombre',
+                          hintText: 'Buscar por nombre, correo o ID',
                       hintStyle: TextStyle(
                         color: Color(0xFF8C95A6),
                         fontSize: 14,
                         fontWeight: FontWeight.w400,
                       ),
-                      border: InputBorder.none,
-                      isDense: true,
-                    ),
+                          prefixIcon: Icon(
+                            Icons.search_rounded,
+                            color: Color(0xFF8C95A6),
+                          ),
+                          border: InputBorder.none,
+                          isDense: true,
+                        ),
                     style: const TextStyle(
                       fontSize: 14,
                       color: Color(0xFF1E293B),
@@ -167,10 +171,35 @@ class _AdminUsuariosViewState extends ConsumerState<AdminUsuariosView> {
 
         // Lista de usuarios
         Expanded(
-          child: users.isEmpty
+          child: state.isLoadingUsers
+              ? const Center(child: CircularProgressIndicator())
+              : state.usersError != null
+                  ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              state.usersError!,
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 12),
+                            OutlinedButton.icon(
+                              onPressed: () => ref
+                                  .read(adminControllerProvider.notifier)
+                                  .loadUsers(),
+                              icon: const Icon(Icons.refresh),
+                              label: const Text('Reintentar'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  : users.isEmpty
               ? const Center(
                   child: Text(
-                    'No se encontraron usuarios',
+                    'No hay usuarios que coincidan con la búsqueda.',
                     style: TextStyle(color: Color(0xFF8C95A6), fontSize: 14),
                   ),
                 )
@@ -213,6 +242,22 @@ class _UserListTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isActivo = user.isActivo;
+    final isRevocado = user.isRevocado;
+    final stateLabel = isActivo
+        ? 'Activo'
+        : isRevocado
+            ? 'Revocado'
+            : 'Sin estado';
+    final stateColor = isActivo
+        ? const Color(0xFF16A34A)
+        : isRevocado
+            ? const Color(0xFFDC2626)
+            : const Color(0xFF64748B);
+    final stateBackground = isActivo
+        ? const Color(0xFFDCFCE7)
+        : isRevocado
+            ? const Color(0xFFFEE2E2)
+            : const Color(0xFFE2E8F0);
 
     return InkWell(
       onTap: onTap,
@@ -244,7 +289,7 @@ class _UserListTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    user.nombre,
+                    user.nombre.isEmpty ? 'Sin nombre registrado' : user.nombre,
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
@@ -253,7 +298,7 @@ class _UserListTile extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    user.rol,
+                    user.rol.isEmpty ? 'Sin rol registrado' : user.rol,
                     style: const TextStyle(
                       fontSize: 12.5,
                       color: Color(0xFF64748B),
@@ -263,23 +308,19 @@ class _UserListTile extends StatelessWidget {
               ),
             ),
 
-            // Badge de estado: Activo (verde) o Revocado (rojo)
+            // Badge de estado recibido de la base de datos.
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: isActivo
-                    ? const Color(0xFFDCFCE7)
-                    : const Color(0xFFFEE2E2),
+                color: stateBackground,
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Text(
-                isActivo ? 'Activo' : 'Revocado',
+                stateLabel,
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
-                  color: isActivo
-                      ? const Color(0xFF16A34A)
-                      : const Color(0xFFDC2626),
+                  color: stateColor,
                 ),
               ),
             ),

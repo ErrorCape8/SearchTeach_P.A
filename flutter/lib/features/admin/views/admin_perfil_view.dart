@@ -7,7 +7,11 @@ import '../admin_controller.dart';
 class AdminPerfilView extends ConsumerWidget {
   const AdminPerfilView({super.key});
 
-  void _showEditPhoneDialog(BuildContext context, WidgetRef ref, String currentPhone) {
+  void _showEditPhoneDialog(
+    BuildContext context,
+    WidgetRef ref,
+    String currentPhone,
+  ) {
     final controller = TextEditingController(text: currentPhone);
     showDialog<void>(
       context: context,
@@ -33,20 +37,39 @@ class AdminPerfilView extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar', style: TextStyle(color: Color(0xFF64748B))),
+            child: const Text('Cancelar',
+                style: TextStyle(color: Color(0xFF64748B))),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFEA580C),
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
             ),
-            onPressed: () {
+            onPressed: () async {
               final newPhone = controller.text.trim();
-              if (newPhone.isNotEmpty) {
-                ref.read(adminControllerProvider.notifier).updateAdminPhone(newPhone);
+              if (newPhone.isEmpty) {
+                ScaffoldMessenger.of(ctx).showSnackBar(
+                  const SnackBar(content: Text('El teléfono es obligatorio.')),
+                );
+                return;
               }
+              final saved = await ref
+                  .read(adminControllerProvider.notifier)
+                  .updateAdminPhone(newPhone);
+              if (!ctx.mounted) return;
               Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(saved
+                      ? 'Teléfono actualizado.'
+                      : ref.read(adminControllerProvider).profileError ??
+                          'No se pudo actualizar el teléfono.'),
+                  backgroundColor:
+                      saved ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                ),
+              );
             },
             child: const Text('Guardar'),
           ),
@@ -82,18 +105,21 @@ class AdminPerfilView extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar', style: TextStyle(color: Color(0xFF64748B))),
+            child: const Text('Cancelar',
+                style: TextStyle(color: Color(0xFF64748B))),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFEA580C),
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
             ),
             onPressed: () {
               if (passCtrl.text.length < 8) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Debe tener al menos 8 caracteres.')),
+                  const SnackBar(
+                      content: Text('Debe tener al menos 8 caracteres.')),
                 );
                 return;
               }
@@ -115,10 +141,36 @@ class AdminPerfilView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(adminControllerProvider);
+    final profile = state.adminProfile;
+    String showValue(String? value) {
+      if (value == null) return 'Cargando…';
+      return value.isEmpty ? 'No registrado' : value;
+    }
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
       children: [
+        if (state.profileError != null)
+          Container(
+            padding: const EdgeInsets.all(12),
+            margin: const EdgeInsets.only(bottom: 16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFEE2E2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(state.profileError!),
+                TextButton.icon(
+                  onPressed: () =>
+                      ref.read(adminControllerProvider.notifier).loadProfile(),
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Reintentar'),
+                ),
+              ],
+            ),
+          ),
         // Datos que puedes editar
         const Text(
           'Datos que puedes editar',
@@ -130,7 +182,13 @@ class AdminPerfilView extends ConsumerWidget {
         ),
         const SizedBox(height: 10),
         InkWell(
-          onTap: () => _showEditPhoneDialog(context, ref, state.adminPhone),
+          onTap: state.isLoadingProfile || profile == null
+              ? null
+              : () => _showEditPhoneDialog(
+                    context,
+                    ref,
+                    profile.telefono,
+                  ),
           borderRadius: BorderRadius.circular(18),
           child: Container(
             padding: const EdgeInsets.all(16),
@@ -167,7 +225,7 @@ class AdminPerfilView extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        state.adminPhone,
+                        showValue(profile?.telefono),
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
@@ -301,22 +359,22 @@ class AdminPerfilView extends ConsumerWidget {
             children: [
               _buildInstitutionalRow(
                 title: 'Correo',
-                value: 'ti@comfenalco.edu.co',
+                value: showValue(profile?.correo),
               ),
               const Divider(height: 18, color: Color(0xFFF1F5F9)),
               _buildInstitutionalRow(
                 title: 'Documento',
-                value: '—',
+                value: showValue(profile?.documento),
               ),
               const Divider(height: 18, color: Color(0xFFF1F5F9)),
               _buildInstitutionalRow(
                 title: 'Programa',
-                value: 'Tecnologías de la información',
+                value: showValue(profile?.programa),
               ),
               const Divider(height: 18, color: Color(0xFFF1F5F9)),
               _buildInstitutionalRow(
                 title: 'Rol',
-                value: 'Administrador',
+                value: showValue(profile?.rol),
               ),
             ],
           ),
