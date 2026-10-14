@@ -136,114 +136,90 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
     StudentDashboardData data,
     AvailableTutor tutor,
   ) async {
-    final subject = TextEditingController();
-    var date = _nextDate(tutor.day);
+    final availableSubjects = tutor.subjects
+        .where((item) =>
+            data.profile.career.trim().isEmpty ||
+            item.careers.contains(data.profile.career.trim()))
+        .map((item) => item.name)
+        .toSet()
+        .toList()
+      ..sort();
+    String? selectedSubject;
+    final date = _nextDate(tutor.day);
+    if (availableSubjects.isEmpty) {
+      _showMessage(
+          'Este docente aún no tiene materias configuradas para tu tecnología.');
+      return;
+    }
     try {
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (dialogContext) => StatefulBuilder(
-          builder: (context, setDialogState) => AlertDialog(
-            title: const Text('Inscribirse en tutoría grupal'),
-            content: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('${tutor.name} · ${tutor.day} '
-                      '${tutor.startTime}–${tutor.endTime}'),
-                  const SizedBox(height: 16),
-                  Autocomplete<String>(
-                    optionsBuilder: (value) {
-                      final studentCareer = data.profile.career.trim();
-                      final options = tutor.subjects
-                          .where((item) =>
-                              studentCareer.isEmpty ||
-                              item.careers.contains(studentCareer))
-                          .map((item) => item.name);
-                      final query = value.text.trim().toLowerCase();
-                      return options
-                          .where((name) => name.toLowerCase().contains(query));
-                    },
-                    onSelected: (value) => subject.text = value,
-                    fieldViewBuilder:
-                        (context, controller, focusNode, onSubmitted) =>
-                            TextField(
-                      controller: controller,
-                      focusNode: focusNode,
-                      autofocus: true,
-                      onChanged: (value) => subject.text = value,
-                      decoration: const InputDecoration(
-                        labelText: 'Materia o tema',
-                        hintText: 'Elige una materia que dicta el tutor',
-                        border: OutlineInputBorder(),
-                      ),
+            builder: (context, setDialogState) => AlertDialog(
+                  title: const Text('Inscribirse en tutoría grupal'),
+                  content: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 420),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('${tutor.name} · ${tutor.day} '
+                            '${tutor.startTime}–${tutor.endTime}'),
+                        const SizedBox(height: 16),
+                        DropdownButtonFormField<String>(
+                          decoration: const InputDecoration(
+                            labelText: 'Materia',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: availableSubjects
+                              .map((name) => DropdownMenuItem(
+                                    value: name,
+                                    child: Text(name),
+                                  ))
+                              .toList(),
+                          onChanged: (value) =>
+                              setDialogState(() => selectedSubject = value),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            const Icon(Icons.calendar_month_outlined, size: 18),
+                            const SizedBox(width: 8),
+                            Text(
+                                'Próxima fecha disponible: ${_dateLabel(date)}'),
+                          ],
+                        ),
+                        const SizedBox(height: 5),
+                        Text(
+                            'Horario del docente: ${tutor.startTime}–${tutor.endTime}',
+                            style: Theme.of(context).textTheme.bodySmall),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  OutlinedButton.icon(
-                    onPressed: () async {
-                      final picked = await showDatePicker(
-                        context: context,
-                        initialDate: date,
-                        firstDate: DateTime.now(),
-                        lastDate: DateTime.now().add(const Duration(days: 90)),
-                      );
-                      if (picked != null) setDialogState(() => date = picked);
-                    },
-                    icon: const Icon(Icons.calendar_month_outlined),
-                    label: Text(_dateLabel(date)),
-                  ),
-                  const SizedBox(height: 5),
-                  Text(
-                      'Tutoría de 1 hora, de ${tutor.startTime} a ${tutor.endTime}',
-                      style: Theme.of(context).textTheme.bodySmall),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialogContext, false),
-                child: const Text('Volver'),
-              ),
-              FilledButton(
-                onPressed: () {
-                  if (subject.text.trim().isEmpty) {
-                    _showMessage('Escribe la materia o el tema de la tutoría.');
-                    return;
-                  }
-                  if (tutor.subjects.isNotEmpty) {
-                    final selectedSubject = tutor.subjects.where((item) =>
-                        item.name.toLowerCase() ==
-                        subject.text.trim().toLowerCase());
-                    final studentCareer = data.profile.career.trim();
-                    if (selectedSubject.isEmpty ||
-                        (studentCareer.isNotEmpty &&
-                            !selectedSubject.first.careers
-                                .contains(studentCareer))) {
-                      _showMessage(
-                          'Esa materia no está disponible para tu tecnología.');
-                      return;
-                    }
-                  }
-                  if (_weekday(date) != tutor.day) {
-                    _showMessage(
-                        'Selecciona un ${tutor.day} para este horario.');
-                    return;
-                  }
-                  Navigator.pop(dialogContext, true);
-                },
-                child: const Text('Inscribirme'),
-              ),
-            ],
-          ),
-        ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(dialogContext, false),
+                      child: const Text('Volver'),
+                    ),
+                    FilledButton(
+                      onPressed: () {
+                        if (selectedSubject == null) {
+                          _showMessage(
+                              'Selecciona una materia configurada por coordinación.');
+                          return;
+                        }
+                        Navigator.pop(dialogContext, true);
+                      },
+                      child: const Text('Inscribirme'),
+                    ),
+                  ],
+                )),
       );
       if (confirmed != true) return;
       await enrollInTutoring(
         dio: ref.read(dioProvider),
         tutor: tutor,
-        subject: subject.text,
+        subject: selectedSubject!,
         start: date,
       );
       ref.invalidate(studentDashboardProvider);
@@ -252,8 +228,6 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
       _showMessage(_apiMessage(error));
     } on FormatException catch (error) {
       _showMessage(error.message);
-    } finally {
-      subject.dispose();
     }
   }
 
@@ -279,7 +253,18 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
   Future<void> _toggleProjectEnrollment(ClassroomProjectSpace space) async {
     try {
       final dio = ref.read(dioProvider);
-      if (space.enrolled) {
+      if (space.createOrJoin) {
+        final name = await _askProjectName();
+        if (name == null || name.trim().isEmpty) return;
+        await createOrJoinClassroomProject(
+          dio: dio,
+          tutoringId: space.tutoringId,
+          name: name.trim(),
+        );
+        ref.invalidate(studentDashboardProvider);
+        _showMessage('Te inscribiste en el equipo del proyecto.');
+        return;
+      } else if (space.enrolled) {
         await leaveClassroomProject(dio: dio, space: space);
       } else {
         await enrollInClassroomProject(dio: dio, space: space);
@@ -290,6 +275,39 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
           : 'Te inscribiste en el proyecto de aula.');
     } on DioException catch (error) {
       _showMessage(_apiMessage(error));
+    }
+  }
+
+  Future<String?> _askProjectName() async {
+    final controller = TextEditingController();
+    try {
+      return await showDialog<String>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Proyecto de aula'),
+          content: TextField(
+            controller: controller,
+            maxLength: 120,
+            autofocus: true,
+            decoration: const InputDecoration(
+              labelText: 'Nombre del proyecto',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, controller.text),
+              child: const Text('Continuar'),
+            ),
+          ],
+        ),
+      );
+    } finally {
+      controller.dispose();
     }
   }
 
@@ -332,16 +350,6 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
     if (difference == 0) difference = 7;
     return DateTime(now.year, now.month, now.day + difference);
   }
-
-  String _weekday(DateTime date) => const [
-        'Lunes',
-        'Martes',
-        'Miércoles',
-        'Jueves',
-        'Viernes',
-        'Sábado',
-        'Domingo',
-      ][date.weekday - 1];
 
   String _dateLabel(DateTime date) => '${date.day.toString().padLeft(2, '0')}/'
       '${date.month.toString().padLeft(2, '0')}/${date.year}';

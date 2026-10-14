@@ -19,11 +19,19 @@ class _CoordinacionTutoriasPageState
   final _formKey = GlobalKey<FormState>();
   final _leader = TextEditingController();
   final _supportTeachers = List.generate(5, (_) => TextEditingController());
-  final _projects = List.generate(6, (index) => _ProjectControllers(index + 1));
+  String _career = careerCatalog.first;
+  int _semester = 1;
   bool _saving = false;
+  bool _loadingTutorias = true;
   String? _error;
   int _selectedSection = 0;
-  final List<String> _createdTutorias = [];
+  List<Map<String, dynamic>> _createdTutorias = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCreatedTutorias();
+  }
 
   @override
   void dispose() {
@@ -31,10 +39,54 @@ class _CoordinacionTutoriasPageState
     for (final controller in _supportTeachers) {
       controller.dispose();
     }
-    for (final project in _projects) {
-      project.dispose();
-    }
     super.dispose();
+  }
+
+  Future<void> _loadCreatedTutorias() async {
+    setState(() {
+      _loadingTutorias = true;
+      _error = null;
+    });
+    try {
+      final response = await ref
+          .read(dioProvider)
+          .get<List<dynamic>>('/api/coordinacion/tutorias-colectivas');
+      final data = response.data;
+      if (data == null) {
+        throw const FormatException(
+          'El servidor devolvió una lista de tutorías vacía.',
+        );
+      }
+      final tutorias = data.map((entry) {
+        if (entry is! Map<String, dynamic>) {
+          throw const FormatException(
+            'El servidor devolvió una tutoría colectiva inválida.',
+          );
+        }
+        return entry;
+      }).toList(growable: false);
+      if (!mounted) return;
+      setState(() {
+        _createdTutorias = tutorias;
+        _loadingTutorias = false;
+        _error = null;
+      });
+    } on DioException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _error = _apiError(
+          error,
+          fallback: 'No se pudieron cargar las tutorías colectivas.',
+        );
+        _loadingTutorias = false;
+      });
+    } on FormatException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _error = error.message;
+        _loadingTutorias = false;
+      });
+    }
   }
 
   Future<void> _create() async {
@@ -60,31 +112,19 @@ class _CoordinacionTutoriasPageState
         data: {
           'docenteLiderId': _leader.text.trim(),
           'docentesApoyoIds': supportIds,
-          'proyectos': List.generate(
-            6,
-            (index) => _projects[index].toJson(
-              index == 0 ? _leader.text.trim() : supportIds[index - 1],
-            ),
-          ),
+          'tecnologia': _career,
+          'semestre': _semester,
         },
       );
       final body = response.data;
-      if (body == null || body['id'] is! String || body['proyectos'] is! List) {
+      if (body == null || body['id'] is! String) {
         throw const FormatException(
           'El servidor devolvió una tutoría incompleta.',
         );
       }
-      final projectIds = (body['proyectos'] as List)
-          .map((project) => (project as Map<String, dynamic>)['proyectoId'])
-          .whereType<String>()
-          .toList();
+      await _loadCreatedTutorias();
       if (!mounted) return;
       setState(() {
-        _createdTutorias.insert(
-          0,
-          'Tutoría ${body['id']} creada. '
-          'Identificadores de proyectos: ${projectIds.join(', ')}',
-        );
         _selectedSection = 1;
       });
     } on DioException catch (error) {
@@ -98,12 +138,58 @@ class _CoordinacionTutoriasPageState
     }
   }
 
-  String _apiError(DioException error) {
+  Future<void> _deleteTutoria(Map<String, dynamic> tutoria) async {
+    final id = tutoria['id'];
+    if (id is! String || id.isEmpty) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Eliminar tutoría colectiva'),
+        content: const Text(
+          'Se eliminarán también los proyectos, las inscripciones y los informes asociados. '
+          'Esta acción no se puede deshacer.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await ref
+          .read(dioProvider)
+          .delete<void>('/api/coordinacion/tutorias-colectivas/$id');
+      await _loadCreatedTutorias();
+    } on DioException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              _apiError(error,
+                  fallback: 'No se pudo eliminar la tutoría colectiva.'),
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  String _apiError(
+    DioException error, {
+    String fallback = 'No se pudo crear la tutoría colectiva.',
+  }) {
     final data = error.response?.data;
     if (data is Map && data['message'] is String) {
       return data['message'] as String;
     }
-    return 'No se pudo crear la tutoría colectiva. Comprueba tu conexión e inténtalo de nuevo.';
+    return '$fallback Comprueba tu conexión e inténtalo de nuevo.';
   }
 
   @override
@@ -163,9 +249,48 @@ class _CoordinacionTutoriasPageState
                               ),
                               const SizedBox(height: 8),
                               const Text(
-                                'Asigna un docente líder y cinco docentes de apoyo para crear espacios de los semestres 1 al 6. Los estudiantes se inscribirán desde su cuenta.',
+                                'Define la carrera y el semestre, asigna un docente líder y cinco docentes de apoyo. Los estudiantes registrarán sus proyectos desde su cuenta.',
                               ),
                               const SizedBox(height: 20),
+                              DropdownButtonFormField<String>(
+                                initialValue: _career,
+                                decoration: const InputDecoration(
+                                  labelText: 'Carrera',
+                                  border: OutlineInputBorder(),
+                                ),
+                                items: careerCatalog
+                                    .map((career) => DropdownMenuItem(
+                                          value: career,
+                                          child: Text(career),
+                                        ))
+                                    .toList(),
+                                onChanged: (value) {
+                                  if (value != null) {
+                                    setState(() => _career = value);
+                                  }
+                                },
+                              ),
+                              const SizedBox(height: 12),
+                              DropdownButtonFormField<int>(
+                                initialValue: _semester,
+                                decoration: const InputDecoration(
+                                  labelText: 'Semestre',
+                                  border: OutlineInputBorder(),
+                                ),
+                                items: [
+                                  for (var value = 1; value <= 6; value++)
+                                    DropdownMenuItem(
+                                      value: value,
+                                      child: Text('$value'),
+                                    ),
+                                ],
+                                onChanged: (value) {
+                                  if (value != null) {
+                                    setState(() => _semester = value);
+                                  }
+                                },
+                              ),
+                              const SizedBox(height: 12),
                               _textField(
                                 _leader,
                                 'Identificación del docente líder',
@@ -178,16 +303,6 @@ class _CoordinacionTutoriasPageState
                                   'Identificación del docente',
                                 ),
                                 const SizedBox(height: 10),
-                              ],
-                              for (var index = 0; index < 6; index++) ...[
-                                _ProjectFields(
-                                  number: index + 1,
-                                  controllers: _projects[index],
-                                  responsibleLabel: index == 0
-                                      ? 'Docente líder'
-                                      : 'Docente de apoyo $index',
-                                ),
-                                const SizedBox(height: 18),
                               ],
                               if (_error != null)
                                 _MessageBox(message: _error!, isError: true),
@@ -217,6 +332,28 @@ class _CoordinacionTutoriasPageState
       );
 
   Widget _createdContent() {
+    if (_loadingTutorias) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_error != null && _createdTutorias.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(_error!, textAlign: TextAlign.center),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: _loadCreatedTutorias,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Reintentar'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     if (_createdTutorias.isEmpty) {
       return const Center(
         child: Padding(
@@ -237,7 +374,30 @@ class _CoordinacionTutoriasPageState
             children: [
               const Icon(Icons.groups_outlined, color: Colors.green),
               const SizedBox(width: 12),
-              Expanded(child: Text(_createdTutorias[index])),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${_createdTutorias[index]['tecnologia'] ?? 'Carrera'} · '
+                      'Semestre ${_createdTutorias[index]['semestre'] ?? '—'}',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                        'Docente líder: ${_createdTutorias[index]['docenteLiderId'] ?? '—'}'),
+                    Text(
+                      '${(_createdTutorias[index]['proyectos'] as List?)?.length ?? 0} proyectos · '
+                      'ID ${_createdTutorias[index]['id'] ?? '—'}',
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                tooltip: 'Eliminar tutoría colectiva',
+                onPressed: () => _deleteTutoria(_createdTutorias[index]),
+                icon: const Icon(Icons.delete_outline, color: Colors.red),
+              ),
             ],
           ),
         ),
@@ -251,128 +411,6 @@ class _CoordinacionTutoriasPageState
       );
 
   Widget _textField(TextEditingController controller, String label) =>
-      TextFormField(
-        controller: controller,
-        decoration: InputDecoration(
-          labelText: label,
-          border: const OutlineInputBorder(),
-        ),
-        validator: (value) => value == null || value.trim().isEmpty
-            ? 'Este dato es obligatorio.'
-            : null,
-      );
-}
-
-class _ProjectControllers {
-  _ProjectControllers(int semester) {
-    semestre.text = '$semester';
-  }
-
-  final nombre = TextEditingController();
-  final tecnologia = TextEditingController();
-  final semestre = TextEditingController();
-
-  void dispose() {
-    nombre.dispose();
-    tecnologia.dispose();
-    semestre.dispose();
-  }
-
-  Map<String, Object> toJson(String responsableId) => {
-        'nombre': nombre.text.trim(),
-        'docenteResponsableId': responsableId,
-        'tecnologia': tecnologia.text.trim(),
-        'semestre': int.parse(semestre.text.trim()),
-      };
-}
-
-class _ProjectFields extends StatelessWidget {
-  const _ProjectFields({
-    required this.number,
-    required this.controllers,
-    required this.responsibleLabel,
-  });
-
-  final int number;
-  final _ProjectControllers controllers;
-  final String responsibleLabel;
-
-  @override
-  Widget build(BuildContext context) => Card(
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Espacio del semestre $number',
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 10),
-              _requiredField(controllers.nombre, 'Nombre del proyecto'),
-              const SizedBox(height: 10),
-              Text('Responsable: $responsibleLabel'),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: Autocomplete<String>(
-                      initialValue: TextEditingValue(
-                        text: controllers.tecnologia.text,
-                      ),
-                      optionsBuilder: (value) {
-                        final query = value.text.trim().toLowerCase();
-                        if (query.isEmpty) return careerCatalog;
-                        return careerCatalog.where(
-                            (career) => career.toLowerCase().contains(query));
-                      },
-                      onSelected: (career) =>
-                          controllers.tecnologia.text = career,
-                      fieldViewBuilder:
-                          (context, controller, focusNode, onSubmitted) =>
-                              TextFormField(
-                        controller: controller,
-                        focusNode: focusNode,
-                        onChanged: (value) =>
-                            controllers.tecnologia.text = value,
-                        decoration: const InputDecoration(
-                          labelText: 'Tecnología del proyecto',
-                          border: OutlineInputBorder(),
-                        ),
-                        validator: (value) => value == null ||
-                                !careerCatalog.contains(value.trim())
-                            ? 'Selecciona una tecnología del catálogo.'
-                            : null,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  SizedBox(
-                    width: 100,
-                    child: TextFormField(
-                      controller: controllers.semestre,
-                      readOnly: true,
-                      decoration: const InputDecoration(
-                        labelText: 'Semestre',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) {
-                        final semester = int.tryParse(value ?? '');
-                        return semester != number ? 'Inválido' : null;
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      );
-
-  static Widget _requiredField(
-    TextEditingController controller,
-    String label,
-  ) =>
       TextFormField(
         controller: controller,
         decoration: InputDecoration(

@@ -149,12 +149,14 @@ class TeacherScheduleGrid extends StatelessWidget {
     required this.teachers,
     required this.schedules,
     required this.onSelect,
+    required this.onDelete,
     super.key,
   });
 
   final List<Teacher> teachers;
   final Map<String, TutorSchedule> schedules;
   final ValueChanged<Teacher> onSelect;
+  final ValueChanged<Teacher> onDelete;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
@@ -179,6 +181,7 @@ class TeacherScheduleGrid extends StatelessWidget {
                 teacher: teacher,
                 schedule: schedules[teacher.id],
                 onTap: () => onSelect(teacher),
+                onDelete: () => onDelete(teacher),
               );
             },
           );
@@ -191,11 +194,13 @@ class _TeacherCard extends StatelessWidget {
     required this.teacher,
     required this.schedule,
     required this.onTap,
+    required this.onDelete,
   });
 
   final Teacher teacher;
   final TutorSchedule? schedule;
   final VoidCallback onTap;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -267,12 +272,20 @@ class _TeacherCard extends StatelessWidget {
                 style: const TextStyle(color: _muted, height: 1.4),
               ),
             ),
-            Align(
-              alignment: Alignment.centerRight,
-              child: FilledButton(
-                onPressed: onTap,
-                child: Text(assigned ? 'Editar' : 'Asignar'),
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                if (assigned)
+                  IconButton(
+                    tooltip: 'Eliminar horario',
+                    onPressed: onDelete,
+                    icon: const Icon(Icons.delete_outline, color: Colors.red),
+                  ),
+                FilledButton(
+                  onPressed: onTap,
+                  child: Text(assigned ? 'Editar' : 'Asignar'),
+                ),
+              ],
             ),
           ],
         ),

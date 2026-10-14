@@ -160,6 +160,49 @@ class _CoordinacionHorariosPageState
     );
   }
 
+  Future<void> _deleteSchedule(Teacher teacher) async {
+    final schedule = _scheduleByTeacher[teacher.id];
+    if (schedule == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Eliminar horario'),
+        content: Text(
+          '¿Eliminar el horario publicado de ${teacher.nombre}? '
+          'Las tutorías ya creadas no se modificarán.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await ref.read(dioProvider).delete<void>(
+            '/api/coordinacion/horarios/${Uri.encodeComponent(teacher.id)}',
+          );
+      if (!mounted) return;
+      setState(() => _schedules =
+          _schedules.where((item) => item.docenteId != teacher.id).toList());
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Horario eliminado.')),
+      );
+    } on DioException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text(apiError(error, 'No se pudo eliminar el horario.'))),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
         backgroundColor: const Color(0xFFF3F5FA),
@@ -228,6 +271,7 @@ class _CoordinacionHorariosPageState
                                       teachers: _visibleTeachers,
                                       schedules: _scheduleByTeacher,
                                       onSelect: _editSchedule,
+                                      onDelete: _deleteSchedule,
                                     ),
                             ),
                           ],

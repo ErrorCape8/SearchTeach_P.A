@@ -252,6 +252,14 @@ class _StudentTutoringViewState extends State<StudentTutoringView> {
     final career = widget.data.profile.career.trim();
     final spaces = widget.data.projectSpaces
         .where((space) => career.isEmpty || space.career == career)
+        .where((space) =>
+            !space.createOrJoin ||
+            !widget.data.projectSpaces.any(
+              (project) =>
+                  !project.createOrJoin &&
+                  project.tutoringId == space.tutoringId &&
+                  project.enrolled,
+            ))
         .toList()
       ..sort((a, b) => a.semester.compareTo(b.semester));
     if (spaces.isEmpty) {
@@ -283,20 +291,24 @@ class _StudentTutoringViewState extends State<StudentTutoringView> {
                 Text(space.name),
                 Text(space.career, style: const TextStyle(color: _muted)),
                 const SizedBox(height: 8),
-                Text(
-                    'Docente: ${space.teacherId} · ${space.enrolledCount}/4 inscritos'),
-                const SizedBox(height: 12),
+                if (!space.createOrJoin) ...[
+                  Text(
+                      'Docente: ${space.teacherId} · ${space.enrolledCount}/4 inscritos'),
+                  const SizedBox(height: 12),
+                ],
                 Align(
                   alignment: Alignment.centerRight,
                   child: FilledButton.tonal(
-                    onPressed: !space.enrolled && full
+                    onPressed: !space.createOrJoin && !space.enrolled && full
                         ? null
                         : () => widget.onProjectEnrollment(space),
-                    child: Text(space.enrolled
-                        ? 'Desistir de esta tutoría'
-                        : full
-                            ? 'Cupo completo'
-                            : 'Inscribirme'),
+                    child: Text(space.createOrJoin
+                        ? 'Crear o unirse'
+                        : space.enrolled
+                            ? 'Desistir de esta tutoría'
+                            : full
+                                ? 'Cupo completo'
+                                : 'Inscribirme'),
                   ),
                 ),
               ],

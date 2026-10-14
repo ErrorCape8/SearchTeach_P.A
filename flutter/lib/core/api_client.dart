@@ -5,13 +5,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 /// Android emulator: 10.0.2.2 = tu PC. iOS simulator / web: localhost.
-/// Celular físico: usa la IP de tu PC (ej. http://192.168.1.20:8080).
+/// Celular físico: usa la IP de tu PC (ej. http://192.168.1.20:8081).
 const _configuredBaseUrl = String.fromEnvironment('API_BASE_URL');
 
 String get baseUrl {
   if (_configuredBaseUrl.isNotEmpty) return _configuredBaseUrl;
-  if (kIsWeb) return 'http://localhost:8080';
-  return Platform.isAndroid ? 'http://10.0.2.2:8080' : 'http://localhost:8080';
+  if (kIsWeb) return 'http://localhost:8081';
+  return Platform.isAndroid ? 'http://10.0.2.2:8081' : 'http://localhost:8081';
 }
 
 const _tokenKey = 'token';

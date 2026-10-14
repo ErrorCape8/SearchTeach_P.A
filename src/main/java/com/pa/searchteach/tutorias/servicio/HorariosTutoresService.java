@@ -106,7 +106,10 @@ public class HorariosTutoresService {
 	public void validarMateria(String docenteId, String estudianteId, String materia) {
 		HorarioTutor horario = horarios.findByDocenteId(docenteId)
 				.orElseThrow(() -> new NotFoundException("El docente seleccionado no tiene horarios disponibles."));
-		if (horario.materias().isEmpty()) return;
+		if (horario.materias().isEmpty()) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT,
+					"El docente aún no tiene materias preconfiguradas para sus tutorías.");
+		}
 
 		User estudiante = usuarios.findById(estudianteId)
 				.orElseThrow(() -> new NotFoundException("No se encontrÃ³ el estudiante seleccionado."));
@@ -135,6 +138,13 @@ public class HorariosTutoresService {
 		return horarios.save(construir(actual.id(), docenteId, solicitud));
 	}
 
+	public void eliminar(String docenteId) {
+		if (horarios.findByDocenteId(docenteId).isEmpty()) {
+			throw new NotFoundException("El docente todavía no tiene un horario asignado.");
+		}
+		horarios.deleteByDocenteId(docenteId);
+	}
+
 	private HorarioTutor construir(String id, String docenteId, HorarioTutorSolicitud solicitud) {
 		if (!CatalogoTecnologias.contiene(solicitud.carrera())) {
 			throw new IllegalArgumentException("Selecciona una tecnología del catálogo institucional.");
@@ -153,6 +163,9 @@ public class HorariosTutoresService {
 			throw new IllegalArgumentException("Indica la ubicación para las sesiones presenciales.");
 		}
 		List<MateriaHorario> materias = solicitud.materias() == null ? List.of() : solicitud.materias();
+		if (materias.size() > 2) {
+			throw new IllegalArgumentException("Cada docente puede tener como máximo dos materias asignadas.");
+		}
 		Set<String> nombresMateria = new HashSet<>();
 		for (MateriaHorario materia : materias) {
 			if (materia == null || materia.nombre() == null || materia.nombre().isBlank()

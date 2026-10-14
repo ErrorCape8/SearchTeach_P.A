@@ -10,4 +10,6 @@ public interface HorarioTutorRepository extends MongoRepository<HorarioTutor, St
 	List<HorarioTutor> findAllByOrderByActualizadoEnDesc();
 
 	Optional<HorarioTutor> findByDocenteId(String docenteId);
+
+	void deleteByDocenteId(String docenteId);
 }

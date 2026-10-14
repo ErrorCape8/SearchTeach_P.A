@@ -5,6 +5,8 @@ import java.util.List;
 import com.pa.searchteach.tutorias.dto.InformeAvanceSolicitud;
 import com.pa.searchteach.tutorias.dto.ProyectoAsignadoDocente;
 import com.pa.searchteach.tutorias.dto.ProyectoAulaDisponible;
+import com.pa.searchteach.tutorias.dto.ProyectoAulaNombreSolicitud;
+import com.pa.searchteach.tutorias.dto.TutoriaColectivaEstudiante;
 import com.pa.searchteach.tutorias.dto.TutoriaColectivaConAvance;
 import com.pa.searchteach.tutorias.dto.TutoriaColectivaSolicitud;
 import com.pa.searchteach.tutorias.modelo.InformeAvanceProyecto;
@@ -65,10 +67,25 @@ public class ControladorTutoriasColectivas {
 		return servicio.listarParaCoordinacion();
 	}
 
+	@DeleteMapping("/api/coordinacion/tutorias-colectivas/{tutoriaId}")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	public void eliminar(@PathVariable String tutoriaId) {
+		servicio.eliminar(tutoriaId);
+	}
+
 	@GetMapping("/api/estudiante/tutorias-colectivas/espacios")
-	public List<ProyectoAulaDisponible> listarEspaciosParaEstudiante(
+	public List<TutoriaColectivaEstudiante> listarEspaciosParaEstudiante(
 			@AuthenticationPrincipal String estudianteId) {
 		return servicio.listarEspaciosParaEstudiante(estudianteId);
+	}
+
+	@PostMapping("/api/estudiante/tutorias-colectivas/{tutoriaId}/proyectos")
+	@ResponseStatus(HttpStatus.CREATED)
+	public ProyectoAulaDisponible crearOUnirseAProyecto(
+			@PathVariable String tutoriaId,
+			@Valid @RequestBody ProyectoAulaNombreSolicitud solicitud,
+			@AuthenticationPrincipal String estudianteId) {
+		return servicio.crearOUnirseAProyecto(tutoriaId, solicitud, estudianteId);
 	}
 
 	@PostMapping("/api/estudiante/tutorias-colectivas/{tutoriaId}/proyectos/{proyectoId}/inscripcion")

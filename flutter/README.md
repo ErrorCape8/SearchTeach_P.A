@@ -21,9 +21,13 @@ Docker's build cache, so source changes do not require manually clearing caches.
 The Android Gradle configuration also limits build memory and reuses its build
 cache.
 
+The backend uses `MONGO_URI` from the project-root `.env` when provided; include
+the target database in the URI path (for example, `/searchteach`). Without it,
+the backend uses the local Compose MongoDB database.
+
 To start only one frontend, use `.\start-searchteach.ps1 -Frontend web` or
 `.\start-searchteach.ps1 -Frontend windows`. The backend API is at
-`http://localhost:8080`.
+`http://localhost:8081`.
 
 ## Program-leader menu and account data
 
@@ -41,11 +45,17 @@ coordinator-assigned `docenteId`, one to five `estudianteIds`, `fechaInicio`,
 entry per student with `asistio` set to `true`, `false`, or `null` until it is
 recorded. The backend creates the collection on startup.
 
-A coordinator can create a collective capstone-project tutoring group through
-`POST /api/coordinacion/tutorias-colectivas`. A group has one lead teacher, five
-support teachers, and five projects; each support teacher is responsible for
-one project, which has four students, a technology, and a semester. Support
-teachers submit periodic 0–100 progress scores and notes with
+A coordinator creates a collective tutoring cohort through
+`POST /api/coordinacion/tutorias-colectivas`, selecting one lead teacher, five
+support teachers, a career, and a semester. Students in that career can create
+a project by name or join an existing project with the same name in the cohort;
+the backend assigns a support teacher at random and limits each project to four
+students. Coordinators can delete cohorts, including their projects,
+enrollments, and progress reports. Individual tutor schedules can also be
+deleted; previously created tutoring sessions are retained. Each tutor may be
+assigned up to two subjects total, including subjects shared across careers,
+and students select only from those configured subjects. Support teachers
+submit periodic 0–100 progress scores and notes with
 `POST /api/docente/tutorias-colectivas/{tutoriaId}/proyectos/{proyectoId}/informes`.
 The program leader reads the reports and project trends from
 `GET /api/direccion/tutorias-colectivas`. The trend is estimated with linear
@@ -112,18 +122,18 @@ From this directory, start the app on an emulator:
 flutter run -d <device-id>
 ```
 
-The default API address `http://10.0.2.2:8080` points from the Android emulator
+The default API address `http://10.0.2.2:8081` points from the Android emulator
 to the backend on the development PC. The Android debug manifest permits local
 HTTP traffic for development only.
 
 For a physical phone, connect the phone and PC to the same Wi-Fi, allow inbound
-connections to port 8080 through the PC firewall, then pass the PC's LAN address:
+connections to port 8081 through the PC firewall, then pass the PC's LAN address:
 
 ```powershell
 $flutterPath = (Get-Command flutter).Source
 $fileSystem = New-Object -ComObject Scripting.FileSystemObject
 $flutterPath = $fileSystem.GetFile($flutterPath).ShortPath
-& $flutterPath run -d <device-id> --dart-define=API_BASE_URL=http://192.168.1.20:8080
+& $flutterPath run -d <device-id> --dart-define=API_BASE_URL=http://192.168.1.20:8081
 ```
 
 Replace the example address with the PC's actual LAN IP. Keep the backend running

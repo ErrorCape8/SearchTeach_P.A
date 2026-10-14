@@ -51,7 +51,13 @@ final proyectosAulaProvider =
         cambio: (forecast['cambioPronosticado'] as num?)?.toDouble(),
       );
     }).toList(growable: false);
+    final tutoria = entry['tutoriaColectiva'] as Map<String, dynamic>;
     return _TutoriaColectivaVista(
+      tecnologia: tutoria['tecnologia'] is String
+          ? tutoria['tecnologia'] as String
+          : '',
+      semestre:
+          tutoria['semestre'] is num ? (tutoria['semestre'] as num).toInt() : 0,
       proyectos: projects,
     );
   }).toList(growable: false);
@@ -98,8 +104,19 @@ class ProyectosAulaPage extends ConsumerWidget {
                 )
               else
                 for (final group in groups) ...[
-                  for (final project in group.proyectos)
-                    _ProyectoCard(project: project),
+                  if (group.proyectos.isEmpty)
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Text(
+                          '${group.tecnologia} · semestre ${group.semestre}: '
+                          'sin proyectos inscritos todavía.',
+                        ),
+                      ),
+                    )
+                  else
+                    for (final project in group.proyectos)
+                      _ProyectoCard(project: project),
                 ],
             ],
           ),
@@ -158,8 +175,14 @@ class _ProyectoCard extends StatelessWidget {
 }
 
 class _TutoriaColectivaVista {
-  const _TutoriaColectivaVista({required this.proyectos});
+  const _TutoriaColectivaVista({
+    required this.tecnologia,
+    required this.semestre,
+    required this.proyectos,
+  });
 
+  final String tecnologia;
+  final int semestre;
   final List<_ProyectoAulaVista> proyectos;
 }
 

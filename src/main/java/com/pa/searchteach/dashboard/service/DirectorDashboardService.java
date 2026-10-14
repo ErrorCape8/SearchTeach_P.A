@@ -4,6 +4,7 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -95,7 +96,7 @@ public class DirectorDashboardService {
 												.append("cond", new Document(
 														"$and",
 														List.of(
-																new Document("$ne", List.of("$$estudiante", null)),
+																new Document("$ne", Arrays.asList("$$estudiante", null)),
 																new Document("$ne", List.of("$$estudiante", ""))))))))
 						.append("asistenciasConfirmadas", 1)
 						.append("asistenciasRegistradas", 1));

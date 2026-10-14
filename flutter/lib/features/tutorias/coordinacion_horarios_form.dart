@@ -129,6 +129,11 @@ class _CoordinacionHorariosFormPageState
   void _addSubject() {
     final name = _subjectEntry.text.trim();
     if (name.isEmpty) return;
+    if (_subjects.length >= 2) {
+      setState(() =>
+          _error = 'Cada docente puede asignar como máximo dos materias.');
+      return;
+    }
     if (_subjects
         .any((subject) => subject.nombre.toLowerCase() == name.toLowerCase())) {
       setState(() => _error = 'Esa materia ya está agregada.');
@@ -273,9 +278,14 @@ class _CoordinacionHorariosFormPageState
                           Align(
                             alignment: Alignment.centerRight,
                             child: TextButton.icon(
-                              onPressed: _addSubject,
+                              onPressed:
+                                  _subjects.length >= 2 ? null : _addSubject,
                               icon: const Icon(Icons.add),
-                              label: const Text('Agregar materia'),
+                              label: Text(
+                                _subjects.length >= 2
+                                    ? 'Límite de 2 materias'
+                                    : 'Agregar materia',
+                              ),
                             ),
                           ),
                           if (_subjects.isNotEmpty) ...[

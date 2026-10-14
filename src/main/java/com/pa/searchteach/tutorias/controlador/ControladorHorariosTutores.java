@@ -9,6 +9,7 @@ import com.pa.searchteach.tutorias.servicio.HorariosTutoresService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -48,5 +49,11 @@ public class ControladorHorariosTutores {
 			@PathVariable String docenteId,
 			@Valid @RequestBody HorarioTutorSolicitud solicitud) {
 		return servicio.actualizar(docenteId, solicitud);
+	}
+
+	@DeleteMapping("/api/coordinacion/horarios/{docenteId}")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	public void eliminar(@PathVariable String docenteId) {
+		servicio.eliminar(docenteId);
 	}
 }

@@ -11,4 +11,6 @@ public interface InformeAvanceProyectoRepositorio extends MongoRepository<Inform
 	List<InformeAvanceProyecto> findByTutoriaColectivaIdAndProyectoIdOrderByFechaInformeAsc(
 			String tutoriaColectivaId,
 			String proyectoId);
+
+	List<InformeAvanceProyecto> findByTutoriaColectivaId(String tutoriaColectivaId);
 }

@@ -17,7 +17,9 @@ public record TutoriaColectiva(
 		@NotBlank String coordinadoraId,
 		@NotBlank String docenteLiderId,
 		@NotEmpty @Size(min = 5, max = 5) List<@NotBlank String> docentesApoyoIds,
-		@NotEmpty List<@NotNull ProyectoAula> proyectos,
+		String tecnologia,
+		int semestre,
+		List<@NotNull ProyectoAula> proyectos,
 		@NotNull LocalDateTime creadaEn) {
 
 	public TutoriaColectiva {
@@ -33,17 +35,17 @@ public record TutoriaColectiva(
 					"Debe asignarse un docente líder y cinco docentes de apoyo distintos.");
 		}
 		HashSet<String> conjuntoDocentesApoyo = new HashSet<>(docentesApoyoIds);
-		if (proyectos == null || (proyectos.size() != 5 && proyectos.size() != 6)
+		if ((tecnologia != null && !tecnologia.isBlank()
+				&& (semestre < 1 || semestre > 6))
+				|| (tecnologia != null && tecnologia.isBlank())
+				|| proyectos == null
 				|| proyectos.stream().anyMatch(proyecto -> proyecto == null)
 				|| proyectos.stream().map(ProyectoAula::proyectoId).distinct().count() != proyectos.size()
-				|| (proyectos.size() == 6 && proyectos.stream().map(ProyectoAula::semestre).distinct().count() != 6)
-				|| (proyectos.size() == 6 && proyectos.stream().anyMatch(proyecto -> proyecto.semestre() < 1 || proyecto.semestre() > 6))
-				|| proyectos.stream().map(ProyectoAula::docenteResponsableId).distinct().count() != proyectos.size()
 				|| proyectos.stream()
 						.anyMatch(proyecto -> !conjuntoDocentesApoyo.contains(proyecto.docenteResponsableId())
 								&& !docenteLiderId.equals(proyecto.docenteResponsableId()))) {
 			throw new IllegalArgumentException(
-					"Cada uno de los cinco docentes de apoyo debe ser responsable de un proyecto distinto.");
+					"Los proyectos deben tener docentes responsables válidos.");
 		}
 		HashSet<String> todosLosEstudiantes = new HashSet<>();
 		for (ProyectoAula proyecto : proyectos) {
@@ -65,6 +67,10 @@ public record TutoriaColectiva(
 		List<ProyectoAula> nuevos = proyectos.stream()
 				.map(proyecto -> proyecto.proyectoId().equals(actualizado.proyectoId()) ? actualizado : proyecto)
 				.toList();
-		return new TutoriaColectiva(id, coordinadoraId, docenteLiderId, docentesApoyoIds, nuevos, creadaEn);
+		if (proyectos.stream().noneMatch(proyecto -> proyecto.proyectoId().equals(actualizado.proyectoId()))) {
+			nuevos = java.util.stream.Stream.concat(proyectos.stream(), java.util.stream.Stream.of(actualizado)).toList();
+		}
+		return new TutoriaColectiva(
+				id, coordinadoraId, docenteLiderId, docentesApoyoIds, tecnologia, semestre, nuevos, creadaEn);
 	}
 }

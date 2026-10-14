@@ -48,11 +48,11 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 if ($Frontend -in @('both', 'web')) {
-    Start-FlutterSession 'run -d chrome --web-port 5001'
+    Start-FlutterSession 'run -d chrome --web-port 5001 --dart-define=API_BASE_URL=http://localhost:8081'
 }
 
 if ($Frontend -in @('both', 'windows')) {
-    Start-FlutterSession 'run -d windows'
+    Start-FlutterSession 'run -d windows --dart-define=API_BASE_URL=http://localhost:8081'
 }
 
-Write-Host 'Flutter se está iniciando. Web: http://localhost:5001; API: http://localhost:8080.'
+Write-Host 'Flutter se está iniciando. Web: http://localhost:5001; API: http://localhost:8081.'
