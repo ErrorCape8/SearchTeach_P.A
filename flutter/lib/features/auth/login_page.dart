@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/widgets/auth_shell.dart';
+import 'auth_repository.dart';
 import 'auth_controller.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
@@ -29,7 +30,16 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final ok = await ref
         .read(authControllerProvider.notifier)
         .login(_id.text.trim(), _pass.text);
-    if (ok && mounted) context.go('/home');
+    if (ok && mounted) {
+      final role = await ref.read(authRepositoryProvider).currentRole();
+      if (!mounted) return;
+      context.go(switch (role) {
+        'ADMIN' => '/admin',
+        'COORDINATOR' => '/coordinacion',
+        'DIRECTOR' => '/home',
+        _ => '/docente',
+      });
+    }
   }
 
   @override
@@ -103,6 +113,22 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         TextStyle(color: kBlue, fontWeight: FontWeight.w700)),
               ),
             ]),
+            const SizedBox(height: 16),
+            Center(
+              child: TextButton.icon(
+                onPressed: () => context.go('/admin'),
+                icon: const Icon(Icons.admin_panel_settings_outlined,
+                    size: 18, color: Color(0xFFEA580C)),
+                label: const Text(
+                  'Acceso directo: Panel de TI (Admin)',
+                  style: TextStyle(
+                    color: Color(0xFFEA580C),
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),

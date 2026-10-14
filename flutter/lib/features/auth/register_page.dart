@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/widgets/auth_shell.dart';
+import 'auth_repository.dart';
 import 'auth_controller.dart';
 
 /// Paso 1: documento  ->  Paso 2: crear contraseña (aquí se llama a /api/auth/register).
@@ -36,7 +37,13 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
         .read(authControllerProvider.notifier)
         .register(_id.text.trim(), _pass.text);
     if (ok && mounted) {
-      context.go('/home');
+      final role = await ref.read(authRepositoryProvider).currentRole();
+      if (!mounted) return;
+      context.go(switch (role) {
+        'COORDINATOR' => '/coordinacion',
+        'DIRECTOR' => '/home',
+        _ => '/docente',
+      });
     } else if (mounted) {
       // Si el documento no existe, el backend lo dice aquí: volvemos al paso 1.
       setState(() => _step = 0);

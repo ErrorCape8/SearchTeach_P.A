@@ -25,6 +25,55 @@ To start only one frontend, use `.\start-searchteach.ps1 -Frontend web` or
 `.\start-searchteach.ps1 -Frontend windows`. The backend API is at
 `http://localhost:8080`.
 
+## Program-leader menu and account data
+
+The program-leader panel provides **Inicio**, **Calidad**, **Pronóstico**,
+**Proyectos**, and **Perfil**. Its dashboard metrics are loaded from the
+backend's MongoDB tutoring data. Before a program leader can register, add their
+identification as `_id` in the `program_leaders` collection of the `Searchteach`
+database. The backend creates this collection on startup and supports existing
+accounts in the legacy `coordinators` collection.
+
+Group tutoring sessions are stored separately in `sesiones_tutoria`, preserving
+the existing one-student `tutorias` request workflow. Each session contains a
+coordinator-assigned `docenteId`, one to five `estudianteIds`, `fechaInicio`,
+`fechaFin`, `tecnologia`, and `semestre`. Its `asistencias` array stores one
+entry per student with `asistio` set to `true`, `false`, or `null` until it is
+recorded. The backend creates the collection on startup.
+
+A coordinator can create a collective capstone-project tutoring group through
+`POST /api/coordinacion/tutorias-colectivas`. A group has one lead teacher, five
+support teachers, and five projects; each support teacher is responsible for
+one project, which has four students, a technology, and a semester. Support
+teachers submit periodic 0–100 progress scores and notes with
+`POST /api/docente/tutorias-colectivas/{tutoriaId}/proyectos/{proyectoId}/informes`.
+The program leader reads the reports and project trends from
+`GET /api/direccion/tutorias-colectivas`. The trend is estimated with linear
+regression over the mean score recorded per report date; it reports insufficient
+data until there are three distinct report dates, then forecasts four weeks
+ahead. A projected four-week change of at least 2 points is marked as
+improvement or regression; a smaller change is stable. Reports should use the
+same 0–100 progress rubric so the trend is comparable. It indicates progress
+trends, not proof that tutoring caused a change.
+These endpoints are protected by coordinator, assigned-teacher, and program
+leader access checks, respectively.
+The coordinator-entered leader and support-teacher identifiers must already
+exist in the `users` collection so those teachers can authenticate to submit
+their reports.
+
+After signing in, coordinator accounts open the collective-tutoring setup form,
+ordinary user accounts can submit reports only for projects assigned to their
+account, and program-leader accounts keep the institutional dashboard with a
+**Proyectos** tab for the collective reports and their trend.
+
+The **Pronóstico** view reports distinct enrolled students and recorded/
+confirmed attendance by subject, using tutoring records from MongoDB. It fits a
+linear regression separately for each subject over up to 10 completed weeks,
+and displays one-week and four-week demand estimates, a 95% predictive interval,
+and the demand trend. A subject needs requests in at least four completed weeks
+to receive a forecast; missing weeks after its first request are treated as
+zero.
+
 ## Run on a phone
 
 First start the backend from the project root with `docker compose up -d app`.

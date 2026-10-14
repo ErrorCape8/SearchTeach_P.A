@@ -22,10 +22,12 @@ class DirectorDashboard {
     final weekly = json['historialSemanal'];
     final subjects = json['tutoriasPorMateria'];
     if (weekly is! List) {
-      throw const FormatException('El historial semanal no tiene un formato válido.');
+      throw const FormatException(
+          'El historial semanal no tiene un formato válido.');
     }
     if (subjects is! List) {
-      throw const FormatException('El resumen por materia no tiene un formato válido.');
+      throw const FormatException(
+          'El resumen por materia no tiene un formato válido.');
     }
 
     return DirectorDashboard(
@@ -35,7 +37,8 @@ class DirectorDashboard {
       tasaAsistencia: _readNullableDouble(json, 'tasaAsistencia'),
       historialSemanal: weekly.map((entry) {
         if (entry is! Map<String, dynamic>) {
-          throw const FormatException('Una semana del historial no tiene un formato válido.');
+          throw const FormatException(
+              'Una semana del historial no tiene un formato válido.');
         }
         final start = DateTime.tryParse(entry['semanaInicio'] as String? ?? '');
         if (start == null) {
@@ -48,7 +51,8 @@ class DirectorDashboard {
       }).toList(growable: false),
       tutoriasPorMateria: subjects.map((entry) {
         if (entry is! Map<String, dynamic>) {
-          throw const FormatException('Una materia del resumen no tiene un formato válido.');
+          throw const FormatException(
+              'Una materia del resumen no tiene un formato válido.');
         }
         final materia = entry['materia'];
         if (materia is! String || materia.trim().isEmpty) {
@@ -58,7 +62,15 @@ class DirectorDashboard {
           materia: materia,
           totalTutorias: _readInt(entry, 'totalTutorias'),
           tutoriasRealizadas: _readInt(entry, 'tutoriasRealizadas'),
+          estudiantesInscritos: _readInt(entry, 'estudiantesInscritos'),
+          asistenciasConfirmadas: _readInt(entry, 'asistenciasConfirmadas'),
+          asistenciasRegistradas: _readInt(entry, 'asistenciasRegistradas'),
           tasaAsistencia: _readNullableDouble(entry, 'tasaAsistencia'),
+          pronostico: entry['pronostico'] == null
+              ? null
+              : PronosticoDemanda.fromJson(
+                  entry['pronostico'] as Map<String, dynamic>,
+                ),
         );
       }).toList(growable: false),
     );
@@ -88,52 +100,108 @@ class WeeklyTutoringCount {
   final int total;
 }
 
-class WeeklyTutoringReference {
-  const WeeklyTutoringReference({
-    required this.average,
-    required this.minimum,
-    required this.maximum,
-  });
-
-  final double average;
-  final int minimum;
-  final int maximum;
-
-  static WeeklyTutoringReference? fromHistory(
-    List<WeeklyTutoringCount> history, {
-    DateTime? today,
-  }) {
-    final date = today ?? DateTime.now();
-    final startOfCurrentWeek = DateTime(date.year, date.month, date.day)
-        .subtract(Duration(days: date.weekday - DateTime.monday));
-    final completedWeeks = history
-        .where((week) => week.semanaInicio.isBefore(startOfCurrentWeek))
-        .toList(growable: false);
-    if (completedWeeks.length < 4) return null;
-
-    final sample = completedWeeks.sublist(completedWeeks.length - 4);
-    if (!sample.any((week) => week.total > 0)) return null;
-    final total = sample.fold<int>(0, (sum, week) => sum + week.total);
-    return WeeklyTutoringReference(
-      average: total / sample.length,
-      minimum: sample.map((week) => week.total).reduce((a, b) => a < b ? a : b),
-      maximum: sample.map((week) => week.total).reduce((a, b) => a > b ? a : b),
-    );
-  }
-}
-
 class SubjectTutoringSummary {
   const SubjectTutoringSummary({
     required this.materia,
     required this.totalTutorias,
     required this.tutoriasRealizadas,
+    required this.estudiantesInscritos,
+    required this.asistenciasConfirmadas,
+    required this.asistenciasRegistradas,
     required this.tasaAsistencia,
+    required this.pronostico,
   });
 
   final String materia;
   final int totalTutorias;
   final int tutoriasRealizadas;
+  final int estudiantesInscritos;
+  final int asistenciasConfirmadas;
+  final int asistenciasRegistradas;
   final double? tasaAsistencia;
+  final PronosticoDemanda? pronostico;
+}
+
+class PronosticoDemanda {
+  const PronosticoDemanda({
+    required this.historialSolicitudes,
+    required this.estimadoProximaSemana,
+    required this.minimoProximaSemana,
+    required this.maximoProximaSemana,
+    required this.estimadoProximasCuatroSemanas,
+    required this.minimoProximasCuatroSemanas,
+    required this.maximoProximasCuatroSemanas,
+    required this.tendencia,
+    required this.alertaCreciente,
+  });
+
+  final List<WeeklyTutoringCount> historialSolicitudes;
+  final int estimadoProximaSemana;
+  final int minimoProximaSemana;
+  final int maximoProximaSemana;
+  final int estimadoProximasCuatroSemanas;
+  final int minimoProximasCuatroSemanas;
+  final int maximoProximasCuatroSemanas;
+  final String tendencia;
+  final bool alertaCreciente;
+
+  factory PronosticoDemanda.fromJson(Map<String, dynamic> json) {
+    final weekly = json['historialSolicitudes'];
+    if (weekly is! List) {
+      throw const FormatException(
+        'El historial de solicitudes no tiene un formato válido.',
+      );
+    }
+    final trend = json['tendencia'];
+    if (trend is! String ||
+        !const {'SUBE', 'ESTABLE', 'BAJA'}.contains(trend)) {
+      throw const FormatException('La tendencia no tiene un formato válido.');
+    }
+    final alert = json['alertaCreciente'];
+    if (alert is! bool) {
+      throw const FormatException(
+        'La alerta de demanda no tiene un formato válido.',
+      );
+    }
+
+    return PronosticoDemanda(
+      historialSolicitudes: weekly.map((entry) {
+        if (entry is! Map<String, dynamic>) {
+          throw const FormatException(
+            'Una semana de solicitudes no tiene un formato válido.',
+          );
+        }
+        final weekStart =
+            DateTime.tryParse(entry['semanaInicio'] as String? ?? '');
+        if (weekStart == null) {
+          throw const FormatException(
+            'La fecha de una semana de solicitudes no es válida.',
+          );
+        }
+        return WeeklyTutoringCount(
+          semanaInicio: weekStart,
+          total: _readInt(entry, 'total'),
+        );
+      }).toList(growable: false),
+      estimadoProximaSemana: _readInt(json, 'estimadoProximaSemana'),
+      minimoProximaSemana: _readInt(json, 'minimoProximaSemana'),
+      maximoProximaSemana: _readInt(json, 'maximoProximaSemana'),
+      estimadoProximasCuatroSemanas:
+          _readInt(json, 'estimadoProximasCuatroSemanas'),
+      minimoProximasCuatroSemanas:
+          _readInt(json, 'minimoProximasCuatroSemanas'),
+      maximoProximasCuatroSemanas:
+          _readInt(json, 'maximoProximasCuatroSemanas'),
+      tendencia: trend,
+      alertaCreciente: alert,
+    );
+  }
+
+  static int _readInt(Map<String, dynamic> json, String key) {
+    final value = json[key];
+    if (value is num) return value.toInt();
+    throw FormatException('El campo "$key" no es un número.');
+  }
 }
 
 final directorDashboardProvider =

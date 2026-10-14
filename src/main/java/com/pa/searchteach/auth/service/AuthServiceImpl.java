@@ -4,6 +4,10 @@ import com.pa.searchteach.auth.dto.AuthResponse;
 import com.pa.searchteach.auth.exception.AuthException;
 import com.pa.searchteach.coordinators.model.Coordinator;
 import com.pa.searchteach.coordinators.repository.CoordinatorRepository;
+import com.pa.searchteach.it.model.ItAdmin;
+import com.pa.searchteach.it.repository.ItAdminRepository;
+import com.pa.searchteach.programleaders.model.LiderPrograma;
+import com.pa.searchteach.programleaders.repository.RepositorioLiderPrograma;
 import com.pa.searchteach.users.model.Role;
 import com.pa.searchteach.users.model.User;
 import com.pa.searchteach.users.repository.UserRepository;
@@ -13,6 +17,7 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
@@ -21,7 +26,9 @@ import java.nio.charset.StandardCharsets;
 public class AuthServiceImpl implements AuthService {
 
 	private final UserRepository userRepository;
+	private final RepositorioLiderPrograma repositorioLiderPrograma;
 	private final CoordinatorRepository coordinatorRepository;
+	private final ItAdminRepository itAdminRepository;
 	private final MongoTemplate mongoTemplate;
 	private final PasswordEncoder passwordEncoder;
 	private final JwtService jwtService;
@@ -29,13 +36,29 @@ public class AuthServiceImpl implements AuthService {
 
 	public AuthServiceImpl(
 			UserRepository userRepository,
+			RepositorioLiderPrograma repositorioLiderPrograma,
 			CoordinatorRepository coordinatorRepository,
 			MongoTemplate mongoTemplate,
 			PasswordEncoder passwordEncoder,
 			JwtService jwtService,
 			AuthAttemptLimiter attemptLimiter) {
+		this(userRepository, repositorioLiderPrograma, coordinatorRepository, null, mongoTemplate, passwordEncoder, jwtService, attemptLimiter);
+	}
+
+	@Autowired
+	public AuthServiceImpl(
+			UserRepository userRepository,
+			RepositorioLiderPrograma repositorioLiderPrograma,
+			CoordinatorRepository coordinatorRepository,
+			ItAdminRepository itAdminRepository,
+			MongoTemplate mongoTemplate,
+			PasswordEncoder passwordEncoder,
+			JwtService jwtService,
+			AuthAttemptLimiter attemptLimiter) {
 		this.userRepository = userRepository;
+		this.repositorioLiderPrograma = repositorioLiderPrograma;
 		this.coordinatorRepository = coordinatorRepository;
+		this.itAdminRepository = itAdminRepository;
 		this.mongoTemplate = mongoTemplate;
 		this.passwordEncoder = passwordEncoder;
 		this.jwtService = jwtService;
@@ -47,8 +70,17 @@ public class AuthServiceImpl implements AuthService {
 		attemptLimiter.assertAllowed(identifier, clientIp);
 		validatePasswordLength(password);
 
-		Coordinator coordinator = coordinatorRepository.findById(identifier).orElse(null);
-		if (coordinator == null && !userRepository.existsById(identifier)) {
+		ItAdmin itAdmin = itAdminRepository != null
+				? itAdminRepository.findById(identifier).orElse(null)
+				: null;
+		LiderPrograma liderPrograma = itAdmin == null
+				? repositorioLiderPrograma.findById(identifier).orElse(null)
+				: null;
+		Coordinator legacyCoordinator = (itAdmin == null && liderPrograma == null)
+				? coordinatorRepository.findById(identifier).orElse(null)
+				: null;
+
+		if (itAdmin == null && liderPrograma == null && legacyCoordinator == null && !userRepository.existsById(identifier)) {
 			attemptLimiter.recordFailure(identifier, clientIp);
 			throw new AuthException(HttpStatus.NOT_FOUND,
 					"No encontramos un usuario con esa identificación. Verifícala e inténtalo de nuevo.",
@@ -63,7 +95,15 @@ public class AuthServiceImpl implements AuthService {
 				Criteria.where("_id").is(identifier),
 				passwordNotSet));
 		long modifiedCount;
-		if (coordinator != null) {
+		if (itAdmin != null) {
+			modifiedCount = mongoTemplate.updateFirst(
+					query, Update.update("passwordHash", passwordEncoder.encode(password)), ItAdmin.class)
+					.getModifiedCount();
+		} else if (liderPrograma != null) {
+			modifiedCount = mongoTemplate.updateFirst(
+					query, Update.update("passwordHash", passwordEncoder.encode(password)), LiderPrograma.class)
+					.getModifiedCount();
+		} else if (legacyCoordinator != null) {
 			modifiedCount = mongoTemplate.updateFirst(
 					query, Update.update("passwordHash", passwordEncoder.encode(password)), Coordinator.class)
 					.getModifiedCount();
@@ -80,7 +120,7 @@ public class AuthServiceImpl implements AuthService {
 		}
 
 		attemptLimiter.recordSuccess(identifier);
-		return issueToken(identifier, coordinator == null ? Role.USER : Role.DIRECTOR);
+		return issueToken(identifier, roleFor(itAdmin, liderPrograma, legacyCoordinator));
 	}
 
 	@Override
@@ -88,11 +128,26 @@ public class AuthServiceImpl implements AuthService {
 		attemptLimiter.assertAllowed(identifier, clientIp);
 		validatePasswordLength(password);
 
-		Coordinator coordinator = coordinatorRepository.findById(identifier).orElse(null);
-		User user = coordinator == null ? userRepository.findById(identifier).orElse(null) : null;
+		ItAdmin itAdmin = itAdminRepository != null
+				? itAdminRepository.findById(identifier).orElse(null)
+				: null;
+		LiderPrograma liderPrograma = itAdmin == null
+				? repositorioLiderPrograma.findById(identifier).orElse(null)
+				: null;
+		Coordinator legacyCoordinator = (itAdmin == null && liderPrograma == null)
+				? coordinatorRepository.findById(identifier).orElse(null)
+				: null;
+		User user = (itAdmin == null && liderPrograma == null && legacyCoordinator == null)
+				? userRepository.findById(identifier).orElse(null)
+				: null;
+
 		String passwordHash;
-		if (coordinator != null) {
-			passwordHash = coordinator.getPasswordHash();
+		if (itAdmin != null) {
+			passwordHash = itAdmin.getPasswordHash();
+		} else if (liderPrograma != null) {
+			passwordHash = liderPrograma.getPasswordHash();
+		} else if (legacyCoordinator != null) {
+			passwordHash = legacyCoordinator.getPasswordHash();
 		} else {
 			passwordHash = user == null ? null : user.getPasswordHash();
 		}
@@ -104,7 +159,17 @@ public class AuthServiceImpl implements AuthService {
 		}
 
 		attemptLimiter.recordSuccess(identifier);
-		return issueToken(identifier, coordinator == null ? Role.USER : Role.DIRECTOR);
+		return issueToken(identifier, roleFor(itAdmin, liderPrograma, legacyCoordinator));
+	}
+
+	private Role roleFor(ItAdmin itAdmin, LiderPrograma liderPrograma, Coordinator legacyCoordinator) {
+		if (itAdmin != null) {
+			return Role.ADMIN;
+		}
+		if (liderPrograma != null) {
+			return Role.DIRECTOR;
+		}
+		return legacyCoordinator != null ? Role.COORDINATOR : Role.USER;
 	}
 
 	private void validatePasswordLength(String password) {

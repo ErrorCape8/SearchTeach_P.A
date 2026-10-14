@@ -6,6 +6,7 @@ import 'package:searchteach_mobile/core/widgets/auth_shell.dart';
 import 'package:searchteach_mobile/features/auth/login_page.dart';
 import 'package:searchteach_mobile/features/dashboard/dashboard_page.dart';
 import 'package:searchteach_mobile/features/dashboard/director_dashboard_provider.dart';
+import 'package:searchteach_mobile/features/tutorias/coordinacion_tutorias_page.dart';
 
 void main() {
   testWidgets('login page renders auth form', (WidgetTester tester) async {
@@ -23,13 +24,36 @@ void main() {
     expect(find.byType(TextFormField), findsNWidgets(2));
   });
 
+  testWidgets('coordinator form has five projects and four student fields each',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(home: CoordinacionTutoriasPage()),
+      ),
+    );
+
+    expect(find.text('Identificación del docente líder'), findsOneWidget);
+    expect(find.text('Docente de apoyo 1'), findsOneWidget);
+    expect(find.text('Proyecto 1'), findsOneWidget);
+    expect(find.text('Identificación del estudiante 4'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Docente de apoyo 5'),
+      500,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Docente de apoyo 5'), findsOneWidget);
+    expect(find.text('Proyecto 5'), findsOneWidget);
+    expect(find.text('Identificación del estudiante 1'), findsOneWidget);
+  });
+
   testWidgets('director dashboard shows real-data summary and empty states',
       (WidgetTester tester) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           directorDashboardProvider.overrideWith(
-            (ref) async => const DirectorDashboard(
+            (ref) async => DirectorDashboard(
               totalTutorias: 12,
               tutoriasRealizadas: 8,
               tutoriasProgramadas: 3,
@@ -40,7 +64,28 @@ void main() {
                   materia: 'Cálculo I',
                   totalTutorias: 5,
                   tutoriasRealizadas: 4,
+                  estudiantesInscritos: 4,
+                  asistenciasConfirmadas: 3,
+                  asistenciasRegistradas: 4,
                   tasaAsistencia: 75,
+                  pronostico: PronosticoDemanda(
+                    historialSolicitudes: List.generate(
+                      6,
+                      (index) => WeeklyTutoringCount(
+                        semanaInicio:
+                            DateTime(2026, 1, 5).add(Duration(days: index * 7)),
+                        total: index + 1,
+                      ),
+                    ),
+                    estimadoProximaSemana: 7,
+                    minimoProximaSemana: 5,
+                    maximoProximaSemana: 9,
+                    estimadoProximasCuatroSemanas: 34,
+                    minimoProximasCuatroSemanas: 27,
+                    maximoProximasCuatroSemanas: 41,
+                    tendencia: 'SUBE',
+                    alertaCreciente: true,
+                  ),
                 ),
               ],
             ),
@@ -51,6 +96,11 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    expect(find.text('Hola, líder del programa'), findsOneWidget);
+    expect(find.text('Inicio'), findsOneWidget);
+    expect(find.text('Calidad'), findsOneWidget);
+    expect(find.text('Pronóstico'), findsOneWidget);
+    expect(find.text('Perfil'), findsOneWidget);
     expect(find.text('12'), findsOneWidget);
     expect(find.text('75.0%'), findsOneWidget);
     expect(find.text('Satisfacción'), findsOneWidget);
@@ -70,33 +120,16 @@ void main() {
     await tester.tap(find.text('Pronóstico'));
     await tester.pumpAndSettle();
     expect(find.text('Pronóstico de tutorías'), findsOneWidget);
-    expect(find.text('Estimación orientativa'), findsNothing);
-    expect(
-        find.textContaining('Aún no hay actividad suficiente'), findsOneWidget);
+    expect(find.text('Demanda creciente'), findsOneWidget);
+    expect(find.text('~7 solicitudes para la próxima semana'), findsOneWidget);
+    expect(find.text('Intervalo predictivo 95%: 5–9'), findsOneWidget);
     await tester.tap(find.text('Próximas 4 semanas'));
     await tester.pumpAndSettle();
-    expect(find.text('Próximas 4 semanas'), findsOneWidget);
+    expect(find.text('~34 solicitudes para las próximas 4 semanas'),
+        findsOneWidget);
+    await tester.tap(find.text('Perfil'));
+    await tester.pumpAndSettle();
+    expect(find.text('Cuenta del líder del programa'), findsOneWidget);
   });
 
-  test('weekly reference uses the last four completed weeks', () {
-    final now = DateTime.now();
-    final currentMonday = DateTime(now.year, now.month, now.day)
-        .subtract(Duration(days: now.weekday - DateTime.monday));
-    final history = List.generate(4, (index) {
-      final weekStart = currentMonday.subtract(Duration(days: 7 * (4 - index)));
-      return WeeklyTutoringCount(
-        semanaInicio: weekStart,
-        total: index + 1,
-      );
-    });
-
-    final reference = WeeklyTutoringReference.fromHistory(
-      history,
-      today: now,
-    );
-
-    expect(reference?.average, 2.5);
-    expect(reference?.minimum, 1);
-    expect(reference?.maximum, 4);
-  });
 }

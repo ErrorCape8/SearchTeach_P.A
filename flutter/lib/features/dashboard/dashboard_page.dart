@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../auth/auth_repository.dart';
 import 'director_dashboard_provider.dart';
+import 'proyectos_aula_page.dart';
 
 const _purple = Color(0xFF6337BF);
 const _ink = Color(0xFF28243A);
@@ -27,6 +28,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
       0 => _home(dashboard),
       1 => _quality(),
       2 => _forecast(),
+      3 => const ProyectosAulaPage(),
       _ => _profile(),
     };
 
@@ -38,7 +40,8 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Hola, Dirección', style: TextStyle(fontSize: 18)),
+            const Text('Hola, líder del programa',
+                style: TextStyle(fontSize: 18)),
             Text(
               _titles[_selectedTab],
               style: const TextStyle(fontSize: 12, color: Color(0xFFDCD0F6)),
@@ -48,7 +51,10 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
         actions: [
           IconButton(
             tooltip: 'Actualizar',
-            onPressed: () => ref.invalidate(directorDashboardProvider),
+            onPressed: () {
+              ref.invalidate(directorDashboardProvider);
+              ref.invalidate(proyectosAulaProvider);
+            },
             icon: const Icon(Icons.refresh),
           ),
         ],
@@ -71,10 +77,16 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
         selectedIndex: _selectedTab,
         onDestinationSelected: (index) => setState(() => _selectedTab = index),
         destinations: const [
-          NavigationDestination(icon: Icon(Icons.home_outlined), label: 'Inicio'),
-          NavigationDestination(icon: Icon(Icons.star_outline), label: 'Calidad'),
-          NavigationDestination(icon: Icon(Icons.bar_chart), label: 'Pronóstico'),
-          NavigationDestination(icon: Icon(Icons.person_outline), label: 'Perfil'),
+          NavigationDestination(
+              icon: Icon(Icons.home_outlined), label: 'Inicio'),
+          NavigationDestination(
+              icon: Icon(Icons.star_outline), label: 'Calidad'),
+          NavigationDestination(
+              icon: Icon(Icons.bar_chart), label: 'Pronóstico'),
+          NavigationDestination(
+              icon: Icon(Icons.science_outlined), label: 'Proyectos'),
+          NavigationDestination(
+              icon: Icon(Icons.person_outline), label: 'Perfil'),
         ],
       ),
     );
@@ -84,15 +96,15 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => _errorState(error),
         data: (data) => RefreshIndicator(
-          onRefresh: () => ref
-              .refresh(directorDashboardProvider.future)
-              .then<void>((_) {}),
+          onRefresh: () =>
+              ref.refresh(directorDashboardProvider.future).then<void>((_) {}),
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
               const Text(
                 'Resumen institucional',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: _ink),
+                style: TextStyle(
+                    fontSize: 20, fontWeight: FontWeight.w800, color: _ink),
               ),
               const SizedBox(height: 4),
               const Text(
@@ -155,7 +167,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
               ),
               const SizedBox(height: 16),
               _ForecastPreview(
-                history: data.historialSemanal,
+                subjects: data.tutoriasPorMateria,
                 onTap: () => setState(() => _selectedTab = 2),
               ),
               const SizedBox(height: 22),
@@ -188,7 +200,8 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
           children: [
             const Text(
               'Calidad de las tutorías',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: _ink),
+              style: TextStyle(
+                  fontSize: 20, fontWeight: FontWeight.w800, color: _ink),
             ),
             const SizedBox(height: 5),
             const Text(
@@ -245,14 +258,17 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
             ),
             const SizedBox(height: 12),
             Text(
-              isForbidden ? 'Acceso exclusivo para dirección' : 'No se pudo cargar el resumen',
+              isForbidden
+                  ? 'Acceso exclusivo para el líder del programa'
+                  : 'No se pudo cargar el resumen',
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: _ink),
+              style: const TextStyle(
+                  fontSize: 18, fontWeight: FontWeight.w700, color: _ink),
             ),
             const SizedBox(height: 8),
             Text(
               isForbidden
-                  ? 'Esta cuenta no está registrada como coordinadora. Solicita al administrador que autorice su cédula en MongoDB.'
+                  ? 'Esta cuenta no está autorizada como líder del programa. Solicita al administrador que registre tu cédula.'
                   : 'Verifica que el servidor esté activo e inténtalo de nuevo.',
               textAlign: TextAlign.center,
               style: const TextStyle(color: _muted),
@@ -279,7 +295,13 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
   }
 }
 
-const _titles = ['Panel institucional', 'Calidad', 'Pronóstico', 'Perfil'];
+const _titles = [
+  'Panel institucional',
+  'Calidad',
+  'Pronóstico',
+  'Proyectos',
+  'Perfil'
+];
 
 class _MetricCard extends StatelessWidget {
   const _MetricCard({
@@ -337,9 +359,12 @@ class _SectionCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: const TextStyle(fontWeight: FontWeight.w700, color: _ink)),
+              Text(title,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w700, color: _ink)),
               const SizedBox(height: 3),
-              Text(subtitle, style: const TextStyle(fontSize: 12, color: _muted)),
+              Text(subtitle,
+                  style: const TextStyle(fontSize: 12, color: _muted)),
               const SizedBox(height: 18),
               child,
             ],
@@ -349,14 +374,21 @@ class _SectionCard extends StatelessWidget {
 }
 
 class _ForecastPreview extends StatelessWidget {
-  const _ForecastPreview({required this.history, required this.onTap});
+  const _ForecastPreview({required this.subjects, required this.onTap});
 
-  final List<WeeklyTutoringCount> history;
+  final List<SubjectTutoringSummary> subjects;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final reference = WeeklyTutoringReference.fromHistory(history);
+    final forecasts = subjects
+        .map((subject) => subject.pronostico)
+        .whereType<PronosticoDemanda>()
+        .toList(growable: false);
+    final estimated = forecasts.fold<int>(
+      0,
+      (total, forecast) => total + forecast.estimadoProximaSemana,
+    );
     return Card(
       margin: EdgeInsets.zero,
       child: ListTile(
@@ -370,9 +402,9 @@ class _ForecastPreview extends StatelessWidget {
           style: TextStyle(fontWeight: FontWeight.w700, color: _ink),
         ),
         subtitle: Text(
-          reference == null
-              ? 'Se requieren 4 semanas completas con actividad'
-              : 'Referencia: ~${reference.average.round()} tutorías · promedio reciente',
+          forecasts.isEmpty
+              ? 'Se requieren solicitudes en 4 semanas por asignatura'
+              : 'Modelo lineal: ~$estimated solicitudes · ${forecasts.length} asignaturas con historial suficiente',
           style: const TextStyle(color: _muted, fontSize: 12),
         ),
         trailing: const Icon(Icons.chevron_right, color: _muted),
@@ -428,7 +460,8 @@ class _WeeklyChart extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 5),
-                    Text('S${index + 1}', style: const TextStyle(fontSize: 9, color: _muted)),
+                    Text('S${index + 1}',
+                        style: const TextStyle(fontSize: 9, color: _muted)),
                   ],
                 ),
               ),
@@ -486,11 +519,19 @@ class _SubjectSummaryRow extends StatelessWidget {
             children: [
               Text(
                 subject.materia,
-                style: const TextStyle(fontWeight: FontWeight.w700, color: _ink),
+                style:
+                    const TextStyle(fontWeight: FontWeight.w700, color: _ink),
               ),
               const SizedBox(height: 3),
               Text(
                 '${subject.totalTutorias} tutorías · ${subject.tutoriasRealizadas} realizadas',
+                style: const TextStyle(fontSize: 11, color: _muted),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                '${subject.estudiantesInscritos} estudiantes · '
+                '${subject.asistenciasConfirmadas} asistencias confirmadas '
+                'de ${subject.asistenciasRegistradas} registradas',
                 style: const TextStyle(fontSize: 11, color: _muted),
               ),
               if (rate != null) ...[
@@ -514,6 +555,99 @@ class _SubjectSummaryRow extends StatelessWidget {
           style: const TextStyle(color: _purple, fontWeight: FontWeight.w800),
         ),
       ],
+    );
+  }
+}
+
+class _DemandForecastCard extends StatelessWidget {
+  const _DemandForecastCard({
+    required this.subject,
+    required this.horizonWeeks,
+  });
+
+  final SubjectTutoringSummary subject;
+  final int horizonWeeks;
+
+  @override
+  Widget build(BuildContext context) {
+    final forecast = subject.pronostico;
+    final estimate = horizonWeeks == 1
+        ? forecast?.estimadoProximaSemana
+        : forecast?.estimadoProximasCuatroSemanas;
+    final minimum = horizonWeeks == 1
+        ? forecast?.minimoProximaSemana
+        : forecast?.minimoProximasCuatroSemanas;
+    final maximum = horizonWeeks == 1
+        ? forecast?.maximoProximaSemana
+        : forecast?.maximoProximasCuatroSemanas;
+    final trendLabel = switch (forecast?.tendencia) {
+      'SUBE' => 'Demanda creciente',
+      'BAJA' => 'Demanda decreciente',
+      'ESTABLE' => 'Demanda estable',
+      _ => 'Historial insuficiente',
+    };
+    final trendColor = switch (forecast?.tendencia) {
+      'SUBE' => const Color(0xFFB3261E),
+      'BAJA' => const Color(0xFF49628A),
+      _ => _muted,
+    };
+
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    subject.materia,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: _ink,
+                    ),
+                  ),
+                ),
+                if (forecast?.alertaCreciente ?? false)
+                  const Icon(Icons.trending_up, color: Color(0xFFB3261E)),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              trendLabel,
+              style: TextStyle(
+                color: trendColor,
+                fontWeight: FontWeight.w600,
+                fontSize: 12,
+              ),
+            ),
+            const SizedBox(height: 12),
+            if (estimate != null && minimum != null && maximum != null) ...[
+              Text(
+                '~$estimate solicitudes para '
+                '${horizonWeeks == 1 ? 'la próxima semana' : 'las próximas 4 semanas'}',
+                style: const TextStyle(
+                  color: _purple,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              Text(
+                'Intervalo predictivo 95%: $minimum–$maximum',
+                style: const TextStyle(color: _muted, fontSize: 12),
+              ),
+              const SizedBox(height: 14),
+              _WeeklyChart(forecast!.historialSolicitudes),
+            ] else
+              const Text(
+                'Se requieren solicitudes registradas en al menos 4 semanas completas dentro del historial disponible.',
+                style: TextStyle(color: _muted, fontSize: 12),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -550,23 +684,32 @@ class _ForecastPage extends StatefulWidget {
 }
 
 class _ForecastPageState extends State<_ForecastPage> {
-  int _horizonWeeks = 1;
+  int _selectedHorizon = 1;
 
   @override
   Widget build(BuildContext context) {
-    final reference =
-        WeeklyTutoringReference.fromHistory(widget.dashboard.historialSemanal);
+    final subjects = widget.dashboard.tutoriasPorMateria.toList()
+      ..sort((left, right) {
+        final leftForecast = _selectedHorizon == 1
+            ? left.pronostico?.estimadoProximaSemana
+            : left.pronostico?.estimadoProximasCuatroSemanas;
+        final rightForecast = _selectedHorizon == 1
+            ? right.pronostico?.estimadoProximaSemana
+            : right.pronostico?.estimadoProximasCuatroSemanas;
+        return (rightForecast ?? -1).compareTo(leftForecast ?? -1);
+      });
 
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         const Text(
           'Pronóstico de tutorías',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: _ink),
+          style:
+              TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: _ink),
         ),
         const SizedBox(height: 5),
         const Text(
-          'Referencia basada en actividad observada, no en un modelo predictivo.',
+          'Regresión lineal por asignatura a partir de solicitudes registradas en MongoDB.',
           style: TextStyle(color: _muted),
         ),
         const SizedBox(height: 16),
@@ -575,60 +718,38 @@ class _ForecastPageState extends State<_ForecastPage> {
             ButtonSegment(value: 1, label: Text('Próxima semana')),
             ButtonSegment(value: 4, label: Text('Próximas 4 semanas')),
           ],
-          selected: {_horizonWeeks},
+          selected: {_selectedHorizon},
           onSelectionChanged: (selection) {
-            setState(() => _horizonWeeks = selection.first);
+            setState(() => _selectedHorizon = selection.first);
           },
         ),
         const SizedBox(height: 16),
-        if (reference != null) ...[
-          _SectionCard(
-            title: 'Estimación orientativa',
-            subtitle: 'Promedio de las últimas 4 semanas completas',
-            child: Column(
-              children: [
-                Text(
-                  '~${(reference.average * _horizonWeeks).round()}',
-                  style: const TextStyle(
-                    color: _purple,
-                    fontSize: 38,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                Text(
-                  _horizonWeeks == 1
-                      ? 'tutorías para la próxima semana'
-                      : 'tutorías en las próximas 4 semanas',
-                  style: const TextStyle(color: _muted),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Rango observado: ${reference.minimum * _horizonWeeks}–${reference.maximum * _horizonWeeks}',
-                  style: const TextStyle(color: _ink, fontSize: 12),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-        ] else
+        if (subjects.isEmpty)
           const _InfoNote(
-            text:
-                'Aún no hay actividad suficiente en las últimas 4 semanas completas para calcular una referencia.',
-          ),
+            text: 'Aún no hay solicitudes de tutoría registradas por asignatura.',
+          )
+        else ...[
+          for (final subject in subjects) ...[
+            _DemandForecastCard(
+              subject: subject,
+              horizonWeeks: _selectedHorizon,
+            ),
+            const SizedBox(height: 12),
+          ],
+        ],
         _SectionCard(
           title: 'Histórico de tutorías',
-          subtitle: 'Cada barra representa una semana registrada',
+          subtitle: 'Solicitudes registradas durante las últimas 10 semanas',
           child: _WeeklyChart(widget.dashboard.historialSemanal),
         ),
         const SizedBox(height: 16),
         const _InfoNote(
           text:
-              'La cifra usa el promedio de las últimas 4 semanas completas. El rango muestra los valores mínimo y máximo observados en esas semanas; no es un intervalo de confianza ni una garantía.',
+            'El modelo ajusta una recta por asignatura sobre las últimas 10 semanas completas. Requiere solicitudes en al menos 4 semanas; las semanas sin solicitudes desde la primera actividad se cuentan como cero. El rango es un intervalo predictivo del 95%, no una garantía. La tendencia se considera estable cuando el cambio es menor a 1 solicitud o al 10% del promedio de las últimas 4 semanas.',
         ),
       ],
     );
   }
-
 }
 
 class _InfoNote extends StatelessWidget {
@@ -644,7 +765,8 @@ class _InfoNote extends StatelessWidget {
         ),
         child: Padding(
           padding: const EdgeInsets.all(14),
-          child: Text(text, style: const TextStyle(color: _purple, fontSize: 12)),
+          child:
+              Text(text, style: const TextStyle(color: _purple, fontSize: 12)),
         ),
       );
 }
@@ -666,9 +788,10 @@ class _ProfilePage extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           const Text(
-            'Cuenta de dirección',
+            'Cuenta del líder del programa',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: _ink),
+            style: TextStyle(
+                fontSize: 20, fontWeight: FontWeight.w800, color: _ink),
           ),
           const SizedBox(height: 6),
           const Text(

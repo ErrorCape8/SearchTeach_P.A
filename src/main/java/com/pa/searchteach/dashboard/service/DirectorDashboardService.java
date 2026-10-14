@@ -7,8 +7,10 @@ import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 import com.pa.searchteach.dashboard.dto.DashboardSummary;
+import com.pa.searchteach.dashboard.dto.PronosticoDemanda;
 import com.pa.searchteach.dashboard.dto.SubjectTutoringSummary;
 import com.pa.searchteach.dashboard.dto.WeeklyTutoringCount;
 import com.pa.searchteach.tutorias.modelo.EstadoTutoria;
@@ -60,6 +62,7 @@ public class DirectorDashboardService {
 				"$group",
 				new Document("_id", "$materia")
 						.append("totalTutorias", new Document("$sum", 1))
+						.append("estudiantes", new Document("$addToSet", "$estudianteId"))
 						.append("tutoriasRealizadas", new Document(
 								"$sum",
 								new Document("$cond", List.of(
@@ -72,29 +75,113 @@ public class DirectorDashboardService {
 										new Document("$in", List.of("$asistio", List.of(true, false))),
 										1,
 										0))))
-						.append("asistencias", new Document(
+						.append("asistenciasConfirmadas", new Document(
 								"$sum",
 								new Document("$cond", List.of(
 										new Document("$eq", List.of("$asistio", true)),
 										1,
 										0)))));
+		AggregationOperation project = context -> new Document(
+				"$project",
+				new Document("_id", 0)
+						.append("materia", "$_id")
+						.append("totalTutorias", 1)
+						.append("tutoriasRealizadas", 1)
+						.append("estudiantesInscritos", new Document(
+								"$size",
+								new Document("$filter",
+										new Document("input", "$estudiantes")
+												.append("as", "estudiante")
+												.append("cond", new Document(
+														"$and",
+														List.of(
+																new Document("$ne", List.of("$$estudiante", null)),
+																new Document("$ne", List.of("$$estudiante", ""))))))))
+						.append("asistenciasConfirmadas", 1)
+						.append("asistenciasRegistradas", 1));
 		Aggregation aggregation = Aggregation.newAggregation(
 				match,
 				group,
-				Aggregation.sort(org.springframework.data.domain.Sort.by("_id")));
+				project,
+				Aggregation.sort(org.springframework.data.domain.Sort.by("materia")));
 		List<SubjectAttendanceCount> results = mongoTemplate
 				.aggregate(aggregation, "tutorias", SubjectAttendanceCount.class)
 				.getMappedResults();
+		Map<String, PronosticoDemanda> forecasts = obtenerPronosticosPorMateria();
 
 		return results.stream()
 				.map(result -> new SubjectTutoringSummary(
-						result.id(),
+						result.materia(),
 						result.totalTutorias(),
 						result.tutoriasRealizadas(),
+						result.estudiantesInscritos(),
+						result.asistenciasConfirmadas(),
+						result.asistenciasRegistradas(),
 						result.asistenciasRegistradas() == 0
 								? null
-								: result.asistencias() * 100.0 / result.asistenciasRegistradas()))
+								: result.asistenciasConfirmadas() * 100.0 / result.asistenciasRegistradas(),
+						forecasts.get(result.materia())))
 				.toList();
+	}
+
+	private Map<String, PronosticoDemanda> obtenerPronosticosPorMateria() {
+		LocalDate currentWeek = LocalDate.now().with(DayOfWeek.MONDAY);
+		LocalDate firstWeek = currentWeek.minusWeeks(HISTORY_WEEKS);
+		ZoneId zone = ZoneId.systemDefault();
+		LocalDateTime from = firstWeek.atStartOfDay();
+		LocalDateTime until = currentWeek.atStartOfDay();
+
+		AggregationOperation match = context -> new Document(
+				"$match",
+				new Document("materia", new Document("$type", "string").append("$ne", ""))
+						.append("fechaInicio", new Document("$gte", asDate(from, zone))
+								.append("$lt", asDate(until, zone))));
+		AggregationOperation project = context -> new Document(
+				"$project",
+				new Document("materia", 1)
+						.append("day", new Document(
+								"$dateToString",
+								new Document("format", "%Y-%m-%d")
+										.append("date", "$fechaInicio")
+										.append("timezone", zone.getId()))));
+		AggregationOperation group = context -> new Document(
+				"$group",
+				new Document("_id", new Document("materia", "$materia").append("day", "$day"))
+						.append("total", new Document("$sum", 1)));
+		Aggregation aggregation = Aggregation.newAggregation(match, project, group);
+		List<Document> dailyCounts = mongoTemplate
+				.aggregate(aggregation, "tutorias", Document.class)
+				.getMappedResults();
+
+		Map<String, Map<LocalDate, Long>> countsBySubject = new HashMap<>();
+		for (Document dailyCount : dailyCounts) {
+			Document key = dailyCount.get("_id", Document.class);
+			LocalDate day = LocalDate.parse(key.getString("day"));
+			LocalDate week = day.with(DayOfWeek.MONDAY);
+			countsBySubject.computeIfAbsent(key.getString("materia"), ignored -> new TreeMap<>())
+					.merge(week, dailyCount.get("total", Number.class).longValue(), Long::sum);
+		}
+
+		Map<String, PronosticoDemanda> forecasts = new HashMap<>();
+		countsBySubject.forEach((subject, counts) -> {
+			long weeksWithRequests = counts.values().stream().filter(total -> total > 0).count();
+			if (weeksWithRequests < 4) {
+				return;
+			}
+
+			LocalDate firstActiveWeek = counts.keySet().iterator().next();
+			List<WeeklyTutoringCount> history = java.util.stream.LongStream.range(
+					0, java.time.temporal.ChronoUnit.WEEKS.between(firstActiveWeek, currentWeek))
+					.mapToObj(offset -> {
+						LocalDate week = firstActiveWeek.plusWeeks(offset);
+						return new WeeklyTutoringCount(week, counts.getOrDefault(week, 0L));
+					})
+					.toList();
+			if (history.size() >= 4 && history.size() <= HISTORY_WEEKS) {
+				forecasts.put(subject, RegresionDemandaSemanal.pronosticar(history));
+			}
+		});
+		return forecasts;
 	}
 
 	private long contarPorEstado(EstadoTutoria estado) {
@@ -162,10 +249,11 @@ public class DirectorDashboardService {
 	}
 
 	private record SubjectAttendanceCount(
-			@Id String id,
+			String materia,
 			long totalTutorias,
 			long tutoriasRealizadas,
-			long asistenciasRegistradas,
-			long asistencias) {
+			long estudiantesInscritos,
+			long asistenciasConfirmadas,
+			long asistenciasRegistradas) {
 	}
 }

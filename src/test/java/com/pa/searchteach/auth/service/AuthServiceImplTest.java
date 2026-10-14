@@ -4,6 +4,8 @@ import com.pa.searchteach.auth.dto.AuthResponse;
 import com.pa.searchteach.auth.exception.AuthException;
 import com.pa.searchteach.coordinators.model.Coordinator;
 import com.pa.searchteach.coordinators.repository.CoordinatorRepository;
+import com.pa.searchteach.programleaders.model.LiderPrograma;
+import com.pa.searchteach.programleaders.repository.RepositorioLiderPrograma;
 import com.pa.searchteach.users.model.Role;
 import com.pa.searchteach.users.model.User;
 import com.pa.searchteach.users.repository.UserRepository;
@@ -31,6 +33,7 @@ import static org.mockito.Mockito.when;
 class AuthServiceImplTest {
 
 	private final UserRepository userRepository = mock(UserRepository.class);
+	private final RepositorioLiderPrograma repositorioLiderPrograma = mock(RepositorioLiderPrograma.class);
 	private final CoordinatorRepository coordinatorRepository = mock(CoordinatorRepository.class);
 	private final MongoTemplate mongoTemplate = mock(MongoTemplate.class);
 	private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
@@ -38,7 +41,8 @@ class AuthServiceImplTest {
 			"test-only-secret-key-with-at-least-32-bytes", 900);
 	private final AuthAttemptLimiter attemptLimiter = mock(AuthAttemptLimiter.class);
 	private final AuthServiceImpl authService = new AuthServiceImpl(
-			userRepository, coordinatorRepository, mongoTemplate, passwordEncoder, jwtService, attemptLimiter);
+			userRepository, repositorioLiderPrograma, coordinatorRepository, mongoTemplate, passwordEncoder,
+			jwtService, attemptLimiter);
 
 	@Test
 	void registrationSetsPasswordOnlyForAnExistingUnregisteredUser() {
@@ -64,6 +68,7 @@ class AuthServiceImplTest {
 
 	@Test
 	void registrationRejectsAnIdentificationMissingFromTheDatabase() {
+		when(repositorioLiderPrograma.findById("00123456")).thenReturn(Optional.empty());
 		when(userRepository.existsById("00123456")).thenReturn(false);
 		when(coordinatorRepository.findById("00123456")).thenReturn(Optional.empty());
 
@@ -82,6 +87,7 @@ class AuthServiceImplTest {
 		User user = new User();
 		user.setId("00123456");
 		user.setPasswordHash(passwordEncoder.encode("valid-password"));
+		when(repositorioLiderPrograma.findById("00123456")).thenReturn(Optional.empty());
 		when(coordinatorRepository.findById("00123456")).thenReturn(Optional.empty());
 		when(userRepository.findById("00123456")).thenReturn(Optional.of(user));
 
@@ -94,6 +100,7 @@ class AuthServiceImplTest {
 
 	@Test
 	void loginUsesOneGenericErrorForUnknownUsersAndWrongPasswords() {
+		when(repositorioLiderPrograma.findById("00123456")).thenReturn(Optional.empty());
 		when(userRepository.findById("00123456")).thenReturn(Optional.empty());
 		when(coordinatorRepository.findById("00123456")).thenReturn(Optional.empty());
 
@@ -106,16 +113,17 @@ class AuthServiceImplTest {
 	}
 
 	@Test
-	void coordinatorCanRegisterAndReceivesDirectorRoleFromCoordinatorCollection() {
+	void coordinatorCanRegisterAndReceivesCoordinatorRoleFromCoordinatorCollection() {
 		Coordinator coordinator = new Coordinator();
 		coordinator.setId("00123456");
+		when(repositorioLiderPrograma.findById("00123456")).thenReturn(Optional.empty());
 		when(coordinatorRepository.findById("00123456")).thenReturn(Optional.of(coordinator));
 		when(mongoTemplate.updateFirst(any(Query.class), any(Update.class), eq(Coordinator.class)))
 				.thenReturn(com.mongodb.client.result.UpdateResult.acknowledged(1, 1L, null));
 
 		AuthResponse response = authService.register("00123456", "valid-password", "127.0.0.1");
 
-		assertEquals(Role.DIRECTOR, jwtService.getRole(response.token()));
+		assertEquals(Role.COORDINATOR, jwtService.getRole(response.token()));
 		verify(mongoTemplate).updateFirst(any(Query.class), any(Update.class), eq(Coordinator.class));
 		verify(userRepository, never()).existsById("00123456");
 	}
@@ -125,11 +133,42 @@ class AuthServiceImplTest {
 		Coordinator coordinator = new Coordinator();
 		coordinator.setId("00123456");
 		coordinator.setPasswordHash(passwordEncoder.encode("valid-password"));
+		when(repositorioLiderPrograma.findById("00123456")).thenReturn(Optional.empty());
 		when(coordinatorRepository.findById("00123456")).thenReturn(Optional.of(coordinator));
 
 		AuthResponse response = authService.login("00123456", "valid-password", "127.0.0.1");
 
+		assertEquals(Role.COORDINATOR, jwtService.getRole(response.token()));
+		verify(userRepository, never()).findById("00123456");
+	}
+
+	@Test
+	void liderProgramaPuedeRegistrarseDesdeSuColeccion() {
+		LiderPrograma liderPrograma = new LiderPrograma();
+		liderPrograma.setId("00123456");
+		when(repositorioLiderPrograma.findById("00123456")).thenReturn(Optional.of(liderPrograma));
+		when(mongoTemplate.updateFirst(any(Query.class), any(Update.class), eq(LiderPrograma.class)))
+				.thenReturn(com.mongodb.client.result.UpdateResult.acknowledged(1, 1L, null));
+
+		AuthResponse response = authService.register("00123456", "valid-password", "127.0.0.1");
+
 		assertEquals(Role.DIRECTOR, jwtService.getRole(response.token()));
+		verify(mongoTemplate).updateFirst(any(Query.class), any(Update.class), eq(LiderPrograma.class));
+		verify(coordinatorRepository, never()).findById("00123456");
+		verify(userRepository, never()).existsById("00123456");
+	}
+
+	@Test
+	void liderProgramaPuedeIniciarSesionDesdeSuColeccion() {
+		LiderPrograma liderPrograma = new LiderPrograma();
+		liderPrograma.setId("00123456");
+		liderPrograma.setPasswordHash(passwordEncoder.encode("valid-password"));
+		when(repositorioLiderPrograma.findById("00123456")).thenReturn(Optional.of(liderPrograma));
+
+		AuthResponse response = authService.login("00123456", "valid-password", "127.0.0.1");
+
+		assertEquals(Role.DIRECTOR, jwtService.getRole(response.token()));
+		verify(coordinatorRepository, never()).findById("00123456");
 		verify(userRepository, never()).findById("00123456");
 	}
 }

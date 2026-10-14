@@ -1,6 +1,7 @@
 package com.pa.searchteach.common.exception;
 
 import com.pa.searchteach.auth.exception.AuthException;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -39,6 +40,23 @@ public class GlobalExceptionHandler {
 			default -> "La solicitud contiene un campo obligatorio inválido.";
 		};
 		return ResponseEntity.badRequest().body(new ApiError(message, true, 0));
+	}
+
+	@ExceptionHandler(IllegalArgumentException.class)
+	ResponseEntity<ApiError> handleInvalidInput(IllegalArgumentException exception) {
+		return ResponseEntity.badRequest().body(new ApiError(exception.getMessage(), false, 0));
+	}
+
+	@ExceptionHandler(NotFoundException.class)
+	ResponseEntity<ApiError> handleNotFound(NotFoundException exception) {
+		return ResponseEntity.status(HttpStatus.NOT_FOUND)
+				.body(new ApiError(exception.getMessage(), false, 0));
+	}
+
+	@ExceptionHandler(ForbiddenException.class)
+	ResponseEntity<ApiError> handleForbidden(ForbiddenException exception) {
+		return ResponseEntity.status(HttpStatus.FORBIDDEN)
+				.body(new ApiError(exception.getMessage(), false, 0));
 	}
 
 	public record ApiError(String message, boolean retryable, long retryAfterSeconds) {

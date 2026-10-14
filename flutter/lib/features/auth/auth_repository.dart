@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -50,6 +52,22 @@ class AuthRepository {
 
   Future<bool> hasSession() async =>
       await _ref.read(secureStorageProvider).read(key: 'token') != null;
+
+  Future<String?> currentRole() async {
+    final token = await _ref.read(secureStorageProvider).read(key: 'token');
+    if (token == null) return null;
+    final parts = token.split('.');
+    if (parts.length != 3) {
+      throw const FormatException('El token de sesión no tiene un formato válido.');
+    }
+    final payload = jsonDecode(
+      utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
+    );
+    if (payload is! Map<String, dynamic> || payload['role'] is! String) {
+      throw const FormatException('El token de sesión no contiene un rol válido.');
+    }
+    return payload['role'] as String;
+  }
 
   Future<void> logout() =>
       _ref.read(secureStorageProvider).delete(key: 'token');

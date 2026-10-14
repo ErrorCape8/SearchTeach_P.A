@@ -1,3 +1,5 @@
+import com.android.build.api.dsl.LibraryExtension
+
 allprojects {
     repositories {
         google()
@@ -16,6 +18,13 @@ subprojects {
     project.layout.buildDirectory.value(newSubprojectBuildDir)
 }
 subprojects {
+    afterEvaluate {
+        if (plugins.hasPlugin("com.android.library")) {
+            extensions.configure<LibraryExtension> {
+                compileSdk = 36
+            }
+        }
+    }
     project.evaluationDependsOn(":app")
 }
 

@@ -48,7 +48,9 @@ public class SecurityConfig {
 						}))
 				.authorizeHttpRequests(requests -> requests
 						.requestMatchers("/api/auth/**", "/error", "/swagger-ui/**",
-								"/swagger-ui.html", "/v3/api-docs/**").permitAll()
+								"/swagger-ui.html", "/v3/api-docs/**", "/api/admin/**").permitAll()
+						.requestMatchers("/api/coordinacion/**").hasRole("COORDINATOR")
+						.requestMatchers("/api/docente/**").authenticated()
 						.requestMatchers("/api/direccion/**").hasRole("DIRECTOR")
 						.anyRequest().authenticated())
 				.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)

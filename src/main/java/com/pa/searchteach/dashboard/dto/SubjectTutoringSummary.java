@@ -4,5 +4,9 @@ public record SubjectTutoringSummary(
 		String materia,
 		long totalTutorias,
 		long tutoriasRealizadas,
-		Double tasaAsistencia) {
+		long estudiantesInscritos,
+		long asistenciasConfirmadas,
+		long asistenciasRegistradas,
+		Double tasaAsistencia,
+		PronosticoDemanda pronostico) {
 }
