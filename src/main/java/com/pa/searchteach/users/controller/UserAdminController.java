@@ -4,10 +4,12 @@ import com.pa.searchteach.common.exception.NotFoundException;
 import com.pa.searchteach.it.model.ItAdmin;
 import com.pa.searchteach.it.repository.ItAdminRepository;
 import com.pa.searchteach.users.dto.UserResponse;
+import com.pa.searchteach.users.dto.UserCreateRequest;
 import com.pa.searchteach.users.dto.UserUpdateRequest;
 import com.pa.searchteach.users.model.User;
 import com.pa.searchteach.users.repository.UserRepository;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
@@ -37,6 +39,60 @@ public class UserAdminController {
 				.map(u -> new UserResponse(u.getId(), u.getNombre(),
 						u.getCorreo(), u.getTelefono(), u.getRol(), u.getEstado()))
 				.toList();
+	}
+
+	@PostMapping("/users/import")
+	public ResponseEntity<?> importUsers(@RequestBody Map<String, List<UserCreateRequest>> payload) {
+		List<UserCreateRequest> rows = payload == null ? null : payload.get("usuarios");
+		if (rows == null || rows.isEmpty()) {
+			return invalidImport();
+		}
+
+		Set<String> ids = new HashSet<>();
+		Set<String> emails = new HashSet<>();
+		for (UserCreateRequest row : rows) {
+			if (row == null || row.id() == null || !row.id().matches("[0-9]{6,10}")
+					|| blank(row.nombre()) || blank(row.correo()) || blank(row.telefono())
+					|| blank(row.rol()) || blank(row.estado())
+					|| !row.correo().matches("[^\\s@]+@[^\\s@]+\\.[^\\s@]+")
+					|| !(row.estado().equalsIgnoreCase("Activo") || row.estado().equalsIgnoreCase("Revocado"))
+					|| !ids.add(row.id()) || !emails.add(row.correo().trim().toLowerCase(Locale.ROOT))) {
+				return invalidImport();
+			}
+		}
+
+		List<User> existing = userRepository.findAll();
+		Set<String> existingIds = new HashSet<>();
+		Set<String> existingEmails = new HashSet<>();
+		for (User user : existing) {
+			existingIds.add(user.getId());
+			if (!blank(user.getCorreo())) {
+				existingEmails.add(user.getCorreo().trim().toLowerCase(Locale.ROOT));
+			}
+		}
+		if (ids.stream().anyMatch(existingIds::contains) || emails.stream().anyMatch(existingEmails::contains)) {
+			return invalidImport();
+		}
+
+		List<User> users = rows.stream().map(row -> new User(
+				row.id().trim(), null, row.nombre().trim(), row.correo().trim().toLowerCase(Locale.ROOT),
+				row.telefono().trim(), row.rol().trim(),
+				row.estado().equalsIgnoreCase("activo") ? "Activo" : "Revocado"))
+				.toList();
+		List<UserResponse> created = userRepository.saveAll(users).stream()
+				.map(u -> new UserResponse(u.getId(), u.getNombre(), u.getCorreo(),
+						u.getTelefono(), u.getRol(), u.getEstado()))
+				.toList();
+		return ResponseEntity.status(HttpStatus.CREATED).body(created);
+	}
+
+	private boolean blank(String value) {
+		return value == null || value.isBlank();
+	}
+
+	private ResponseEntity<Map<String, String>> invalidImport() {
+		return ResponseEntity.badRequest().body(Map.of(
+				"message", "no todos los usuairos cumplen con los parametros"));
 	}
 
 	@GetMapping("/users/{id}")

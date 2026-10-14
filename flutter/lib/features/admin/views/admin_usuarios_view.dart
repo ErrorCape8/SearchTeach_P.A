@@ -1,5 +1,10 @@
+import 'dart:convert';
+
+import 'package:dio/dio.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/api_client.dart';
 import '../admin_controller.dart';
 import '../models/admin_user.dart';
 
@@ -12,6 +17,131 @@ class AdminUsuariosView extends ConsumerStatefulWidget {
 
 class _AdminUsuariosViewState extends ConsumerState<AdminUsuariosView> {
   final _searchController = TextEditingController();
+  bool _importingUsers = false;
+
+  static const _invalidCsvMessage =
+      'no todos los usuairos cumplen con los parametros';
+
+  Future<void> _importCsv() async {
+    final picked = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const ['csv'],
+      withData: true,
+    );
+    if (picked == null || picked.files.isEmpty || !mounted) return;
+    final bytes = picked.files.single.bytes;
+    if (bytes == null) {
+      await _showImportError(_invalidCsvMessage);
+      return;
+    }
+
+    try {
+      final users = _parseCsv(utf8.decode(bytes, allowMalformed: false));
+      setState(() => _importingUsers = true);
+      await ref.read(dioProvider).post<void>(
+        '/api/admin/users/import',
+        data: {'usuarios': users},
+      );
+      await ref.read(adminControllerProvider.notifier).loadUsers();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${users.length} usuarios importados.')),
+        );
+      }
+    } on FormatException {
+      await _showImportError(_invalidCsvMessage);
+    } on DioException catch (error) {
+      final body = error.response?.data;
+      final message = body is Map && body['message'] is String
+          ? body['message'] as String
+          : 'No se pudo importar el archivo CSV.';
+      await _showImportError(message);
+    } finally {
+      if (mounted) setState(() => _importingUsers = false);
+    }
+  }
+
+  List<Map<String, String>> _parseCsv(String source) {
+    final rows = <List<String>>[];
+    final row = <String>[];
+    final cell = StringBuffer();
+    var quoted = false;
+    final text = source.replaceFirst('\uFEFF', '').replaceAll('\r\n', '\n').replaceAll('\r', '\n');
+    for (var i = 0; i < text.length; i++) {
+      final char = text[i];
+      if (char == '"') {
+        if (quoted && i + 1 < text.length && text[i + 1] == '"') {
+          cell.write('"');
+          i++;
+        } else {
+          quoted = !quoted;
+        }
+      } else if (!quoted && char == ',') {
+        row.add(cell.toString().trim());
+        cell.clear();
+      } else if (!quoted && char == '\n') {
+        row.add(cell.toString().trim());
+        cell.clear();
+        if (row.any((value) => value.isNotEmpty)) rows.add(List.of(row));
+        row.clear();
+      } else {
+        cell.write(char);
+      }
+    }
+    if (quoted) throw const FormatException();
+    row.add(cell.toString().trim());
+    if (row.any((value) => value.isNotEmpty)) rows.add(row);
+    if (rows.length < 2) throw const FormatException();
+
+    const required = ['id', 'nombre', 'correo', 'telefono', 'rol', 'estado'];
+    final headers = rows.first.map((value) => value.toLowerCase()).toList();
+    if (headers.toSet().length != headers.length ||
+        required.any((header) => !headers.contains(header))) {
+      throw const FormatException();
+    }
+    final imported = <Map<String, String>>[];
+    final ids = <String>{};
+    final emails = <String>{};
+    for (final values in rows.skip(1)) {
+      if (values.length != headers.length) throw const FormatException();
+      final record = <String, String>{
+        for (var i = 0; i < headers.length; i++) headers[i]: values[i],
+      };
+      final id = record['id']!;
+      final email = record['correo']!.toLowerCase();
+      final status = record['estado']!.toLowerCase();
+      if (!RegExp(r'^\d{6,10}$').hasMatch(id) ||
+          !RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email) ||
+          required.any((key) => record[key]!.isEmpty) ||
+          !const {'activo', 'revocado'}.contains(status) ||
+          !ids.add(id) ||
+          !emails.add(email)) {
+        throw const FormatException();
+      }
+      record['correo'] = email;
+      imported.add(record);
+    }
+    if (imported.isEmpty) throw const FormatException();
+    return imported;
+  }
+
+  Future<void> _showImportError(String message) async {
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        icon: const Icon(Icons.error_outline, color: Color(0xFFDC2626)),
+        title: const Text('Error al importar usuarios'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Aceptar'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   void dispose() {
@@ -181,6 +311,29 @@ class _AdminUsuariosViewState extends ConsumerState<AdminUsuariosView> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.refresh_rounded),
+                  style: IconButton.styleFrom(
+                    foregroundColor: const Color(0xFFEA580C),
+                    backgroundColor: Colors.white,
+                    minimumSize: const Size(48, 48),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: const BorderSide(color: Color(0xFFE5E7EB), width: 1.2),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Tooltip(
+                message: 'CSV con columnas: id, nombre, correo, telefono, rol, estado',
+                child: IconButton(
+                  onPressed: _importingUsers ? null : _importCsv,
+                  icon: _importingUsers
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.upload_file_outlined),
                   style: IconButton.styleFrom(
                     foregroundColor: const Color(0xFFEA580C),
                     backgroundColor: Colors.white,

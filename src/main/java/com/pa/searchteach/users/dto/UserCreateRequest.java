@@ -1,4 +1,10 @@
 package com.pa.searchteach.users.dto;
 
-public class UserCreateRequest {
+public record UserCreateRequest(
+		String id,
+		String nombre,
+		String correo,
+		String telefono,
+		String rol,
+		String estado) {
 }
