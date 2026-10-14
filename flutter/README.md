@@ -61,10 +61,25 @@ The coordinator-entered leader and support-teacher identifiers must already
 exist in the `users` collection so those teachers can authenticate to submit
 their reports.
 
-After signing in, coordinator accounts open the collective-tutoring setup form,
+After signing in, coordinator accounts open the tutor schedule manager,
 ordinary user accounts can submit reports only for projects assigned to their
 account, and program-leader accounts keep the institutional dashboard with a
 **Proyectos** tab for the collective reports and their trend.
+
+Coordinator accounts open **Horarios de tutores** after signing in. The screen
+searches the active teacher directory by name or identification, filters saved
+availability by career and semester, and separates the teacher directory from
+the **Horarios creados** list. Assigning a schedule creates a persistent record;
+the same teacher's action then changes to **Editar**. Career and semester are
+captured with each schedule, and the dashboard uses a navigation rail and a
+wider content area on desktop while retaining bottom navigation on mobile.
+Collective tutoring setup remains available from the coordinator schedule
+screen.
+
+The Flutter schedule feature is split by responsibility: its page owns loading
+and filtering state, `coordinacion_horarios_form.dart` owns create/edit input,
+`coordinacion_horarios_widgets.dart` contains the responsive filters and cards,
+and `coordinacion_horarios_models.dart` parses the API data.
 
 The **Pronóstico** view reports distinct enrolled students and recorded/
 confirmed attendance by subject, using tutoring records from MongoDB. It fits a

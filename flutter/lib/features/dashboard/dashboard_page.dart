@@ -7,6 +7,7 @@ import 'director_dashboard_provider.dart';
 import 'proyectos_aula_page.dart';
 
 const _purple = Color(0xFF6337BF);
+const _brandOrange = Color(0xFFEA580C);
 const _ink = Color(0xFF28243A);
 const _muted = Color(0xFF777487);
 const _canvas = Color(0xFFF4F5FA);
@@ -60,35 +61,103 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
         ],
       ),
       body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 720),
-            child: AnimatedSwitcher(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isWide = constraints.maxWidth >= 900;
+            final content = AnimatedSwitcher(
               duration: const Duration(milliseconds: 180),
               child: KeyedSubtree(
                 key: ValueKey(_selectedTab),
                 child: screen,
               ),
-            ),
-          ),
+            );
+            if (!isWide) {
+              return Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 720),
+                  child: content,
+                ),
+              );
+            }
+            return Row(
+              children: [
+                NavigationRail(
+                  backgroundColor: Colors.white,
+                  selectedIndex: _selectedTab,
+                  onDestinationSelected: (index) =>
+                      setState(() => _selectedTab = index),
+                  labelType: NavigationRailLabelType.all,
+                  groupAlignment: -0.8,
+                  indicatorColor: const Color(0xFFFFF1E6),
+                  selectedIconTheme: const IconThemeData(color: _brandOrange),
+                  unselectedIconTheme:
+                      const IconThemeData(color: Color(0xFF8C95A6)),
+                  selectedLabelTextStyle: const TextStyle(
+                    color: _brandOrange,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  unselectedLabelTextStyle:
+                      const TextStyle(color: Color(0xFF64748B)),
+                  destinations: const [
+                    NavigationRailDestination(
+                      icon: Icon(Icons.home_outlined),
+                      selectedIcon: Icon(Icons.home_rounded),
+                      label: Text('Inicio'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.star_outline),
+                      label: Text('Calidad'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.bar_chart),
+                      label: Text('Pronóstico'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.science_outlined),
+                      label: Text('Proyectos'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.person_outline),
+                      label: Text('Perfil'),
+                    ),
+                  ],
+                ),
+                const VerticalDivider(width: 1, thickness: 1),
+                Expanded(
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 1440),
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: content,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedTab,
-        onDestinationSelected: (index) => setState(() => _selectedTab = index),
-        destinations: const [
-          NavigationDestination(
-              icon: Icon(Icons.home_outlined), label: 'Inicio'),
-          NavigationDestination(
-              icon: Icon(Icons.star_outline), label: 'Calidad'),
-          NavigationDestination(
-              icon: Icon(Icons.bar_chart), label: 'Pronóstico'),
-          NavigationDestination(
-              icon: Icon(Icons.science_outlined), label: 'Proyectos'),
-          NavigationDestination(
-              icon: Icon(Icons.person_outline), label: 'Perfil'),
-        ],
-      ),
+      bottomNavigationBar: MediaQuery.sizeOf(context).width < 900
+          ? NavigationBar(
+              selectedIndex: _selectedTab,
+              onDestinationSelected: (index) =>
+                  setState(() => _selectedTab = index),
+              destinations: const [
+                NavigationDestination(
+                    icon: Icon(Icons.home_outlined), label: 'Inicio'),
+                NavigationDestination(
+                    icon: Icon(Icons.star_outline), label: 'Calidad'),
+                NavigationDestination(
+                    icon: Icon(Icons.bar_chart), label: 'Pronóstico'),
+                NavigationDestination(
+                    icon: Icon(Icons.science_outlined), label: 'Proyectos'),
+                NavigationDestination(
+                    icon: Icon(Icons.person_outline), label: 'Perfil'),
+              ],
+            )
+          : null,
     );
   }
 
@@ -235,12 +304,14 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
         data: (data) => _ForecastPage(dashboard: data),
       );
 
-  Widget _profile() => _ProfilePage(
-        onLogout: () async {
-          await ref.read(authRepositoryProvider).logout();
-          if (context.mounted) context.go('/login');
-        },
-      );
+  Widget _profile() {
+    return _ProfilePage(
+      onLogout: () async {
+        await ref.read(authRepositoryProvider).logout();
+        if (mounted) context.go('/login');
+      },
+    );
+  }
 
   Widget _errorState(Object error) {
     final isForbidden =
@@ -284,7 +355,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
               TextButton(
                 onPressed: () async {
                   await ref.read(authRepositoryProvider).logout();
-                  if (context.mounted) context.go('/login');
+                  if (mounted) context.go('/login');
                 },
                 child: const Text('Cerrar sesión'),
               ),
@@ -726,7 +797,8 @@ class _ForecastPageState extends State<_ForecastPage> {
         const SizedBox(height: 16),
         if (subjects.isEmpty)
           const _InfoNote(
-            text: 'Aún no hay solicitudes de tutoría registradas por asignatura.',
+            text:
+                'Aún no hay solicitudes de tutoría registradas por asignatura.',
           )
         else ...[
           for (final subject in subjects) ...[
@@ -745,7 +817,7 @@ class _ForecastPageState extends State<_ForecastPage> {
         const SizedBox(height: 16),
         const _InfoNote(
           text:
-            'El modelo ajusta una recta por asignatura sobre las últimas 10 semanas completas. Requiere solicitudes en al menos 4 semanas; las semanas sin solicitudes desde la primera actividad se cuentan como cero. El rango es un intervalo predictivo del 95%, no una garantía. La tendencia se considera estable cuando el cambio es menor a 1 solicitud o al 10% del promedio de las últimas 4 semanas.',
+              'El modelo ajusta una recta por asignatura sobre las últimas 10 semanas completas. Requiere solicitudes en al menos 4 semanas; las semanas sin solicitudes desde la primera actividad se cuentan como cero. El rango es un intervalo predictivo del 95%, no una garantía. La tendencia se considera estable cuando el cambio es menor a 1 solicitud o al 10% del promedio de las últimas 4 semanas.',
         ),
       ],
     );

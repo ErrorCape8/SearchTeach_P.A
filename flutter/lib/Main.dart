@@ -6,6 +6,7 @@ import 'features/auth/login_page.dart';
 import 'features/auth/register_page.dart';
 import 'features/dashboard/dashboard_page.dart';
 import 'features/tutorias/coordinacion_tutorias_page.dart';
+import 'features/tutorias/coordinacion_horarios_page.dart';
 import 'features/tutorias/docente_informes_page.dart';
 
 final _router = GoRouter(
@@ -19,6 +20,10 @@ final _router = GoRouter(
     ),
     GoRoute(
       path: '/coordinacion',
+      builder: (_, __) => const CoordinacionHorariosPage(),
+    ),
+    GoRoute(
+      path: '/coordinacion/tutorias-colectivas',
       builder: (_, __) => const CoordinacionTutoriasPage(),
     ),
     GoRoute(
