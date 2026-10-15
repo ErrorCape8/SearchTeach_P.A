@@ -5,6 +5,13 @@
 !.env.example
 target
 build
-flutter
 .dart_tool
 .idea
+
+**/.dart_tool
+**/build
+**/.gradle
+**/.pub-cache
+**/ephemeral
+**/node_modules
+**/Pods

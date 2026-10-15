@@ -10,10 +10,12 @@ if (-not (Test-Path $flutterRoot -PathType Container)) {
     throw "No se encontró la carpeta Flutter: $flutterRoot"
 }
 
-$flutterCommand = Get-Command flutter -ErrorAction Stop
-$flutterPath = $flutterCommand.Source
-$flutterSdkRoot = Split-Path (Split-Path $flutterPath -Parent) -Parent
 $script:reservedFlutterDrives = @()
+if ($Frontend -in @('both', 'windows')) {
+    $flutterCommand = Get-Command flutter -ErrorAction Stop
+    $flutterPath = $flutterCommand.Source
+    $flutterSdkRoot = Split-Path (Split-Path $flutterPath -Parent) -Parent
+}
 
 function Start-FlutterSession {
     param([Parameter(Mandatory = $true)][string]$Arguments)
@@ -42,17 +44,21 @@ function Start-FlutterSession {
         -PassThru | Out-Null
 }
 
-docker compose --project-directory $projectRoot up -d --build app
+if ($Frontend -in @('both', 'web')) {
+    docker compose --project-directory $projectRoot up -d --build app frontend
+} else {
+    docker compose --project-directory $projectRoot up -d --build app
+}
 if ($LASTEXITCODE -ne 0) {
-    throw 'No se pudo iniciar el backend. Revisa Docker Desktop y el mensaje de Docker Compose.'
+    throw 'No se pudo iniciar Docker Compose. Revisa Docker Desktop y el mensaje de Compose.'
 }
 
 if ($Frontend -in @('both', 'web')) {
-    Start-FlutterSession 'run -d chrome --web-port 5001 --dart-define=API_BASE_URL=http://localhost:8081'
+    Start-Process 'http://localhost:5001'
 }
 
 if ($Frontend -in @('both', 'windows')) {
     Start-FlutterSession 'run -d windows --dart-define=API_BASE_URL=http://localhost:8081'
 }
 
-Write-Host 'Flutter se está iniciando. Web: http://localhost:5001; API: http://localhost:8081.'
+Write-Host 'SearchTeach listo. Web: http://localhost:5001; API: http://localhost:8081.'
