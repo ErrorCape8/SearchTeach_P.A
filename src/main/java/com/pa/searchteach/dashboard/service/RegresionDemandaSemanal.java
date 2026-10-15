@@ -68,7 +68,8 @@ final class RegresionDemandaSemanal {
 				proximasCuatroSemanas.minimo(),
 				proximasCuatroSemanas.maximo(),
 				tendencia,
-				"SUBE".equals(tendencia));
+				"SUBE".equals(tendencia),
+				"REGRESION");
 	}
 
 	private static RangoPronostico calcularRango(

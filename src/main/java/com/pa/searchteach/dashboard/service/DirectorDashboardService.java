@@ -8,6 +8,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeMap;
 
 import com.pa.searchteach.dashboard.dto.DashboardSummary;
@@ -17,6 +18,8 @@ import com.pa.searchteach.dashboard.dto.WeeklyTutoringCount;
 import com.pa.searchteach.tutorias.modelo.EstadoTutoria;
 import com.pa.searchteach.tutorias.modelo.Tutoria;
 import org.bson.Document;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.aggregation.Aggregation;
@@ -29,10 +32,16 @@ import org.springframework.stereotype.Service;
 public class DirectorDashboardService {
 
 	private static final int HISTORY_WEEKS = 10;
+	private static final double UMBRAL_TENDENCIA_ESTABLE = 0.10;
+	private static final Logger LOGGER = LoggerFactory.getLogger(DirectorDashboardService.class);
 	private final MongoTemplate mongoTemplate;
+	private final PronosticoReptreeService pronosticoReptreeService;
 
-	public DirectorDashboardService(MongoTemplate mongoTemplate) {
+	public DirectorDashboardService(
+			MongoTemplate mongoTemplate,
+			PronosticoReptreeService pronosticoReptreeService) {
 		this.mongoTemplate = mongoTemplate;
+		this.pronosticoReptreeService = pronosticoReptreeService;
 	}
 
 	public DashboardSummary obtenerResumen() {
@@ -165,11 +174,6 @@ public class DirectorDashboardService {
 
 		Map<String, PronosticoDemanda> forecasts = new HashMap<>();
 		countsBySubject.forEach((subject, counts) -> {
-			long weeksWithRequests = counts.values().stream().filter(total -> total > 0).count();
-			if (weeksWithRequests < 4) {
-				return;
-			}
-
 			LocalDate firstActiveWeek = counts.keySet().iterator().next();
 			List<WeeklyTutoringCount> history = java.util.stream.LongStream.range(
 					0, java.time.temporal.ChronoUnit.WEEKS.between(firstActiveWeek, currentWeek))
@@ -179,10 +183,67 @@ public class DirectorDashboardService {
 					})
 					.toList();
 			if (history.size() >= 4 && history.size() <= HISTORY_WEEKS) {
-				forecasts.put(subject, RegresionDemandaSemanal.pronosticar(history));
+				forecasts.put(subject, pronosticarMateria(subject, history, currentWeek));
 			}
 		});
 		return forecasts;
+	}
+
+	PronosticoDemanda pronosticarMateria(
+			String materia,
+			List<WeeklyTutoringCount> historial,
+			LocalDate primeraSemanaPronosticada) {
+		try {
+			Optional<List<Long>> predicciones = pronosticoReptreeService.pronosticar(
+					materia, historial, primeraSemanaPronosticada);
+			if (predicciones.isPresent()) {
+				return crearPronosticoReptree(historial, predicciones.get());
+			}
+		} catch (Exception exception) {
+			LOGGER.warn("Falló REPTree para {}; se usará la regresión lineal.", materia, exception);
+		}
+		return RegresionDemandaSemanal.pronosticar(historial);
+	}
+
+	private PronosticoDemanda crearPronosticoReptree(
+			List<WeeklyTutoringCount> historial,
+			List<Long> predicciones) {
+		PronosticoDemanda referencia = RegresionDemandaSemanal.pronosticar(historial);
+		long estimadoProximaSemana = predicciones.getFirst();
+		long estimadoProximasCuatroSemanas = 0;
+		for (Long prediccion : predicciones) {
+			if (prediccion == null) {
+				throw new IllegalStateException("REPTree devolvió una predicción vacía.");
+			}
+			estimadoProximasCuatroSemanas += prediccion.longValue();
+		}
+		long minimoProximaSemana = Math.min(referencia.minimoProximaSemana(), estimadoProximaSemana);
+		long maximoProximaSemana = Math.max(referencia.maximoProximaSemana(), estimadoProximaSemana);
+		long minimoProximasCuatroSemanas = Math.min(
+				referencia.minimoProximasCuatroSemanas(), estimadoProximasCuatroSemanas);
+		long maximoProximasCuatroSemanas = Math.max(
+				referencia.maximoProximasCuatroSemanas(), estimadoProximasCuatroSemanas);
+		long solicitudesRecientes = 0;
+		for (int index = historial.size() - 4; index < historial.size(); index++) {
+			solicitudesRecientes += historial.get(index).total();
+		}
+		double promedioReciente = solicitudesRecientes / 4.0;
+		double cambio = estimadoProximaSemana - promedioReciente;
+		double umbralEstable = Math.max(1, promedioReciente * UMBRAL_TENDENCIA_ESTABLE);
+		String tendencia = cambio > umbralEstable ? "SUBE"
+				: cambio < -umbralEstable ? "BAJA" : "ESTABLE";
+
+		return new PronosticoDemanda(
+				List.copyOf(historial),
+				estimadoProximaSemana,
+				minimoProximaSemana,
+				maximoProximaSemana,
+				estimadoProximasCuatroSemanas,
+				minimoProximasCuatroSemanas,
+				maximoProximasCuatroSemanas,
+				tendencia,
+				"SUBE".equals(tendencia),
+				"REPTREE");
 	}
 
 	private long contarPorEstado(EstadoTutoria estado) {

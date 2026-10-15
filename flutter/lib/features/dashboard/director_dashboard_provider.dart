@@ -133,6 +133,7 @@ class PronosticoDemanda {
     required this.maximoProximasCuatroSemanas,
     required this.tendencia,
     required this.alertaCreciente,
+    this.modelo,
   });
 
   final List<WeeklyTutoringCount> historialSolicitudes;
@@ -144,6 +145,7 @@ class PronosticoDemanda {
   final int maximoProximasCuatroSemanas;
   final String tendencia;
   final bool alertaCreciente;
+  final String? modelo;
 
   factory PronosticoDemanda.fromJson(Map<String, dynamic> json) {
     final weekly = json['historialSolicitudes'];
@@ -194,6 +196,7 @@ class PronosticoDemanda {
           _readInt(json, 'maximoProximasCuatroSemanas'),
       tendencia: trend,
       alertaCreciente: alert,
+      modelo: json['modelo'] as String?,
     );
   }
 

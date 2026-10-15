@@ -11,5 +11,6 @@ public record PronosticoDemanda(
 		long minimoProximasCuatroSemanas,
 		long maximoProximasCuatroSemanas,
 		String tendencia,
-		boolean alertaCreciente) {
+		boolean alertaCreciente,
+		String modelo) {
 }

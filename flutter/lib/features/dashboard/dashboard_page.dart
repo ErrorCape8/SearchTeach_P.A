@@ -706,7 +706,9 @@ class _DemandForecastCard extends StatelessWidget {
                 ),
               ),
               Text(
-                'Intervalo predictivo 95%: $minimum–$maximum',
+                forecast?.modelo == 'REPTREE'
+                    ? 'Rango de referencia lineal: $minimum–$maximum'
+                    : 'Intervalo predictivo 95%: $minimum–$maximum',
                 style: const TextStyle(color: _muted, fontSize: 12),
               ),
               const SizedBox(height: 14),
@@ -817,7 +819,7 @@ class _ForecastPageState extends State<_ForecastPage> {
         const SizedBox(height: 16),
         const _InfoNote(
           text:
-              'El modelo ajusta una recta por asignatura sobre las últimas 10 semanas completas. Requiere solicitudes en al menos 4 semanas; las semanas sin solicitudes desde la primera actividad se cuentan como cero. El rango es un intervalo predictivo del 95%, no una garantía. La tendencia se considera estable cuando el cambio es menor a 1 solicitud o al 10% del promedio de las últimas 4 semanas.',
+              'REPTree predice de forma iterativa usando las últimas 4 semanas completas; requiere al menos 4 semanas de historial. El rango que se muestra para REPTree es una referencia calculada por regresión lineal, no un intervalo calibrado para el árbol. Si REPTree no está disponible o no puede procesar una materia, se usa la regresión lineal. La tendencia se considera estable cuando el cambio es menor a 1 solicitud o al 10% del promedio de las últimas 4 semanas.',
         ),
       ],
     );
