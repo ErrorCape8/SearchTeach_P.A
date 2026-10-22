@@ -2,7 +2,7 @@ package com.pa.searchteach.tutorias.dto;
 
 import java.time.LocalDateTime;
 
-import com.pa.searchteach.tutorias.modelo.ModalidadTutoria;
+import com.pa.searchteach.tutorias.model.ModalidadTutoria;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 

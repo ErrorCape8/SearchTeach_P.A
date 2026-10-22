@@ -1,6 +1,6 @@
 package com.pa.searchteach.common.config;
 
-import com.pa.searchteach.auth.filter.JwtAuthenticationFilter;
+import com.pa.searchteach.auth.security.JwtAuthenticationFilter;
 import com.pa.searchteach.auth.service.JwtService;
 import jakarta.servlet.Filter;
 import java.util.List;

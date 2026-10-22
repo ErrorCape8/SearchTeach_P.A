@@ -188,6 +188,11 @@ class _Header extends StatelessWidget {
           ]),
         ),
         IconButton(
+          tooltip: 'Notificaciones',
+          onPressed: () => context.push('/notificaciones'),
+          icon: const Icon(Icons.notifications_outlined, color: Colors.white),
+        ),
+        IconButton(
           tooltip: 'Actualizar datos',
           onPressed: () => context.findAncestorStateOfType<_CoordinacionDashboardPageState>()?._load(),
           icon: const Icon(Icons.refresh_rounded, color: Colors.white),

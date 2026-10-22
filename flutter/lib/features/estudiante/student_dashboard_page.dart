@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/api_client.dart';
 import '../../core/widgets/brand_logo.dart';
 import '../auth/auth_repository.dart';
+import '../notifications/notifications_page.dart';
 import 'student_dashboard_models.dart';
 import 'student_dashboard_views.dart';
 
@@ -79,7 +80,7 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
                               ? () => context.go('/docente')
                               : null,
                         ),
-                        StudentAlertsView(data: value),
+                        const NotificationsInbox(),
                       ],
                     ),
                   ),

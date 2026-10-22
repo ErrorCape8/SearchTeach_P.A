@@ -8,7 +8,7 @@ import com.pa.searchteach.users.dto.UserCreateRequest;
 import com.pa.searchteach.users.dto.UserUpdateRequest;
 import com.pa.searchteach.users.model.User;
 import com.pa.searchteach.users.repository.UserRepository;
-import com.pa.searchteach.tutorias.modelo.CatalogoTecnologias;
+import com.pa.searchteach.tutorias.model.CatalogoTecnologias;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;

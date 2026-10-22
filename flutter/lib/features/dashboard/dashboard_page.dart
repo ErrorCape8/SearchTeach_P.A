@@ -51,6 +51,11 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
         ),
         actions: [
           IconButton(
+            tooltip: 'Notificaciones',
+            onPressed: () => context.push('/notificaciones'),
+            icon: const Icon(Icons.notifications_outlined),
+          ),
+          IconButton(
             tooltip: 'Actualizar',
             onPressed: () {
               ref.invalidate(directorDashboardProvider);

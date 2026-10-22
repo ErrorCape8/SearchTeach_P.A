@@ -4,7 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Pattern;
 import java.util.List;
-import com.pa.searchteach.tutorias.modelo.MateriaHorario;
+import com.pa.searchteach.tutorias.model.MateriaHorario;
 
 public record HorarioTutorSolicitud(
 		@NotBlank String carrera,

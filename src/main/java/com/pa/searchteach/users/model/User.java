@@ -15,6 +15,8 @@ public class User {
 	private String rol;
 	private String estado;
 	private String carrera;
+	private java.util.List<String> titulosAcademicos = java.util.List.of();
+	private java.util.List<String> materiasAsignadas = java.util.List.of();
 
 	public User() {
 	}
@@ -96,5 +98,21 @@ public class User {
 
 	public void setCarrera(String carrera) {
 		this.carrera = carrera;
+	}
+
+	public java.util.List<String> getTitulosAcademicos() {
+		return titulosAcademicos == null ? java.util.List.of() : java.util.List.copyOf(titulosAcademicos);
+	}
+
+	public void setTitulosAcademicos(java.util.List<String> titulosAcademicos) {
+		this.titulosAcademicos = titulosAcademicos == null ? java.util.List.of() : java.util.List.copyOf(titulosAcademicos);
+	}
+
+	public java.util.List<String> getMateriasAsignadas() {
+		return materiasAsignadas == null ? java.util.List.of() : java.util.List.copyOf(materiasAsignadas);
+	}
+
+	public void setMateriasAsignadas(java.util.List<String> materiasAsignadas) {
+		this.materiasAsignadas = materiasAsignadas == null ? java.util.List.of() : java.util.List.copyOf(materiasAsignadas);
 	}
 }

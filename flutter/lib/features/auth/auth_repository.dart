@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/api_client.dart';
+import '../notifications/notification_push_service.dart';
 
 /// Error que viene del backend: {message, retryable, retryAfterSeconds}
 class AuthFailure implements Exception {
@@ -122,8 +123,14 @@ class AuthRepository {
     }
   }
 
-  Future<void> logout() =>
-      _ref.read(secureStorageProvider).delete(key: 'token');
+  Future<void> logout() async {
+    try {
+      await disableDeviceNotifications(_dio);
+    } catch (_) {
+      // A push token must not prevent the user from ending the session.
+    }
+    await _ref.read(secureStorageProvider).delete(key: 'token');
+  }
 }
 
 final authRepositoryProvider =

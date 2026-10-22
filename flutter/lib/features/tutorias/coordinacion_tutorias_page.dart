@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api_client.dart';
+import '../auth/auth_repository.dart';
 import '../../core/career_catalog.dart';
 
 class CoordinacionTutoriasPage extends ConsumerStatefulWidget {
@@ -198,9 +199,14 @@ class _CoordinacionTutoriasPageState
           title: const Text('Tutorías de proyectos de aula'),
           actions: [
             IconButton(
+              tooltip: 'Notificaciones',
+              onPressed: () => context.push('/notificaciones'),
+              icon: const Icon(Icons.notifications_outlined),
+            ),
+            IconButton(
               tooltip: 'Cerrar sesión',
               onPressed: () async {
-                await ref.read(secureStorageProvider).delete(key: 'token');
+                await ref.read(authRepositoryProvider).logout();
                 if (context.mounted) context.go('/login');
               },
               icon: const Icon(Icons.logout),

@@ -2,7 +2,7 @@ package com.pa.searchteach.tutorias.dto;
 
 import java.util.List;
 
-import com.pa.searchteach.tutorias.modelo.TutoriaColectiva;
+import com.pa.searchteach.tutorias.model.TutoriaColectiva;
 
 public record TutoriaColectivaConAvance(
 		TutoriaColectiva tutoriaColectiva,

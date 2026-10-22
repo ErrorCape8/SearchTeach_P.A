@@ -1,6 +1,6 @@
 package com.pa.searchteach.tutorias.dto;
 
-import com.pa.searchteach.tutorias.modelo.ProyectoAula;
+import com.pa.searchteach.tutorias.model.ProyectoAula;
 
 public record ProyectoAsignadoDocente(
 		String tutoriaColectivaId,

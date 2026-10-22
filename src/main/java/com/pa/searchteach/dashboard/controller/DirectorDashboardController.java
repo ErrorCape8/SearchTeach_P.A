@@ -17,7 +17,7 @@ public class DirectorDashboardController {
 	}
 
 	@GetMapping
-	public DashboardSummary obtenerResumen() {
+	public DashboardSummary obtenerResumenDelDashboard() {
 		return dashboardService.obtenerResumen();
 	}
 }

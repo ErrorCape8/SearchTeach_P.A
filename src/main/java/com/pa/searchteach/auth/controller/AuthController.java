@@ -26,7 +26,7 @@ public class AuthController {
 
 	@PostMapping("/register")
 	@ResponseStatus(HttpStatus.CREATED)
-	public AuthResponse register(
+	public AuthResponse registrarUsuario(
 			@Valid @RequestBody RegisterRequest request,
 			HttpServletRequest servletRequest) {
 		return authService.register(request.identifier(), request.password(), servletRequest.getRemoteAddr());
@@ -34,14 +34,14 @@ public class AuthController {
 
 	@PostMapping("/register/verify")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
-	public void verifyRegistration(
+	public void verificarRegistroDeUsuario(
 			@Valid @RequestBody VerifyRegistrationRequest request,
 			HttpServletRequest servletRequest) {
 		authService.verifyRegistration(request.identifier(), servletRequest.getRemoteAddr());
 	}
 
 	@PostMapping("/login")
-	public AuthResponse login(
+	public AuthResponse iniciarSesion(
 			@Valid @RequestBody LoginRequest request,
 			HttpServletRequest servletRequest) {
 		return authService.login(request.identifier(), request.password(), servletRequest.getRemoteAddr());

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "405794789070",
+    "project_id": "searchteach-6b0dc",
+    "storage_bucket": "searchteach-6b0dc.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:405794789070:android:1804333fb326c31969229f",
+        "android_client_info": {
+          "package_name": "com.example.searchteach_mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAt7bXr5XPdDR3zyKlOAeKNTNh33GvjD6s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
