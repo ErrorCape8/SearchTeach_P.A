@@ -96,7 +96,7 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
               data: (_) => NavigationBar(
                 selectedIndex: _tab,
                 onDestinationSelected: _selectTab,
-                destinations: const [
+                destinations: [
                   NavigationDestination(
                       icon: Icon(Icons.home_outlined),
                       selectedIcon: Icon(Icons.home),
@@ -110,8 +110,12 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
                       selectedIcon: Icon(Icons.person),
                       label: 'Perfil'),
                   NavigationDestination(
-                      icon: Icon(Icons.notifications_none_outlined),
-                      selectedIcon: Icon(Icons.notifications),
+                      icon: const NotificationUnreadIcon(
+                        icon: Icons.notifications_none_outlined,
+                      ),
+                      selectedIcon: const NotificationUnreadIcon(
+                        icon: Icons.notifications,
+                      ),
                       label: 'Avisos'),
                 ],
               ),

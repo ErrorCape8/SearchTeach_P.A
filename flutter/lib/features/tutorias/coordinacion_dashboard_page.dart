@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/api_client.dart';
 import '../auth/auth_repository.dart';
+import '../notifications/notifications_page.dart';
 import 'coordinacion_horarios_page.dart';
 
 const _wine = Color(0xFFA9154F);
@@ -63,9 +64,8 @@ class _CoordinacionDashboardPageState
         _groups = rows(2);
         _reports = rows(3);
         final profile = responses[4].data;
-        _profile = profile is Map<String, dynamic>
-            ? profile
-            : <String, dynamic>{};
+        _profile =
+            profile is Map<String, dynamic> ? profile : <String, dynamic>{};
         _loading = false;
       });
     } on DioException catch (error) {
@@ -138,7 +138,8 @@ class _CoordinacionDashboardPageState
           ),
         1 => const CoordinacionHorariosPage(),
         2 => _LeadersView(teachers: _teachers, groups: _groups),
-        3 => _ReportsView(teachers: _teachers, groups: _groups, reports: _reports),
+        3 =>
+          _ReportsView(teachers: _teachers, groups: _groups, reports: _reports),
         _ => _ProfileView(profile: _profile, onRefresh: _load),
       };
 }
@@ -151,10 +152,12 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isHome = title == 'Inicio';
-    final display = name?.trim().isNotEmpty == true ? name!.trim() : 'Coordinación';
+    final display =
+        name?.trim().isNotEmpty == true ? name!.trim() : 'Coordinación';
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.fromLTRB(20, MediaQuery.paddingOf(context).top + 12, 20, 20),
+      padding: EdgeInsets.fromLTRB(
+          20, MediaQuery.paddingOf(context).top + 12, 20, 20),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           colors: [_wine, _wineDark],
@@ -172,29 +175,34 @@ class _Header extends StatelessWidget {
             border: Border.all(color: Colors.white70, width: 2),
           ),
           alignment: Alignment.center,
-          child: Text(_initials(display), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+          child: Text(_initials(display),
+              style: const TextStyle(
+                  color: Colors.white, fontWeight: FontWeight.w800)),
         ),
         const SizedBox(width: 14),
         Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(isHome ? 'Hola, $display' : title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800)),
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800)),
             Text(isHome ? 'Coordinador' : display,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: Colors.white.withValues(alpha: .82), fontSize: 13)),
+                style: TextStyle(
+                    color: Colors.white.withValues(alpha: .82), fontSize: 13)),
           ]),
         ),
-        IconButton(
-          tooltip: 'Notificaciones',
-          onPressed: () => context.push('/notificaciones'),
-          icon: const Icon(Icons.notifications_outlined, color: Colors.white),
-        ),
+        const NotificationBellButton(),
         IconButton(
           tooltip: 'Actualizar datos',
-          onPressed: () => context.findAncestorStateOfType<_CoordinacionDashboardPageState>()?._load(),
+          onPressed: () => context
+              .findAncestorStateOfType<_CoordinacionDashboardPageState>()
+              ?._load(),
           icon: const Icon(Icons.refresh_rounded, color: Colors.white),
         ),
       ]),
@@ -203,13 +211,18 @@ class _Header extends StatelessWidget {
 }
 
 String _initials(String value) {
-  final words = value.trim().split(RegExp(r'\s+')).where((word) => word.isNotEmpty).toList();
+  final words = value
+      .trim()
+      .split(RegExp(r'\s+'))
+      .where((word) => word.isNotEmpty)
+      .toList();
   if (words.isEmpty) return 'CO';
   return words.take(2).map((word) => word[0].toUpperCase()).join();
 }
 
 class _Navigation extends StatelessWidget {
-  const _Navigation({required this.index, required this.wide, required this.onSelect});
+  const _Navigation(
+      {required this.index, required this.wide, required this.onSelect});
   final int index;
   final bool wide;
   final ValueChanged<int> onSelect;
@@ -232,7 +245,8 @@ class _Navigation extends StatelessWidget {
           labelType: NavigationRailLabelType.all,
           indicatorColor: _pink,
           selectedIconTheme: const IconThemeData(color: _wine),
-          selectedLabelTextStyle: const TextStyle(color: _wine, fontWeight: FontWeight.w700),
+          selectedLabelTextStyle:
+              const TextStyle(color: _wine, fontWeight: FontWeight.w700),
           destinations: [
             for (var i = 0; i < _items.length; i++)
               NavigationRailDestination(
@@ -252,7 +266,12 @@ class _Navigation extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(28),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: .1), blurRadius: 18, offset: const Offset(0, 3))],
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withValues(alpha: .1),
+                blurRadius: 18,
+                offset: const Offset(0, 3))
+          ],
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -265,9 +284,17 @@ class _Navigation extends StatelessWidget {
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 5),
                     child: Column(mainAxisSize: MainAxisSize.min, children: [
-                      Icon(i == index ? _items[i].$2 : _items[i].$1, color: i == index ? _wine : const Color(0xFFA4ADBB), size: 22),
+                      Icon(i == index ? _items[i].$2 : _items[i].$1,
+                          color: i == index ? _wine : const Color(0xFFA4ADBB),
+                          size: 22),
                       const SizedBox(height: 2),
-                      Text(_items[i].$3, style: TextStyle(color: i == index ? _wine : _muted, fontSize: 10.5, fontWeight: i == index ? FontWeight.w700 : FontWeight.w500)),
+                      Text(_items[i].$3,
+                          style: TextStyle(
+                              color: i == index ? _wine : _muted,
+                              fontSize: 10.5,
+                              fontWeight: i == index
+                                  ? FontWeight.w700
+                                  : FontWeight.w500)),
                     ]),
                   ),
                 ),
@@ -280,30 +307,48 @@ class _Navigation extends StatelessWidget {
 }
 
 class _HomeView extends StatelessWidget {
-  const _HomeView({required this.teachers, required this.schedules, required this.groups, required this.reports, required this.onOpen});
+  const _HomeView(
+      {required this.teachers,
+      required this.schedules,
+      required this.groups,
+      required this.reports,
+      required this.onOpen});
   final List<Map<String, dynamic>> teachers, schedules, groups, reports;
   final ValueChanged<int> onOpen;
 
   @override
   Widget build(BuildContext context) {
     final scheduledIds = schedules.map((row) => row['docenteId']).toSet();
-    final unscheduled = teachers.where((teacher) => !scheduledIds.contains(teacher['id'])).toList();
-    final assignedLeaders = groups.where((group) => group['docenteLiderId'] is String).length;
+    final unscheduled = teachers
+        .where((teacher) => !scheduledIds.contains(teacher['id']))
+        .toList();
+    final assignedLeaders =
+        groups.where((group) => group['docenteLiderId'] is String).length;
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
       children: [
         Row(children: [
-          Expanded(child: _Metric(value: '${teachers.length}', label: 'Tutores activos')),
+          Expanded(
+              child: _Metric(
+                  value: '${teachers.length}', label: 'Tutores activos')),
           const SizedBox(width: 10),
-          Expanded(child: _Metric(value: '$assignedLeaders/${groups.length}', label: 'Con líder')),
+          Expanded(
+              child: _Metric(
+                  value: '$assignedLeaders/${groups.length}',
+                  label: 'Con líder')),
           const SizedBox(width: 10),
-          Expanded(child: _Metric(value: '${reports.length}', label: 'Informes')),
+          Expanded(
+              child: _Metric(value: '${reports.length}', label: 'Informes')),
         ]),
         const SizedBox(height: 24),
-        _SectionTitle(title: 'Por asignar', action: 'Ver horarios', onTap: () => onOpen(1)),
+        _SectionTitle(
+            title: 'Por asignar',
+            action: 'Ver horarios',
+            onTap: () => onOpen(1)),
         const SizedBox(height: 10),
         if (unscheduled.isEmpty)
-          const _EmptyCard(message: 'Todos los tutores tienen un horario registrado.')
+          const _EmptyCard(
+              message: 'Todos los tutores tienen un horario registrado.')
         else
           _CardList(children: [
             for (final teacher in unscheduled.take(4))
@@ -316,17 +361,22 @@ class _HomeView extends StatelessWidget {
               ),
           ]),
         const SizedBox(height: 24),
-        _SectionTitle(title: 'Reportes recientes', action: 'Ver todos', onTap: () => onOpen(3)),
+        _SectionTitle(
+            title: 'Reportes recientes',
+            action: 'Ver todos',
+            onTap: () => onOpen(3)),
         const SizedBox(height: 10),
         if (reports.isEmpty)
-          const _EmptyCard(message: 'Todavía no hay informes de avance registrados.')
+          const _EmptyCard(
+              message: 'Todavía no hay informes de avance registrados.')
         else
           _CardList(children: [
             for (final report in reports.take(3))
               _RecordRow(
                 icon: Icons.inbox_outlined,
                 title: _projectName(groups, report['proyectoId']),
-                subtitle: 'Avance ${_text(report['puntajeAvance'], '—')}% · ${_date(report['fechaInforme'])}',
+                subtitle:
+                    'Avance ${_text(report['puntajeAvance'], '—')}% · ${_date(report['fechaInforme'])}',
                 badge: 'Informe',
                 onTap: () => onOpen(3),
               ),
@@ -342,7 +392,9 @@ class _LeadersView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final names = {for (final teacher in teachers) teacher['id']: teacher['nombre']};
+    final names = {
+      for (final teacher in teachers) teacher['id']: teacher['nombre']
+    };
     final projects = <Map<String, dynamic>>[];
     for (final group in groups) {
       final items = group['proyectos'];
@@ -361,12 +413,16 @@ class _LeadersView extends StatelessWidget {
       children: [
         Container(
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(color: _pink, borderRadius: BorderRadius.circular(18)),
-          child: const Text('Proyectos y responsables de tutorías colectivas guardados en el sistema.', style: TextStyle(color: _wineDark, height: 1.35)),
+          decoration: BoxDecoration(
+              color: _pink, borderRadius: BorderRadius.circular(18)),
+          child: const Text(
+              'Proyectos y responsables de tutorías colectivas guardados en el sistema.',
+              style: TextStyle(color: _wineDark, height: 1.35)),
         ),
         const SizedBox(height: 18),
         if (projects.isEmpty)
-          const _EmptyCard(message: 'No hay proyectos de tutoría colectiva registrados.')
+          const _EmptyCard(
+              message: 'No hay proyectos de tutoría colectiva registrados.')
         else
           for (final project in projects)
             Padding(
@@ -374,7 +430,8 @@ class _LeadersView extends StatelessWidget {
               child: _RecordRow(
                 icon: Icons.groups_2_outlined,
                 title: _text(project['nombre'], 'Proyecto'),
-                subtitle: 'Semestre ${_text(project['semestre'], '—')} · Líder: ${_text(names[project['_leaderId']], 'No registrado')} · Apoyo: ${_text(names[project['_supportId']], 'No registrado')}',
+                subtitle:
+                    'Semestre ${_text(project['semestre'], '—')} · Líder: ${_text(names[project['_leaderId']], 'No registrado')} · Apoyo: ${_text(names[project['_supportId']], 'No registrado')}',
                 badge: 'Asignado',
               ),
             ),
@@ -384,17 +441,21 @@ class _LeadersView extends StatelessWidget {
 }
 
 class _ReportsView extends StatelessWidget {
-  const _ReportsView({required this.teachers, required this.groups, required this.reports});
+  const _ReportsView(
+      {required this.teachers, required this.groups, required this.reports});
   final List<Map<String, dynamic>> teachers, groups, reports;
 
   @override
   Widget build(BuildContext context) {
-    final names = {for (final teacher in teachers) teacher['id']: teacher['nombre']};
+    final names = {
+      for (final teacher in teachers) teacher['id']: teacher['nombre']
+    };
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
       children: [
         if (reports.isEmpty)
-          const _EmptyCard(message: 'Todavía no hay informes de avance registrados.')
+          const _EmptyCard(
+              message: 'Todavía no hay informes de avance registrados.')
         else
           for (final report in reports)
             Padding(
@@ -402,7 +463,8 @@ class _ReportsView extends StatelessWidget {
               child: _RecordRow(
                 icon: Icons.inbox_outlined,
                 title: _projectName(groups, report['proyectoId']),
-                subtitle: '${_text(names[report['docenteId']], 'Tutor')} · ${_date(report['fechaInforme'])} · Avance ${_text(report['puntajeAvance'], '—')}%',
+                subtitle:
+                    '${_text(names[report['docenteId']], 'Tutor')} · ${_date(report['fechaInforme'])} · Avance ${_text(report['puntajeAvance'], '—')}%',
                 badge: 'Informe',
               ),
             ),
@@ -418,24 +480,31 @@ class _ProfileView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    Widget row(IconData icon, String title, String value, {bool editable = false}) =>
-        _RecordRow(icon: icon, title: title, subtitle: value, badge: editable ? 'Editar' : null);
+    Widget row(IconData icon, String title, String value,
+            {bool editable = false}) =>
+        _RecordRow(
+            icon: icon,
+            title: title,
+            subtitle: value,
+            badge: editable ? 'Editar' : null);
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
       children: [
-        const Text('Datos de la cuenta', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+        const Text('Datos de la cuenta',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
         const SizedBox(height: 10),
         _CardList(children: [
-        _RecordRow(
-          icon: Icons.phone_outlined,
-          title: 'Teléfono',
-          subtitle: _text(profile['telefono'], 'No registrado'),
-          badge: 'Editar',
-          onTap: () => _editPhone(context, ref),
-        ),
+          _RecordRow(
+            icon: Icons.phone_outlined,
+            title: 'Teléfono',
+            subtitle: _text(profile['telefono'], 'No registrado'),
+            badge: 'Editar',
+            onTap: () => _editPhone(context, ref),
+          ),
         ]),
         const SizedBox(height: 20),
-        const Text('Seguridad', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+        const Text('Seguridad',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
         const SizedBox(height: 10),
         _CardList(children: [
           _RecordRow(
@@ -446,26 +515,33 @@ class _ProfileView extends ConsumerWidget {
           ),
         ]),
         const SizedBox(height: 20),
-        const Text('Datos institucionales', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+        const Text('Datos institucionales',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
         const SizedBox(height: 10),
         _CardList(children: [
-          row(Icons.lock_outline, 'Correo', _text(profile['correo'], 'No registrado')),
-          row(Icons.lock_outline, 'Documento', _text(profile['id'], 'No registrado')),
+          row(Icons.lock_outline, 'Correo',
+              _text(profile['correo'], 'No registrado')),
+          row(Icons.lock_outline, 'Documento',
+              _text(profile['id'], 'No registrado')),
           row(Icons.lock_outline, 'Programa', 'No registrado'),
           row(Icons.lock_outline, 'Rol', _text(profile['rol'], 'Coordinador')),
         ]),
         const SizedBox(height: 10),
-        const Text('El perfil institucional muestra únicamente los campos disponibles en la cuenta.', style: TextStyle(color: _muted, fontSize: 12)),
+        const Text(
+            'El perfil institucional muestra únicamente los campos disponibles en la cuenta.',
+            style: TextStyle(color: _muted, fontSize: 12)),
         const SizedBox(height: 20),
         SizedBox(
           height: 50,
           child: FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: _pink, foregroundColor: _wineDark),
+            style: FilledButton.styleFrom(
+                backgroundColor: _pink, foregroundColor: _wineDark),
             onPressed: () async {
               await ref.read(authRepositoryProvider).logout();
               if (context.mounted) context.go('/login');
             },
-            child: const Text('Cerrar sesión', style: TextStyle(fontWeight: FontWeight.w800)),
+            child: const Text('Cerrar sesión',
+                style: TextStyle(fontWeight: FontWeight.w800)),
           ),
         ),
       ],
@@ -473,7 +549,9 @@ class _ProfileView extends ConsumerWidget {
   }
 
   Future<void> _editPhone(BuildContext context, WidgetRef ref) async {
-    final controller = TextEditingController(text: profile['telefono'] as String? ?? '');
+    final scaffoldMessenger = ScaffoldMessenger.maybeOf(context);
+    final controller =
+        TextEditingController(text: profile['telefono'] as String? ?? '');
     final phone = await showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -485,8 +563,13 @@ class _ProfileView extends ConsumerWidget {
           decoration: const InputDecoration(labelText: 'Teléfono'),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancelar')),
-          FilledButton(onPressed: () => Navigator.pop(dialogContext, controller.text.trim()), child: const Text('Guardar')),
+          TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancelar')),
+          FilledButton(
+              onPressed: () =>
+                  Navigator.pop(dialogContext, controller.text.trim()),
+              child: const Text('Guardar')),
         ],
       ),
     );
@@ -503,13 +586,12 @@ class _ProfileView extends ConsumerWidget {
       final message = data is Map && data['message'] is String
           ? data['message'] as String
           : 'No se pudo actualizar el teléfono.';
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
-      }
+      scaffoldMessenger?.showSnackBar(SnackBar(content: Text(message)));
     }
   }
 
   Future<void> _editPassword(BuildContext context, WidgetRef ref) async {
+    final scaffoldMessenger = ScaffoldMessenger.maybeOf(context);
     final current = TextEditingController();
     final next = TextEditingController();
     final passwords = await showDialog<(String, String)>(
@@ -517,13 +599,28 @@ class _ProfileView extends ConsumerWidget {
       builder: (dialogContext) => AlertDialog(
         title: const Text('Cambiar contraseña'),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
-          TextField(controller: current, obscureText: true, decoration: const InputDecoration(labelText: 'Contraseña actual')),
+          TextField(
+              controller: current,
+              obscureText: true,
+              decoration:
+                  const InputDecoration(labelText: 'Contraseña actual')),
           const SizedBox(height: 12),
-          TextField(controller: next, obscureText: true, decoration: const InputDecoration(labelText: 'Nueva contraseña', helperText: 'Mínimo 8 caracteres'), maxLength: 100),
+          TextField(
+              controller: next,
+              obscureText: true,
+              decoration: const InputDecoration(
+                  labelText: 'Nueva contraseña',
+                  helperText: 'Mínimo 8 caracteres'),
+              maxLength: 100),
         ]),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancelar')),
-          FilledButton(onPressed: () => Navigator.pop(dialogContext, (current.text, next.text)), child: const Text('Guardar')),
+          TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancelar')),
+          FilledButton(
+              onPressed: () =>
+                  Navigator.pop(dialogContext, (current.text, next.text)),
+              child: const Text('Guardar')),
         ],
       ),
     );
@@ -531,25 +628,27 @@ class _ProfileView extends ConsumerWidget {
     next.dispose();
     if (passwords == null) return;
     if (passwords.$1.isEmpty || passwords.$2.length < 8) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ingresa la contraseña actual y una nueva de al menos 8 caracteres.')));
+      scaffoldMessenger?.showSnackBar(const SnackBar(
+          content: Text(
+              'Ingresa la contraseña actual y una nueva de al menos 8 caracteres.')));
       return;
     }
     try {
       await ref.read(dioProvider).put<void>(
         '/api/usuarios/perfil/contrasena',
-        data: {'contrasenaActual': passwords.$1, 'nuevaContrasena': passwords.$2},
+        data: {
+          'contrasenaActual': passwords.$1,
+          'nuevaContrasena': passwords.$2
+        },
       );
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Contraseña actualizada.')));
-      }
+      scaffoldMessenger?.showSnackBar(
+          const SnackBar(content: Text('Contraseña actualizada.')));
     } on DioException catch (error) {
       final data = error.response?.data;
       final message = data is Map && data['message'] is String
           ? data['message'] as String
           : 'No se pudo actualizar la contraseña.';
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
-      }
+      scaffoldMessenger?.showSnackBar(SnackBar(content: Text(message)));
     }
   }
 }
@@ -560,23 +659,43 @@ class _Metric extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 16),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: .05), blurRadius: 12, offset: const Offset(0, 3))]),
+        decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.black.withValues(alpha: .05),
+                  blurRadius: 12,
+                  offset: const Offset(0, 3))
+            ]),
         child: Column(children: [
-          Text(value, style: const TextStyle(color: _wine, fontSize: 21, fontWeight: FontWeight.w900)),
+          Text(value,
+              style: const TextStyle(
+                  color: _wine, fontSize: 21, fontWeight: FontWeight.w900)),
           const SizedBox(height: 3),
-          Text(label, textAlign: TextAlign.center, style: const TextStyle(color: _muted, fontSize: 10.5)),
+          Text(label,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: _muted, fontSize: 10.5)),
         ]),
       );
 }
 
 class _SectionTitle extends StatelessWidget {
-  const _SectionTitle({required this.title, required this.action, required this.onTap});
+  const _SectionTitle(
+      {required this.title, required this.action, required this.onTap});
   final String title, action;
   final VoidCallback onTap;
   @override
   Widget build(BuildContext context) => Row(children: [
-        Expanded(child: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800))),
-        TextButton(onPressed: onTap, child: Text(action, style: const TextStyle(color: _wine, fontWeight: FontWeight.w700))),
+        Expanded(
+            child: Text(title,
+                style: const TextStyle(
+                    fontSize: 16, fontWeight: FontWeight.w800))),
+        TextButton(
+            onPressed: onTap,
+            child: Text(action,
+                style: const TextStyle(
+                    color: _wine, fontWeight: FontWeight.w700))),
       ]);
 }
 
@@ -586,13 +705,31 @@ class _CardList extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 14),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(22), boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: .05), blurRadius: 14, offset: const Offset(0, 3))]),
-        child: Column(children: [for (var i = 0; i < children.length; i++) ...[if (i > 0) const Divider(height: 1, color: Color(0xFFEDF0F5)), children[i]]]),
+        decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(22),
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.black.withValues(alpha: .05),
+                  blurRadius: 14,
+                  offset: const Offset(0, 3))
+            ]),
+        child: Column(children: [
+          for (var i = 0; i < children.length; i++) ...[
+            if (i > 0) const Divider(height: 1, color: Color(0xFFEDF0F5)),
+            children[i]
+          ]
+        ]),
       );
 }
 
 class _RecordRow extends StatelessWidget {
-  const _RecordRow({required this.icon, required this.title, required this.subtitle, this.badge, this.onTap});
+  const _RecordRow(
+      {required this.icon,
+      required this.title,
+      required this.subtitle,
+      this.badge,
+      this.onTap});
   final IconData icon;
   final String title, subtitle;
   final String? badge;
@@ -603,18 +740,44 @@ class _RecordRow extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 13),
           child: Row(children: [
-            Container(width: 42, height: 42, decoration: BoxDecoration(color: _pink, borderRadius: BorderRadius.circular(13)), child: Icon(icon, color: _wine, size: 21)),
+            Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                    color: _pink, borderRadius: BorderRadius.circular(13)),
+                child: Icon(icon, color: _wine, size: 21)),
             const SizedBox(width: 12),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800)),
-              const SizedBox(height: 3),
-              Text(subtitle, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: _muted, fontSize: 11.5)),
-            ])),
+            Expanded(
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                  Text(title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          fontSize: 14, fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 3),
+                  Text(subtitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: _muted, fontSize: 11.5)),
+                ])),
             if (badge != null) ...[
               const SizedBox(width: 8),
-              Container(padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5), decoration: BoxDecoration(color: const Color(0xFFFFF1DC), borderRadius: BorderRadius.circular(20)), child: Text(badge!, style: const TextStyle(color: Color(0xFFAA6A13), fontSize: 10.5, fontWeight: FontWeight.w700))),
+              Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                  decoration: BoxDecoration(
+                      color: const Color(0xFFFFF1DC),
+                      borderRadius: BorderRadius.circular(20)),
+                  child: Text(badge!,
+                      style: const TextStyle(
+                          color: Color(0xFFAA6A13),
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w700))),
             ],
-            if (onTap != null) const Icon(Icons.chevron_right_rounded, color: Color(0xFFA4ADBB)),
+            if (onTap != null)
+              const Icon(Icons.chevron_right_rounded, color: Color(0xFFA4ADBB)),
           ]),
         ),
       );
@@ -624,7 +787,12 @@ class _EmptyCard extends StatelessWidget {
   const _EmptyCard({required this.message});
   final String message;
   @override
-  Widget build(BuildContext context) => Container(padding: const EdgeInsets.all(20), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)), child: Text(message, textAlign: TextAlign.center, style: const TextStyle(color: _muted)));
+  Widget build(BuildContext context) => Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+          color: Colors.white, borderRadius: BorderRadius.circular(20)),
+      child: Text(message,
+          textAlign: TextAlign.center, style: const TextStyle(color: _muted)));
 }
 
 class _LoadFailure extends StatelessWidget {
@@ -632,17 +800,31 @@ class _LoadFailure extends StatelessWidget {
   final String message;
   final VoidCallback onRetry;
   @override
-  Widget build(BuildContext context) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Column(mainAxisSize: MainAxisSize.min, children: [Text(message, textAlign: TextAlign.center), const SizedBox(height: 12), OutlinedButton.icon(onPressed: onRetry, icon: const Icon(Icons.refresh), label: const Text('Reintentar'))])));
+  Widget build(BuildContext context) => Center(
+      child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Text(message, textAlign: TextAlign.center),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+                onPressed: onRetry,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Reintentar'))
+          ])));
 }
 
-String _text(Object? value, String fallback) => value == null || value.toString().trim().isEmpty ? fallback : value.toString();
+String _text(Object? value, String fallback) =>
+    value == null || value.toString().trim().isEmpty
+        ? fallback
+        : value.toString();
 
 String _projectName(List<Map<String, dynamic>> groups, Object? projectId) {
   for (final group in groups) {
     final projects = group['proyectos'];
     if (projects is List) {
       for (final project in projects.whereType<Map<String, dynamic>>()) {
-        if (project['proyectoId'] == projectId) return _text(project['nombre'], 'Proyecto');
+        if (project['proyectoId'] == projectId)
+          return _text(project['nombre'], 'Proyecto');
       }
     }
   }

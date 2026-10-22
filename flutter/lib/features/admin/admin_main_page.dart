@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'admin_controller.dart';
 import 'views/admin_editar_usuario_view.dart';
 import 'views/admin_inicio_view.dart';
@@ -110,7 +109,6 @@ class AdminMainPage extends ConsumerWidget {
                     subtitle: headerSubtitle,
                     isEditing: isEditing,
                     onBack: () => notifier.clearSelectedUser(),
-                    onNotifications: () => context.push('/notificaciones'),
                   ),
                   Expanded(
                     child: isWide

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/widgets/brand_logo.dart';
+import '../../notifications/notifications_page.dart';
 
 const kAdminOrange = Color(0xFFEA580C);
 const kAdminOrangeDark = Color(0xFFC2410C);
@@ -11,14 +12,12 @@ class AdminHeader extends StatelessWidget {
     required this.subtitle,
     this.isEditing = false,
     this.onBack,
-    this.onNotifications,
   });
 
   final String title;
   final String subtitle;
   final bool isEditing;
   final VoidCallback? onBack;
-  final VoidCallback? onNotifications;
 
   @override
   Widget build(BuildContext context) {
@@ -114,12 +113,7 @@ class AdminHeader extends StatelessWidget {
                     ],
                   ),
                 ),
-                IconButton(
-                  tooltip: 'Notificaciones',
-                  onPressed: onNotifications,
-                  color: Colors.white,
-                  icon: const Icon(Icons.notifications_outlined),
-                ),
+                const NotificationBellButton(),
               ],
             ),
           ),

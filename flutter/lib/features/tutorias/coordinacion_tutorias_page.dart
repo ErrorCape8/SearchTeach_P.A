@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/api_client.dart';
 import '../auth/auth_repository.dart';
+import '../notifications/notifications_page.dart';
 import '../../core/career_catalog.dart';
 
 class CoordinacionTutoriasPage extends ConsumerStatefulWidget {
@@ -198,11 +199,7 @@ class _CoordinacionTutoriasPageState
         appBar: AppBar(
           title: const Text('Tutorías de proyectos de aula'),
           actions: [
-            IconButton(
-              tooltip: 'Notificaciones',
-              onPressed: () => context.push('/notificaciones'),
-              icon: const Icon(Icons.notifications_outlined),
-            ),
+            const NotificationBellButton(),
             IconButton(
               tooltip: 'Cerrar sesión',
               onPressed: () async {

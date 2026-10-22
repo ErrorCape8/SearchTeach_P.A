@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../auth/auth_repository.dart';
+import '../notifications/notifications_page.dart';
 import 'director_dashboard_provider.dart';
 import 'proyectos_aula_page.dart';
 
@@ -50,11 +51,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
           ],
         ),
         actions: [
-          IconButton(
-            tooltip: 'Notificaciones',
-            onPressed: () => context.push('/notificaciones'),
-            icon: const Icon(Icons.notifications_outlined),
-          ),
+          const NotificationBellButton(),
           IconButton(
             tooltip: 'Actualizar',
             onPressed: () {

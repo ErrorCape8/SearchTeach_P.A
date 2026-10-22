@@ -44,13 +44,16 @@ function Start-FlutterSession {
         -PassThru | Out-Null
 }
 
-if ($Frontend -in @('both', 'web')) {
-    docker compose --project-directory $projectRoot up -d --build app frontend
-} else {
-    docker compose --project-directory $projectRoot up -d --build app
-}
+docker compose --project-directory $projectRoot up -d --build app
 if ($LASTEXITCODE -ne 0) {
-    throw 'No se pudo iniciar Docker Compose. Revisa Docker Desktop y el mensaje de Compose.'
+    throw 'No se pudo construir o iniciar la API. Revisa Docker Desktop y el mensaje de Compose.'
+}
+
+if ($Frontend -in @('both', 'web')) {
+    docker compose --project-directory $projectRoot up -d --build frontend
+    if ($LASTEXITCODE -ne 0) {
+        throw 'La API inició, pero no se pudo construir o iniciar el frontend. Revisa Docker Desktop y el mensaje de Compose.'
+    }
 }
 
 if ($Frontend -in @('both', 'web')) {

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/api_client.dart';
 import '../auth/auth_repository.dart';
+import '../notifications/notifications_page.dart';
 
 final _proyectosAsignadosProvider =
     FutureProvider.autoDispose<List<_ProyectoAsignado>>((ref) async {
@@ -132,11 +133,7 @@ class _DocenteInformesPageState extends ConsumerState<DocenteInformesPage> {
         appBar: AppBar(
           title: const Text('Informe de tutoría'),
           actions: [
-            IconButton(
-              tooltip: 'Notificaciones',
-              onPressed: () => context.push('/notificaciones'),
-              icon: const Icon(Icons.notifications_outlined),
-            ),
+            const NotificationBellButton(),
             IconButton(
               tooltip: 'Cerrar sesión',
               onPressed: () async {

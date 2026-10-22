@@ -105,7 +105,11 @@ class _DesktopNavigation extends StatelessWidget {
                     selectedTileColor: const Color(0xFFEAF3FC),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
-                    leading: Icon(_items[i].$1),
+                    leading: i == 3
+                        ? const NotificationUnreadIcon(
+                            icon: Icons.notifications_none_outlined,
+                          )
+                        : Icon(_items[i].$1),
                     title: Text(_items[i].$2,
                         style: const TextStyle(fontWeight: FontWeight.w600)),
                     onTap: () => onSelect(i),
