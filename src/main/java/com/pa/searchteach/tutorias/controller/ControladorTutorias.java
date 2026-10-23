@@ -58,6 +58,11 @@ public class ControladorTutorias {
 		return sesionesGrupalesService.listarDeDocente(docenteId);
 	}
 
+	@GetMapping("/grupales/disponibles")
+	public List<SesionTutoria> listarSesionesGrupalesDisponibles(@AuthenticationPrincipal String estudianteId) {
+		return sesionesGrupalesService.listarDisponibles(estudianteId);
+	}
+
 	@PostMapping("/grupales/inscripcion")
 	@ResponseStatus(HttpStatus.CREATED)
 	public SesionTutoria inscribirEnGrupal(

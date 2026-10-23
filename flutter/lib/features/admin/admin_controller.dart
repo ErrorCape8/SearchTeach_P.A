@@ -308,6 +308,7 @@ class AdminController extends StateNotifier<AdminState> {
           'rol': updated.rol,
           'estado': updated.estado,
           'carrera': updated.carrera,
+          'titulosAcademicos': updated.titulosAcademicos,
           if (nuevaContrasena != null && nuevaContrasena.trim().isNotEmpty)
             'nuevaContrasena': nuevaContrasena.trim(),
         },

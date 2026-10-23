@@ -1,14 +1,14 @@
-// Reemplaza los valores FIREBASE_* por la configuraci?n p?blica del proyecto Firebase.
+﻿// Configuración pública de la aplicación web SearchTeach en Firebase.
 importScripts('https://www.gstatic.com/firebasejs/11.9.1/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/11.9.1/firebase-messaging-compat.js');
 
 firebase.initializeApp({
-  apiKey: 'FIREBASE_API_KEY',
-  authDomain: 'FIREBASE_AUTH_DOMAIN',
-  projectId: 'FIREBASE_PROJECT_ID',
-  storageBucket: 'FIREBASE_STORAGE_BUCKET',
-  messagingSenderId: 'FIREBASE_MESSAGING_SENDER_ID',
-  appId: 'FIREBASE_APP_ID',
+  apiKey: 'AIzaSyBxvN47o6LZuxpB1k4j_fiARRQ6ZklRK4c',
+  authDomain: 'searchteach-6b0dc.firebaseapp.com',
+  projectId: 'searchteach-6b0dc',
+  storageBucket: 'searchteach-6b0dc.firebasestorage.app',
+  messagingSenderId: '405794789070',
+  appId: '1:405794789070:web:46c2c75cae34410669229f',
 });
 
 const messaging = firebase.messaging();

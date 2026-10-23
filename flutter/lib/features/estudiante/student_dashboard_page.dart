@@ -69,6 +69,8 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
                           onEnroll: (tutor) => _enroll(value, tutor),
                           onProjectEnrollment: _toggleProjectEnrollment,
                           onLeaveGroupSession: _leaveGroupSession,
+                          onJoinPublishedSession: (session) =>
+                              _joinPublishedSession(value, session),
                           onAction: _tutoringAction,
                           onShowMessage: _showMessage,
                         ),
@@ -324,6 +326,33 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
       _showMessage('Saliste de la sesión grupal.');
     } on DioException catch (error) {
       _showMessage(_apiMessage(error));
+    }
+  }
+
+  Future<void> _joinPublishedSession(
+    StudentDashboardData data,
+    StudentGroupSession session,
+  ) async {
+    AvailableTutor? tutor;
+    for (final item in data.tutors) {
+      if (item.teacherId == session.teacherId) tutor = item;
+    }
+    if (tutor == null) {
+      _showMessage('No se encontró la disponibilidad del docente.');
+      return;
+    }
+    try {
+      await enrollInPublishedGroupTutoring(
+        dio: ref.read(dioProvider),
+        session: session,
+        modality: tutor.modality,
+      );
+      ref.invalidate(studentDashboardProvider);
+      _showMessage('Te inscribiste en la tutoría grupal.');
+    } on DioException catch (error) {
+      _showMessage(_apiMessage(error));
+    } on FormatException catch (error) {
+      _showMessage(error.message);
     }
   }
 

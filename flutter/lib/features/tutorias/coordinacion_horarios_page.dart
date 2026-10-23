@@ -112,20 +112,20 @@ class _CoordinacionHorariosPageState
     final query = normalizeSearch(_searchController.text.trim());
     final schedules = _scheduleByTeacher;
     final source = _section == 0
-        ? _teachers
-        : _teachers.where((teacher) => schedules.containsKey(teacher.id));
+        ? _teachers.where((teacher) => schedules.containsKey(teacher.id))
+        : _teachers.where((teacher) => !schedules.containsKey(teacher.id));
     return source.where((teacher) {
       final schedule = schedules[teacher.id];
       final matchesText = query.isEmpty ||
           normalizeSearch(teacher.nombre).contains(query) ||
           normalizeSearch(teacher.id).contains(query);
-      final matchesCareer = _career == 'Todas' ||
+      final matchesCareer = schedule == null || _career == 'Todas' ||
           schedule?.carrera == _career ||
           (schedule?.materias
                   .any((subject) => subject.carreras.contains(_career)) ??
               false);
-      final matchesSemester =
-          _semester == null || schedule?.semestre == _semester;
+      final matchesSemester = schedule == null ||
+          _semester == null || schedule.semestre == _semester;
       return matchesText && matchesCareer && matchesSemester;
     }).toList(growable: false);
   }
@@ -220,17 +220,17 @@ class _CoordinacionHorariosPageState
               onPressed: () =>
                   context.push('/coordinacion/tutorias-colectivas'),
               icon: const Icon(Icons.groups_outlined),
-              label: const Text('Tutorías colectivas'),
+              label: const Text('Tutorias de proyectos'),
             ),
             const SizedBox(width: 8),
           ],
         ),
         floatingActionButton: FloatingActionButton.extended(
-          onPressed: () => context.push('/coordinacion/tutorias-colectivas'),
+          onPressed: () => context.push('/coordinacion/programar-tutorias'),
           backgroundColor: const Color(0xFFA9154F),
           foregroundColor: Colors.white,
           icon: const Icon(Icons.add),
-          label: const Text('Crear tutoría colectiva'),
+          label: const Text('Programar tutorias'),
         ),
         body: SafeArea(
           child: Center(
@@ -244,7 +244,14 @@ class _CoordinacionHorariosPageState
                           children: [
                             ScheduleSectionSelector(
                               selected: _section,
-                              scheduleCount: _schedules.length,
+                              withScheduleCount: _teachers
+                                  .where((teacher) =>
+                                      _scheduleByTeacher.containsKey(teacher.id))
+                                  .length,
+                              withoutScheduleCount: _teachers
+                                  .where((teacher) =>
+                                      !_scheduleByTeacher.containsKey(teacher.id))
+                                  .length,
                               onChanged: (value) =>
                                   setState(() => _section = value),
                             ),

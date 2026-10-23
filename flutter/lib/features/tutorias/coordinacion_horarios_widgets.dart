@@ -8,13 +8,15 @@ const _muted = Color(0xFF64748B);
 class ScheduleSectionSelector extends StatelessWidget {
   const ScheduleSectionSelector({
     required this.selected,
-    required this.scheduleCount,
+    required this.withScheduleCount,
+    required this.withoutScheduleCount,
     required this.onChanged,
     super.key,
   });
 
   final int selected;
-  final int scheduleCount;
+  final int withScheduleCount;
+  final int withoutScheduleCount;
   final ValueChanged<int> onChanged;
 
   @override
@@ -22,15 +24,15 @@ class ScheduleSectionSelector extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(20, 18, 20, 10),
         child: SegmentedButton<int>(
           segments: [
-            const ButtonSegment(
+            ButtonSegment(
               value: 0,
               icon: Icon(Icons.people_outline),
-              label: Text('Docentes'),
+              label: Text('Con disponibilidad ($withScheduleCount)'),
             ),
             ButtonSegment(
               value: 1,
               icon: const Icon(Icons.event_available_outlined),
-              label: Text('Horarios creados ($scheduleCount)'),
+              label: Text('Sin disponibilidad ($withoutScheduleCount)'),
             ),
           ],
           selected: {selected},

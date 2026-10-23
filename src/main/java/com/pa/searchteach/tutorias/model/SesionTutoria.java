@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Set;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
@@ -17,12 +16,12 @@ import org.springframework.data.mongodb.core.mapping.Document;
 public record SesionTutoria(
 		@Id String id,
 		@NotBlank String docenteId,
-		@NotEmpty @Size(max = 5) List<@NotBlank String> estudianteIds,
+		@Size(max = 5) List<@NotBlank String> estudianteIds,
 		@NotNull LocalDateTime fechaInicio,
 		@NotNull LocalDateTime fechaFin,
 		@NotBlank String tecnologia,
 		@Positive int semestre,
-		@NotEmpty List<AsistenciaEstudiante> asistencias,
+		@Size(max = 5) List<AsistenciaEstudiante> asistencias,
 		String materia,
 		List<@NotBlank String> tecnologias) {
 
@@ -30,7 +29,7 @@ public record SesionTutoria(
 		if (docenteId == null || docenteId.isBlank()) {
 			throw new IllegalArgumentException("El id del docente es obligatorio.");
 		}
-		if (estudianteIds == null || estudianteIds.isEmpty() || estudianteIds.size() > 5) {
+		if (estudianteIds == null || estudianteIds.size() > 5) {
 			throw new IllegalArgumentException("La sesión debe tener entre 1 y 5 estudiantes.");
 		}
 		estudianteIds = List.copyOf(estudianteIds);
@@ -88,6 +87,17 @@ public record SesionTutoria(
 		return new SesionTutoria(
 				null, docenteId, estudianteIds, fechaInicio, fechaFin, tecnologia, semestre, asistencias,
 				null, List.of(tecnologia));
+	}
+
+	public static SesionTutoria crearDisponible(
+			String docenteId,
+			LocalDateTime fechaInicio,
+			LocalDateTime fechaFin,
+			String materia,
+			String tecnologia,
+			int semestre) {
+		return new SesionTutoria(null, docenteId, List.of(), fechaInicio, fechaFin, tecnologia, semestre,
+				List.of(), materia, List.of(tecnologia));
 	}
 
 	public static SesionTutoria crear(///cambiar nombre del metodo a crearSesionTutoriaColectiva

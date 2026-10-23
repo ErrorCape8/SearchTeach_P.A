@@ -7,6 +7,7 @@ public class UserUpdateRequest {
 	private String rol;
 	private String estado;
 	private String carrera;
+	private java.util.List<String> titulosAcademicos;
 	private String nuevaContrasena;
 
 	public UserUpdateRequest() {
@@ -67,6 +68,14 @@ public class UserUpdateRequest {
 
 	public void setCarrera(String carrera) {
 		this.carrera = carrera;
+	}
+
+	public java.util.List<String> getTitulosAcademicos() {
+		return titulosAcademicos;
+	}
+
+	public void setTitulosAcademicos(java.util.List<String> titulosAcademicos) {
+		this.titulosAcademicos = titulosAcademicos;
 	}
 
 	public String getNuevaContrasena() {

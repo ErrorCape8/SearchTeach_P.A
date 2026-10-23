@@ -38,7 +38,7 @@ public class UserAdminController {
 	public List<UserResponse> listUsers() {
 		return userRepository.findAll().stream()
 				.map(u -> new UserResponse(u.getId(), u.getNombre(),
-						u.getCorreo(), u.getTelefono(), u.getRol(), u.getEstado(), u.getCarrera()))
+					 u.getCorreo(), u.getTelefono(), u.getRol(), u.getEstado(), u.getCarrera(), u.getTitulosAcademicos()))
 				.toList();
 	}
 
@@ -85,7 +85,7 @@ public class UserAdminController {
 				.toList();
 		List<UserResponse> created = userRepository.saveAll(users).stream()
 				.map(u -> new UserResponse(u.getId(), u.getNombre(), u.getCorreo(),
-						u.getTelefono(), u.getRol(), u.getEstado(), u.getCarrera()))
+					u.getTelefono(), u.getRol(), u.getEstado(), u.getCarrera(), u.getTitulosAcademicos()))
 				.toList();
 		return ResponseEntity.status(HttpStatus.CREATED).body(created);
 	}
@@ -104,7 +104,7 @@ public class UserAdminController {
 		User user = userRepository.findById(id)
 				.orElseThrow(() -> new NotFoundException("Usuario no encontrado con ID: " + id));
 		return ResponseEntity.ok(new UserResponse(user.getId(), user.getNombre(), user.getCorreo(),
-				user.getTelefono(), user.getRol(), user.getEstado(), user.getCarrera()));
+				user.getTelefono(), user.getRol(), user.getEstado(), user.getCarrera(), user.getTitulosAcademicos()));
 	}
 
 	@PutMapping("/users/{id}")
@@ -120,6 +120,16 @@ public class UserAdminController {
 		if (request.getTelefono() != null) user.setTelefono(request.getTelefono());
 		if (request.getRol() != null) user.setRol(request.getRol());
 		if (request.getEstado() != null) user.setEstado(request.getEstado());
+		if (request.getTitulosAcademicos() != null && user.getRol() != null
+				&& user.getRol().toLowerCase(Locale.ROOT).contains("docente")) {
+			LinkedHashSet<String> titles = new LinkedHashSet<>();
+			request.getTitulosAcademicos().stream()
+					.filter(Objects::nonNull)
+					.map(String::trim)
+					.filter(title -> !title.isEmpty())
+					.forEach(titles::add);
+			user.setTitulosAcademicos(new ArrayList<>(titles));
+		}
 		if (request.getCarrera() != null) {
 			if (!blank(request.getCarrera()) && !CatalogoTecnologias.contiene(request.getCarrera())) {
 				throw new IllegalArgumentException("Selecciona una tecnología del catálogo institucional.");
@@ -136,7 +146,7 @@ public class UserAdminController {
 
 		User saved = userRepository.save(user);
 		return ResponseEntity.ok(new UserResponse(saved.getId(), saved.getNombre(), saved.getCorreo(),
-				saved.getTelefono(), saved.getRol(), saved.getEstado(), saved.getCarrera()));
+				saved.getTelefono(), saved.getRol(), saved.getEstado(), saved.getCarrera(), saved.getTitulosAcademicos()));
 	}
 
 	@PatchMapping("/users/{id}/estado")
@@ -152,7 +162,7 @@ public class UserAdminController {
 		}
 		User saved = userRepository.save(user);
 		return ResponseEntity.ok(new UserResponse(saved.getId(), saved.getNombre(), saved.getCorreo(),
-				saved.getTelefono(), saved.getRol(), saved.getEstado(), saved.getCarrera()));
+				saved.getTelefono(), saved.getRol(), saved.getEstado(), saved.getCarrera(), saved.getTitulosAcademicos()));
 	}
 
 	@GetMapping("/stats")

@@ -25,6 +25,8 @@ class _AdminEditarUsuarioViewState
   late final TextEditingController _correoCtrl;
   late final TextEditingController _telefonoCtrl;
   late final TextEditingController _passCtrl;
+  late final TextEditingController _studyCtrl;
+  late List<String> _studies;
   late String _career;
 
   late String _selectedRol;
@@ -37,6 +39,8 @@ class _AdminEditarUsuarioViewState
     _correoCtrl = TextEditingController(text: widget.user.correo);
     _telefonoCtrl = TextEditingController(text: widget.user.telefono);
     _passCtrl = TextEditingController();
+    _studyCtrl = TextEditingController();
+    _studies = [...widget.user.titulosAcademicos];
     _career = widget.user.carrera;
 
     _selectedRol = widget.user.rol;
@@ -49,6 +53,7 @@ class _AdminEditarUsuarioViewState
     _correoCtrl.dispose();
     _telefonoCtrl.dispose();
     _passCtrl.dispose();
+    _studyCtrl.dispose();
     super.dispose();
   }
 
@@ -79,6 +84,7 @@ class _AdminEditarUsuarioViewState
       rol: _selectedRol,
       estado: _selectedEstado,
       carrera: selectedCareer,
+      titulosAcademicos: _studies,
     );
 
     final pass = _passCtrl.text.trim();
@@ -125,6 +131,7 @@ class _AdminEditarUsuarioViewState
   Widget build(BuildContext context) {
     final state = ref.watch(adminControllerProvider);
     final isActivo = _selectedEstado.trim().toLowerCase() == 'activo';
+    final isTeacher = _selectedRol.toLowerCase().contains('docente');
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
@@ -158,7 +165,7 @@ class _AdminEditarUsuarioViewState
         ),
         const SizedBox(height: 18),
 
-        const _FieldLabel('TECNOLOGÍA / CARRERA'),
+        _FieldLabel(isTeacher ? 'TECNOLOGIA ENFOCADA EN DAR CLASES' : 'TECNOLOGIA / CARRERA'),
         const SizedBox(height: 6),
         Autocomplete<String>(
           initialValue: TextEditingValue(text: _career),
@@ -182,6 +189,48 @@ class _AdminEditarUsuarioViewState
           ),
         ),
         const SizedBox(height: 18),
+
+        if (isTeacher) ...[
+          const _FieldLabel('ESTUDIOS DEL DOCENTE'),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _studyCtrl,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => _addStudy(),
+                  decoration: const InputDecoration(
+                    hintText: 'Ej. Licenciatura en Matematicas',
+                    prefixIcon: Icon(Icons.school_outlined),
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton.filledTonal(
+                tooltip: 'Agregar estudio',
+                onPressed: _addStudy,
+                icon: const Icon(Icons.add),
+              ),
+            ],
+          ),
+          if (_studies.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              children: [
+                for (final study in _studies)
+                  InputChip(
+                    label: Text(study),
+                    onDeleted: () => setState(() => _studies.remove(study)),
+                  ),
+              ],
+            ),
+          ],
+          const SizedBox(height: 18),
+        ],
 
         // NUEVA CONTRASEÑA
         const _FieldLabel('NUEVA CONTRASEÑA'),
@@ -374,6 +423,18 @@ class _AdminEditarUsuarioViewState
         ),
       ),
     );
+  }
+
+  void _addStudy() {
+    final study = _studyCtrl.text.trim();
+    if (study.isEmpty ||
+        _studies.any((item) => item.toLowerCase() == study.toLowerCase())) {
+      return;
+    }
+    setState(() {
+      _studies.add(study);
+      _studyCtrl.clear();
+    });
   }
 
   Widget _buildRoleChip(String role) {

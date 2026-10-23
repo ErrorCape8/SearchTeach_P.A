@@ -318,8 +318,10 @@ class _GroupSessionTeacherCard extends StatelessWidget {
           leading: const Icon(Icons.groups_outlined),
           title: Text(session.materia),
           subtitle: Text(
-            'Semestre ${session.semestre} · ${session.tecnologias.join(', ')}\n'
-            'Estudiantes: ${session.estudiantes.join(', ')}\n'
+            'Semestre ${session.semestre} · ${session.tecnologias.join(', ')}\n' +
+            (session.estudiantes.isEmpty
+                ? 'Publicada · sin inscritos\n'
+                : 'Estudiantes: ${session.estudiantes.join(', ')}\n') +
             '${session.fechaInicio?.toLocal() ?? 'Fecha no disponible'}',
           ),
           isThreeLine: true,

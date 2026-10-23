@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io' show Platform;
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -16,6 +17,9 @@ String get baseUrl {
 
 const _tokenKey = 'token';
 
+final _authExpiredController = StreamController<void>.broadcast(sync: true);
+Stream<void> get authExpiredEvents => _authExpiredController.stream;
+
 final secureStorageProvider = Provider((_) => const FlutterSecureStorage());
 
 final dioProvider = Provider<Dio>((ref) {
@@ -27,7 +31,10 @@ final dioProvider = Provider<Dio>((ref) {
     headers: {'Content-Type': 'application/json'},
   ));
 
-  // Agrega el JWT a todas las llamadas protegidas.
+  var redirectingAfterExpiredToken = false;
+
+  // Agrega el JWT a las llamadas protegidas y cierra la sesión si el servidor
+  // informa que el token venció o dejó de ser válido.
   dio.interceptors.add(InterceptorsWrapper(
     onRequest: (options, handler) async {
       if (!options.path.startsWith('/api/auth')) {
@@ -35,6 +42,24 @@ final dioProvider = Provider<Dio>((ref) {
         if (token != null) options.headers['Authorization'] = 'Bearer $token';
       }
       handler.next(options);
+    },
+    onResponse: (response, handler) {
+      if (response.requestOptions.path.startsWith('/api/auth') &&
+          (response.statusCode ?? 500) < 400) {
+        redirectingAfterExpiredToken = false;
+      }
+      handler.next(response);
+    },
+    onError: (error, handler) async {
+      final isAuthRequest = error.requestOptions.path.startsWith('/api/auth');
+      if (error.response?.statusCode == 401 &&
+          !isAuthRequest &&
+          !redirectingAfterExpiredToken) {
+        redirectingAfterExpiredToken = true;
+        await storage.delete(key: _tokenKey);
+        _authExpiredController.add(null);
+      }
+      handler.next(error);
     },
   ));
   return dio;

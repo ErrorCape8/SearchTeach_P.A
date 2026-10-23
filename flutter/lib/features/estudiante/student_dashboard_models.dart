@@ -137,6 +137,7 @@ class StudentDashboardData {
     required this.tutorings,
     this.projectSpaces = const [],
     this.groupSessions = const [],
+    this.availableGroupSessions = const [],
   });
 
   final StudentProfile profile;
@@ -144,6 +145,7 @@ class StudentDashboardData {
   final List<StudentTutoring> tutorings;
   final List<ClassroomProjectSpace> projectSpaces;
   final List<StudentGroupSession> groupSessions;
+  final List<StudentGroupSession> availableGroupSessions;
 }
 
 class StudentGroupSession {
@@ -254,12 +256,15 @@ final studentDashboardProvider =
   final projectsRequest =
       dio.get<List<dynamic>>('/api/estudiante/tutorias-colectivas/espacios');
   final groupSessionsRequest = dio.get<List<dynamic>>('/api/tutorias/grupales');
+  final availableGroupSessionsRequest =
+      dio.get<List<dynamic>>('/api/tutorias/grupales/disponibles');
   await Future.wait<Object>([
     profileRequest,
     tutorsRequest,
     tutoringsRequest,
     projectsRequest,
-    groupSessionsRequest
+    groupSessionsRequest,
+    availableGroupSessionsRequest,
   ]);
   final profileJson = (await profileRequest).data;
   if (profileJson == null) {
@@ -269,6 +274,8 @@ final studentDashboardProvider =
   final tutoringsJson = (await tutoringsRequest).data ?? const [];
   final projectsJson = (await projectsRequest).data ?? const [];
   final groupSessionsJson = (await groupSessionsRequest).data ?? const [];
+  final availableGroupSessionsJson =
+      (await availableGroupSessionsRequest).data ?? const [];
   final profile = StudentProfile.fromJson(profileJson);
   final tutors = tutorsJson
       .whereType<Map<String, dynamic>>()
@@ -307,12 +314,17 @@ final studentDashboardProvider =
       .whereType<Map<String, dynamic>>()
       .map(StudentGroupSession.fromJson)
       .toList();
+  final availableGroupSessions = availableGroupSessionsJson
+      .whereType<Map<String, dynamic>>()
+      .map(StudentGroupSession.fromJson)
+      .toList();
   return StudentDashboardData(
     profile: profile,
     tutors: tutors,
     tutorings: tutorings,
     projectSpaces: projectSpaces,
     groupSessions: groupSessions,
+    availableGroupSessions: availableGroupSessions,
   );
 });
 
@@ -397,6 +409,29 @@ Future<void> enrollInTutoring({
 Future<void> leaveGroupTutoring(
         {required Dio dio, required String sessionId}) =>
     dio.delete<void>('/api/tutorias/grupales/$sessionId/inscripcion');
+
+Future<void> enrollInPublishedGroupTutoring({
+  required Dio dio,
+  required StudentGroupSession session,
+  required String modality,
+}) async {
+  final start = session.start;
+  final end = session.end;
+  if (start == null || end == null) {
+    throw const FormatException('El horario publicado no es válido.');
+  }
+  await dio.post<void>(
+    '/api/tutorias/grupales/inscripcion',
+    data: {
+      'docenteId': session.teacherId,
+      'materia': session.subject,
+      'modalidad': _apiModality(modality),
+      'fechaInicio': start.toIso8601String(),
+      'fechaFin': end.toIso8601String(),
+      'semestre': session.semester,
+    },
+  );
+}
 
 Future<void> updateTutoring({
   required Dio dio,

@@ -1,10 +1,13 @@
 package com.pa.searchteach.tutorias.service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 import com.pa.searchteach.tutorias.dto.InscripcionTutoriaGrupal;
+import com.pa.searchteach.tutorias.dto.ProgramarTutoriasSolicitud;
 import com.pa.searchteach.tutorias.model.SesionTutoria;
+import com.pa.searchteach.tutorias.model.CatalogoTecnologias;
 import com.pa.searchteach.tutorias.repository.SesionTutoriaRepositorio;
 import com.pa.searchteach.notifications.service.NotificationService;
 import com.pa.searchteach.users.model.User;
@@ -38,6 +41,61 @@ public class SesionesGrupalesTutoriaService {
 
 	public List<SesionTutoria> listarDeDocente(String docenteId) {
 		return sesiones.findByDocenteId(docenteId);
+	}
+
+	public List<SesionTutoria> listarDisponibles(String estudianteId) {
+		User estudiante = buscarEstudiante(estudianteId);
+		String tecnologia = estudiante.getCarrera() == null ? "" : estudiante.getCarrera().trim();
+		if (tecnologia.isEmpty()) return List.of();
+		return sesiones.findAll().stream()
+				.filter(sesion -> sesion.fechaInicio().isAfter(LocalDateTime.now()))
+				.filter(sesion -> sesion.estudianteIds().size() < 5)
+				.filter(sesion -> !sesion.estudianteIds().contains(estudianteId))
+				.filter(sesion -> sesion.tecnologias().stream().anyMatch(tecnologia::equalsIgnoreCase))
+				.sorted((left, right) -> left.fechaInicio().compareTo(right.fechaInicio()))
+				.toList();
+	}
+
+	public List<SesionTutoria> programar(ProgramarTutoriasSolicitud solicitud) {
+		if (!CatalogoTecnologias.contiene(solicitud.tecnologia())
+				|| solicitud.semestre() < 1 || solicitud.semestre() > 6) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+					"Selecciona una tecnología y semestre válidos.");
+		}
+		List<SesionTutoria> existentes = sesiones.findAll();
+		List<SesionTutoria> nuevas = new ArrayList<>();
+		for (ProgramarTutoriasSolicitud.Bloque bloque : solicitud.bloques()) {
+			if (bloque.fechaInicio() == null || bloque.fechaFin() == null
+					|| !bloque.fechaFin().isAfter(bloque.fechaInicio())
+					|| !bloque.fechaInicio().toLocalDate().equals(bloque.fechaFin().toLocalDate())
+					|| !bloque.fechaInicio().isAfter(LocalDateTime.now())) {
+				throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+						"Cada sesión debe tener una fecha futura y una duración válida.");
+			}
+			horarios.validarMateriaParaTecnologia(bloque.docenteId(), solicitud.tecnologia(),
+					solicitud.semestre(), bloque.materia());
+			boolean conflictoExistente = existentes.stream()
+					.anyMatch(sesion -> sesion.docenteId().equals(bloque.docenteId())
+							&& bloque.fechaInicio().isBefore(sesion.fechaFin())
+							&& sesion.fechaInicio().isBefore(bloque.fechaFin()));
+			boolean conflictoNuevo = nuevas.stream()
+					.anyMatch(sesion -> sesion.docenteId().equals(bloque.docenteId())
+							&& bloque.fechaInicio().isBefore(sesion.fechaFin())
+							&& sesion.fechaInicio().isBefore(bloque.fechaFin()));
+			if (conflictoExistente || conflictoNuevo) {
+				throw new ResponseStatusException(HttpStatus.CONFLICT,
+						"El docente ya tiene una tutoría programada en ese horario.");
+			}
+			nuevas.add(SesionTutoria.crearDisponible(bloque.docenteId(), bloque.fechaInicio(),
+					bloque.fechaFin(), bloque.materia(), solicitud.tecnologia(), solicitud.semestre()));
+		}
+		List<SesionTutoria> guardadas = sesiones.saveAll(nuevas);
+		guardadas.forEach(sesion -> notificationService.notifyUser(
+				sesion.docenteId(),
+				"Nueva tutoría programada",
+				"Coordinación programó una tutoría de " + sesion.materia() + " para " + sesion.tecnologia() + ".",
+				"/docente"));
+		return guardadas;
 	}
 
 	public SesionTutoria inscribir(InscripcionTutoriaGrupal solicitud, String estudianteId) {

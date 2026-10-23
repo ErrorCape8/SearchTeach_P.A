@@ -7,6 +7,7 @@ class AdminUser {
     required this.rol,
     required this.estado,
     this.carrera = '',
+    this.titulosAcademicos = const [],
   });
 
   final String id;
@@ -16,6 +17,7 @@ class AdminUser {
   final String rol;
   final String estado;
   final String carrera;
+  final List<String> titulosAcademicos;
 
   bool get isActivo => estado.trim().toLowerCase() == 'activo';
   bool get isRevocado => estado.trim().toLowerCase() == 'revocado';
@@ -28,6 +30,7 @@ class AdminUser {
     String? rol,
     String? estado,
     String? carrera,
+    List<String>? titulosAcademicos,
   }) {
     return AdminUser(
       id: id ?? this.id,
@@ -37,6 +40,7 @@ class AdminUser {
       rol: rol ?? this.rol,
       estado: estado ?? this.estado,
       carrera: carrera ?? this.carrera,
+      titulosAcademicos: titulosAcademicos ?? this.titulosAcademicos,
     );
   }
 
@@ -58,6 +62,9 @@ class AdminUser {
       rol: readValue('rol'),
       estado: readValue('estado'),
       carrera: readValue('carrera'),
+      titulosAcademicos: json['titulosAcademicos'] is List
+          ? (json['titulosAcademicos'] as List).whereType<String>().toList()
+          : const [],
     );
   }
 
@@ -70,6 +77,7 @@ class AdminUser {
       'rol': rol,
       'estado': estado,
       'carrera': carrera,
+      'titulosAcademicos': titulosAcademicos,
     };
   }
 }

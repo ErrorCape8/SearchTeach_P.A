@@ -8,6 +8,7 @@ class StudentTutoringView extends StatefulWidget {
     required this.onEnroll,
     required this.onProjectEnrollment,
     required this.onLeaveGroupSession,
+    required this.onJoinPublishedSession,
     required this.onAction,
     required this.onShowMessage,
     super.key,
@@ -19,6 +20,7 @@ class StudentTutoringView extends StatefulWidget {
   final Future<void> Function(AvailableTutor tutor) onEnroll;
   final Future<void> Function(ClassroomProjectSpace space) onProjectEnrollment;
   final Future<void> Function(StudentGroupSession session) onLeaveGroupSession;
+  final Future<void> Function(StudentGroupSession session) onJoinPublishedSession;
   final Future<void> Function(StudentTutoring tutoring, String action) onAction;
   final void Function(String message) onShowMessage;
 
@@ -100,6 +102,12 @@ class _StudentTutoringViewState extends State<StudentTutoringView> {
             onTap: () => setState(() => _section = 'solicitudes'),
           ),
           _MenuTile(
+            icon: Icons.event_available_outlined,
+            title: 'Tutorías grupales disponibles',
+            subtitle: 'Inscríbete en una sesión publicada por coordinación.',
+            onTap: () => setState(() => _section = 'grupales-disponibles'),
+          ),
+          _MenuTile(
             icon: Icons.event_note_outlined,
             title: 'Mis sesiones',
             subtitle: 'Consulta las tutorías programadas y en curso.',
@@ -129,6 +137,10 @@ class _StudentTutoringViewState extends State<StudentTutoringView> {
           'Haz seguimiento a tus solicitudes de tutoría.'
         ),
       'sesiones' => ('Mis sesiones', 'Tutorías confirmadas y en curso.'),
+      'grupales-disponibles' => (
+          'Tutorías grupales disponibles',
+          'Elige una sesión de tu tecnología y semestre.'
+        ),
       _ => ('Historial', 'Tutorías realizadas o canceladas.'),
     };
     return _PageHeading(title: content.$1, subtitle: content.$2);
@@ -150,6 +162,8 @@ class _StudentTutoringViewState extends State<StudentTutoringView> {
         );
       case 'sesiones':
         return _sessionsList();
+      case 'grupales-disponibles':
+        return _publishedGroupSessions();
       default:
         return _tutoringList(
           widget.data.tutorings
@@ -349,6 +363,59 @@ class _StudentTutoringViewState extends State<StudentTutoringView> {
               onCancel: () => widget.onAction(tutoring, 'cancelar'),
             )),
       ],
+    );
+  }
+
+  Widget _publishedGroupSessions() {
+    final sessions = widget.data.availableGroupSessions;
+    if (sessions.isEmpty) {
+      return const _EmptyCard(
+        icon: Icons.event_busy_outlined,
+        title: 'No hay sesiones disponibles',
+        message: 'Cuando coordinación publique tutorías para tu tecnología, aparecerán aquí.',
+      );
+    }
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
+      itemCount: sessions.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      itemBuilder: (context, index) {
+        final session = sessions[index];
+        AvailableTutor? teacher;
+        for (final item in widget.data.tutors) {
+          if (item.teacherId == session.teacherId) teacher = item;
+        }
+        final start = session.start?.toLocal();
+        final end = session.end?.toLocal();
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(session.subject,
+                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                const SizedBox(height: 6),
+                Text('${teacher?.name ?? 'Docente'} · ${session.technology} · Semestre ${session.semester}'),
+                if (start != null && end != null)
+                  Text('${start.day.toString().padLeft(2, '0')}/${start.month.toString().padLeft(2, '0')}/${start.year} · '
+                      '${start.hour.toString().padLeft(2, '0')}:${start.minute.toString().padLeft(2, '0')}–'
+                      '${end.hour.toString().padLeft(2, '0')}:${end.minute.toString().padLeft(2, '0')}'),
+                const SizedBox(height: 8),
+                Text('${5 - session.studentCount} cupos disponibles',
+                    style: const TextStyle(color: _muted)),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: FilledButton(
+                    onPressed: () => widget.onJoinPublishedSession(session),
+                    child: const Text('Inscribirme'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 

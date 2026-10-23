@@ -131,6 +131,26 @@ public class HorariosTutoresService {
 		}
 	}
 
+	public void validarMateriaParaTecnologia(
+			String docenteId, String tecnologia, int semestre, String materia) {
+		HorarioTutor horario = horarios.findByDocenteId(docenteId)
+				.orElseThrow(() -> new NotFoundException("El docente seleccionado no tiene horarios disponibles."));
+		if (horario.semestre() != semestre) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT,
+					"El semestre no coincide con el horario del docente.");
+		}
+		boolean disponible = materiasCompartidas(horario).stream()
+				.filter(item -> CatalogoMateriasTecnologia.normalizar(item.nombre())
+						.equals(CatalogoMateriasTecnologia.normalizar(materia)))
+				.anyMatch(item -> item.carreras().stream()
+						.anyMatch(c -> CatalogoMateriasTecnologia.normalizar(c)
+								.equals(CatalogoMateriasTecnologia.normalizar(tecnologia))));
+		if (!disponible) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT,
+					"El docente no tiene asignada esa materia para la tecnología seleccionada.");
+		}
+	}
+
 	public HorarioTutor crear(String docenteId, HorarioTutorSolicitud solicitud) {
 		User docente = obtenerDocente(docenteId);
 		if (horarios.findByDocenteId(docenteId).isPresent()) {
