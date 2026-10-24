@@ -15,6 +15,8 @@ import com.pa.searchteach.tutorias.repository.SolicitudCambioFechaSesionReposito
 import com.pa.searchteach.tutorias.model.SolicitudCambioFechaSesion;
 import com.pa.searchteach.tutorias.dto.ResolverSolicitudCambioFecha;
 import com.pa.searchteach.notifications.service.NotificationService;
+import com.pa.searchteach.coordinators.model.Coordinator;
+import com.pa.searchteach.coordinators.repository.CoordinatorRepository;
 import com.pa.searchteach.users.model.User;
 import com.pa.searchteach.users.repository.UserRepository;
 import org.springframework.http.HttpStatus;
@@ -26,6 +28,7 @@ public class SesionesGrupalesTutoriaService {
 
 	private final SesionTutoriaRepositorio sesiones;
 	private final UserRepository usuarios;
+	private final CoordinatorRepository coordinadores;
 	private final HorariosTutoresService horarios;
 	private final NotificationService notificationService;
 	private final SolicitudCambioFechaSesionRepositorio solicitudesCambio;
@@ -33,11 +36,13 @@ public class SesionesGrupalesTutoriaService {
 	public SesionesGrupalesTutoriaService(
 			SesionTutoriaRepositorio sesiones,
 			UserRepository usuarios,
+			CoordinatorRepository coordinadores,
 			HorariosTutoresService horarios,
 			NotificationService notificationService,
 			SolicitudCambioFechaSesionRepositorio solicitudesCambio) {
 		this.sesiones = sesiones;
 		this.usuarios = usuarios;
+		this.coordinadores = coordinadores;
 		this.horarios = horarios;
 		this.notificationService = notificationService;
 		this.solicitudesCambio = solicitudesCambio;
@@ -86,11 +91,8 @@ public class SesionesGrupalesTutoriaService {
 		User docente = usuarios.findById(docenteId)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
 						"No se encontró el docente."));
-		List<User> coordinadores = usuarios.findAll().stream()
-				.filter(user -> user.getRol() != null
-						&& user.getRol().toLowerCase(java.util.Locale.ROOT).contains("coordin"))
-				.toList();
-		if (coordinadores.isEmpty()) {
+		List<Coordinator> coordinadoresDisponibles = coordinadores.findAll();
+		if (coordinadoresDisponibles.isEmpty()) {
 			throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
 					"No hay cuentas de coordinación disponibles para recibir la solicitud.");
 		}
@@ -107,7 +109,7 @@ public class SesionesGrupalesTutoriaService {
 				+ sesion.materia() + " (" + sesion.fechaInicio() + "–" + sesion.fechaFin()
 				+ ") a " + solicitud.fechaInicio() + "–" + solicitud.fechaFin()
 				+ ". Motivo: " + solicitud.motivo().trim();
-		coordinadores.forEach(coordinador -> notificationService.notifyUser(
+		coordinadoresDisponibles.forEach(coordinador -> notificationService.notifyUser(
 				coordinador.getId(), "Solicitud de cambio de fecha", mensaje,
 				"/coordinacion/solicitudes?request=" + guardada.id()));
 	}
