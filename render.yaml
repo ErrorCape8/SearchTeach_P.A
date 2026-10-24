@@ -27,3 +27,17 @@ services:
         value: "false"
       - key: JAVA_TOOL_OPTIONS
         value: "-Xms128m -Xmx384m"
+
+  - type: web
+    name: searchteach-frontend
+    runtime: docker
+    region: oregon
+    plan: free
+    dockerfilePath: ./flutter/Dockerfile
+    dockerContext: .
+    envVars:
+      - key: API_BASE_URL
+        fromService:
+          type: web
+          name: searchteach-api
+          envVarKey: RENDER_EXTERNAL_URL
