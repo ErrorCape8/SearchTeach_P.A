@@ -5,6 +5,7 @@ import java.util.List;
 import com.pa.searchteach.tutorias.dto.PropuestaHorario;
 import com.pa.searchteach.tutorias.dto.InscripcionTutoriaGrupal;
 import com.pa.searchteach.tutorias.dto.RegistroAsistencia;
+import com.pa.searchteach.tutorias.dto.SolicitudCambioFechaTutoria;
 import com.pa.searchteach.tutorias.dto.SolicitudTutoria;
 import com.pa.searchteach.tutorias.dto.TutorDisponible;
 import com.pa.searchteach.tutorias.model.Tutoria;
@@ -77,6 +78,15 @@ public class ControladorTutorias {
 			@PathVariable String id,
 			@AuthenticationPrincipal String usuarioId) {
 		sesionesGrupalesService.desistir(id, usuarioId);
+	}
+
+	@PostMapping("/grupales/{id}/solicitud-cambio-fecha")
+	@ResponseStatus(HttpStatus.CREATED)
+	public void solicitarCambioFechaGrupal(
+			@PathVariable String id,
+			@Valid @RequestBody SolicitudCambioFechaTutoria solicitud,
+			@AuthenticationPrincipal String docenteId) {
+		sesionesGrupalesService.solicitarCambioFecha(id, docenteId, solicitud);
 	}
 
 	@PostMapping

@@ -18,6 +18,8 @@ class AdminUsuariosView extends ConsumerStatefulWidget {
 
 class _AdminUsuariosViewState extends ConsumerState<AdminUsuariosView> {
   final _searchController = TextEditingController();
+  static const _pageSize = 10;
+  int _currentPage = 0;
   bool _importingUsers = false;
 
   static const _invalidCsvMessage =
@@ -218,6 +220,7 @@ class _AdminUsuariosViewState extends ConsumerState<AdminUsuariosView> {
                         ref
                             .read(adminControllerProvider.notifier)
                             .setFilter(opt);
+                        setState(() => _currentPage = 0);
                         Navigator.pop(ctx);
                       },
                     );
@@ -235,6 +238,10 @@ class _AdminUsuariosViewState extends ConsumerState<AdminUsuariosView> {
   Widget build(BuildContext context) {
     final state = ref.watch(adminControllerProvider);
     final users = state.filteredUsers;
+    final pageCount = (users.length / _pageSize).ceil();
+    final page = pageCount == 0 ? 0 : _currentPage.clamp(0, pageCount - 1);
+    final firstUserIndex = page * _pageSize;
+    final pageUsers = users.skip(firstUserIndex).take(_pageSize).toList();
 
     return Column(
       children: [
@@ -254,9 +261,12 @@ class _AdminUsuariosViewState extends ConsumerState<AdminUsuariosView> {
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: TextField(
                     controller: _searchController,
-                    onChanged: (val) => ref
-                        .read(adminControllerProvider.notifier)
-                        .setSearchQuery(val),
+                    onChanged: (val) {
+                      ref
+                          .read(adminControllerProvider.notifier)
+                          .setSearchQuery(val);
+                      setState(() => _currentPage = 0);
+                    },
                     decoration: const InputDecoration(
                       hintText: 'Buscar por nombre, correo o ID',
                       hintStyle: TextStyle(
@@ -400,26 +410,67 @@ class _AdminUsuariosViewState extends ConsumerState<AdminUsuariosView> {
                                 color: Color(0xFF8C95A6), fontSize: 14),
                           ),
                         )
-                      : ListView.separated(
-                          padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
-                          itemCount: users.length,
-                          separatorBuilder: (_, __) => const Divider(
-                            height: 1,
-                            thickness: 1,
-                            color: Color(0xFFF1F5F9),
-                          ),
-                          itemBuilder: (context, index) {
-                            final user = users[index];
-                            return _UserListTile(
-                              user: user,
-                              onTap: () {
-                                // Al presionar un usuario lo deja editar
-                                ref
-                                    .read(adminControllerProvider.notifier)
-                                    .selectUser(user);
-                              },
-                            );
-                          },
+                      : Column(
+                          children: [
+                            Expanded(
+                              child: ListView.separated(
+                                padding:
+                                    const EdgeInsets.fromLTRB(16, 6, 16, 12),
+                                itemCount: pageUsers.length,
+                                separatorBuilder: (_, __) => const Divider(
+                                  height: 1,
+                                  thickness: 1,
+                                  color: Color(0xFFF1F5F9),
+                                ),
+                                itemBuilder: (context, index) {
+                                  final user = pageUsers[index];
+                                  return _UserListTile(
+                                    user: user,
+                                    onTap: () => ref
+                                        .read(adminControllerProvider.notifier)
+                                        .selectUser(user),
+                                  );
+                                },
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    '${firstUserIndex + 1}–${firstUserIndex + pageUsers.length} de ${users.length}',
+                                    style: const TextStyle(
+                                      color: Color(0xFF64748B),
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                  Row(
+                                    children: [
+                                      IconButton(
+                                        tooltip: 'Página anterior',
+                                        onPressed: page > 0
+                                            ? () => setState(
+                                                () => _currentPage = page - 1)
+                                            : null,
+                                        icon: const Icon(Icons.chevron_left),
+                                      ),
+                                      Text('${page + 1} de $pageCount'),
+                                      IconButton(
+                                        tooltip: 'Página siguiente',
+                                        onPressed: page + 1 < pageCount
+                                            ? () => setState(
+                                                () => _currentPage = page + 1)
+                                            : null,
+                                        icon: const Icon(Icons.chevron_right),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
         ),
       ],

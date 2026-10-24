@@ -1,17 +1,23 @@
 import 'package:dio/dio.dart';
 
 class Teacher {
-  const Teacher({required this.id, required this.nombre});
+  const Teacher({required this.id, required this.nombre, this.tecnologia = ''});
 
   final String id;
   final String nombre;
+  final String tecnologia;
 
   factory Teacher.fromJson(Map<String, dynamic> json) {
     if (json['id'] is! String || json['nombre'] is! String) {
       throw const FormatException(
-          'El docente no tiene nombre o identificación válida.');
+          'El docente no tiene nombre o identificaciÃ³n vÃ¡lida.');
     }
-    return Teacher(id: json['id'] as String, nombre: json['nombre'] as String);
+    return Teacher(
+      id: json['id'] as String,
+      nombre: json['nombre'] as String,
+      tecnologia:
+          json['tecnologia'] is String ? json['tecnologia'] as String : '',
+    );
   }
 }
 
@@ -47,7 +53,7 @@ class TutorSchedule {
         json['horaFin'] is! String ||
         json['modalidad'] is! String) {
       throw const FormatException(
-          'El horario devuelto por el servidor está incompleto.');
+          'El horario devuelto por el servidor estÃ¡ incompleto.');
     }
     return TutorSchedule(
       docenteId: json['docenteId'] as String,
@@ -66,6 +72,40 @@ class TutorSchedule {
           : const [],
     );
   }
+}
+
+class PublishedTutoringSession {
+  const PublishedTutoringSession({
+    required this.teacherId,
+    required this.subject,
+    required this.technology,
+    required this.semester,
+    required this.start,
+    required this.end,
+    required this.modality,
+    required this.location,
+  });
+
+  final String teacherId;
+  final String subject;
+  final String technology;
+  final int semester;
+  final DateTime? start;
+  final DateTime? end;
+  final String modality;
+  final String location;
+
+  factory PublishedTutoringSession.fromJson(Map<String, dynamic> json) =>
+      PublishedTutoringSession(
+        teacherId: json['docenteId'] is String ? json['docenteId'] as String : '',
+        subject: json['materia'] is String ? json['materia'] as String : 'Tutoría',
+        technology: json['tecnologia'] is String ? json['tecnologia'] as String : '',
+        semester: json['semestre'] is num ? (json['semestre'] as num).toInt() : 0,
+        start: DateTime.tryParse(json['fechaInicio']?.toString() ?? ''),
+        end: DateTime.tryParse(json['fechaFin']?.toString() ?? ''),
+        modality: json['modalidad']?.toString() ?? '',
+        location: json['ubicacion'] is String ? json['ubicacion'] as String : '',
+      );
 }
 
 class ScheduleSubject {
@@ -87,18 +127,36 @@ class ScheduleSubject {
 
 String normalizeSearch(String value) => value
     .toLowerCase()
-    .replaceAll('á', 'a')
-    .replaceAll('é', 'e')
-    .replaceAll('í', 'i')
-    .replaceAll('ó', 'o')
-    .replaceAll('ú', 'u')
-    .replaceAll('ü', 'u')
-    .replaceAll('ñ', 'n');
+    .replaceAll('Ã¡', 'a')
+    .replaceAll('Ã©', 'e')
+    .replaceAll('Ã­', 'i')
+    .replaceAll('Ã³', 'o')
+    .replaceAll('Ãº', 'u')
+    .replaceAll('Ã¼', 'u')
+    .replaceAll('Ã±', 'n');
 
 String apiError(DioException error, String fallback) {
   final response = error.response?.data;
-  if (response is Map && response['message'] is String) {
-    return response['message'] as String;
+  if (response is Map) {
+    for (final key in const ['message', 'detail']) {
+      final value = response[key];
+      if (value is String && value.trim().isNotEmpty) return value.trim();
+    }
   }
-  return '$fallback Comprueba tu conexión e inténtalo de nuevo.';
+  if (response is String && response.trim().isNotEmpty) return response.trim();
+
+  final status = error.response?.statusCode;
+  if (status != null) {
+    return '$fallback El servidor respondió con el código $status, pero no envió detalles.';
+  }
+
+  switch (error.type) {
+    case DioExceptionType.connectionTimeout:
+    case DioExceptionType.sendTimeout:
+    case DioExceptionType.receiveTimeout:
+    case DioExceptionType.connectionError:
+      return '$fallback No fue posible comunicarse con el servidor. Verifica que esté iniciado y que la dirección de la API sea correcta.';
+    default:
+      return '$fallback ${error.message ?? 'Ocurrió un error inesperado.'}';
+  }
 }

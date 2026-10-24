@@ -23,7 +23,9 @@ public record SesionTutoria(
 		@Positive int semestre,
 		@Size(max = 5) List<AsistenciaEstudiante> asistencias,
 		String materia,
-		List<@NotBlank String> tecnologias) {
+		List<@NotBlank String> tecnologias,
+		ModalidadTutoria modalidad,
+		String ubicacion) {
 
 	public SesionTutoria {
 		if (docenteId == null || docenteId.isBlank()) {
@@ -86,7 +88,7 @@ public record SesionTutoria(
 						.toList();
 		return new SesionTutoria(
 				null, docenteId, estudianteIds, fechaInicio, fechaFin, tecnologia, semestre, asistencias,
-				null, List.of(tecnologia));
+				null, List.of(tecnologia), null, null);
 	}
 
 	public static SesionTutoria crearDisponible(
@@ -96,8 +98,20 @@ public record SesionTutoria(
 			String materia,
 			String tecnologia,
 			int semestre) {
+		return crearDisponible(docenteId, fechaInicio, fechaFin, materia, tecnologia, semestre, null, null);
+	}
+
+	public static SesionTutoria crearDisponible(
+			String docenteId,
+			LocalDateTime fechaInicio,
+			LocalDateTime fechaFin,
+			String materia,
+			String tecnologia,
+			int semestre,
+			ModalidadTutoria modalidad,
+			String ubicacion) {
 		return new SesionTutoria(null, docenteId, List.of(), fechaInicio, fechaFin, tecnologia, semestre,
-				List.of(), materia, List.of(tecnologia));
+				List.of(), materia, List.of(tecnologia), modalidad, ubicacion);
 	}
 
 	public static SesionTutoria crear(///cambiar nombre del metodo a crearSesionTutoriaColectiva
@@ -115,7 +129,7 @@ public record SesionTutoria(
 						.map(estudianteId -> new AsistenciaEstudiante(estudianteId, null))
 						.toList();
 		return new SesionTutoria(null, docenteId, estudianteIds, fechaInicio, fechaFin,
-				tecnologiaPrincipal, semestre, asistencias, materia, tecnologias);
+				tecnologiaPrincipal, semestre, asistencias, materia, tecnologias, null, null);
 	}
 
 	public SesionTutoria registrarAsistencia(String estudianteId, boolean asistio) {
@@ -138,7 +152,9 @@ public record SesionTutoria(
 				semestre,
 				asistenciasActualizadas,
 				materia,
-				tecnologias);
+				tecnologias,
+				modalidad,
+				ubicacion);
 	}
 
 	public SesionTutoria inscribir(String estudianteId, String tecnologiaEstudiante) {
@@ -155,7 +171,7 @@ public record SesionTutoria(
 				.concat(tecnologias.stream(), java.util.stream.Stream.of(tecnologiaEstudiante))
 				.distinct().toList();
 		return new SesionTutoria(id, docenteId, nuevosEstudiantes, fechaInicio, fechaFin,
-				tecnologia, semestre, nuevasAsistencias, materia, nuevasTecnologias);
+				tecnologia, semestre, nuevasAsistencias, materia, nuevasTecnologias, modalidad, ubicacion);
 	}
 
 	public SesionTutoria desistir(String estudianteId) {
@@ -164,6 +180,6 @@ public record SesionTutoria(
 		List<AsistenciaEstudiante> nuevasAsistencias = asistencias.stream()
 				.filter(actual -> !actual.estudianteId().equals(estudianteId)).toList();
 		return new SesionTutoria(id, docenteId, nuevosEstudiantes, fechaInicio, fechaFin,
-				tecnologia, semestre, nuevasAsistencias, materia, tecnologias);
+				tecnologia, semestre, nuevasAsistencias, materia, tecnologias, modalidad, ubicacion);
 	}
 }

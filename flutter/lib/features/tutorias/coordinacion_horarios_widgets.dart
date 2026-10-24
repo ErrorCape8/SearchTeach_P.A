@@ -27,12 +27,12 @@ class ScheduleSectionSelector extends StatelessWidget {
             ButtonSegment(
               value: 0,
               icon: Icon(Icons.people_outline),
-              label: Text('Con disponibilidad ($withScheduleCount)'),
+              label: Text('Asignados ($withScheduleCount)'),
             ),
             ButtonSegment(
               value: 1,
               icon: const Icon(Icons.event_available_outlined),
-              label: Text('Sin disponibilidad ($withoutScheduleCount)'),
+              label: Text('No asignados ($withoutScheduleCount)'),
             ),
           ],
           selected: {selected},
@@ -50,6 +50,8 @@ class ScheduleFilters extends StatelessWidget {
     required this.onSearchChanged,
     required this.onCareerChanged,
     required this.onSemesterChanged,
+    required this.onRefresh,
+    this.refreshing = false,
     super.key,
   });
 
@@ -60,6 +62,8 @@ class ScheduleFilters extends StatelessWidget {
   final ValueChanged<String> onSearchChanged;
   final ValueChanged<String> onCareerChanged;
   final ValueChanged<int?> onSemesterChanged;
+  final VoidCallback onRefresh;
+  final bool refreshing;
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -112,6 +116,17 @@ class ScheduleFilters extends StatelessWidget {
               ],
               onChanged: onSemesterChanged,
             );
+            final refreshButton = OutlinedButton.icon(
+              onPressed: refreshing ? null : onRefresh,
+              icon: refreshing
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.refresh),
+              label: const Text('Actualizar'),
+            );
             if (constraints.maxWidth < 650) {
               return Column(
                 children: [
@@ -121,7 +136,20 @@ class ScheduleFilters extends StatelessWidget {
                     children: [
                       Expanded(child: careerFilter),
                       const SizedBox(width: 10),
-                      SizedBox(width: 140, child: semesterFilter),
+                      SizedBox(width: 125, child: semesterFilter),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        tooltip: 'Actualizar',
+                        onPressed: refreshing ? null : onRefresh,
+                        icon: refreshing
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2),
+                              )
+                            : const Icon(Icons.refresh),
+                      ),
                     ],
                   ),
                 ],
@@ -134,6 +162,8 @@ class ScheduleFilters extends StatelessWidget {
                 Expanded(flex: 3, child: careerFilter),
                 const SizedBox(width: 12),
                 SizedBox(width: 180, child: semesterFilter),
+                const SizedBox(width: 12),
+                refreshButton,
               ],
             );
           },
@@ -150,15 +180,13 @@ class TeacherScheduleGrid extends StatelessWidget {
   const TeacherScheduleGrid({
     required this.teachers,
     required this.schedules,
-    required this.onSelect,
-    required this.onDelete,
+    required this.sessions,
     super.key,
   });
 
   final List<Teacher> teachers;
   final Map<String, TutorSchedule> schedules;
-  final ValueChanged<Teacher> onSelect;
-  final ValueChanged<Teacher> onDelete;
+  final Map<String, List<PublishedTutoringSession>> sessions;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
@@ -182,8 +210,7 @@ class TeacherScheduleGrid extends StatelessWidget {
               return _TeacherCard(
                 teacher: teacher,
                 schedule: schedules[teacher.id],
-                onTap: () => onSelect(teacher),
-                onDelete: () => onDelete(teacher),
+                sessions: sessions[teacher.id] ?? const [],
               );
             },
           );
@@ -195,27 +222,17 @@ class _TeacherCard extends StatelessWidget {
   const _TeacherCard({
     required this.teacher,
     required this.schedule,
-    required this.onTap,
-    required this.onDelete,
+    required this.sessions,
   });
 
   final Teacher teacher;
   final TutorSchedule? schedule;
-  final VoidCallback onTap;
-  final VoidCallback onDelete;
+  final List<PublishedTutoringSession> sessions;
 
   @override
   Widget build(BuildContext context) {
     final assigned = schedule != null;
-    final currentSchedule = schedule;
-    final subjectSummary = currentSchedule == null
-        ? ''
-        : currentSchedule.materias.map((subject) {
-            final sharedCareers = subject.carreras
-                .where((career) => career != currentSchedule.carrera)
-                .join(', ');
-            return '${subject.nombre} (${sharedCareers.isEmpty ? 'Exclusiva' : 'Compartida con $sharedCareers'})';
-          }).join(', ');
+    final hasAvailability = assigned || sessions.isNotEmpty;
     return Card(
       color: Colors.white,
       elevation: 0,
@@ -244,55 +261,50 @@ class _TeacherCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        teacher.nombre.isEmpty ? 'Docente' : teacher.nombre,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF1E293B),
-                        ),
-                      ),
+                      Text(teacher.nombre.isEmpty ? 'Docente' : teacher.nombre,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF1E293B))),
                       Text('ID ${teacher.id}',
                           style: const TextStyle(color: _muted, fontSize: 12)),
                     ],
                   ),
                 ),
-                _ScheduleBadge(assigned: assigned),
+                _ScheduleBadge(assigned: hasAvailability),
               ],
             ),
-            const SizedBox(height: 12),
-            Expanded(
-              child: Text(
-                assigned
-                    ? '${schedule!.carrera} · Semestre ${schedule!.semestre}\n'
-                        '${schedule!.dia} · ${schedule!.horaInicio}–${schedule!.horaFin} · ${schedule!.modalidad}'
-                        '${subjectSummary.isEmpty ? '' : '\nMaterias: $subjectSummary'}'
-                    : 'Aún no se ha registrado disponibilidad para este tutor.',
-                maxLines: 5,
+            const SizedBox(height: 14),
+            Text(
+              assigned
+                  ? '${schedule!.carrera} · Semestre ${schedule!.semestre} · ${schedule!.dia} ${schedule!.horaInicio}–${schedule!.horaFin}'
+                  : sessions.isNotEmpty
+                      ? 'Tiene ${sessions.length} tutoría(s) publicada(s).'
+                  : 'Este docente aún no tiene tutorías asignadas.',
+              style: const TextStyle(color: _muted, height: 1.4),
+            ),
+            for (final session in sessions.take(2))
+              Text(
+                '${session.subject} · ${_sessionDateTime(session)}',
+                maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: _muted, height: 1.4),
+                style: const TextStyle(color: _muted, fontSize: 12),
               ),
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                if (assigned)
-                  IconButton(
-                    tooltip: 'Eliminar horario',
-                    onPressed: onDelete,
-                    icon: const Icon(Icons.delete_outline, color: Colors.red),
-                  ),
-                FilledButton(
-                  onPressed: onTap,
-                  child: Text(assigned ? 'Editar' : 'Asignar'),
-                ),
-              ],
-            ),
           ],
         ),
       ),
     );
+  }
+
+  String _sessionDateTime(PublishedTutoringSession session) {
+    final start = session.start?.toLocal();
+    if (start == null) return 'Fecha pendiente';
+    final date = '${start.day.toString().padLeft(2, '0')}/${start.month.toString().padLeft(2, '0')}/${start.year}';
+    final time = '${start.hour.toString().padLeft(2, '0')}:${start.minute.toString().padLeft(2, '0')}';
+    final modality = session.modality.isEmpty ? '' : ' · ${session.modality}';
+    final location = session.location.isEmpty ? '' : ' · ${session.location}';
+    return '$date $time$modality$location';
   }
 }
 
@@ -309,7 +321,7 @@ class _ScheduleBadge extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
-          assigned ? 'Asignado' : 'Sin horario',
+          assigned ? 'Asignado' : 'No asignado',
           style: TextStyle(
             color: assigned ? const Color(0xFF15803D) : const Color(0xFFC2410C),
             fontWeight: FontWeight.w700,

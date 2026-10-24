@@ -159,6 +159,8 @@ class StudentGroupSession {
     required this.start,
     required this.end,
     required this.studentCount,
+    this.modality = '',
+    this.location = '',
   });
 
   final String id;
@@ -170,6 +172,8 @@ class StudentGroupSession {
   final DateTime? start;
   final DateTime? end;
   final int studentCount;
+  final String modality;
+  final String location;
 
   factory StudentGroupSession.fromJson(Map<String, dynamic> json) =>
       StudentGroupSession(
@@ -187,6 +191,8 @@ class StudentGroupSession {
         studentCount: json['estudianteIds'] is List
             ? (json['estudianteIds'] as List).length
             : 1,
+        modality: _string(json['modalidad']),
+        location: _string(json['ubicacion']),
       );
 }
 

@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -51,6 +52,15 @@ public class GlobalExceptionHandler {
 	ResponseEntity<ApiError> handleNotFound(NotFoundException exception) {
 		return ResponseEntity.status(HttpStatus.NOT_FOUND)
 				.body(new ApiError(exception.getMessage(), false, 0));
+	}
+
+	@ExceptionHandler(ResponseStatusException.class)
+	ResponseEntity<ApiError> handleResponseStatus(ResponseStatusException exception) {
+		String message = exception.getReason() == null || exception.getReason().isBlank()
+				? exception.getStatusCode().toString()
+				: exception.getReason();
+		return ResponseEntity.status(exception.getStatusCode())
+				.body(new ApiError(message, false, 0));
 	}
 
 	@ExceptionHandler(ForbiddenException.class)

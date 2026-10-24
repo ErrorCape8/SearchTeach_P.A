@@ -43,7 +43,8 @@ public class HorariosTutoresService {
 				.filter(this::esDocente)
 				.filter(user -> user.getEstado() == null || user.getEstado().isBlank()
 						|| "Activo".equalsIgnoreCase(user.getEstado()))
-				.map(user -> new DocenteCoordinacion(user.getId(), valor(user.getNombre())))
+				.map(user -> new DocenteCoordinacion(
+						user.getId(), valor(user.getNombre()), valor(user.getCarrera())))
 				.toList();
 	}
 
@@ -148,6 +149,27 @@ public class HorariosTutoresService {
 		if (!disponible) {
 			throw new ResponseStatusException(HttpStatus.CONFLICT,
 					"El docente no tiene asignada esa materia para la tecnología seleccionada.");
+		}
+	}
+
+	public void validarDocenteParaTecnologia(
+			String docenteId, String tecnologia, int semestre, String materia) {
+		User docente = obtenerDocente(docenteId);
+		if (docente.getEstado() != null && !docente.getEstado().isBlank()
+				&& !"Activo".equalsIgnoreCase(docente.getEstado())) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT,
+					"El docente seleccionado no está activo.");
+		}
+		if (!CatalogoTecnologias.contiene(tecnologia)
+				|| !CatalogoMateriasTecnologia.contiene(tecnologia, semestre, materia)) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT,
+					"La materia no pertenece al plan de estudios seleccionado.");
+		}
+		if (!CatalogoTecnologias.contiene(docente.getCarrera())
+				|| !CatalogoMateriasTecnologia.normalizar(docente.getCarrera())
+						.equals(CatalogoMateriasTecnologia.normalizar(tecnologia))) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT,
+					"El docente no está asignado a la tecnología seleccionada.");
 		}
 	}
 

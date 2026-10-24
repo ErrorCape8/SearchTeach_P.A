@@ -8,6 +8,7 @@ import com.pa.searchteach.tutorias.service.SesionesGrupalesTutoriaService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -21,6 +22,11 @@ public class ControladorProgramacionTutorias {
 
 	public ControladorProgramacionTutorias(SesionesGrupalesTutoriaService sesiones) {
 		this.sesiones = sesiones;
+	}
+
+	@GetMapping
+	public List<SesionTutoria> listarPublicadas() {
+		return sesiones.listarPublicadas();
 	}
 
 	@PostMapping

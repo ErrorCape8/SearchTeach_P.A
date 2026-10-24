@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api_client.dart';
-import 'coordinacion_horarios_form.dart';
 import 'coordinacion_horarios_models.dart';
 import 'coordinacion_horarios_widgets.dart';
 
@@ -21,10 +20,12 @@ class _CoordinacionHorariosPageState
   final _searchController = TextEditingController();
   List<Teacher> _teachers = const [];
   List<TutorSchedule> _schedules = const [];
+  List<PublishedTutoringSession> _publishedSessions = const [];
   String _career = 'Todas';
   int? _semester;
   int _section = 0;
   bool _loading = true;
+  bool _speedDialOpen = false;
   String? _error;
 
   @override
@@ -49,10 +50,12 @@ class _CoordinacionHorariosPageState
       final results = await Future.wait([
         dio.get<List<dynamic>>('/api/coordinacion/docentes'),
         dio.get<List<dynamic>>('/api/coordinacion/horarios'),
+        dio.get<List<dynamic>>('/api/coordinacion/sesiones-grupales'),
       ]);
       final teacherData = results[0].data;
       final scheduleData = results[1].data;
-      if (teacherData == null || scheduleData == null) {
+      final publishedData = results[2].data;
+      if (teacherData == null || scheduleData == null || publishedData == null) {
         throw const FormatException(
             'El servidor devolvió una lista incompleta.');
       }
@@ -70,10 +73,16 @@ class _CoordinacionHorariosPageState
         }
         return TutorSchedule.fromJson(entry);
       }).toList(growable: false);
+      final publishedSessions = publishedData
+          .whereType<Map<String, dynamic>>()
+          .map(PublishedTutoringSession.fromJson)
+          .where((session) => session.teacherId.isNotEmpty)
+          .toList(growable: false);
       if (!mounted) return;
       setState(() {
         _teachers = teachers;
         _schedules = schedules;
+        _publishedSessions = publishedSessions;
         if (!_careers.contains(_career)) _career = 'Todas';
         _loading = false;
       });
@@ -97,7 +106,10 @@ class _CoordinacionHorariosPageState
         .expand((item) => [
               item.carrera,
               ...item.materias.expand((subject) => subject.carreras),
-            ])
+        ])
+        .followedBy(_publishedSessions
+            .map((session) => session.technology)
+            .where((value) => value.isNotEmpty))
         .toSet()
         .toList()
       ..sort();
@@ -108,94 +120,45 @@ class _CoordinacionHorariosPageState
         for (final schedule in _schedules) schedule.docenteId: schedule,
       };
 
+  Map<String, List<PublishedTutoringSession>> get _sessionsByTeacher {
+    final grouped = <String, List<PublishedTutoringSession>>{};
+    for (final session in _publishedSessions) {
+      grouped.putIfAbsent(session.teacherId, () => []).add(session);
+    }
+    return grouped;
+  }
+
+  bool _hasAvailability(String teacherId) =>
+      _scheduleByTeacher.containsKey(teacherId) ||
+      _sessionsByTeacher.containsKey(teacherId);
+
   List<Teacher> get _visibleTeachers {
     final query = normalizeSearch(_searchController.text.trim());
     final schedules = _scheduleByTeacher;
+    final sessionsByTeacher = _sessionsByTeacher;
     final source = _section == 0
-        ? _teachers.where((teacher) => schedules.containsKey(teacher.id))
-        : _teachers.where((teacher) => !schedules.containsKey(teacher.id));
+        ? _teachers.where((teacher) => _hasAvailability(teacher.id))
+        : _teachers.where((teacher) => !_hasAvailability(teacher.id));
     return source.where((teacher) {
       final schedule = schedules[teacher.id];
       final matchesText = query.isEmpty ||
           normalizeSearch(teacher.nombre).contains(query) ||
           normalizeSearch(teacher.id).contains(query);
-      final matchesCareer = schedule == null || _career == 'Todas' ||
-          schedule?.carrera == _career ||
-          (schedule?.materias
-                  .any((subject) => subject.carreras.contains(_career)) ??
-              false);
-      final matchesSemester = schedule == null ||
-          _semester == null || schedule.semestre == _semester;
+      final sessions = sessionsByTeacher[teacher.id] ??
+          const <PublishedTutoringSession>[];
+      final matchesCareer = (schedule == null && sessions.isEmpty) ||
+          _career == 'Todas' ||
+          (schedule != null &&
+              (schedule.carrera == _career ||
+                  schedule.materias
+                      .any((subject) => subject.carreras.contains(_career)))) ||
+          sessions.any((session) => session.technology == _career);
+      final matchesSemester = (schedule == null && sessions.isEmpty) ||
+          _semester == null ||
+          (schedule != null && schedule.semestre == _semester) ||
+          sessions.any((session) => session.semester == _semester);
       return matchesText && matchesCareer && matchesSemester;
     }).toList(growable: false);
-  }
-
-  Future<void> _editSchedule(Teacher teacher) async {
-    final existing = _scheduleByTeacher[teacher.id];
-    final result = await Navigator.of(context).push<TutorSchedule>(
-      MaterialPageRoute(
-        builder: (_) => CoordinacionHorariosFormPage(
-          teacher: teacher,
-          existing: existing,
-        ),
-      ),
-    );
-    if (result == null || !mounted) return;
-    setState(() {
-      _schedules = [
-        result,
-        ..._schedules.where((item) => item.docenteId != teacher.id),
-      ];
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-            existing == null ? 'Horario asignado.' : 'Horario actualizado.'),
-      ),
-    );
-  }
-
-  Future<void> _deleteSchedule(Teacher teacher) async {
-    final schedule = _scheduleByTeacher[teacher.id];
-    if (schedule == null) return;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Eliminar horario'),
-        content: Text(
-          '¿Eliminar el horario publicado de ${teacher.nombre}? '
-          'Las tutorías ya creadas no se modificarán.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Eliminar'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
-    try {
-      await ref.read(dioProvider).delete<void>(
-            '/api/coordinacion/horarios/${Uri.encodeComponent(teacher.id)}',
-          );
-      if (!mounted) return;
-      setState(() => _schedules =
-          _schedules.where((item) => item.docenteId != teacher.id).toList());
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Horario eliminado.')),
-      );
-    } on DioException catch (error) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text(apiError(error, 'No se pudo eliminar el horario.'))),
-      );
-    }
   }
 
   @override
@@ -215,22 +178,44 @@ class _CoordinacionHorariosPageState
               ),
             ],
           ),
-          actions: [
-            TextButton.icon(
-              onPressed: () =>
-                  context.push('/coordinacion/tutorias-colectivas'),
-              icon: const Icon(Icons.groups_outlined),
-              label: const Text('Tutorias de proyectos'),
-            ),
-            const SizedBox(width: 8),
-          ],
         ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: () => context.push('/coordinacion/programar-tutorias'),
-          backgroundColor: const Color(0xFFA9154F),
-          foregroundColor: Colors.white,
-          icon: const Icon(Icons.add),
-          label: const Text('Programar tutorias'),
+        floatingActionButton: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            if (_speedDialOpen) ...[
+              FloatingActionButton.extended(
+                heroTag: 'tutorias_proyecto_aula',
+                onPressed: () =>
+                    context.push('/coordinacion/tutorias-colectivas'),
+                backgroundColor: Colors.white,
+                foregroundColor: const Color(0xFFA9154F),
+                icon: const Icon(Icons.groups_outlined),
+                label: const Text('Tutorías de proyecto de aula'),
+              ),
+              const SizedBox(height: 12),
+              FloatingActionButton.extended(
+                heroTag: 'tutorias_retroalimentativas',
+                onPressed: () async {
+                  await context.push('/coordinacion/programar-tutorias');
+                  if (mounted) _load();
+                },
+                backgroundColor: Colors.white,
+                foregroundColor: const Color(0xFFA9154F),
+                icon: const Icon(Icons.rate_review_outlined),
+                label: const Text('Tutorías retroalimentativas'),
+              ),
+              const SizedBox(height: 12),
+            ],
+            FloatingActionButton.extended(
+              heroTag: 'programar_tutorias_speed_dial',
+              onPressed: () => setState(() => _speedDialOpen = !_speedDialOpen),
+              backgroundColor: const Color(0xFFA9154F),
+              foregroundColor: Colors.white,
+              icon: Icon(_speedDialOpen ? Icons.close : Icons.add),
+              label: Text(_speedDialOpen ? 'Cerrar' : 'Programar tutorías'),
+            ),
+          ],
         ),
         body: SafeArea(
           child: Center(
@@ -245,12 +230,10 @@ class _CoordinacionHorariosPageState
                             ScheduleSectionSelector(
                               selected: _section,
                               withScheduleCount: _teachers
-                                  .where((teacher) =>
-                                      _scheduleByTeacher.containsKey(teacher.id))
+                                  .where((teacher) => _hasAvailability(teacher.id))
                                   .length,
                               withoutScheduleCount: _teachers
-                                  .where((teacher) =>
-                                      !_scheduleByTeacher.containsKey(teacher.id))
+                                  .where((teacher) => !_hasAvailability(teacher.id))
                                   .length,
                               onChanged: (value) =>
                                   setState(() => _section = value),
@@ -265,6 +248,8 @@ class _CoordinacionHorariosPageState
                                   setState(() => _career = value),
                               onSemesterChanged: (value) =>
                                   setState(() => _semester = value),
+                              onRefresh: _load,
+                              refreshing: _loading,
                             ),
                             Expanded(
                               child: _visibleTeachers.isEmpty
@@ -272,8 +257,7 @@ class _CoordinacionHorariosPageState
                                   : TeacherScheduleGrid(
                                       teachers: _visibleTeachers,
                                       schedules: _scheduleByTeacher,
-                                      onSelect: _editSchedule,
-                                      onDelete: _deleteSchedule,
+                                      sessions: _sessionsByTeacher,
                                     ),
                             ),
                           ],

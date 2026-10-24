@@ -397,6 +397,10 @@ class _StudentTutoringViewState extends State<StudentTutoringView> {
                     style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
                 const SizedBox(height: 6),
                 Text('${teacher?.name ?? 'Docente'} · ${session.technology} · Semestre ${session.semester}'),
+                if (session.modality.isNotEmpty)
+                  Text(
+                    '${_groupSessionModality(session.modality)}${session.location.isEmpty ? '' : ' · ${session.location}'}',
+                  ),
                 if (start != null && end != null)
                   Text('${start.day.toString().padLeft(2, '0')}/${start.month.toString().padLeft(2, '0')}/${start.year} · '
                       '${start.hour.toString().padLeft(2, '0')}:${start.minute.toString().padLeft(2, '0')}–'
@@ -418,6 +422,13 @@ class _StudentTutoringViewState extends State<StudentTutoringView> {
       },
     );
   }
+
+  String _groupSessionModality(String value) => switch (value.toUpperCase()) {
+        'PRESENCIAL' => 'Presencial',
+        'HIBRIDA' => 'Híbrida',
+        'VIRTUAL' => 'Virtual',
+        _ => value,
+      };
 
   Widget _tutoringList(
     Iterable<StudentTutoring> values, {

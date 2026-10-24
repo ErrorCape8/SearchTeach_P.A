@@ -11,7 +11,7 @@ import 'features/dashboard/dashboard_page.dart';
 import 'features/tutorias/coordinacion_tutorias_page.dart';
 import 'features/tutorias/coordinacion_programar_tutorias_page.dart';
 import 'features/tutorias/coordinacion_dashboard_page.dart';
-import 'features/tutorias/docente_informes_page.dart';
+import 'features/tutorias/docente_dashboard_page.dart';
 import 'features/estudiante/student_dashboard_page.dart';
 import 'features/notifications/notifications_page.dart';
 
@@ -20,7 +20,8 @@ final _router = GoRouter(
   routes: [
     GoRoute(path: '/login', builder: (_, __) => const LoginPage()),
     GoRoute(path: '/register', builder: (_, __) => const RegisterPage()),
-    GoRoute(path: '/notificaciones', builder: (_, __) => const NotificationsPage()),
+    GoRoute(
+        path: '/notificaciones', builder: (_, __) => const NotificationsPage()),
     GoRoute(
       path: '/home',
       builder: (_, __) => const DashboardPage(),
@@ -39,7 +40,7 @@ final _router = GoRouter(
     ),
     GoRoute(
       path: '/docente',
-      builder: (_, __) => const DocenteInformesPage(),
+      builder: (_, __) => const DocenteDashboardPage(),
     ),
     GoRoute(
       path: '/estudiante',

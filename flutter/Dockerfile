@@ -12,7 +12,7 @@ WORKDIR /workspace
 COPY flutter/pubspec.yaml ./
 COPY flutter/ ./
 RUN flutter pub get
-RUN flutter build web --release -t lib/Main.dart \
+RUN flutter build web --release -t lib/main.dart \
     --dart-define=API_BASE_URL=${API_BASE_URL} \
     --dart-define=FIREBASE_API_KEY=${FIREBASE_API_KEY} \
     --dart-define=FIREBASE_APP_ID=${FIREBASE_APP_ID} \

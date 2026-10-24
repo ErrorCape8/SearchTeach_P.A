@@ -1,0 +1,29 @@
+services:
+  - type: keyvalue
+    name: searchteach-redis
+    region: oregon
+    plan: free
+    maxmemoryPolicy: allkeys-lru
+    ipAllowList: []
+
+  - type: web
+    name: searchteach-api
+    runtime: docker
+    region: oregon
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    envVars:
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: SPRING_DATA_REDIS_URL
+        fromService:
+          type: keyvalue
+          name: searchteach-redis
+          property: connectionString
+      - key: FIREBASE_PUSH_ENABLED
+        value: "false"
+      - key: JAVA_TOOL_OPTIONS
+        value: "-Xms128m -Xmx384m"

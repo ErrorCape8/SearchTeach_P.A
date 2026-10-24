@@ -7,6 +7,7 @@ import '../../core/api_client.dart';
 import '../auth/auth_repository.dart';
 import '../notifications/notifications_page.dart';
 import 'coordinacion_horarios_page.dart';
+import 'coordinacion_solicitudes_page.dart';
 
 const _wine = Color(0xFFA9154F);
 const _wineDark = Color(0xFF86123F);
@@ -85,6 +86,7 @@ class _CoordinacionDashboardPageState
         'Horarios de tutores',
         'Tutores líderes',
         'Reportes recientes',
+        'Solicitudes docentes',
         'Perfil',
       ][_tab];
 
@@ -140,6 +142,7 @@ class _CoordinacionDashboardPageState
         2 => _LeadersView(teachers: _teachers, groups: _groups),
         3 =>
           _ReportsView(teachers: _teachers, groups: _groups, reports: _reports),
+        4 => const CoordinacionSolicitudesPage(),
         _ => _ProfileView(profile: _profile, onRefresh: _load),
       };
 }
@@ -231,6 +234,11 @@ class _Navigation extends StatelessWidget {
     (Icons.calendar_month_outlined, Icons.calendar_month_rounded, 'Horarios'),
     (Icons.groups_outlined, Icons.groups_rounded, 'Líderes'),
     (Icons.inbox_outlined, Icons.inbox_rounded, 'Reportes'),
+    (
+      Icons.event_available_outlined,
+      Icons.event_available_rounded,
+      'Cambios'
+    ),
     (Icons.person_outline_rounded, Icons.person_rounded, 'Perfil'),
   ];
 
@@ -823,8 +831,9 @@ String _projectName(List<Map<String, dynamic>> groups, Object? projectId) {
     final projects = group['proyectos'];
     if (projects is List) {
       for (final project in projects.whereType<Map<String, dynamic>>()) {
-        if (project['proyectoId'] == projectId)
+        if (project['proyectoId'] == projectId) {
           return _text(project['nombre'], 'Proyecto');
+        }
       }
     }
   }
