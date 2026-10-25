@@ -361,10 +361,11 @@ Future<Map<String, dynamic>> createOrJoinClassroomProject({
   required Dio dio,
   required String tutoringId,
   required String name,
+  required int semester,
 }) async {
   final response = await dio.post<Map<String, dynamic>>(
     '/api/estudiante/tutorias-colectivas/$tutoringId/proyectos',
-    data: {'nombre': name},
+    data: {'nombre': name, 'semestre': semester},
   );
   return response.data ?? const {};
 }

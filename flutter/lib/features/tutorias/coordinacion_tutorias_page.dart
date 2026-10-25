@@ -27,6 +27,7 @@ class _CoordinacionTutoriasPageState
   bool _saving = false;
   bool _loadingTutorias = true;
   String? _error;
+  String? _editingId;
   int _selectedSection = 0;
   List<Map<String, dynamic>> _createdTutorias = const [];
 
@@ -68,13 +69,13 @@ class _CoordinacionTutoriasPageState
       final data = response.data;
       if (data == null) {
         throw const FormatException(
-          'El servidor devolvió una lista de tutorías vacía.',
+          'El servidor devolviÃ³ una lista de tutorÃ­as vacÃ­a.',
         );
       }
       final tutorias = data.map((entry) {
         if (entry is! Map<String, dynamic>) {
           throw const FormatException(
-            'El servidor devolvió una tutoría colectiva inválida.',
+            'El servidor devolviÃ³ una tutorÃ­a colectiva invÃ¡lida.',
           );
         }
         return entry;
@@ -90,7 +91,7 @@ class _CoordinacionTutoriasPageState
       setState(() {
         _error = _apiError(
           error,
-          fallback: 'No se pudieron cargar las tutorías colectivas.',
+          fallback: 'No se pudieron cargar las tutorÃ­as colectivas.',
         );
         _loadingTutorias = false;
       });
@@ -110,7 +111,7 @@ class _CoordinacionTutoriasPageState
         supportIds.toSet().length != 5 || supportIds.contains(_leaderId)) {
       setState(() {
         _error =
-            'El docente líder y los cinco docentes de apoyo deben ser distintos.';
+            'El docente lÃ­der y los cinco docentes de apoyo deben ser distintos.';
       });
       return;
     }
@@ -120,24 +121,28 @@ class _CoordinacionTutoriasPageState
       _error = null;
     });
     try {
-      final response = await ref.read(dioProvider).post<Map<String, dynamic>>(
-        '/api/coordinacion/tutorias-colectivas',
-        data: {
-          'docenteLiderId': _leaderId,
-          'docentesApoyoIds': supportIds,
-          'tecnologia': _career,
-          'semestre': _semester,
-        },
-      );
+      final dio = ref.read(dioProvider);
+      final payload = {
+        'docenteLiderId': _leaderId,
+        'docentesApoyoIds': supportIds,
+        'tecnologia': _career,
+        'semestre': _semester,
+      };
+      final response = _editingId == null
+          ? await dio.post<Map<String, dynamic>>(
+              '/api/coordinacion/tutorias-colectivas', data: payload)
+          : await dio.put<Map<String, dynamic>>(
+              '/api/coordinacion/tutorias-colectivas/$_editingId', data: payload);
       final body = response.data;
       if (body == null || body['id'] is! String) {
         throw const FormatException(
-          'El servidor devolvió una tutoría incompleta.',
+          'El servidor devolviÃ³ una tutorÃ­a incompleta.',
         );
       }
       await _loadCreatedTutorias();
       if (!mounted) return;
       setState(() {
+        _editingId = null;
         _selectedSection = 1;
       });
     } on DioException catch (error) {
@@ -151,16 +156,51 @@ class _CoordinacionTutoriasPageState
     }
   }
 
+  void _editTutoria(Map<String, dynamic> tutoria) {
+    final id = tutoria['id'];
+    final supports = (tutoria['docentesApoyoIds'] as List? ?? const [])
+        .whereType<String>()
+        .toList();
+    if (id is! String || id.isEmpty || supports.length != 5) {
+      setState(() => _error = 'No se pudo cargar la asignación de docentes.');
+      return;
+    }
+    final career = tutoria['tecnologia'] is String
+        ? tutoria['tecnologia'] as String
+        : careerCatalog.first;
+    setState(() {
+      _editingId = id;
+      _career = careerCatalog.contains(career) ? career : careerCatalog.first;
+      _semester = tutoria['semestre'] is num
+          ? (tutoria['semestre'] as num).toInt()
+          : 1;
+      _leaderId = tutoria['docenteLiderId'] as String?;
+      _supportIds = supports.cast<String?>();
+      _selectedSection = 0;
+      _error = null;
+    });
+  }
+
+  void _cancelEdit() {
+    setState(() {
+      _editingId = null;
+      _leaderId = null;
+      _supportIds = List<String?>.filled(5, null);
+      _error = null;
+    });
+  }
+
   Future<void> _deleteTutoria(Map<String, dynamic> tutoria) async {
     final id = tutoria['id'];
     if (id is! String || id.isEmpty) return;
-    final confirmed = await showDialog<bool>(
+    final confirmed = await _confirmDelete();
+    /*final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Eliminar tutoría colectiva'),
+        title: const Text('Eliminar tutorÃ­a colectiva'),
         content: const Text(
-          'Se eliminarán también los proyectos, las inscripciones y los informes asociados. '
-          'Esta acción no se puede deshacer.',
+          'Se eliminarÃ¡n tambiÃ©n los proyectos, las inscripciones y los informes asociados. '
+          'Esta acciÃ³n no se puede deshacer.',
         ),
         actions: [
           TextButton(
@@ -173,7 +213,7 @@ class _CoordinacionTutoriasPageState
           ),
         ],
       ),
-    );
+    );*/
     if (confirmed != true || !mounted) return;
     try {
       await ref
@@ -186,7 +226,7 @@ class _CoordinacionTutoriasPageState
           SnackBar(
             content: Text(
               _apiError(error,
-                  fallback: 'No se pudo eliminar la tutoría colectiva.'),
+                  fallback: 'No se pudo eliminar la tutorÃ­a colectiva.'),
             ),
           ),
         );
@@ -194,25 +234,47 @@ class _CoordinacionTutoriasPageState
     }
   }
 
+  Future<bool> _confirmDelete() async {
+    final controller = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, refresh) => AlertDialog(
+          title: const Text('Eliminar tutoría colectiva'),
+          content: Column(mainAxisSize: MainAxisSize.min, children: [
+            const Text('Escribe ELIMINAR para borrar la tutoría y sus proyectos asociados.'),
+            TextField(controller: controller, onChanged: (_) => refresh(() {}), decoration: const InputDecoration(labelText: 'Escribe ELIMINAR')),
+          ]),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancelar')),
+            FilledButton(onPressed: controller.text.trim().toUpperCase() == 'ELIMINAR' ? () => Navigator.pop(dialogContext, true) : null, child: const Text('Eliminar')),
+          ],
+        ),
+      ),
+    );
+    controller.dispose();
+    return confirmed == true;
+  }
+
   String _apiError(
     DioException error, {
-    String fallback = 'No se pudo crear la tutoría colectiva.',
+    String fallback = 'No se pudo crear la tutorÃ­a colectiva.',
   }) {
     final data = error.response?.data;
     if (data is Map && data['message'] is String) {
       return data['message'] as String;
     }
-    return '$fallback Comprueba tu conexión e inténtalo de nuevo.';
+    return '$fallback Comprueba tu conexiÃ³n e intÃ©ntalo de nuevo.';
   }
 
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(
-          title: const Text('Tutorías de proyectos de aula'),
+          title: const Text('TutorÃ­as de proyectos de aula'),
           actions: [
             const NotificationBellButton(),
             IconButton(
-              tooltip: 'Cerrar sesión',
+              tooltip: 'Cerrar sesiÃ³n',
               onPressed: () async {
                 await ref.read(authRepositoryProvider).logout();
                 if (context.mounted) context.go('/login');
@@ -233,7 +295,7 @@ class _CoordinacionTutoriasPageState
                       const ButtonSegment(
                         value: 0,
                         icon: Icon(Icons.add_circle_outline),
-                        label: Text('Nueva tutoría'),
+                        label: Text('Nueva tutorÃ­a'),
                       ),
                       ButtonSegment(
                         value: 1,
@@ -255,7 +317,7 @@ class _CoordinacionTutoriasPageState
                             padding: const EdgeInsets.all(20),
                             children: [
                               const Text(
-                                'Crear acompañamiento colectivo',
+                                'Crear acompaÃ±amiento colectivo',
                                 style: TextStyle(
                                   fontSize: 22,
                                   fontWeight: FontWeight.bold,
@@ -263,7 +325,7 @@ class _CoordinacionTutoriasPageState
                               ),
                               const SizedBox(height: 8),
                               const Text(
-                                'Define la carrera y el semestre, asigna un docente líder y cinco docentes de apoyo. Los estudiantes registrarán sus proyectos desde su cuenta.',
+                                'Define la carrera y el semestre, asigna un docente lÃ­der y cinco docentes de apoyo. Los estudiantes registrarÃ¡n sus proyectos desde su cuenta.',
                               ),
                               const SizedBox(height: 20),
                               DropdownButtonFormField<String>(
@@ -305,7 +367,7 @@ class _CoordinacionTutoriasPageState
                                 },
                               ),
                               const SizedBox(height: 12),
-                              _teacherDropdown(label: 'Docente l�der', value: _leaderId, excluded: _supportIds.whereType<String>().toSet(), onChanged: (value) => setState(() => _leaderId = value)),
+                              _teacherDropdown(label: 'Docente líder', value: _leaderId, excluded: _supportIds.whereType<String>().toSet(), onChanged: (value) => setState(() => _leaderId = value)),
                               const SizedBox(height: 12),
                               for (var index = 0; index < 5; index++) ...[
                                 _sectionTitle('Docente de apoyo ${index + 1}'),
@@ -326,7 +388,7 @@ class _CoordinacionTutoriasPageState
                                         ),
                                       )
                                     : const Icon(Icons.save_outlined),
-                                label: const Text('Crear tutoría colectiva'),
+                                label: const Text('Crear tutorÃ­a colectiva'),
                               ),
                             ],
                           ),
@@ -366,7 +428,7 @@ class _CoordinacionTutoriasPageState
       return const Center(
         child: Padding(
           padding: EdgeInsets.all(24),
-          child: Text('Todavía no has creado tutorías colectivas.'),
+          child: Text('TodavÃ­a no has creado tutorÃ­as colectivas.'),
         ),
       );
     }
@@ -387,22 +449,23 @@ class _CoordinacionTutoriasPageState
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '${_createdTutorias[index]['tecnologia'] ?? 'Carrera'} · '
-                      'Semestre ${_createdTutorias[index]['semestre'] ?? '—'}',
+                      '${_createdTutorias[index]['tecnologia'] ?? 'Carrera'} Â· '
+                      'Semestre ${_createdTutorias[index]['semestre'] ?? 'â€”'}',
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                        'Docente líder: ${_createdTutorias[index]['docenteLiderId'] ?? '—'}'),
+                        'Docente lÃ­der: ${_createdTutorias[index]['docenteLiderId'] ?? 'â€”'}'),
                     Text(
-                      '${(_createdTutorias[index]['proyectos'] as List?)?.length ?? 0} proyectos · '
-                      'ID ${_createdTutorias[index]['id'] ?? '—'}',
+                      '${(_createdTutorias[index]['proyectos'] as List?)?.length ?? 0} proyectos Â· '
+                      'ID ${_createdTutorias[index]['id'] ?? 'â€”'}',
                     ),
                   ],
                 ),
               ),
+              IconButton(tooltip: 'Editar', onPressed: () => _editTutoria(_createdTutorias[index]), icon: const Icon(Icons.edit_outlined)),
               IconButton(
-                tooltip: 'Eliminar tutoría colectiva',
+                tooltip: 'Eliminar tutorÃ­a colectiva',
                 onPressed: () => _deleteTutoria(_createdTutorias[index]),
                 icon: const Icon(Icons.delete_outline, color: Colors.red),
               ),
@@ -420,7 +483,7 @@ class _CoordinacionTutoriasPageState
 
   Widget _teacherDropdown({required String label, required String? value, required Set<String> excluded, required ValueChanged<String?> onChanged}) {
     final options = _teachers.where((teacher) => (teacher['tecnologia'] as String? ?? '').toLowerCase() == _career.toLowerCase() && teacher['id'] is String && (!excluded.contains(teacher['id']) || teacher['id'] == value)).toList();
-    return DropdownButtonFormField<String>(value: value, decoration: InputDecoration(labelText: label, border: const OutlineInputBorder()), items: options.map((teacher) => DropdownMenuItem<String>(value: teacher['id'] as String, child: Text(teacher['nombre'] as String? ?? 'Docente'))).toList(), onChanged: _teachers.isEmpty ? null : onChanged, validator: (selected) => selected == null ? 'Selecciona un docente.' : null, hint: Text(options.isEmpty ? 'No hay docentes para esta tecnolog�a' : 'Selecciona'));
+    return DropdownButtonFormField<String>(value: value, decoration: InputDecoration(labelText: label, border: const OutlineInputBorder()), items: options.map((teacher) => DropdownMenuItem<String>(value: teacher['id'] as String, child: Text(teacher['nombre'] as String? ?? 'Docente'))).toList(), onChanged: _teachers.isEmpty ? null : onChanged, validator: (selected) => selected == null ? 'Selecciona un docente.' : null, hint: Text(options.isEmpty ? 'No hay docentes para esta tecnología' : 'Selecciona'));
   }
 }
 

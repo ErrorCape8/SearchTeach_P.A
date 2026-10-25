@@ -263,12 +263,14 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
     try {
       final dio = ref.read(dioProvider);
       if (space.createOrJoin) {
-        final name = await _askProjectName(space);
-        if (name == null || name.trim().isEmpty) return;
+        final draft = await _askProjectName(space);
+        if (draft == null) return;
+        final name = draft.name;
         final created = await createOrJoinClassroomProject(
           dio: dio,
           tutoringId: space.tutoringId,
-          name: name.trim(),
+          name: draft.name,
+          semester: draft.semester,
         );
         ref.invalidate(studentDashboardProvider);
         final code = created['codigoInscripcion'];
@@ -304,20 +306,29 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
     }
   }
 
-  Future<String?> _askProjectName(ClassroomProjectSpace space) async {
+  Future<({int semester, String name})?> _askProjectName(ClassroomProjectSpace space) async {
     final controller = TextEditingController();
+    var semester = space.semester;
     try {
-      return await showDialog<String>(
+      return await showDialog<({int semester, String name})>(
         context: context,
-        builder: (dialogContext) => AlertDialog(
+        builder: (dialogContext) => StatefulBuilder(builder: (context, setDialogState) => AlertDialog(
           title: const Text('Registrar proyecto de aula'),
           content: Column(mainAxisSize: MainAxisSize.min, children: [
-            Text('Semestre ${space.semester} · ${space.career}'),
+            Text(space.career),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<int>(
+              value: semester,
+              decoration: const InputDecoration(labelText: 'Semestre', border: OutlineInputBorder()),
+              items: [for (var value = 1; value <= 6; value++) DropdownMenuItem(value: value, child: Text('$value'))],
+              onChanged: (value) { if (value != null) setDialogState(() => semester = value); },
+            ),
             const SizedBox(height: 12),
             TextField(
               controller: controller,
               maxLength: 120,
               autofocus: true,
+              onChanged: (_) => setDialogState(() {}),
               decoration: const InputDecoration(
                 labelText: 'Nombre del proyecto de aula',
                 border: OutlineInputBorder(),
@@ -330,11 +341,11 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
               child: const Text('Cancelar'),
             ),
             FilledButton(
-              onPressed: () => Navigator.pop(dialogContext, controller.text),
+              onPressed: controller.text.trim().isEmpty ? null : () => Navigator.pop(dialogContext, (semester: semester, name: controller.text.trim())),
               child: const Text('Continuar'),
             ),
           ],
-        ),
+        )),
       );
     } finally {
       controller.dispose();

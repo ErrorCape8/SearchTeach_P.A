@@ -98,12 +98,6 @@ class _StudentTutoringViewState extends State<StudentTutoringView> {
             onTap: () => setState(() => _section = 'proyectos'),
           ),
           _MenuTile(
-            icon: Icons.pending_actions_outlined,
-            title: 'Mis solicitudes',
-            subtitle: 'Consulta solicitudes pendientes o propuestas.',
-            onTap: () => setState(() => _section = 'solicitudes'),
-          ),
-          _MenuTile(
             icon: Icons.event_available_outlined,
             title: 'Tutorías grupales disponibles',
             subtitle: 'Inscríbete en una sesión publicada por coordinación.',
@@ -134,10 +128,6 @@ class _StudentTutoringViewState extends State<StudentTutoringView> {
           'Tutorías de proyectos de aula',
           'Inscríbete en el espacio de tu tecnología y semestre.'
         ),
-      'solicitudes' => (
-          'Mis solicitudes',
-          'Haz seguimiento a tus solicitudes de tutoría.'
-        ),
       'sesiones' => ('Mis sesiones', 'Tutorías confirmadas y en curso.'),
       'grupales-disponibles' => (
           'Tutorías grupales disponibles',
@@ -155,13 +145,6 @@ class _StudentTutoringViewState extends State<StudentTutoringView> {
         return _availableTutors();
       case 'proyectos':
         return _projectSpaces();
-      case 'solicitudes':
-        return _tutoringList(
-          widget.data.tutorings.where((t) =>
-              t.status == 'SOLICITADA' || t.status == 'ALTERNATIVA_PROPUESTA'),
-          emptyTitle: 'No tienes solicitudes pendientes',
-          emptyMessage: 'Al inscribirte, tus solicitudes aparecerán aquí.',
-        );
       case 'sesiones':
         return _sessionsList();
       case 'grupales-disponibles':
@@ -279,13 +262,23 @@ class _StudentTutoringViewState extends State<StudentTutoringView> {
         .toList()
       ..sort((a, b) => a.semester.compareTo(b.semester));
     if (spaces.isEmpty) {
-      return const Center(
-        child: _EmptyCard(
-          icon: Icons.groups_outlined,
-          title: 'No hay proyectos de aula disponibles',
-          message:
-              'Cuando coordinación cree un espacio para tu tecnología aparecerá aquí.',
-        ),
+      return ListView(
+        padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
+        children: [
+          Card(child: ListTile(
+            leading: const Icon(Icons.key_outlined),
+            title: const Text('Ingresar código de inscripción'),
+            subtitle: const Text('Únete al proyecto de un compañero.'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: widget.onJoinProjectCode,
+          )),
+          const SizedBox(height: 10),
+          const _EmptyCard(
+            icon: Icons.groups_outlined,
+            title: 'No hay proyectos de aula disponibles',
+            message: 'Cuando coordinación cree un espacio para tu tecnología aparecerá aquí.',
+          ),
+        ],
       );
     }
     return ListView.separated(

@@ -83,6 +83,42 @@ public class TutoriasColectivasService {
 		return guardada;
 	}
 
+	public TutoriaColectiva actualizar(String tutoriaId, TutoriaColectivaSolicitud solicitud) {
+		TutoriaColectiva actual = buscarTutoria(tutoriaId);
+		if (!CatalogoTecnologias.contiene(solicitud.tecnologia())) {
+			throw new IllegalArgumentException("Selecciona una tecnología del catálogo institucional.");
+		}
+		validarDocentesAsignados(solicitud);
+		List<String> docentesAsignados = new ArrayList<>(solicitud.docentesApoyoIds());
+		docentesAsignados.add(solicitud.docenteLiderId());
+		boolean cambiaTecnologiaOSemestre = !actual.tecnologia().equalsIgnoreCase(solicitud.tecnologia().trim())
+				|| actual.semestre() != solicitud.semestre();
+		if (!actual.proyectos().isEmpty() && cambiaTecnologiaOSemestre) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT,
+					"No puedes cambiar tecnología o semestre mientras haya proyectos inscritos.");
+		}
+		if (actual.proyectos().stream()
+				.anyMatch(proyecto -> !docentesAsignados.contains(proyecto.docenteResponsableId()))) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT,
+					"Conserva asignados a los docentes que ya tienen proyectos a cargo.");
+		}
+		return tutoriaColectivaRepositorio.save(new TutoriaColectiva(
+				actual.id(), actual.coordinadoraId(), solicitud.docenteLiderId(), solicitud.docentesApoyoIds(),
+				solicitud.tecnologia().trim(), solicitud.semestre(), actual.proyectos(), actual.creadaEn()));
+	}
+
+	private void validarDocentesAsignados(TutoriaColectivaSolicitud solicitud) {
+		List<String> docentes = new ArrayList<>(solicitud.docentesApoyoIds());
+		docentes.add(solicitud.docenteLiderId());
+		if (docentes.stream().anyMatch(docenteId -> userRepository.findById(docenteId)
+				.filter(this::esDocenteActivoDeTecnologia)
+				.filter(user -> user.getCarrera() != null
+						&& user.getCarrera().equalsIgnoreCase(solicitud.tecnologia().trim()))
+				.isEmpty())) {
+			throw new IllegalArgumentException("Selecciona docentes activos asignados a la tecnología elegida.");
+		}
+	}
+
 	public void eliminar(String tutoriaId) {
 		buscarTutoria(tutoriaId);
 		informeRepositorio.deleteAll(informeRepositorio.findByTutoriaColectivaId(tutoriaId));
@@ -160,6 +196,10 @@ public class TutoriasColectivasService {
 				|| tutoria.semestre() < 1 || tutoria.semestre() > 6) {
 			throw new ResponseStatusException(HttpStatus.CONFLICT,
 					"La tutoría no tiene una carrera y semestre válidos para crear proyectos.");
+		}
+		if (solicitud.semestre() != tutoria.semestre()) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT,
+					"El semestre ingresado no corresponde al espacio de proyecto seleccionado.");
 		}
 		String nombre = solicitud.nombre().trim();
 		validarInscripcionUnica(tutoria, estudianteId, null);
