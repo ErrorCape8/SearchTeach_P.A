@@ -155,7 +155,7 @@ class _CoordinacionProgramarTutoriasPageState
         DateTime(date.year, date.month, date.day, endTime.hour, endTime.minute);
     if (!end.isAfter(start) || !start.isAfter(DateTime.now())) {
       setState(() => _error =
-          'La hora final debe ser posterior a la inicial y la fecha debe ser futura.');
+          'Puedes programar para hoy; la hora de inicio debe ser futura y la hora final posterior.');
       return;
     }
     if (_slots.length >= 3) {
@@ -360,14 +360,12 @@ class _CoordinacionProgramarTutoriasPageState
                             children: [
                               OutlinedButton.icon(
                                 onPressed: () async {
+                                  final today = DateUtils.dateOnly(DateTime.now());
                                   final value = await showDatePicker(
                                     context: context,
-                                    firstDate: DateTime.now(),
-                                    lastDate: DateTime.now()
-                                        .add(const Duration(days: 180)),
-                                    initialDate: _date ??
-                                        DateTime.now()
-                                            .add(const Duration(days: 1)),
+                                    firstDate: today,
+                                    lastDate: today.add(const Duration(days: 180)),
+                                    initialDate: _date ?? today.add(const Duration(days: 1)),
                                   );
                                   if (value != null)
                                     setState(() {

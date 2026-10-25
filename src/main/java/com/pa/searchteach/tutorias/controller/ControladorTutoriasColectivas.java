@@ -6,6 +6,9 @@ import com.pa.searchteach.tutorias.dto.InformeAvanceSolicitud;
 import com.pa.searchteach.tutorias.dto.ProyectoAsignadoDocente;
 import com.pa.searchteach.tutorias.dto.ProyectoAulaDisponible;
 import com.pa.searchteach.tutorias.dto.ProyectoAulaNombreSolicitud;
+import com.pa.searchteach.tutorias.dto.ProyectoAulaCreado;
+import com.pa.searchteach.tutorias.dto.ProyectoAulaCodigoSolicitud;
+import com.pa.searchteach.tutorias.dto.ProyectoAulaInscripcionPreview;
 import com.pa.searchteach.tutorias.dto.TutoriaColectivaEstudiante;
 import com.pa.searchteach.tutorias.dto.TutoriaColectivaConAvance;
 import com.pa.searchteach.tutorias.dto.TutoriaColectivaSolicitud;
@@ -81,20 +84,26 @@ public class ControladorTutoriasColectivas {
 
 	@PostMapping("/api/estudiante/tutorias-colectivas/{tutoriaId}/proyectos")
 	@ResponseStatus(HttpStatus.CREATED)
-	public ProyectoAulaDisponible crearOUnirseAProyectoDeTutoria(
+	public ProyectoAulaCreado crearOUnirseAProyectoDeTutoria(
 			@PathVariable String tutoriaId,
 			@Valid @RequestBody ProyectoAulaNombreSolicitud solicitud,
 			@AuthenticationPrincipal String estudianteId) {
 		return servicio.crearOUnirseAProyecto(tutoriaId, solicitud, estudianteId);
 	}
 
-	@PostMapping("/api/estudiante/tutorias-colectivas/{tutoriaId}/proyectos/{proyectoId}/inscripcion")
+	@GetMapping("/api/estudiante/tutorias-colectivas/proyectos/codigo/{codigo}")
+	public ProyectoAulaInscripcionPreview previsualizarInscripcionPorCodigo(
+			@PathVariable String codigo,
+			@AuthenticationPrincipal String estudianteId) {
+		return servicio.previsualizarInscripcion(codigo, estudianteId);
+	}
+
+	@PostMapping("/api/estudiante/tutorias-colectivas/proyectos/inscripcion-codigo")
 	@ResponseStatus(HttpStatus.OK)
 	public ProyectoAulaDisponible inscribirEstudianteEnProyecto(
-			@PathVariable String tutoriaId,
-			@PathVariable String proyectoId,
+			@Valid @RequestBody ProyectoAulaCodigoSolicitud solicitud,
 			@AuthenticationPrincipal String estudianteId) {
-		return servicio.inscribirEstudiante(tutoriaId, proyectoId, estudianteId);
+		return servicio.inscribirPorCodigo(solicitud, estudianteId);
 	}
 
 	@DeleteMapping("/api/estudiante/tutorias-colectivas/{tutoriaId}/proyectos/{proyectoId}/inscripcion")

@@ -241,6 +241,7 @@ class _CoordinacionHorariosPageState
       _sessionsByTeacher.containsKey(teacherId);
 
   List<Teacher> get _visibleTeachers {
+    if (_section == 2) return const [];
     final query = normalizeSearch(_searchController.text.trim());
     final schedules = _scheduleByTeacher;
     final sessionsByTeacher = _sessionsByTeacher;
@@ -268,6 +269,63 @@ class _CoordinacionHorariosPageState
       return matchesText && matchesCareer && matchesSemester;
     }).toList(growable: false);
   }
+
+  List<PublishedTutoringSession> get _visiblePublishedSessions {
+    final query = normalizeSearch(_searchController.text.trim());
+    final teacherNames = {for (final teacher in _teachers) teacher.id: teacher.nombre};
+    return _publishedSessions.where((session) {
+      final teacherName = teacherNames[session.teacherId] ?? session.teacherId;
+      final matchesText = query.isEmpty ||
+          normalizeSearch(session.subject).contains(query) ||
+          normalizeSearch(teacherName).contains(query) ||
+          normalizeSearch(session.teacherId).contains(query);
+      final matchesCareer = _career == 'Todas' || session.technology == _career;
+      final matchesSemester = _semester == null || session.semester == _semester;
+      return matchesText && matchesCareer && matchesSemester;
+    }).toList(growable: false);
+  }
+
+  Widget _publishedSessionsView() {
+    final sessions = _visiblePublishedSessions;
+    if (sessions.isEmpty) {
+      return const Center(child: Text('No hay tutorías publicadas que coincidan con los filtros.'));
+    }
+    final teacherNames = {for (final teacher in _teachers) teacher.id: teacher.nombre};
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+      itemCount: sessions.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      itemBuilder: (context, index) {
+        final session = sessions[index];
+        final start = session.start?.toLocal();
+        final fecha = start == null ? 'Fecha pendiente' : _formatSessionDate(start);
+        final teacher = teacherNames[session.teacherId] ?? session.teacherId;
+        return Card(
+          color: Colors.white,
+          child: ListTile(
+            leading: const CircleAvatar(child: Icon(Icons.menu_book_outlined)),
+            title: Text(session.subject, style: const TextStyle(fontWeight: FontWeight.w700)),
+            subtitle: Text('$teacher · ${session.technology}, semestre ${session.semester}\n$fecha · ${_modalityLabel(session.modality)}${session.location.isEmpty ? '' : ' · ${session.location}'}'),
+            isThreeLine: true,
+            trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+              IconButton(tooltip: 'Editar tutoría', onPressed: () => _editSession(session), icon: const Icon(Icons.edit_outlined)),
+              IconButton(tooltip: 'Eliminar tutoría', onPressed: () => _deleteSession(session), icon: const Icon(Icons.delete_outline, color: Colors.red)),
+            ]),
+          ),
+        );
+      },
+    );
+  }
+
+  String _formatSessionDate(DateTime value) =>
+      '${value.day.toString().padLeft(2, '0')}/${value.month.toString().padLeft(2, '0')}/${value.year} · ${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
+
+  String _modalityLabel(String value) => switch (value.toUpperCase()) {
+        'VIRTUAL' => 'Virtual',
+        'HIBRIDA' => 'Híbrida',
+        'PRESENCIAL' => 'Presencial',
+        _ => value,
+      };
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -343,6 +401,7 @@ class _CoordinacionHorariosPageState
                               withoutScheduleCount: _teachers
                                   .where((teacher) => !_hasAvailability(teacher.id))
                                   .length,
+                              publishedSessionCount: _publishedSessions.length,
                               onChanged: (value) =>
                                   setState(() => _section = value),
                             ),
@@ -360,7 +419,9 @@ class _CoordinacionHorariosPageState
                               refreshing: _loading,
                             ),
                             Expanded(
-                              child: _visibleTeachers.isEmpty
+                              child: _section == 2
+                                  ? _publishedSessionsView()
+                                  : _visibleTeachers.isEmpty
                                   ? const ScheduleEmptyResults()
                                   : TeacherScheduleGrid(
                                       teachers: _visibleTeachers,

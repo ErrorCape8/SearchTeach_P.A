@@ -7,6 +7,7 @@ class StudentTutoringView extends StatefulWidget {
     required this.focusRequest,
     required this.onEnroll,
     required this.onProjectEnrollment,
+    required this.onJoinProjectCode,
     required this.onLeaveGroupSession,
     required this.onJoinPublishedSession,
     required this.onAction,
@@ -19,6 +20,7 @@ class StudentTutoringView extends StatefulWidget {
   final int focusRequest;
   final Future<void> Function(AvailableTutor tutor) onEnroll;
   final Future<void> Function(ClassroomProjectSpace space) onProjectEnrollment;
+  final Future<void> Function() onJoinProjectCode;
   final Future<void> Function(StudentGroupSession session) onLeaveGroupSession;
   final Future<void> Function(StudentGroupSession session) onJoinPublishedSession;
   final Future<void> Function(StudentTutoring tutoring, String action) onAction;
@@ -288,10 +290,21 @@ class _StudentTutoringViewState extends State<StudentTutoringView> {
     }
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
-      itemCount: spaces.length,
+      itemCount: spaces.length + 1,
       separatorBuilder: (_, __) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
-        final space = spaces[index];
+        if (index == 0) {
+          return Card(
+            child: ListTile(
+              leading: const Icon(Icons.key_outlined),
+              title: const Text('Ingresar código de inscripción'),
+              subtitle: const Text('Únete al proyecto de un compañero.'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: widget.onJoinProjectCode,
+            ),
+          );
+        }
+        final space = spaces[index - 1];
         final full = space.enrolledCount >= 4;
         return Card(
           child: Padding(
@@ -313,16 +326,20 @@ class _StudentTutoringViewState extends State<StudentTutoringView> {
                 Align(
                   alignment: Alignment.centerRight,
                   child: FilledButton.tonal(
-                    onPressed: !space.createOrJoin && !space.enrolled && full
-                        ? null
-                        : () => widget.onProjectEnrollment(space),
+                    onPressed: space.createOrJoin
+                        ? () => widget.onProjectEnrollment(space)
+                        : space.enrolled
+                            ? () => widget.onProjectEnrollment(space)
+                            : full
+                                ? null
+                                : widget.onJoinProjectCode,
                     child: Text(space.createOrJoin
                         ? 'Crear o unirse'
                         : space.enrolled
                             ? 'Desistir de esta tutoría'
                             : full
                                 ? 'Cupo completo'
-                                : 'Inscribirme'),
+                                : 'Unirme con código'),
                   ),
                 ),
               ],

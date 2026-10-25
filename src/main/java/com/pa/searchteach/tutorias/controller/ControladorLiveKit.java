@@ -16,6 +16,8 @@ import com.pa.searchteach.tutorias.model.MensajeChatTutoria;
 import com.pa.searchteach.tutorias.model.AsistenciaEstudiante;
 import com.pa.searchteach.tutorias.service.SesionesGrupalesTutoriaService;
 import com.pa.searchteach.tutorias.repository.SesionTutoriaRepositorio;
+import com.pa.searchteach.users.model.User;
+import com.pa.searchteach.users.repository.UserRepository;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
@@ -36,6 +38,7 @@ public class ControladorLiveKit {
 
 	private final SesionTutoriaRepositorio sesiones;
 	private final SesionesGrupalesTutoriaService servicioSesiones;
+	private final UserRepository usuarios;
 	private final String serverUrl;
 	private final String apiKey;
 	private final String apiSecret;
@@ -43,11 +46,13 @@ public class ControladorLiveKit {
 	public ControladorLiveKit(
 			SesionTutoriaRepositorio sesiones,
 			SesionesGrupalesTutoriaService servicioSesiones,
+			UserRepository usuarios,
 			@Value("${livekit.url:}") String serverUrl,
 			@Value("${livekit.api-key:}") String apiKey,
 			@Value("${livekit.api-secret:}") String apiSecret) {
 		this.sesiones = sesiones;
 		this.servicioSesiones = servicioSesiones;
+		this.usuarios = usuarios;
 		this.serverUrl = serverUrl;
 		this.apiKey = apiKey;
 		this.apiSecret = apiSecret;
@@ -81,12 +86,25 @@ public class ControladorLiveKit {
 	public record MensajeSolicitud(String texto) {}
 	public record AsistenciaSolicitud(String estudianteId, boolean asistio) {}
 	public record CierreSolicitud(String motivo) {}
+	public record EstudianteSala(String id, String nombre) {}
 
 	@GetMapping("/{id}")
 	public SesionTutoria consultarSesion(@PathVariable String id, @AuthenticationPrincipal String usuarioId) {
 		SesionTutoria sesion = sesiones.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No se encontró la tutoría."));
 		if (!sesion.docenteId().equals(usuarioId) && !sesion.estudianteIds().contains(usuarioId)) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No perteneces a esta tutoría.");
 		return sesion;
+	}
+
+	@GetMapping("/{id}/estudiantes")
+	public List<EstudianteSala> estudiantes(@PathVariable String id, @AuthenticationPrincipal String usuarioId) {
+		SesionTutoria sesion = sesiones.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No se encontró la tutoría."));
+		if (!sesion.docenteId().equals(usuarioId) && !sesion.estudianteIds().contains(usuarioId)) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No perteneces a esta tutoría.");
+		return sesion.estudianteIds().stream().map(estudianteId -> {
+			User estudiante = usuarios.findById(estudianteId).orElse(null);
+			String nombre = estudiante == null || estudiante.getNombre() == null || estudiante.getNombre().isBlank()
+					? estudianteId : estudiante.getNombre();
+			return new EstudianteSala(estudianteId, nombre);
+		}).toList();
 	}
 
 	@PostMapping("/{id}/livekit-token")
@@ -97,8 +115,7 @@ public class ControladorLiveKit {
 		}
 		SesionTutoria sesion = sesiones.findById(id)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No se encontró la sesión."));
-		if (sesion.modalidad() != null && !java.util.Set.of(
-				ModalidadTutoria.VIRTUAL, ModalidadTutoria.HIBRIDA, ModalidadTutoria.PRESENCIAL).contains(sesion.modalidad())) {
+		if (!java.util.Set.of(ModalidadTutoria.VIRTUAL, ModalidadTutoria.HIBRIDA).contains(sesion.modalidad())) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
 					"LiveKit solo está habilitado para sesiones virtuales o híbridas.");
 		}

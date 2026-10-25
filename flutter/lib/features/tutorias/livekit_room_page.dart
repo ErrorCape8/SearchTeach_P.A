@@ -9,10 +9,11 @@ import 'package:livekit_client/livekit_client.dart';
 import '../../core/api_client.dart';
 
 class LiveKitRoomPage extends ConsumerStatefulWidget {
-  const LiveKitRoomPage({required this.sessionId, required this.subject, this.teacherMode = false, this.students = const [], this.ended = false, this.endAt, super.key});
+  const LiveKitRoomPage({required this.sessionId, required this.subject, this.modality = 'VIRTUAL', this.teacherMode = false, this.students = const [], this.ended = false, this.endAt, super.key});
 
   final String sessionId;
   final String subject;
+  final String modality;
   final bool teacherMode;
   final List<String> students;
   final bool ended;
@@ -27,6 +28,7 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
   final TextEditingController _message = TextEditingController();
   final List<_RoomMessage> _messages = [];
   final Map<String, bool?> _attendance = {};
+  final Map<String, String> _studentNames = {};
   dynamic _listener;
   bool _connecting = true;
   bool _connected = false;
@@ -34,6 +36,7 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
   bool _cameraEnabled = true;
   bool _ended = false;
   Timer? _endTimer;
+  Timer? _chatTimer;
   String? _error;
 
   @override
@@ -41,7 +44,9 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
     super.initState();
     _ended = widget.ended;
     _loadChatHistory();
+    _chatTimer = Timer.periodic(const Duration(seconds: 5), (_) => _loadChatHistory());
     _loadAttendance();
+    _loadStudentNames();
     final endAt = widget.endAt;
     if (endAt != null && !widget.ended) {
       final delay = endAt.difference(DateTime.now());
@@ -54,7 +59,25 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
         }
       });
     }
-    _connect();
+    if (widget.modality.toUpperCase() == 'PRESENCIAL') {
+      _connecting = false;
+    } else {
+      _connect();
+    }
+  }
+
+  Future<void> _loadStudentNames() async {
+    try {
+      final response = await ref.read(dioProvider).get<List<dynamic>>('/api/tutorias/grupales/${widget.sessionId}/estudiantes');
+      if (!mounted) return;
+      setState(() {
+        for (final item in (response.data ?? const []).whereType<Map<String, dynamic>>()) {
+          final id = item['id'];
+          final name = item['nombre'];
+          if (id is String && name is String) _studentNames[id] = name;
+        }
+      });
+    } on DioException { }
   }
 
   Future<void> _loadAttendance() async {
@@ -142,12 +165,17 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
 
   Future<void> _sendMessage() async {
     final text = _message.text.trim();
-    if (text.isEmpty || _room.localParticipant == null) return;
-    final payload = utf8.encode(jsonEncode({'text': text, 'sentAt': DateTime.now().toUtc().toIso8601String()}));
-    await _room.localParticipant!.publishData(payload, reliable: true, topic: 'searchteach.chat');
+    if (text.isEmpty || _ended) return;
     try {
       await ref.read(dioProvider).post('/api/tutorias/grupales/${widget.sessionId}/chat', data: {'texto': text});
-    } on DioException { }
+      if (_room.localParticipant != null) {
+        final payload = utf8.encode(jsonEncode({'text': text, 'sentAt': DateTime.now().toUtc().toIso8601String()}));
+        await _room.localParticipant!.publishData(payload, reliable: true, topic: 'searchteach.chat');
+      }
+    } on DioException catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message ?? 'No se pudo guardar el mensaje.')));
+      return;
+    }
     if (mounted) {
       setState(() => _messages.add(_RoomMessage(sender: 'Tú', text: text)));
       _message.clear();
@@ -196,6 +224,7 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
   @override
   void dispose() {
     _endTimer?.cancel();
+    _chatTimer?.cancel();
     _message.dispose();
     unawaited(_closeRoom());
     super.dispose();
@@ -217,7 +246,7 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
           Expanded(child: ListView(children: [
             for (final student in widget.students) ListTile(
               leading: Icon(_attendance[student] == true ? Icons.check_circle : _attendance[student] == false ? Icons.cancel_outlined : Icons.help_outline),
-              title: Text(student),
+              title: Text(_studentNames[student] ?? student),
               subtitle: Text(_attendance[student] == true ? 'Presente' : _attendance[student] == false ? 'Ausente' : 'Sin marcar'),
             ),
             const Divider(),
@@ -243,14 +272,18 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
                     child: GridView.count(
                       padding: const EdgeInsets.all(12),
                       crossAxisCount: MediaQuery.sizeOf(context).width > 700 ? 3 : 2,
-                      children: [
-                        ..._videoTiles(),
-                        if (_videoTiles().isEmpty)
-                          const Center(child: Text('Cámara apagada')),
-                      ],
+                      children: widget.modality.toUpperCase() == 'PRESENCIAL'
+                          ? const [Center(child: Text('Tutoría presencial'))]
+                          : [
+                              ..._videoTiles(),
+                              if (_videoTiles().isEmpty) const Center(child: Text('Cámara apagada')),
+                            ],
                     ),
                   ),
-                  Wrap(spacing: 12, children: [
+                  Expanded(child: ListView(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    children: [
+                  if (widget.modality.toUpperCase() != 'PRESENCIAL') Wrap(spacing: 12, children: [
                     IconButton.filledTonal(
                       tooltip: _microphoneEnabled ? 'Silenciar' : 'Activar micrófono',
                       onPressed: _toggleMicrophone,
@@ -272,7 +305,7 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
                     for (final student in widget.students)
                       ListTile(
                         dense: true,
-                        title: Text(student),
+                        title: Text(_studentNames[student] ?? student),
                         subtitle: Text(_attendance[student] == true ? 'Presente' : _attendance[student] == false ? 'Ausente' : 'Sin marcar'),
                         trailing: Row(mainAxisSize: MainAxisSize.min, children: [
                           IconButton(tooltip: 'Marcar presente', onPressed: () => _setAttendance(student, true), icon: const Icon(Icons.check_circle_outline, color: Colors.green)),
@@ -287,8 +320,9 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
                     ]),
                   ],
                   const Divider(),
-                  Expanded(
-                    flex: 2,
+                  const Padding(padding: EdgeInsets.all(8), child: Text('Chat de la tutoría', style: TextStyle(fontWeight: FontWeight.bold))),
+                  SizedBox(
+                    height: 200,
                     child: ListView.builder(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       itemCount: _messages.length,
@@ -299,6 +333,8 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
                       ),
                     ),
                   ),
+                    ],
+                  )),
                   SafeArea(
                     top: false,
                     child: Padding(

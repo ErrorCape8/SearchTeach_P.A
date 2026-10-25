@@ -11,6 +11,9 @@ import com.pa.searchteach.common.exception.NotFoundException;
 import com.pa.searchteach.tutorias.dto.InformeAvanceSolicitud;
 import com.pa.searchteach.tutorias.dto.ProyectoAulaConAvance;
 import com.pa.searchteach.tutorias.dto.ProyectoAulaDisponible;
+import com.pa.searchteach.tutorias.dto.ProyectoAulaCreado;
+import com.pa.searchteach.tutorias.dto.ProyectoAulaCodigoSolicitud;
+import com.pa.searchteach.tutorias.dto.ProyectoAulaInscripcionPreview;
 import com.pa.searchteach.tutorias.dto.ProyectoAulaNombreSolicitud;
 import com.pa.searchteach.tutorias.dto.ProyectoAsignadoDocente;
 import com.pa.searchteach.tutorias.dto.TutoriaColectivaConAvance;
@@ -54,7 +57,11 @@ public class TutoriasColectivasService {
 		}
 		List<String> docentes = new ArrayList<>(solicitud.docentesApoyoIds());
 		docentes.add(solicitud.docenteLiderId());
-		if (docentes.stream().anyMatch(docenteId -> !userRepository.existsById(docenteId))) {
+		if (docentes.stream().anyMatch(docenteId -> userRepository.findById(docenteId)
+				.filter(this::esDocenteActivoDeTecnologia)
+				.filter(user -> user.getCarrera() != null
+						&& user.getCarrera().equalsIgnoreCase(solicitud.tecnologia().trim()))
+				.isEmpty())) {
 			throw new IllegalArgumentException(
 					"El docente líder y los docentes de apoyo deben tener una cuenta registrada.");
 		}
@@ -142,7 +149,7 @@ public class TutoriasColectivasService {
 				.toList();
 	}
 
-	public ProyectoAulaDisponible crearOUnirseAProyecto(
+	public ProyectoAulaCreado crearOUnirseAProyecto(
 			String tutoriaId,
 			ProyectoAulaNombreSolicitud solicitud,
 			String estudianteId) {
@@ -155,31 +162,53 @@ public class TutoriasColectivasService {
 					"La tutoría no tiene una carrera y semestre válidos para crear proyectos.");
 		}
 		String nombre = solicitud.nombre().trim();
-		ProyectoAula existente = tutoria.proyectos().stream()
-				.filter(proyecto -> proyecto.nombre().trim().equalsIgnoreCase(nombre))
-				.findFirst()
-				.orElse(null);
-		if (existente != null) {
-			validarInscripcionUnica(tutoria, estudianteId, existente.proyectoId());
-			return inscribirEnProyecto(tutoria, existente, estudianteId);
-		}
 		validarInscripcionUnica(tutoria, estudianteId, null);
 		List<String> docentesApoyo = tutoria.docentesApoyoIds();
 		String responsable = docentesApoyo.get(ThreadLocalRandom.current().nextInt(docentesApoyo.size()));
+		String codigo = generarCodigoInscripcion();
 		ProyectoAula proyecto = new ProyectoAula(
 				UUID.randomUUID().toString(),
 				nombre,
 				responsable,
 				List.of(estudianteId),
 				tutoria.tecnologia(),
-				tutoria.semestre());
+				tutoria.semestre(), codigo, estudianteId);
 		TutoriaColectiva actualizado = tutoria.actualizarProyecto(proyecto);
 		tutoriaColectivaRepositorio.save(actualizado);
 		notificationService.notifyUser(responsable, "Nuevo estudiante en tu proyecto",
 				"Un estudiante se unio al proyecto " + proyecto.nombre() + ".", "/notificaciones");
 		notificationService.notifyUser(estudianteId, "Proyecto creado",
 				"Creaste el proyecto " + proyecto.nombre() + " y quedaste inscrito.", "/notificaciones");
-		return disponible(tutoriaId, proyecto, estudianteId);
+		return new ProyectoAulaCreado(disponible(tutoriaId, proyecto, estudianteId), codigo);
+	}
+
+	public ProyectoAulaInscripcionPreview previsualizarInscripcion(String codigo, String estudianteId) {
+		User estudiante = buscarEstudiante(estudianteId);
+		ProyectoUbicado ubicado = buscarPorCodigo(codigo);
+		validarTecnologia(estudiante, ubicado.proyecto().tecnologia());
+		validarInscripcionUnica(ubicado.tutoria(), estudianteId, ubicado.proyecto().proyectoId());
+		if (ubicado.proyecto().estudianteIds().size() >= 4
+				&& !ubicado.proyecto().estudianteIds().contains(estudianteId)) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT, "Este proyecto ya tiene cuatro estudiantes inscritos.");
+		}
+		String creadorId = ubicado.proyecto().creadorId();
+		if (creadorId == null && !ubicado.proyecto().estudianteIds().isEmpty()) {
+			creadorId = ubicado.proyecto().estudianteIds().get(0);
+		}
+		String creador = creadorId == null
+				? "Estudiante"
+				: userRepository.findById(creadorId).map(User::getNombre).orElse("Estudiante");
+		return new ProyectoAulaInscripcionPreview(ubicado.tutoria().id(), ubicado.proyecto().proyectoId(),
+				ubicado.proyecto().nombre(), creador, ubicado.proyecto().tecnologia(), ubicado.proyecto().semestre(),
+				ubicado.proyecto().estudianteIds().size());
+	}
+
+	public ProyectoAulaDisponible inscribirPorCodigo(ProyectoAulaCodigoSolicitud solicitud, String estudianteId) {
+		User estudiante = buscarEstudiante(estudianteId);
+		ProyectoUbicado ubicado = buscarPorCodigo(solicitud.codigo());
+		validarTecnologia(estudiante, ubicado.proyecto().tecnologia());
+		validarInscripcionUnica(ubicado.tutoria(), estudianteId, ubicado.proyecto().proyectoId());
+		return inscribirEnProyecto(ubicado.tutoria(), ubicado.proyecto(), estudianteId);
 	}
 
 	public ProyectoAulaDisponible inscribirEstudiante(String tutoriaId, String proyectoId, String estudianteId) {
@@ -236,6 +265,39 @@ public class TutoriasColectivasService {
 		return userRepository.findById(id)
 				.orElseThrow(() -> new NotFoundException("No se encontró el usuario estudiante."));
 	}
+
+	private boolean esDocenteActivoDeTecnologia(User user) {
+		return user.getRol() != null && user.getRol().toLowerCase(java.util.Locale.ROOT).contains("docente")
+				&& (user.getEstado() == null || user.getEstado().isBlank()
+						|| "Activo".equalsIgnoreCase(user.getEstado()));
+	}
+
+	private String generarCodigoInscripcion() {
+		String codigo;
+		boolean existe;
+		do {
+			codigo = String.format("%06d", ThreadLocalRandom.current().nextInt(1_000_000));
+			String candidato = codigo;
+			existe = tutoriaColectivaRepositorio.findAll().stream()
+					.flatMap(tutoria -> tutoria.proyectos().stream())
+					.anyMatch(proyecto -> candidato.equals(proyecto.codigoInscripcion()));
+		} while (existe);
+		return codigo;
+	}
+
+	private ProyectoUbicado buscarPorCodigo(String codigo) {
+		if (codigo == null || !codigo.matches("\\d{6}")) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El código debe tener seis dígitos.");
+		}
+		return tutoriaColectivaRepositorio.findAll().stream()
+				.flatMap(tutoria -> tutoria.proyectos().stream()
+						.filter(proyecto -> codigo.equals(proyecto.codigoInscripcion()))
+						.map(proyecto -> new ProyectoUbicado(tutoria, proyecto)))
+				.findFirst()
+				.orElseThrow(() -> new NotFoundException("No se encontró un proyecto con ese código."));
+	}
+
+	private record ProyectoUbicado(TutoriaColectiva tutoria, ProyectoAula proyecto) {}
 
 	private void validarTecnologia(User estudiante, String tecnologia) {
 		if (estudiante.getCarrera() == null || estudiante.getCarrera().isBlank()

@@ -65,7 +65,7 @@ class AvailableTutor {
         day: _string(json['dia']),
         startTime: _string(json['horaInicio']),
         endTime: _string(json['horaFin']),
-        modality: _string(json['modalidad']),
+        modality: _string(json['modalidad'], fallback: 'PRESENCIAL'),
         location: _string(json['ubicacion']),
         careers: json['carreras'] is List
             ? (json['carreras'] as List).whereType<String>().toList()
@@ -357,23 +357,35 @@ final studentGroupSessionsProvider =
   );
 });
 
-Future<void> enrollInClassroomProject({
-  required Dio dio,
-  required ClassroomProjectSpace space,
-}) async {
-  await dio.post<void>(
-    '/api/estudiante/tutorias-colectivas/${space.tutoringId}/proyectos/${space.projectId}/inscripcion',
-  );
-}
-
-Future<void> createOrJoinClassroomProject({
+Future<Map<String, dynamic>> createOrJoinClassroomProject({
   required Dio dio,
   required String tutoringId,
   required String name,
 }) async {
-  await dio.post<void>(
+  final response = await dio.post<Map<String, dynamic>>(
     '/api/estudiante/tutorias-colectivas/$tutoringId/proyectos',
     data: {'nombre': name},
+  );
+  return response.data ?? const {};
+}
+
+Future<Map<String, dynamic>> previewClassroomProjectCode({
+  required Dio dio,
+  required String code,
+}) async {
+  final response = await dio.get<Map<String, dynamic>>(
+    '/api/estudiante/tutorias-colectivas/proyectos/codigo/$code',
+  );
+  return response.data ?? const {};
+}
+
+Future<void> enrollInClassroomProjectCode({
+  required Dio dio,
+  required String code,
+}) async {
+  await dio.post<void>(
+    '/api/estudiante/tutorias-colectivas/proyectos/inscripcion-codigo',
+    data: {'codigo': code},
   );
 }
 

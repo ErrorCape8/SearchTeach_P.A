@@ -127,6 +127,7 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage> {
           const Text('Consulta tus tutorías, solicita cambios de fecha y reporta avances.'),
           const SizedBox(height: 20),
           _TeacherHomeTile(icon: Icons.event_note_outlined, title: 'Mis tutorías', subtitle: 'Revisa sesiones y solicita a coordinación cambiar una fecha.', onTap: () => setState(() => _tab = 1)),
+          _TeacherHomeTile(icon: Icons.play_circle_outline, title: 'Empezar tutorías', subtitle: 'Abre la sala, toma asistencia y consulta el chat de tus sesiones.', onTap: () => setState(() => _tab = 2)),
           _TeacherHomeTile(icon: Icons.assignment_outlined, title: 'Informes de avance', subtitle: 'Envía el seguimiento de tus proyectos asignados.', onTap: () => setState(() => _tab = 3)),
           _TeacherHomeTile(icon: Icons.notifications_none_outlined, title: 'Avisos', subtitle: 'Consulta las notificaciones de tu cuenta.', onTap: () => setState(() => _tab = 4)),
         ],
@@ -165,9 +166,12 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage> {
                           contentPadding: const EdgeInsets.all(16),
                           leading: const CircleAvatar(backgroundColor: Color(0xFFE6F4EA), child: Icon(Icons.event_available, color: _teacherGreen)),
                           title: Text(session.subject, style: const TextStyle(fontWeight: FontWeight.w700)),
-                          subtitle: Text('${session.start == null ? 'Fecha no disponible' : _dateTimeLabel(session.start!)} · Semestre ${session.semester} · ${session.technologies.join(', ')}\n${session.students.isEmpty ? 'Publicada · sin inscritos' : 'Estudiantes: ${session.students.join(', ')}'}'),
+                          subtitle: Text('${session.start == null ? 'Fecha no disponible' : _dateTimeLabel(session.start!)} · ${_modalityLabel(session.modality)} · Semestre ${session.semester} · ${session.technologies.join(', ')}\n${session.students.isEmpty ? 'Publicada · sin inscritos' : 'Estudiantes inscritos: ${session.students.length}'}${session.state == 'FINALIZADA' ? '\nClase finalizada' : ''}'),
                           isThreeLine: true,
-                          trailing: session.start != null && session.start!.isAfter(DateTime.now())
+                          trailing: session.id.isNotEmpty &&
+                                  session.start != null &&
+                                  session.end != null &&
+                                  session.state != 'FINALIZADA'
                               ? IconButton.filledTonal(
                                   tooltip: 'Solicitar cambio de fecha',
                                   onPressed: () => _requestDateChange(session),
@@ -182,7 +186,7 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage> {
                               padding: const EdgeInsets.only(right: 16, bottom: 12),
                               child: FilledButton.icon(
                                 onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-                                  builder: (_) => LiveKitRoomPage(sessionId: session.id, subject: session.subject, teacherMode: true, students: session.students, ended: session.state == 'FINALIZADA', endAt: session.end),
+                                  builder: (_) => LiveKitRoomPage(sessionId: session.id, subject: session.subject, modality: session.modality, teacherMode: true, students: session.students, ended: session.state == 'FINALIZADA', endAt: session.end),
                                 )),
                                 icon: const Icon(Icons.video_call_outlined),
                                 label: Text(session.state == 'FINALIZADA' ? 'Ver historial' : 'Empezar tutoría'),
@@ -278,7 +282,9 @@ class _TeacherTutoringSession {
         start: DateTime.tryParse(json['fechaInicio']?.toString() ?? ''),
         end: DateTime.tryParse(json['fechaFin']?.toString() ?? ''),
         semester: json['semestre'] is num ? (json['semestre'] as num).toInt() : 0,
-        modality: json['modalidad'] is String ? json['modalidad'] as String : '',
+        modality: json['modalidad'] is String && (json['modalidad'] as String).isNotEmpty
+            ? json['modalidad'] as String
+            : 'PRESENCIAL',
         state: json['estadoClase'] is String ? json['estadoClase'] as String : 'PROGRAMADA',
       );
 }
@@ -381,3 +387,10 @@ String _dateTimeLabel(DateTime value) =>
 
 String _dateLabel(DateTime value) =>
     '${value.day.toString().padLeft(2, '0')}/${value.month.toString().padLeft(2, '0')}/${value.year}';
+
+String _modalityLabel(String modality) => switch (modality.toUpperCase()) {
+      'VIRTUAL' => 'Virtual',
+      'HIBRIDA' => 'Híbrida',
+      'PRESENCIAL' => 'Presencial',
+      _ => modality.isEmpty ? 'Modalidad por confirmar' : modality,
+    };

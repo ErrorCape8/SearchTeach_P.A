@@ -3,6 +3,7 @@ package com.pa.searchteach.tutorias.model;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.Positive;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.util.List;
 
 public record ProyectoAula(
@@ -11,7 +12,9 @@ public record ProyectoAula(
 		@NotBlank String docenteResponsableId,
 		@Size(max = 4) List<@NotBlank String> estudianteIds,
 		@NotBlank String tecnologia,
-		@Positive int semestre) {
+		@Positive int semestre,
+		@JsonIgnore String codigoInscripcion,
+		@JsonIgnore String creadorId) {
 
 	public ProyectoAula {
 		if (proyectoId == null || proyectoId.isBlank()) {
@@ -34,11 +37,12 @@ public record ProyectoAula(
 		if (estudianteIds.size() >= 4) throw new IllegalArgumentException("El grupo ya tiene cuatro estudiantes.");
 		return new ProyectoAula(proyectoId, nombre, docenteResponsableId,
 				java.util.stream.Stream.concat(estudianteIds.stream(), java.util.stream.Stream.of(estudianteId)).toList(),
-				tecnologia, semestre);
+				tecnologia, semestre, codigoInscripcion, creadorId);
 	}
 
 	public ProyectoAula desistir(String estudianteId) {
 		return new ProyectoAula(proyectoId, nombre, docenteResponsableId,
-				estudianteIds.stream().filter(id -> !id.equals(estudianteId)).toList(), tecnologia, semestre);
+				estudianteIds.stream().filter(id -> !id.equals(estudianteId)).toList(), tecnologia, semestre,
+				codigoInscripcion, creadorId);
 	}
 }

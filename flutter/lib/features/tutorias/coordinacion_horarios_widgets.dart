@@ -10,6 +10,7 @@ class ScheduleSectionSelector extends StatelessWidget {
     required this.selected,
     required this.withScheduleCount,
     required this.withoutScheduleCount,
+    required this.publishedSessionCount,
     required this.onChanged,
     super.key,
   });
@@ -17,6 +18,7 @@ class ScheduleSectionSelector extends StatelessWidget {
   final int selected;
   final int withScheduleCount;
   final int withoutScheduleCount;
+  final int publishedSessionCount;
   final ValueChanged<int> onChanged;
 
   @override
@@ -33,6 +35,11 @@ class ScheduleSectionSelector extends StatelessWidget {
               value: 1,
               icon: const Icon(Icons.event_available_outlined),
               label: Text('No asignados ($withoutScheduleCount)'),
+            ),
+            ButtonSegment(
+              value: 2,
+              icon: const Icon(Icons.menu_book_outlined),
+              label: Text('Tutorías publicadas ($publishedSessionCount)'),
             ),
           ],
           selected: {selected},

@@ -1,6 +1,7 @@
 package com.pa.searchteach.tutorias.service;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -28,6 +29,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 
 @Service
 public class SesionesGrupalesTutoriaService {
+	private static final ZoneId ZONA_LOCAL = ZoneId.of("America/Bogota");
 	private static final java.util.Set<String> MOTIVOS_CIERRE = java.util.Set.of(
 			"FINALIZADA", "FALTA_ESTUDIANTES", "PROBLEMAS_EXTERNOS", "PROBLEMAS_INTERNET", "FINALIZACION_AUTOMATICA");
 
@@ -38,6 +40,10 @@ public class SesionesGrupalesTutoriaService {
 	private final InscripcionesTutoriasEstudianteService inscripcionesEstudiante;
 	private final NotificationService notificationService;
 	private final SolicitudCambioFechaSesionRepositorio solicitudesCambio;
+
+	private static LocalDateTime ahora() {
+		return LocalDateTime.now(ZONA_LOCAL);
+	}
 
 	public SesionesGrupalesTutoriaService(
 			SesionTutoriaRepositorio sesiones,
@@ -75,7 +81,7 @@ public class SesionesGrupalesTutoriaService {
 		SesionTutoria sesion = obtenerSesionDocente(sesionId, docenteId);
 		String normalizado = motivo == null ? "" : motivo.trim().toUpperCase(java.util.Locale.ROOT);
 		if (!MOTIVOS_CIERRE.contains(normalizado)) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Selecciona un motivo de cierre válido.");
-		return sesiones.save(sesion.cerrar(normalizado, LocalDateTime.now()));
+		return sesiones.save(sesion.cerrar(normalizado, ahora()));
 	}
 
 	public SesionTutoria registrarMensaje(String sesionId, String usuarioId, String texto) {
@@ -90,7 +96,7 @@ public class SesionesGrupalesTutoriaService {
 		if (mensaje.isEmpty() || mensaje.length() > 500) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El mensaje debe tener entre 1 y 500 caracteres.");
 		User autor = usuarios.findById(usuarioId).orElse(null);
 		return sesiones.save(sesion.agregarMensaje(new MensajeChatTutoria(usuarioId,
-				autor == null || autor.getNombre() == null ? usuarioId : autor.getNombre(), mensaje, LocalDateTime.now())));
+				autor == null || autor.getNombre() == null ? usuarioId : autor.getNombre(), mensaje, ahora())));
 	}
 
 	private SesionTutoria obtenerSesionDocente(String sesionId, String docenteId) {
@@ -101,7 +107,7 @@ public class SesionesGrupalesTutoriaService {
 	}
 
 	private SesionTutoria cerrarSiVencida(SesionTutoria sesion) {
-		if (!"FINALIZADA".equals(sesion.estadoClase()) && !LocalDateTime.now().isBefore(sesion.fechaFin())) {
+		if (!"FINALIZADA".equals(sesion.estadoClase()) && !ahora().isBefore(sesion.fechaFin())) {
 			return sesiones.save(sesion.cerrar("FINALIZACION_AUTOMATICA", sesion.fechaFin()));
 		}
 		return sesion;
@@ -109,7 +115,7 @@ public class SesionesGrupalesTutoriaService {
 
 	@Scheduled(fixedDelay = 30000)
 	public void finalizarClasesVencidas() {
-		LocalDateTime ahora = LocalDateTime.now();
+		LocalDateTime ahora = ahora();
 		sesiones.findAll().stream()
 				.filter(sesion -> !"FINALIZADA".equals(sesion.estadoClase()))
 				.filter(sesion -> !sesion.fechaFin().isAfter(ahora))
@@ -117,7 +123,7 @@ public class SesionesGrupalesTutoriaService {
 	}
 
 	public List<SesionTutoria> listarPublicadas() {
-		LocalDateTime ahora = LocalDateTime.now();
+		LocalDateTime ahora = ahora();
 		return sesiones.findAll().stream()
 				.filter(sesion -> sesion.fechaInicio().isAfter(ahora))
 				.sorted((left, right) -> left.fechaInicio().compareTo(right.fechaInicio()))
@@ -133,8 +139,8 @@ public class SesionesGrupalesTutoriaService {
 			throw new ResponseStatusException(HttpStatus.FORBIDDEN,
 					"Solo puedes solicitar cambios para tus propias tutorías.");
 		}
-		LocalDateTime ahora = LocalDateTime.now();
-		if (!sesion.fechaInicio().isAfter(ahora)) {
+		LocalDateTime ahora = ahora();
+		if ("FINALIZADA".equals(sesion.estadoClase())) {
 			throw new ResponseStatusException(HttpStatus.CONFLICT,
 					"No puedes cambiar la fecha de una tutoría que ya comenzó.");
 		}
@@ -199,7 +205,7 @@ public class SesionesGrupalesTutoriaService {
 				LocalDateTime nuevoInicio = resolucion.fechaInicio();
 				java.time.Duration duracion = java.time.Duration.between(sesion.fechaInicio(), sesion.fechaFin());
 				LocalDateTime nuevoFin = nuevoInicio.plus(duracion);
-				if (!nuevoInicio.isAfter(LocalDateTime.now())) {
+				if (!nuevoInicio.isAfter(ahora())) {
 					throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Selecciona una fecha futura.");
 				}
 				boolean conflicto = sesiones.findByDocenteId(sesion.docenteId()).stream()
@@ -241,7 +247,7 @@ public class SesionesGrupalesTutoriaService {
 		String tecnologia = estudiante.getCarrera() == null ? "" : estudiante.getCarrera().trim();
 		if (tecnologia.isEmpty()) return List.of();
 		return sesiones.findAll().stream()
-				.filter(sesion -> sesion.fechaInicio().isAfter(LocalDateTime.now()))
+				.filter(sesion -> sesion.fechaInicio().isAfter(ahora()))
 				.filter(sesion -> sesion.estudianteIds().size() < 5)
 				.filter(sesion -> !sesion.estudianteIds().contains(estudianteId))
 				.filter(sesion -> sesion.tecnologias().stream().anyMatch(tecnologia::equalsIgnoreCase))
@@ -257,7 +263,7 @@ public class SesionesGrupalesTutoriaService {
 		}
 		List<SesionTutoria> existentes = sesiones.findAll();
 		List<SesionTutoria> nuevas = new ArrayList<>();
-		LocalDateTime ahora = LocalDateTime.now();
+		LocalDateTime ahora = ahora();
 		for (ProgramarTutoriasSolicitud.Bloque bloque : solicitud.bloques()) {
 			if (bloque.modalidad() != ModalidadTutoria.VIRTUAL
 					&& (bloque.ubicacion() == null || bloque.ubicacion().isBlank())) {
@@ -267,9 +273,9 @@ public class SesionesGrupalesTutoriaService {
 			if (bloque.fechaInicio() == null || bloque.fechaFin() == null
 					|| !bloque.fechaFin().isAfter(bloque.fechaInicio())
 					|| !bloque.fechaInicio().toLocalDate().equals(bloque.fechaFin().toLocalDate())
-					|| !bloque.fechaInicio().isAfter(LocalDateTime.now())) {
+					|| !bloque.fechaInicio().isAfter(ahora)) {
 				throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-						"Cada sesión debe tener una fecha futura y una duración válida.");
+						"La hora de inicio debe ser futura y la duración debe ser válida.");
 			}
 			horarios.validarDocenteParaTecnologia(bloque.docenteId(), solicitud.tecnologia(),
 					solicitud.semestre(), bloque.materia());
@@ -315,13 +321,13 @@ public class SesionesGrupalesTutoriaService {
 		if (solicitud.bloques().size() != 1) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Edita una tutorÃ­a a la vez.");
 		}
-		if (!actual.fechaInicio().isAfter(LocalDateTime.now())) {
+		if (!actual.fechaInicio().isAfter(ahora())) {
 			throw new ResponseStatusException(HttpStatus.CONFLICT, "No puedes editar una tutorÃ­a que ya comenzÃ³.");
 		}
 		ProgramarTutoriasSolicitud.Bloque bloque = solicitud.bloques().get(0);
 		if (!CatalogoTecnologias.contiene(solicitud.tecnologia()) || solicitud.semestre() < 1 || solicitud.semestre() > 6
 				|| bloque.fechaInicio() == null || bloque.fechaFin() == null
-				|| !bloque.fechaInicio().isAfter(LocalDateTime.now()) || !bloque.fechaFin().isAfter(bloque.fechaInicio())
+				|| !bloque.fechaInicio().isAfter(ahora()) || !bloque.fechaFin().isAfter(bloque.fechaInicio())
 				|| !bloque.fechaInicio().toLocalDate().equals(bloque.fechaFin().toLocalDate())) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Selecciona una fecha futura y un horario vÃ¡lido.");
 		}
