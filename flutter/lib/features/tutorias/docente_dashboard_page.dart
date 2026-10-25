@@ -192,8 +192,7 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage> {
                       ]),
                     ),
                 ],
-              ),
-          );
+              );
         },
       );
 

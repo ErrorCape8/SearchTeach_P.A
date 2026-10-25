@@ -178,7 +178,7 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
     if (local != null) {
       for (final publication in local.videoTrackPublications) {
         final track = publication.track;
-        if (track is VideoTrack) {
+        if (track != null) {
           yield _VideoTile(label: 'Tú', track: track);
         }
       }
@@ -186,7 +186,7 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
     for (final participant in _room.remoteParticipants.values) {
       for (final publication in participant.videoTrackPublications) {
         final track = publication.track;
-        if (track is VideoTrack) {
+        if (track != null) {
           yield _VideoTile(label: participant.identity, track: track);
         }
       }
@@ -269,8 +269,16 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
                   ]),
                   if (widget.teacherMode) ...[
                     const Padding(padding: EdgeInsets.all(8), child: Text('Asistencia', style: TextStyle(fontWeight: FontWeight.bold))),
-                    Wrap(spacing: 8, children: [for (final student in widget.students) Chip(label: Text(student), avatar: const Icon(Icons.person), onDeleted: () => _setAttendance(student, false), deleteIcon: const Icon(Icons.close), tooltip: 'Marcar ausencia'),]),
-                    Wrap(spacing: 8, children: [for (final student in widget.students) OutlinedButton.icon(onPressed: () => _setAttendance(student, true), icon: const Icon(Icons.check), label: Text('Presente $student'))]),
+                    for (final student in widget.students)
+                      ListTile(
+                        dense: true,
+                        title: Text(student),
+                        subtitle: Text(_attendance[student] == true ? 'Presente' : _attendance[student] == false ? 'Ausente' : 'Sin marcar'),
+                        trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                          IconButton(tooltip: 'Marcar presente', onPressed: () => _setAttendance(student, true), icon: const Icon(Icons.check_circle_outline, color: Colors.green)),
+                          IconButton(tooltip: 'Marcar ausente', onPressed: () => _setAttendance(student, false), icon: const Icon(Icons.cancel_outlined, color: Colors.red)),
+                        ]),
+                      ),
                     Wrap(spacing: 8, children: [
                       OutlinedButton(onPressed: () => _finish('FALTA_ESTUDIANTES'), child: const Text('Finalizar por falta de estudiantes')),
                       OutlinedButton(onPressed: () => _finish('PROBLEMAS_EXTERNOS'), child: const Text('Problemas externos')),
