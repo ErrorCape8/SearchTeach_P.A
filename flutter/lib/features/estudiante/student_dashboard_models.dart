@@ -178,6 +178,8 @@ class StudentGroupSession {
     required this.studentCount,
     this.modality = '',
     this.location = '',
+    this.state = 'PROGRAMADA',
+    this.studentIds = const [],
   });
 
   final String id;
@@ -191,6 +193,8 @@ class StudentGroupSession {
   final int studentCount;
   final String modality;
   final String location;
+  final String state;
+  final List<String> studentIds;
 
   factory StudentGroupSession.fromJson(Map<String, dynamic> json) =>
       StudentGroupSession(
@@ -210,6 +214,10 @@ class StudentGroupSession {
             : 1,
         modality: _string(json['modalidad']),
         location: _string(json['ubicacion']),
+        state: _string(json['estadoClase'], fallback: 'PROGRAMADA'),
+        studentIds: json['estudianteIds'] is List
+            ? (json['estudianteIds'] as List).whereType<String>().toList()
+            : const [],
       );
 }
 
@@ -269,6 +277,77 @@ class ClassroomProjectSpace {
         createOrJoin: true,
       );
 }
+
+class StudentProjectFollowup {
+  const StudentProjectFollowup({
+    required this.tutoringId,
+    required this.project,
+    required this.sessions,
+    required this.status,
+    required this.meetingAt,
+  });
+  final String tutoringId;
+  final ClassroomProjectSpace project;
+  final List<StudentProjectSession> sessions;
+  final String status;
+  final DateTime? meetingAt;
+  StudentProjectSession? get nextSession {
+    final upcoming = sessions
+        .where((session) => session.start?.isAfter(DateTime.now()) ?? false)
+        .toList()
+      ..sort((a, b) => a.start!.compareTo(b.start!));
+    return upcoming.isEmpty ? null : upcoming.first;
+  }
+
+  factory StudentProjectFollowup.fromJson(Map<String, dynamic> json) {
+    final projectJson = json['proyecto'] is Map<String, dynamic>
+        ? json['proyecto'] as Map<String, dynamic>
+        : <String, dynamic>{};
+    return StudentProjectFollowup(
+      tutoringId: _string(json['tutoriaColectivaId']),
+      project: ClassroomProjectSpace(
+        tutoringId: _string(json['tutoriaColectivaId']),
+        projectId: _string(projectJson['proyectoId']),
+        name: _string(projectJson['nombre'], fallback: 'Proyecto de aula'),
+        teacherId: _string(projectJson['docenteResponsableId']),
+        career: _string(projectJson['tecnologia']),
+        semester: projectJson['semestre'] is num ? (projectJson['semestre'] as num).toInt() : 0,
+        enrolledCount: (projectJson['estudianteIds'] is List ? (projectJson['estudianteIds'] as List).length : 0),
+        enrolled: true,
+      ),
+      status: _string(projectJson['estadoCierre'], fallback: 'EN_CURSO'),
+      meetingAt: _date(projectJson['fechaReunion']),
+      sessions: (json['sesiones'] is List ? json['sesiones'] as List : const [])
+          .whereType<Map<String, dynamic>>()
+          .map(StudentProjectSession.fromJson)
+          .toList(),
+    );
+  }
+}
+
+class StudentProjectSession {
+  const StudentProjectSession({required this.id, required this.start, required this.end, required this.notes, required this.savedAt});
+  final String id;
+  final DateTime? start;
+  final DateTime? end;
+  final String notes;
+  final DateTime? savedAt;
+  factory StudentProjectSession.fromJson(Map<String, dynamic> json) => StudentProjectSession(
+        id: _string(json['id']), start: _date(json['fechaInicio']), end: _date(json['fechaFin']),
+        notes: _string(json['contenido']), savedAt: _date(json['guardadaEn']),
+      );
+}
+
+final studentProjectFollowupProvider =
+    FutureProvider.autoDispose<List<StudentProjectFollowup>>((ref) async {
+  final response = await ref.read(dioProvider).get<List<dynamic>>(
+    '/api/estudiante/tutorias-colectivas/seguimiento',
+  );
+  return (response.data ?? const [])
+      .whereType<Map<String, dynamic>>()
+      .map(StudentProjectFollowup.fromJson)
+      .toList();
+});
 
 final studentDashboardProvider =
     FutureProvider.autoDispose<StudentDashboardData>((ref) async {

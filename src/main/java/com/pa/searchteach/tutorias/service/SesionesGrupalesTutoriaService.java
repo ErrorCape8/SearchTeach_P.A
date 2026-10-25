@@ -63,7 +63,9 @@ public class SesionesGrupalesTutoriaService {
 	}
 
 	public List<SesionTutoria> listarDeEstudiante(String estudianteId) {
-		return sesiones.findByEstudianteIdsContaining(estudianteId);
+		return sesiones.findByEstudianteIdsContaining(estudianteId).stream()
+				.map(this::cerrarSiVencida)
+				.toList();
 	}
 
 	public List<SesionTutoria> listarDeDocente(String docenteId) {

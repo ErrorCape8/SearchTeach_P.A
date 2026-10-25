@@ -6,7 +6,8 @@ import 'package:go_router/go_router.dart';
 import '../../core/api_client.dart';
 import '../auth/auth_repository.dart';
 import '../notifications/notifications_page.dart';
-import 'docente_informes_page.dart';
+import 'docente_proyectos_aula_page.dart';
+import 'docente_lider_proyectos_page.dart';
 import 'livekit_room_page.dart';
 
 const _teacherGreen = Color(0xFF16834A);
@@ -67,7 +68,8 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage> {
                 _home(),
                 _sessions(),
                 _startTutoring(),
-                const DocenteInformesPage(),
+                const DocenteProyectosAulaPage(),
+                const DocenteLiderProyectosPage(),
                 const NotificationsInbox(),
               ],
             ),
@@ -82,7 +84,8 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage> {
                   NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Inicio'),
                   NavigationDestination(icon: Icon(Icons.event_note_outlined), selectedIcon: Icon(Icons.event_note), label: 'Tutorías'),
                   NavigationDestination(icon: Icon(Icons.play_circle_outline), selectedIcon: Icon(Icons.play_circle), label: 'Empezar'),
-                  NavigationDestination(icon: Icon(Icons.assignment_outlined), selectedIcon: Icon(Icons.assignment), label: 'Informes'),
+                  NavigationDestination(icon: Icon(Icons.school_outlined), selectedIcon: Icon(Icons.school), label: 'Proyectos'),
+                  NavigationDestination(icon: Icon(Icons.fact_check_outlined), selectedIcon: Icon(Icons.fact_check), label: 'Revisar PA'),
                   NavigationDestination(icon: Icon(Icons.notifications_none_outlined), selectedIcon: Icon(Icons.notifications), label: 'Avisos'),
                 ],
               ),
@@ -101,7 +104,7 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage> {
             ),
             const Divider(height: 1),
             const SizedBox(height: 10),
-            for (var i = 0; i < 5; i++)
+            for (var i = 0; i < 3; i++)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                 child: ListTile(
@@ -114,6 +117,33 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage> {
                   onTap: () => setState(() => _tab = i),
                 ),
               ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+              child: ListTile(
+                selected: _tab == 3,
+                leading: const Icon(Icons.school_outlined),
+                title: const Text('Proyectos de aula'),
+                onTap: () => setState(() => _tab = 3),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+              child: ListTile(
+                selected: _tab == 4,
+                leading: const Icon(Icons.fact_check_outlined),
+                title: const Text('Revisar proyectos PA'),
+                onTap: () => setState(() => _tab = 4),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+              child: ListTile(
+                selected: _tab == 5,
+                leading: const Icon(Icons.notifications_none_outlined),
+                title: const Text('Avisos'),
+                onTap: () => setState(() => _tab = 5),
+              ),
+            ),
             const Spacer(),
           ]),
         ),
@@ -124,12 +154,13 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage> {
         children: [
           const Text('¡Hola, docente!', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: _teacherNavy)),
           const SizedBox(height: 6),
-          const Text('Consulta tus tutorías, solicita cambios de fecha y reporta avances.'),
+          const Text('Consulta tus tutorías, solicita cambios de fecha y acompaña tus proyectos de aula.'),
           const SizedBox(height: 20),
           _TeacherHomeTile(icon: Icons.event_note_outlined, title: 'Mis tutorías', subtitle: 'Revisa sesiones y solicita a coordinación cambiar una fecha.', onTap: () => setState(() => _tab = 1)),
           _TeacherHomeTile(icon: Icons.play_circle_outline, title: 'Empezar tutorías', subtitle: 'Abre la sala, toma asistencia y consulta el chat de tus sesiones.', onTap: () => setState(() => _tab = 2)),
-          _TeacherHomeTile(icon: Icons.assignment_outlined, title: 'Informes de avance', subtitle: 'Envía el seguimiento de tus proyectos asignados.', onTap: () => setState(() => _tab = 3)),
-          _TeacherHomeTile(icon: Icons.notifications_none_outlined, title: 'Avisos', subtitle: 'Consulta las notificaciones de tu cuenta.', onTap: () => setState(() => _tab = 4)),
+          _TeacherHomeTile(icon: Icons.school_outlined, title: 'Proyectos de aula', subtitle: 'Escribe reportes, programa sesiones y responde a los estudiantes.', onTap: () => setState(() => _tab = 3)),
+          _TeacherHomeTile(icon: Icons.fact_check_outlined, title: 'Revisar proyectos PA', subtitle: 'Como docente líder, revisa reportes y confirma cierres.', onTap: () => setState(() => _tab = 4)),
+          _TeacherHomeTile(icon: Icons.notifications_none_outlined, title: 'Avisos', subtitle: 'Consulta las notificaciones de tu cuenta.', onTap: () => setState(() => _tab = 5)),
         ],
       );
 
@@ -238,8 +269,8 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage> {
   }
 }
 
-const _teacherLabels = ['Inicio', 'Tutorías', 'Empezar tutorías', 'Informes', 'Avisos'];
-const _teacherIcons = [Icons.home_outlined, Icons.event_note_outlined, Icons.play_circle_outline, Icons.assignment_outlined, Icons.notifications_none_outlined];
+const _teacherLabels = ['Inicio', 'Tutorías', 'Empezar tutorías'];
+const _teacherIcons = [Icons.home_outlined, Icons.event_note_outlined, Icons.play_circle_outline];
 
 class _TeacherHomeTile extends StatelessWidget {
   const _TeacherHomeTile({required this.icon, required this.title, required this.subtitle, required this.onTap});

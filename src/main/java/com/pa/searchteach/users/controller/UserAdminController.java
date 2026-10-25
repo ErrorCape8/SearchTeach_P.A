@@ -196,20 +196,6 @@ public class UserAdminController {
 		return profile;
 	}
 
-	@PutMapping("/perfil/telefono")
-	public Map<String, String> updatePhone(
-			@RequestBody Map<String, String> body,
-			@AuthenticationPrincipal String adminId) {
-		String phone = body.get("telefono");
-		if (phone == null || phone.isBlank()) {
-			throw new IllegalArgumentException("El teléfono es obligatorio.");
-		}
-		ItAdmin admin = findAdmin(adminId);
-		admin.setTelefono(phone.trim());
-		itAdminRepository.save(admin);
-		return getProfile(adminId);
-	}
-
 	private ItAdmin findAdmin(String adminId) {
 		if (adminId == null || adminId.isBlank()) {
 			throw new IllegalArgumentException("No se pudo identificar al administrador.");

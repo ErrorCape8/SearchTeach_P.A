@@ -204,7 +204,11 @@ class _GroupSessionCard extends StatelessWidget {
                   style: const TextStyle(color: _muted)),
               Text('${session.studentCount}/5 estudiantes inscritos',
                   style: const TextStyle(color: _muted)),
-              if (session.id.isNotEmpty) ...[
+              if (session.id.isNotEmpty &&
+                  session.state != 'FINALIZADA' &&
+                  session.end != null &&
+                  session.end!.isAfter(DateTime.now()) &&
+                  session.modality.toUpperCase() == 'VIRTUAL') ...[
                 const SizedBox(height: 10),
                 Align(
                   alignment: Alignment.centerRight,
@@ -217,7 +221,7 @@ class _GroupSessionCard extends StatelessWidget {
                       ),
                     )),
                     icon: const Icon(Icons.video_call_outlined),
-                    label: const Text('Entrar a la sala'),
+                    label: const Text('Unirme a tutoría virtual'),
                   ),
                 ),
               ],
@@ -232,6 +236,31 @@ class _GroupSessionCard extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      );
+}
+
+class _GroupHistoryCard extends StatelessWidget {
+  const _GroupHistoryCard({required this.session});
+  final StudentGroupSession session;
+
+  @override
+  Widget build(BuildContext context) => Card(
+        margin: const EdgeInsets.only(bottom: 12),
+        child: ListTile(
+          leading: const CircleAvatar(child: Icon(Icons.history)),
+          title: Text(session.subject, style: const TextStyle(fontWeight: FontWeight.w700)),
+          subtitle: Text('${session.start == null ? 'Fecha no disponible' : _longDate(session.start!)} · Tutoría grupal finalizada'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => LiveKitRoomPage(
+              sessionId: session.id,
+              subject: session.subject,
+              modality: session.modality,
+              students: session.studentIds,
+              ended: true,
+            ),
+          )),
         ),
       );
 }

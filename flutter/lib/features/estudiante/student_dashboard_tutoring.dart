@@ -1,6 +1,6 @@
 part of 'student_dashboard_views.dart';
 
-class StudentTutoringView extends StatefulWidget {
+class StudentTutoringView extends ConsumerStatefulWidget {
   const StudentTutoringView({
     required this.data,
     required this.focusSection,
@@ -27,10 +27,10 @@ class StudentTutoringView extends StatefulWidget {
   final void Function(String message) onShowMessage;
 
   @override
-  State<StudentTutoringView> createState() => _StudentTutoringViewState();
+  ConsumerState<StudentTutoringView> createState() => _StudentTutoringViewState();
 }
 
-class _StudentTutoringViewState extends State<StudentTutoringView> {
+class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
   String? _section;
   String _query = '';
   String _career = 'Todas';
@@ -98,6 +98,12 @@ class _StudentTutoringViewState extends State<StudentTutoringView> {
             onTap: () => setState(() => _section = 'proyectos'),
           ),
           _MenuTile(
+            icon: Icons.assignment_outlined,
+            title: 'Seguimiento de mi proyecto',
+            subtitle: 'Consulta los reportes del tutor, el horario y las respuestas.',
+            onTap: () => setState(() => _section = 'seguimiento-proyecto'),
+          ),
+          _MenuTile(
             icon: Icons.event_available_outlined,
             title: 'Tutorías grupales disponibles',
             subtitle: 'Inscríbete en una sesión publicada por coordinación.',
@@ -135,6 +141,12 @@ class _StudentTutoringViewState extends State<StudentTutoringView> {
         ),
       _ => ('Historial', 'Tutorías realizadas o canceladas.'),
     };
+    if (_section == 'seguimiento-proyecto') {
+      return const _PageHeading(
+        title: 'Seguimiento de mi proyecto',
+        subtitle: 'Reportes del tutor, horario y conversación de cada sesión.',
+      );
+    }
     return _PageHeading(title: content.$1, subtitle: content.$2);
   }
 
@@ -145,10 +157,14 @@ class _StudentTutoringViewState extends State<StudentTutoringView> {
         return _availableTutors();
       case 'proyectos':
         return _projectSpaces();
+      case 'seguimiento-proyecto':
+        return _projectFollowup();
       case 'sesiones':
         return _sessionsList();
       case 'grupales-disponibles':
         return _publishedGroupSessions();
+      case 'historial':
+        return _history();
       default:
         return _tutoringList(
           widget.data.tutorings
@@ -157,6 +173,99 @@ class _StudentTutoringViewState extends State<StudentTutoringView> {
           emptyMessage: 'Las tutorías finalizadas aparecerán aquí.',
         );
     }
+  }
+
+  Widget _projectFollowup() => ref.watch(studentProjectFollowupProvider).when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, _) => Center(child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text('No se pudo cargar el seguimiento de tu proyecto: $error'),
+        )),
+        data: (projects) => projects.isEmpty
+            ? const _EmptyCard(
+                icon: Icons.assignment_outlined,
+                title: 'Aún no tienes un proyecto inscrito',
+                message: 'Cuando te inscribas, aquí verás el horario y los reportes de tu tutor.',
+              )
+            : ListView(
+                padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
+                children: [
+                  for (final item in projects) Card(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text(item.project.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: _navy)),
+                        Text('${item.project.career} · Semestre ${item.project.semester} · Tutor ${item.project.teacherId}'),
+                        Text(item.status == 'FINALIZADO'
+                            ? 'Proyecto finalizado por el docente líder.'
+                            : item.status == 'PENDIENTE_CONFIRMACION'
+                                ? 'El cierre del proyecto está pendiente de revisión del docente líder.'
+                                : 'Proyecto en curso.'),
+                        if (item.meetingAt != null) Text(
+                          'Reunión de PA: ${_longDate(item.meetingAt!.toLocal())} · ${TimeOfDay.fromDateTime(item.meetingAt!.toLocal()).format(context)}',
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 12),
+                        const Text('Horario e historial de sesiones', style: TextStyle(fontWeight: FontWeight.w700)),
+                        if (item.nextSession != null) ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(Icons.event_available, color: _blue),
+                          title: const Text('Próxima sesión', style: TextStyle(fontWeight: FontWeight.w700)),
+                          subtitle: Text('${_longDate(item.nextSession!.start!.toLocal())} · ${TimeOfDay.fromDateTime(item.nextSession!.start!.toLocal()).format(context)} – ${TimeOfDay.fromDateTime(item.nextSession!.end!.toLocal()).format(context)}'),
+                        ),
+                        if (item.sessions.isEmpty) const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 8),
+                          child: Text('El tutor aún no ha registrado un horario.'),
+                        ),
+                        for (final session in item.sessions) ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(Icons.event_note_outlined),
+                          title: Text(session.start == null ? 'Fecha pendiente' : _longDate(session.start!.toLocal())),
+                          subtitle: Text('${session.start == null ? '' : TimeOfDay.fromDateTime(session.start!.toLocal()).format(context)} – ${session.end == null ? '' : TimeOfDay.fromDateTime(session.end!.toLocal()).format(context)}\n${session.notes}', maxLines: 5, overflow: TextOverflow.ellipsis),
+                          isThreeLine: true,
+                          onTap: () async {
+                            await Navigator.of(context).push(MaterialPageRoute(
+                              builder: (_) => ProyectoAulaChatPage(
+                                tutoringId: item.tutoringId,
+                                projectId: item.project.projectId,
+                                sessionId: session.id,
+                                title: item.project.name,
+                                teacherMode: false,
+                              ),
+                            ));
+                            if (mounted) ref.invalidate(studentProjectFollowupProvider);
+                          },
+                        ),
+                      ]),
+                    ),
+                  ),
+                ],
+              ),
+      );
+
+  Widget _history() {
+    final completedGroups = widget.data.groupSessions
+        .where((session) => session.state == 'FINALIZADA')
+        .toList()
+      ..sort((a, b) => (b.start ?? DateTime(0)).compareTo(a.start ?? DateTime(0)));
+    final individualHistory = widget.data.tutorings
+        .where((t) => t.status == 'REALIZADA' || t.status == 'CANCELADA')
+        .toList();
+    if (completedGroups.isEmpty && individualHistory.isEmpty) {
+      return const _EmptyCard(
+        icon: Icons.history,
+        title: 'Tu historial está vacío',
+        message: 'Las tutorías finalizadas aparecerán aquí.',
+      );
+    }
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
+      children: [
+        ...completedGroups.map((session) => _GroupHistoryCard(session: session)),
+        ...individualHistory.map((tutoring) => _TutoringCard(tutoring: tutoring)),
+      ],
+    );
   }
 
   Widget _availableTutors() {
@@ -251,6 +360,7 @@ class _StudentTutoringViewState extends State<StudentTutoringView> {
     final career = widget.data.profile.career.trim();
     final spaces = widget.data.projectSpaces
         .where((space) => career.isEmpty || space.career == career)
+        .where((space) => space.createOrJoin || space.enrolled)
         .where((space) =>
             !space.createOrJoin ||
             !widget.data.projectSpaces.any(
@@ -265,14 +375,6 @@ class _StudentTutoringViewState extends State<StudentTutoringView> {
       return ListView(
         padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
         children: [
-          Card(child: ListTile(
-            leading: const Icon(Icons.key_outlined),
-            title: const Text('Ingresar código de inscripción'),
-            subtitle: const Text('Únete al proyecto de un compañero.'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: widget.onJoinProjectCode,
-          )),
-          const SizedBox(height: 10),
           const _EmptyCard(
             icon: Icons.groups_outlined,
             title: 'No hay proyectos de aula disponibles',
@@ -283,21 +385,10 @@ class _StudentTutoringViewState extends State<StudentTutoringView> {
     }
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
-      itemCount: spaces.length + 1,
+      itemCount: spaces.length,
       separatorBuilder: (_, __) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
-        if (index == 0) {
-          return Card(
-            child: ListTile(
-              leading: const Icon(Icons.key_outlined),
-              title: const Text('Ingresar código de inscripción'),
-              subtitle: const Text('Únete al proyecto de un compañero.'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: widget.onJoinProjectCode,
-            ),
-          );
-        }
-        final space = spaces[index - 1];
+        final space = spaces[index];
         final full = space.enrolledCount >= 4;
         return Card(
           child: Padding(
@@ -327,12 +418,12 @@ class _StudentTutoringViewState extends State<StudentTutoringView> {
                                 ? null
                                 : widget.onJoinProjectCode,
                     child: Text(space.createOrJoin
-                        ? 'Crear o unirse'
+                        ? 'Asignarme a un grupo'
                         : space.enrolled
                             ? 'Desistir de esta tutoría'
                             : full
                                 ? 'Cupo completo'
-                                : 'Unirme con código'),
+                                : 'Asignación automática'),
                   ),
                 ),
               ],
@@ -344,9 +435,12 @@ class _StudentTutoringViewState extends State<StudentTutoringView> {
   }
 
   Widget _sessionsList() {
+    final activeGroupSessions = widget.data.groupSessions
+        .where((session) => session.state != 'FINALIZADA')
+        .toList();
     final legacy = widget.data.tutorings
         .where((t) => t.status == 'PROGRAMADA' || t.status == 'EN_CURSO');
-    if (widget.data.groupSessions.isEmpty && legacy.isEmpty) {
+    if (activeGroupSessions.isEmpty && legacy.isEmpty) {
       return const _EmptyCard(
         icon: Icons.event_note_outlined,
         title: 'No tienes sesiones programadas',
@@ -357,13 +451,13 @@ class _StudentTutoringViewState extends State<StudentTutoringView> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
       children: [
-        if (widget.data.groupSessions.isNotEmpty) ...[
+        if (activeGroupSessions.isNotEmpty) ...[
           const Padding(
             padding: EdgeInsets.only(bottom: 10),
             child: Text('Tutorías grupales',
                 style: TextStyle(fontWeight: FontWeight.w700, color: _navy)),
           ),
-          ...widget.data.groupSessions.map((session) => _GroupSessionCard(
+          ...activeGroupSessions.map((session) => _GroupSessionCard(
                 session: session,
                 onLeave: () => widget.onLeaveGroupSession(session),
               )),

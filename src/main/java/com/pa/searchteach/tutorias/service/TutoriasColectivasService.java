@@ -1,29 +1,39 @@
 package com.pa.searchteach.tutorias.service;
 
 import java.time.LocalDateTime;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.Locale;
+import java.util.zip.ZipInputStream;
 
 import com.pa.searchteach.common.exception.ForbiddenException;
 import com.pa.searchteach.common.exception.NotFoundException;
 import com.pa.searchteach.tutorias.dto.InformeAvanceSolicitud;
-import com.pa.searchteach.tutorias.dto.ProyectoAulaConAvance;
+import com.pa.searchteach.tutorias.dto.SesionProyectoAulaSolicitud;
+import com.pa.searchteach.tutorias.dto.ReunionProyectoAulaSolicitud;
+import com.pa.searchteach.tutorias.dto.ProyectoAulaSeguimientoEstudiante;
+import com.pa.searchteach.tutorias.dto.MensajeProyectoAulaVista;
 import com.pa.searchteach.tutorias.dto.ProyectoAulaDisponible;
 import com.pa.searchteach.tutorias.dto.ProyectoAulaCreado;
 import com.pa.searchteach.tutorias.dto.ProyectoAulaCodigoSolicitud;
 import com.pa.searchteach.tutorias.dto.ProyectoAulaInscripcionPreview;
 import com.pa.searchteach.tutorias.dto.ProyectoAulaNombreSolicitud;
 import com.pa.searchteach.tutorias.dto.ProyectoAsignadoDocente;
-import com.pa.searchteach.tutorias.dto.TutoriaColectivaConAvance;
 import com.pa.searchteach.tutorias.dto.TutoriaColectivaEstudiante;
 import com.pa.searchteach.tutorias.dto.TutoriaColectivaSolicitud;
 import com.pa.searchteach.tutorias.model.InformeAvanceProyecto;
 import com.pa.searchteach.tutorias.model.ProyectoAula;
+import com.pa.searchteach.tutorias.model.SesionProyectoAula;
+import com.pa.searchteach.tutorias.model.MensajeProyectoAula;
 import com.pa.searchteach.tutorias.model.CatalogoTecnologias;
 import com.pa.searchteach.tutorias.model.TutoriaColectiva;
 import com.pa.searchteach.tutorias.repository.InformeAvanceProyectoRepositorio;
+import com.pa.searchteach.tutorias.repository.SesionProyectoAulaRepositorio;
+import com.pa.searchteach.tutorias.repository.MensajeProyectoAulaRepositorio;
 import com.pa.searchteach.tutorias.repository.TutoriaColectivaRepositorio;
 import com.pa.searchteach.notifications.service.NotificationService;
 import com.pa.searchteach.users.repository.UserRepository;
@@ -31,22 +41,30 @@ import com.pa.searchteach.users.model.User;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.scheduling.annotation.Scheduled;
 
 @Service
 public class TutoriasColectivasService {
 
 	private final TutoriaColectivaRepositorio tutoriaColectivaRepositorio;
 	private final InformeAvanceProyectoRepositorio informeRepositorio;
+	private final SesionProyectoAulaRepositorio sesionProyectoRepositorio;
+	private final MensajeProyectoAulaRepositorio mensajeProyectoRepositorio;
 	private final UserRepository userRepository;
 	private final NotificationService notificationService;
 
 	public TutoriasColectivasService(
 			TutoriaColectivaRepositorio tutoriaColectivaRepositorio,
 			InformeAvanceProyectoRepositorio informeRepositorio,
+			SesionProyectoAulaRepositorio sesionProyectoRepositorio,
+			MensajeProyectoAulaRepositorio mensajeProyectoRepositorio,
 			UserRepository userRepository,
 			NotificationService notificationService) {
 		this.tutoriaColectivaRepositorio = tutoriaColectivaRepositorio;
 		this.informeRepositorio = informeRepositorio;
+		this.sesionProyectoRepositorio = sesionProyectoRepositorio;
+		this.mensajeProyectoRepositorio = mensajeProyectoRepositorio;
 		this.userRepository = userRepository;
 		this.notificationService = notificationService;
 	}
@@ -122,56 +140,312 @@ public class TutoriasColectivasService {
 	public void eliminar(String tutoriaId) {
 		buscarTutoria(tutoriaId);
 		informeRepositorio.deleteAll(informeRepositorio.findByTutoriaColectivaId(tutoriaId));
+		sesionProyectoRepositorio.deleteByTutoriaColectivaId(tutoriaId);
+		mensajeProyectoRepositorio.deleteByTutoriaColectivaId(tutoriaId);
 		tutoriaColectivaRepositorio.deleteById(tutoriaId);
 	}
 
-	public InformeAvanceProyecto registrarInforme(
-			String tutoriaColectivaId,
-			String proyectoId,
-			InformeAvanceSolicitud solicitud,
-			String docenteId) {
-		TutoriaColectiva tutoria = buscarTutoria(tutoriaColectivaId);
-		ProyectoAula proyecto = tutoria.proyectos().stream()
-				.filter(actual -> actual.proyectoId().equals(proyectoId))
-				.findFirst()
-				.orElseThrow(() -> new NotFoundException("No se encontró el proyecto del grupo."));
-		if (!proyecto.docenteResponsableId().equals(docenteId)) {
-			throw new ForbiddenException("Solo el docente de apoyo asignado puede reportar este proyecto.");
-		}
-		InformeAvanceProyecto informe = new InformeAvanceProyecto(
-				UUID.randomUUID().toString(),
-				tutoriaColectivaId,
-				proyectoId,
-				docenteId,
-				solicitud.puntajeAvance(),
-				solicitud.observaciones(),
-				LocalDateTime.now());
-		InformeAvanceProyecto guardado = informeRepositorio.save(informe);
-		String mensajeInforme = "Se registro un informe para el proyecto " + proyecto.nombre() + ".";
-		notificationService.notifyUser(tutoria.coordinadoraId(), "Nuevo informe de avance",
-				mensajeInforme, "/notificaciones");
-		notificationService.notifyUser(tutoria.docenteLiderId(), "Nuevo informe de avance",
-				mensajeInforme, "/notificaciones");
-		return guardado;
+	public List<ProyectoAulaSeguimientoEstudiante> listarSeguimientoEstudiante(String estudianteId) {
+		return tutoriaColectivaRepositorio.findAll().stream()
+				.flatMap(tutoria -> tutoria.proyectos().stream()
+						.filter(proyecto -> proyecto.estudianteIds().contains(estudianteId))
+						.map(proyecto -> new ProyectoAulaSeguimientoEstudiante(
+								tutoria.id(), proyecto,
+								sesionProyectoRepositorio.findByTutoriaColectivaIdAndProyectoIdOrderByFechaInicioDesc(
+										tutoria.id(), proyecto.proyectoId()))))
+				.toList();
 	}
 
-	public List<TutoriaColectivaConAvance> listarParaLiderPrograma() {
+	public SesionProyectoAula registrarSesionProyecto(
+			String tutoriaId, String proyectoId, SesionProyectoAulaSolicitud solicitud, String docenteId) {
+		TutoriaColectiva tutoria = buscarTutoria(tutoriaId);
+		ProyectoAula proyecto = buscarProyecto(tutoria, proyectoId);
+		if (!proyecto.docenteResponsableId().equals(docenteId)) {
+			throw new ForbiddenException("Solo el tutor asignado a este proyecto puede registrar sus sesiones.");
+		}
+		if ("FINALIZADO".equals(proyecto.estadoCierre())) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT, "No puedes agregar sesiones a un proyecto finalizado.");
+		}
+		SesionProyectoAula sesion = new SesionProyectoAula(
+				UUID.randomUUID().toString(), tutoriaId, proyectoId, docenteId,
+				solicitud.fechaInicio(), solicitud.fechaFin(), solicitud.contenido().trim(), LocalDateTime.now());
+		SesionProyectoAula guardada = sesionProyectoRepositorio.save(sesion);
+		notificationService.notifyUser(tutoria.docenteLiderId(), "Nuevo reporte de proyecto de aula",
+				"El tutor de apoyo registró un reporte para " + proyecto.nombre() + ". Revísalo en el panel docente.",
+				"/docente");
+		proyecto.estudianteIds().forEach(estudianteId -> notificationService.notifyUser(
+				estudianteId, "Nuevo seguimiento de proyecto",
+				"El tutor actualizó el horario y las notas de " + proyecto.nombre() + ".", "/notificaciones"));
+		return guardada;
+	}
+
+	public SesionProyectoAula confirmarReporteProyecto(
+			String tutoriaId, String proyectoId, String sesionId, String docenteLiderId) {
+		TutoriaColectiva tutoria = buscarTutoria(tutoriaId);
+		if (!tutoria.docenteLiderId().equals(docenteLiderId)) {
+			throw new ForbiddenException("Solo el docente líder puede confirmar un reporte de apoyo.");
+		}
+		buscarProyecto(tutoria, proyectoId);
+		SesionProyectoAula sesion = sesionProyectoRepositorio
+				.findByIdAndTutoriaColectivaIdAndProyectoId(sesionId, tutoriaId, proyectoId)
+				.orElseThrow(() -> new NotFoundException("No se encontró el reporte del proyecto."));
+		if (sesion.confirmadoPorLiderId() != null) return sesion;
+		SesionProyectoAula confirmada = sesion.confirmar(docenteLiderId, LocalDateTime.now());
+		sesionProyectoRepositorio.save(confirmada);
+		notificationService.notifyUser(sesion.docenteId(), "Reporte de apoyo confirmado",
+				"El docente líder confirmó el reporte registrado para el proyecto.", "/docente");
+		return confirmada;
+	}
+
+	public List<SesionProyectoAula> listarSesionesProyectoDocente(
+			String tutoriaId, String proyectoId, String docenteId) {
+		TutoriaColectiva tutoria = buscarTutoria(tutoriaId);
+		ProyectoAula proyecto = buscarProyecto(tutoria, proyectoId);
+		if (!proyecto.docenteResponsableId().equals(docenteId) && !tutoria.docenteLiderId().equals(docenteId)) {
+			throw new ForbiddenException("Solo el tutor asignado y el docente líder pueden consultar este reporte.");
+		}
+		return sesionProyectoRepositorio.findByTutoriaColectivaIdAndProyectoIdOrderByFechaInicioDesc(
+				tutoriaId, proyectoId);
+	}
+
+	public List<ProyectoAsignadoDocente> listarProyectosParaLider(String docenteLiderId) {
 		return tutoriaColectivaRepositorio.findAll().stream()
-				.map(tutoria -> new TutoriaColectivaConAvance(
-						tutoria,
-						tutoria.proyectos().stream()
-								.map(proyecto -> {
-									List<InformeAvanceProyecto> informes = informeRepositorio
-											.findByTutoriaColectivaIdAndProyectoIdOrderByFechaInformeAsc(
-													tutoria.id(),
-													proyecto.proyectoId());
-									return new ProyectoAulaConAvance(
-											proyecto,
-											informes,
-											ModeloMejoraProyecto.evaluar(informes));
-								})
-								.toList()))
+				.filter(tutoria -> tutoria.docenteLiderId().equals(docenteLiderId))
+				.flatMap(tutoria -> tutoria.proyectos().stream()
+						.map(proyecto -> new ProyectoAsignadoDocente(tutoria.id(), proyecto)))
 				.toList();
+	}
+
+	public ProyectoAula obtenerProyectoEnChat(String tutoriaId, String proyectoId, String sesionId, String usuarioId) {
+		validarAccesoProyecto(tutoriaId, proyectoId, sesionId, usuarioId);
+		return buscarProyecto(buscarTutoria(tutoriaId), proyectoId);
+	}
+
+	public ProyectoAula programarReunionProyecto(
+			String tutoriaId, String proyectoId, String sesionId,
+			ReunionProyectoAulaSolicitud solicitud, String docenteId) {
+		TutoriaColectiva tutoria = buscarTutoria(tutoriaId);
+		ProyectoAula proyecto = buscarProyecto(tutoria, proyectoId);
+		validarTutorResponsable(proyecto, docenteId);
+		if ("FINALIZADO".equals(proyecto.estadoCierre())) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT, "El proyecto ya fue finalizado.");
+		}
+		sesionProyectoRepositorio.findByIdAndTutoriaColectivaIdAndProyectoId(sesionId, tutoriaId, proyectoId)
+				.orElseThrow(() -> new NotFoundException("No se encontró el reporte asociado a este chat."));
+		ProyectoAula actualizado = proyecto.programarReunion(solicitud.fechaReunion(), docenteId, sesionId);
+		tutoriaColectivaRepositorio.save(tutoria.actualizarProyecto(actualizado));
+		String fecha = solicitud.fechaReunion().toString().replace('T', ' ');
+		java.util.stream.Stream.concat(proyecto.estudianteIds().stream(), java.util.stream.Stream.of(tutoria.docenteLiderId()))
+				.distinct().forEach(destinatario -> notificationService.notifyUser(destinatario,
+						"Reunión de proyecto de aula programada",
+						"El tutor programó una reunión para " + proyecto.nombre() + " el " + fecha + ".",
+						"/notificaciones"));
+		return actualizado;
+	}
+
+	@Scheduled(fixedDelay = 30000)
+	public void publicarAvisosDeReunionesIniciadas() {
+		LocalDateTime ahora = LocalDateTime.now();
+		for (TutoriaColectiva tutoria : tutoriaColectivaRepositorio.findAll()) {
+			TutoriaColectiva actual = tutoria;
+			for (ProyectoAula proyecto : tutoria.proyectos()) {
+				if (proyecto.fechaReunion() == null || proyecto.fechaReunion().isAfter(ahora)
+						|| proyecto.reunionMensajePublicadoEn() != null || proyecto.reunionSesionId() == null) continue;
+				if (sesionProyectoRepositorio.findByIdAndTutoriaColectivaIdAndProyectoId(
+						proyecto.reunionSesionId(), tutoria.id(), proyecto.proyectoId()).isEmpty()) continue;
+				String roomId = "searchteach-pa-" + proyecto.proyectoId();
+				mensajeProyectoRepositorio.save(new MensajeProyectoAula(
+						UUID.randomUUID().toString(), tutoria.id(), proyecto.proyectoId(),
+						proyecto.reunionSesionId(), proyecto.docenteResponsableId(),
+						"La reunión de proyecto de aula está comenzando. Entra a la sala desde este mensaje.",
+						null, null, null, null, ahora, "REUNION", roomId));
+				ProyectoAula actualizado = proyecto.marcarMensajeReunionPublicado(ahora);
+				actual = actual.actualizarProyecto(actualizado);
+				tutoriaColectivaRepositorio.save(actual);
+				java.util.stream.Stream.concat(proyecto.estudianteIds().stream(),
+						java.util.stream.Stream.of(tutoria.docenteLiderId(), proyecto.docenteResponsableId()))
+						.distinct().forEach(destinatario -> notificationService.notifyUser(destinatario,
+								"La reunión de proyecto de aula comenzó",
+								"Entra al chat de " + proyecto.nombre() + " para unirte a la reunión.",
+								"/notificaciones"));
+			}
+		}
+	}
+
+	public ProyectoAula solicitarCierreProyecto(
+			String tutoriaId, String proyectoId, String motivo, String docenteId) {
+		TutoriaColectiva tutoria = buscarTutoria(tutoriaId);
+		ProyectoAula proyecto = buscarProyecto(tutoria, proyectoId);
+		validarTutorResponsable(proyecto, docenteId);
+		String motivoNormalizado = motivo == null ? "" : motivo.trim().toUpperCase(Locale.ROOT);
+		if (!List.of("LISTO", "SIN_ATENCION").contains(motivoNormalizado)) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Selecciona un motivo válido para finalizar el proyecto.");
+		}
+		if (!"EN_CURSO".equals(proyecto.estadoCierre())) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT, "El proyecto no está disponible para solicitar cierre.");
+		}
+		ProyectoAula actualizado = proyecto.solicitarCierre(motivoNormalizado);
+		tutoriaColectivaRepositorio.save(tutoria.actualizarProyecto(actualizado));
+		notificationService.notifyUser(tutoria.docenteLiderId(), "Proyecto pendiente de confirmación",
+				"El tutor solicitó finalizar " + proyecto.nombre() + ". Revisa el reporte y confirma el cierre.",
+				"/docente");
+		return actualizado;
+	}
+
+	public ProyectoAula responderSolicitudCierre(
+			String tutoriaId, String proyectoId, boolean confirmar, String docenteLiderId) {
+		TutoriaColectiva tutoria = buscarTutoria(tutoriaId);
+		if (!tutoria.docenteLiderId().equals(docenteLiderId)) {
+			throw new ForbiddenException("Solo el docente líder puede confirmar el cierre del proyecto.");
+		}
+		ProyectoAula proyecto = buscarProyecto(tutoria, proyectoId);
+		if (!"PENDIENTE_CONFIRMACION".equals(proyecto.estadoCierre())) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT, "No hay una solicitud de cierre pendiente.");
+		}
+		List<SesionProyectoAula> reportes = sesionProyectoRepositorio
+				.findByTutoriaColectivaIdAndProyectoIdOrderByFechaInicioDesc(tutoriaId, proyectoId);
+		if (confirmar && (reportes.isEmpty()
+				|| reportes.stream().anyMatch(sesion -> sesion.confirmadoPorLiderId() == null))) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT,
+					"Debe haber reportes de sesión y el docente líder debe confirmarlos antes de finalizar el proyecto.");
+		}
+		ProyectoAula actualizado = confirmar
+				? proyecto.confirmarCierre(docenteLiderId, LocalDateTime.now())
+				: proyecto.rechazarCierre();
+		tutoriaColectivaRepositorio.save(tutoria.actualizarProyecto(actualizado));
+		notificationService.notifyUser(proyecto.docenteResponsableId(),
+				confirmar ? "Proyecto de aula finalizado" : "Solicitud de cierre devuelta",
+				confirmar ? "El docente líder confirmó el cierre de " + proyecto.nombre() + "."
+						: "El docente líder devolvió la solicitud de cierre de " + proyecto.nombre() + ".",
+				"/docente");
+		proyecto.estudianteIds().forEach(estudianteId -> notificationService.notifyUser(estudianteId,
+				confirmar ? "Proyecto de aula finalizado" : "Solicitud de cierre en revisión",
+				confirmar ? "El docente líder confirmó el cierre de " + proyecto.nombre() + "."
+						: "El docente líder pidió revisar la solicitud de cierre de " + proyecto.nombre() + ".",
+				"/notificaciones"));
+		return actualizado;
+	}
+
+	private void validarTutorResponsable(ProyectoAula proyecto, String docenteId) {
+		if (!proyecto.docenteResponsableId().equals(docenteId)) {
+			throw new ForbiddenException("Solo el docente de apoyo asignado puede gestionar este proyecto.");
+		}
+	}
+
+	public List<MensajeProyectoAulaVista> listarMensajesProyecto(
+			String tutoriaId, String proyectoId, String sesionId, String usuarioId) {
+		validarAccesoProyecto(tutoriaId, proyectoId, sesionId, usuarioId);
+		return mensajeProyectoRepositorio
+				.findByTutoriaColectivaIdAndProyectoIdAndSesionIdOrderByEnviadoEnAsc(
+						tutoriaId, proyectoId, sesionId)
+				.stream()
+				.map(mensaje -> new MensajeProyectoAulaVista(
+						mensaje.id(), mensaje.emisorId(), mensaje.emisorId().equals(usuarioId),
+						mensaje.texto(), mensaje.archivoNombre(), mensaje.archivoMime(),
+						mensaje.archivoTamano(), mensaje.enviadoEn(), mensaje.tipo(), mensaje.reunionRoomId()))
+				.toList();
+	}
+
+	public MensajeProyectoAulaVista registrarMensajeProyecto(
+			String tutoriaId, String proyectoId, String sesionId, String usuarioId,
+			String texto, MultipartFile archivo) {
+		validarAccesoProyecto(tutoriaId, proyectoId, sesionId, usuarioId);
+		if ("FINALIZADO".equals(buscarProyecto(buscarTutoria(tutoriaId), proyectoId).estadoCierre())) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT, "El chat quedó cerrado al finalizar el proyecto.");
+		}
+		String contenido = texto == null ? "" : texto.trim();
+		if (contenido.length() > 4000 || (contenido.isEmpty() && (archivo == null || archivo.isEmpty()))) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+					"Escribe un mensaje o adjunta un archivo; el texto admite hasta 4000 caracteres.");
+		}
+		byte[] bytes = null;
+		String nombre = null;
+		String mime = null;
+		if (archivo != null && !archivo.isEmpty()) {
+			try {
+				bytes = archivo.getBytes();
+			} catch (IOException error) {
+				throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No se pudo leer el archivo adjunto.");
+			}
+			if (bytes.length > 8 * 1024 * 1024) {
+				throw new ResponseStatusException(HttpStatus.PAYLOAD_TOO_LARGE, "El archivo no puede superar 8 MB.");
+			}
+			String original = archivo.getOriginalFilename() == null ? "" : archivo.getOriginalFilename();
+			nombre = original.replace('\\', '/');
+			nombre = nombre.substring(nombre.lastIndexOf('/') + 1).replaceAll("[^A-Za-z0-9._ -]", "_");
+			String extension = nombre.substring(nombre.lastIndexOf('.') + 1).toLowerCase(Locale.ROOT);
+			mime = switch (extension) {
+				case "pdf" -> "application/pdf";
+				case "docx" -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+				default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+						"Solo se permiten archivos PDF o Word (.docx).");
+			};
+			if (!archivoValido(extension, bytes)) {
+				throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+						"El contenido del archivo no coincide con su tipo permitido.");
+			}
+		}
+		MensajeProyectoAula guardado = mensajeProyectoRepositorio.save(new MensajeProyectoAula(
+				UUID.randomUUID().toString(), tutoriaId, proyectoId, sesionId, usuarioId,
+				contenido, nombre, mime, bytes == null ? null : (long) bytes.length, bytes, LocalDateTime.now()));
+		return new MensajeProyectoAulaVista(guardado.id(), guardado.emisorId(), true, guardado.texto(),
+				guardado.archivoNombre(), guardado.archivoMime(), guardado.archivoTamano(), guardado.enviadoEn(),
+				guardado.tipo(), guardado.reunionRoomId());
+	}
+
+	public MensajeProyectoAula descargarArchivoProyecto(
+			String tutoriaId, String proyectoId, String sesionId, String mensajeId, String usuarioId) {
+		validarAccesoProyecto(tutoriaId, proyectoId, sesionId, usuarioId);
+		return mensajeProyectoRepositorio
+				.findByTutoriaColectivaIdAndProyectoIdAndSesionIdOrderByEnviadoEnAsc(
+						tutoriaId, proyectoId, sesionId).stream()
+				.filter(mensaje -> mensaje.id().equals(mensajeId) && mensaje.archivoContenido() != null)
+				.findFirst()
+				.orElseThrow(() -> new NotFoundException("No se encontró el archivo adjunto."));
+	}
+
+	private void validarAccesoProyecto(String tutoriaId, String proyectoId, String sesionId, String usuarioId) {
+		TutoriaColectiva tutoria = buscarTutoria(tutoriaId);
+		ProyectoAula proyecto = buscarProyecto(tutoria, proyectoId);
+		if (!proyecto.docenteResponsableId().equals(usuarioId) && !proyecto.estudianteIds().contains(usuarioId)
+				&& !tutoria.docenteLiderId().equals(usuarioId)) {
+			throw new ForbiddenException("Solo el tutor asignado, el docente líder y los estudiantes inscritos pueden acceder al reporte.");
+		}
+		sesionProyectoRepositorio.findByIdAndTutoriaColectivaIdAndProyectoId(sesionId, tutoriaId, proyectoId)
+				.orElseThrow(() -> new NotFoundException("No se encontró el reporte del proyecto."));
+	}
+
+	private boolean archivoValido(String extension, byte[] bytes) {
+		if ("pdf".equals(extension)) {
+			return bytes.length >= 5 && bytes[0] == '%' && bytes[1] == 'P'
+					&& bytes[2] == 'D' && bytes[3] == 'F' && bytes[4] == '-';
+		}
+		if (!"docx".equals(extension) || bytes.length < 4 || bytes[0] != 'P' || bytes[1] != 'K') return false;
+		boolean document = false;
+		boolean contentTypes = false;
+		boolean macroProject = false;
+		long uncompressedBytes = 0;
+		try (ZipInputStream zip = new ZipInputStream(new ByteArrayInputStream(bytes))) {
+			java.util.zip.ZipEntry entry;
+			byte[] buffer = new byte[4096];
+			while ((entry = zip.getNextEntry()) != null) {
+				if ("word/document.xml".equals(entry.getName())) document = true;
+				if ("[Content_Types].xml".equals(entry.getName())) contentTypes = true;
+				if ("word/vbaProject.bin".equalsIgnoreCase(entry.getName())) macroProject = true;
+				int read;
+				while ((read = zip.read(buffer)) != -1) {
+					uncompressedBytes += read;
+					if (uncompressedBytes > 24L * 1024 * 1024) return false;
+				}
+			}
+		} catch (IOException error) {
+			return false;
+		}
+		return document && contentTypes && !macroProject;
+	}
+
+	public List<TutoriaColectiva> listarParaLiderPrograma() {
+		return tutoriaColectivaRepositorio.findAll();
 	}
 
 	public List<TutoriaColectiva> listarParaCoordinacion() {
@@ -201,10 +475,32 @@ public class TutoriasColectivasService {
 			throw new ResponseStatusException(HttpStatus.CONFLICT,
 					"El semestre ingresado no corresponde al espacio de proyecto seleccionado.");
 		}
-		String nombre = solicitud.nombre().trim();
 		validarInscripcionUnica(tutoria, estudianteId, null);
+		List<ProyectoAula> gruposConCupo = tutoria.proyectos().stream()
+				.filter(proyecto -> proyecto.estudianteIds().size() < 4
+						&& "EN_CURSO".equals(proyecto.estadoCierre()))
+				.toList();
+		if (!gruposConCupo.isEmpty()) {
+			int menorTamano = gruposConCupo.stream().mapToInt(proyecto -> proyecto.estudianteIds().size()).min().orElse(0);
+			List<ProyectoAula> menosLlenos = gruposConCupo.stream()
+					.filter(proyecto -> proyecto.estudianteIds().size() == menorTamano).toList();
+			ProyectoAula asignado = menosLlenos.get(ThreadLocalRandom.current().nextInt(menosLlenos.size()));
+			return new ProyectoAulaCreado(
+					inscribirEnProyecto(tutoria, asignado, estudianteId), null);
+		}
 		List<String> docentesApoyo = tutoria.docentesApoyoIds();
-		String responsable = docentesApoyo.get(ThreadLocalRandom.current().nextInt(docentesApoyo.size()));
+		int menorCarga = docentesApoyo.stream()
+				.mapToInt(docenteId -> tutoria.proyectos().stream()
+						.filter(proyecto -> proyecto.docenteResponsableId().equals(docenteId))
+						.mapToInt(proyecto -> proyecto.estudianteIds().size()).sum())
+				.min().orElse(0);
+		List<String> menosAsignados = docentesApoyo.stream()
+				.filter(docenteId -> tutoria.proyectos().stream()
+						.filter(proyecto -> proyecto.docenteResponsableId().equals(docenteId))
+						.mapToInt(proyecto -> proyecto.estudianteIds().size()).sum() == menorCarga)
+				.toList();
+		String responsable = menosAsignados.get(ThreadLocalRandom.current().nextInt(menosAsignados.size()));
+		String nombre = solicitud.nombre().trim();
 		String codigo = generarCodigoInscripcion();
 		ProyectoAula proyecto = new ProyectoAula(
 				UUID.randomUUID().toString(),
@@ -219,7 +515,7 @@ public class TutoriasColectivasService {
 				"Un estudiante se unio al proyecto " + proyecto.nombre() + ".", "/notificaciones");
 		notificationService.notifyUser(estudianteId, "Proyecto creado",
 				"Creaste el proyecto " + proyecto.nombre() + " y quedaste inscrito.", "/notificaciones");
-		return new ProyectoAulaCreado(disponible(tutoriaId, proyecto, estudianteId), codigo);
+		return new ProyectoAulaCreado(disponible(tutoriaId, proyecto, estudianteId), null);
 	}
 
 	public ProyectoAulaInscripcionPreview previsualizarInscripcion(String codigo, String estudianteId) {
@@ -273,12 +569,6 @@ public class TutoriasColectivasService {
 					"Te retiraste del proyecto " + proyecto.nombre() + ".", "/notificaciones");
 		}
 		return disponible(tutoriaId, actualizado, estudianteId);
-	}
-
-	public List<InformeAvanceProyecto> listarInformesParaCoordinacion() {
-		return informeRepositorio.findAll().stream()
-				.sorted((a, b) -> b.fechaInforme().compareTo(a.fechaInforme()))
-				.toList();
 	}
 
 	public List<ProyectoAsignadoDocente> listarProyectosDeDocente(String docenteId) {

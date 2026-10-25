@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import '../auth/auth_repository.dart';
 import '../notifications/notifications_page.dart';
 import 'director_dashboard_provider.dart';
-import 'proyectos_aula_page.dart';
 
 const _purple = Color(0xFF6337BF);
 const _brandOrange = Color(0xFFEA580C);
@@ -30,7 +29,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
       0 => _home(dashboard),
       1 => _quality(),
       2 => _forecast(),
-      3 => const ProyectosAulaPage(),
+      3 => const _PaAccessView(),
       _ => _profile(),
     };
 
@@ -56,7 +55,6 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
             tooltip: 'Actualizar',
             onPressed: () {
               ref.invalidate(directorDashboardProvider);
-              ref.invalidate(proyectosAulaProvider);
             },
             icon: const Icon(Icons.refresh),
           ),
@@ -366,6 +364,21 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
       ),
     );
   }
+}
+
+class _PaAccessView extends StatelessWidget {
+  const _PaAccessView();
+
+  @override
+  Widget build(BuildContext context) => const Center(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Text(
+            'El seguimiento y los informes de proyectos de aula están disponibles únicamente para el docente de apoyo asignado y los estudiantes inscritos.',
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
 }
 
 const _titles = [

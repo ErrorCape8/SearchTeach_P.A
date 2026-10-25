@@ -161,6 +161,11 @@ public class AuthServiceImpl implements AuthService {
 
 	@Override
 	public AuthResponse login(String identifier, String password, String clientIp) {
+		return login(identifier, password, clientIp, false);
+	}
+
+	@Override
+	public AuthResponse login(String identifier, String password, String clientIp, boolean rememberMe) {
 		attemptLimiter.assertAllowed(identifier, clientIp);
 		validatePasswordLength(password);
 
@@ -195,7 +200,8 @@ public class AuthServiceImpl implements AuthService {
 		}
 
 		attemptLimiter.recordSuccess(identifier);
-		return issueToken(identifier, roleFor(itAdmin, liderPrograma, legacyCoordinator));
+		long expiresIn = rememberMe ? 30L * 24 * 60 * 60 : jwtService.getExpirationSeconds();
+		return issueToken(identifier, roleFor(itAdmin, liderPrograma, legacyCoordinator), expiresIn);
 	}
 
 	private Role roleFor(ItAdmin itAdmin, LiderPrograma liderPrograma, Coordinator legacyCoordinator) {
@@ -218,5 +224,10 @@ public class AuthServiceImpl implements AuthService {
 	private AuthResponse issueToken(String identifier, Role role) {
 		return new AuthResponse(jwtService.createToken(identifier, role), "Bearer",
 				jwtService.getExpirationSeconds());
+	}
+
+	private AuthResponse issueToken(String identifier, Role role, long expiresInSeconds) {
+		return new AuthResponse(jwtService.createToken(identifier, role, expiresInSeconds), "Bearer",
+				expiresInSeconds);
 	}
 }

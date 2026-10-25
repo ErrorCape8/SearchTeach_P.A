@@ -44,6 +44,6 @@ public class AuthController {
 	public AuthResponse iniciarSesion(
 			@Valid @RequestBody LoginRequest request,
 			HttpServletRequest servletRequest) {
-		return authService.login(request.identifier(), request.password(), servletRequest.getRemoteAddr());
+		return authService.login(request.identifier(), request.password(), servletRequest.getRemoteAddr(), request.rememberMe());
 	}
 }

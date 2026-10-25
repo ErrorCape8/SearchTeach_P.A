@@ -17,6 +17,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final _id = TextEditingController();
   final _pass = TextEditingController();
   bool _hide = true;
+  bool _rememberMe = false;
 
   @override
   void initState() {
@@ -29,7 +30,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     if (!_formKey.currentState!.validate()) return;
     final ok = await ref
         .read(authControllerProvider.notifier)
-        .login(_id.text.trim(), _pass.text);
+        .login(_id.text.trim(), _pass.text, rememberMe: _rememberMe);
     if (ok && mounted) {
       try {
         final route = await ref.read(authRepositoryProvider).landingRoute();
@@ -93,6 +94,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               onFieldSubmitted: (_) => _submit(),
             ),
             const SizedBox(height: 24),
+            CheckboxListTile(
+              contentPadding: EdgeInsets.zero,
+              controlAffinity: ListTileControlAffinity.leading,
+              value: _rememberMe,
+              onChanged: state.isLoading ? null : (value) => setState(() => _rememberMe = value ?? false),
+              title: const Text('Mantener sesión iniciada'),
+            ),
             DarkButton('Iniciar sesión',
                 loading: state.isLoading, onPressed: _submit),
             const SizedBox(height: 20),

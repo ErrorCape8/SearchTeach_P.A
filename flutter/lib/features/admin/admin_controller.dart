@@ -268,6 +268,22 @@ class AdminController extends StateNotifier<AdminState> {
     }
   }
 
+  // Compatibilidad con el diálogo antiguo; la pantalla actual usa el flujo
+  // verificado por correo de showProfileChangeDialog.
+  Future<bool> updateAdminPhone(String phone) async {
+    try {
+      await _ref.read(dioProvider).put<void>(
+        '/api/admin/perfil/telefono',
+        data: {'telefono': phone},
+      );
+      await loadProfile();
+      return true;
+    } on DioException catch (error) {
+      state = state.copyWith(profileError: () => _apiError(error));
+      return false;
+    }
+  }
+
   String _apiError(DioException error) {
     final data = error.response?.data;
     if (data is Map && data['message'] is String) {
@@ -377,30 +393,6 @@ class AdminController extends StateNotifier<AdminState> {
     }
   }
 
-  Future<bool> updateAdminPhone(String phone) async {
-    try {
-      final response = await _ref.read(dioProvider).put<Map<String, dynamic>>(
-        '/api/admin/perfil/telefono',
-        data: {'telefono': phone},
-      );
-      final data = response.data;
-      if (data == null) {
-        throw const FormatException(
-            'El servidor no confirmó el teléfono actualizado.');
-      }
-      state = state.copyWith(
-        adminProfile: () => AdminProfile.fromJson(data),
-        profileError: () => null,
-      );
-      return true;
-    } on DioException catch (error) {
-      state = state.copyWith(profileError: () => _apiError(error));
-      return false;
-    } on FormatException catch (error) {
-      state = state.copyWith(profileError: () => error.message);
-      return false;
-    }
-  }
 }
 
 final adminControllerProvider =

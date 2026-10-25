@@ -9,4 +9,6 @@ public interface AuthService {
 	void verifyRegistration(String identifier, String clientIp);
 
 	AuthResponse login(String identifier, String password, String clientIp);
+
+	AuthResponse login(String identifier, String password, String clientIp, boolean rememberMe);
 }

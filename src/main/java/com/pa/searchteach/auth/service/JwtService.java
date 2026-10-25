@@ -31,12 +31,16 @@ public class JwtService {
 	}
 
 	public String createToken(String identifier, Role role) {
+		return createToken(identifier, role, expirationSeconds);
+	}
+
+	public String createToken(String identifier, Role role, long durationSeconds) {
 		Instant issuedAt = Instant.now();
 		return Jwts.builder()
 				.subject(identifier)
 				.claim("role", role.name())
 				.issuedAt(Date.from(issuedAt))
-				.expiration(Date.from(issuedAt.plusSeconds(expirationSeconds)))
+				.expiration(Date.from(issuedAt.plusSeconds(durationSeconds)))
 				.signWith(signingKey)
 				.compact();
 	}

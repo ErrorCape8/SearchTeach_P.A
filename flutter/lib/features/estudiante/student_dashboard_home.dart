@@ -110,7 +110,7 @@ class StudentHomeView extends StatelessWidget {
   }
 }
 
-class StudentProfileView extends StatelessWidget {
+class StudentProfileView extends ConsumerWidget {
   const StudentProfileView({
     required this.profile,
     this.onTeacherMode,
@@ -121,7 +121,7 @@ class StudentProfileView extends StatelessWidget {
   final VoidCallback? onTeacherMode;
 
   @override
-  Widget build(BuildContext context) => ListView(
+  Widget build(BuildContext context, WidgetRef ref) => ListView(
         padding: const EdgeInsets.all(24),
         children: [
           const _PageHeading(
@@ -161,6 +161,16 @@ class StudentProfileView extends StatelessWidget {
                   _ProfileRow(label: 'Correo', value: profile.email),
                   _ProfileRow(label: 'Teléfono', value: profile.phone),
                   _ProfileRow(label: 'Rol académico', value: _roleLabel(profile.role)),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => showProfileChangeDialog(context, ref,
+                          onUpdated: () => ref.invalidate(studentDashboardProvider)),
+                      icon: const Icon(Icons.verified_user_outlined),
+                      label: const Text('Cambiar correo, teléfono o contraseña'),
+                    ),
+                  ),
                   if (onTeacherMode != null) ...[
                     const SizedBox(height: 8),
                     SizedBox(

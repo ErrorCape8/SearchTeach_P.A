@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../auth/auth_repository.dart';
+import '../../auth/profile_change_dialog.dart';
 import '../admin_controller.dart';
 
 class AdminPerfilView extends ConsumerWidget {
@@ -184,11 +185,8 @@ class AdminPerfilView extends ConsumerWidget {
         InkWell(
           onTap: state.isLoadingProfile || profile == null
               ? null
-              : () => _showEditPhoneDialog(
-                    context,
-                    ref,
-                    profile.telefono,
-                  ),
+              : () => showProfileChangeDialog(context, ref,
+                    onUpdated: () => ref.read(adminControllerProvider.notifier).loadProfile()),
           borderRadius: BorderRadius.circular(18),
           child: Container(
             padding: const EdgeInsets.all(16),
@@ -265,7 +263,8 @@ class AdminPerfilView extends ConsumerWidget {
         ),
         const SizedBox(height: 10),
         InkWell(
-          onTap: () => _showChangePasswordDialog(context),
+          onTap: () => showProfileChangeDialog(context, ref,
+              onUpdated: () => ref.read(adminControllerProvider.notifier).loadProfile()),
           borderRadius: BorderRadius.circular(18),
           child: Container(
             padding: const EdgeInsets.all(16),
@@ -333,7 +332,7 @@ class AdminPerfilView extends ConsumerWidget {
 
         // Datos institucionales
         const Text(
-          'Datos institucionales',
+          'Correo actual y datos institucionales',
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w800,
@@ -381,11 +380,18 @@ class AdminPerfilView extends ConsumerWidget {
         ),
         const SizedBox(height: 6),
         const Text(
-          'Estos datos los gestiona TI.',
+          'El correo actual recibe los códigos de seguridad. Puedes solicitar su cambio con verificación.',
           style: TextStyle(
             fontSize: 12,
             color: Color(0xFF64748B),
           ),
+        ),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          onPressed: () => showProfileChangeDialog(context, ref,
+              onUpdated: () => ref.read(adminControllerProvider.notifier).loadProfile()),
+          icon: const Icon(Icons.verified_user_outlined),
+          label: const Text('Cambiar correo, teléfono o contraseña'),
         ),
         const SizedBox(height: 26),
 

@@ -7,8 +7,8 @@ class AuthController extends AutoDisposeAsyncNotifier<void> {
   @override
   Future<void> build() async {}
 
-  Future<bool> login(String id, String password) =>
-      _run(() => ref.read(authRepositoryProvider).login(id, password));
+  Future<bool> login(String id, String password, {required bool rememberMe}) =>
+      _run(() => ref.read(authRepositoryProvider).login(id, password, rememberMe: rememberMe));
 
   Future<bool> register(String id, String password) =>
       _run(() => ref.read(authRepositoryProvider).register(id, password));

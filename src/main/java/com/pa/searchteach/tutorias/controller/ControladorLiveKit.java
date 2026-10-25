@@ -123,7 +123,6 @@ public class ControladorLiveKit {
 		if (!sesion.docenteId().equals(usuarioId) && !sesion.estudianteIds().contains(usuarioId)) {
 			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No perteneces a esta sesión.");
 		}
-		Instant now = Instant.now();
 		LocalDateTime horaLocal = LocalDateTime.now();
 		if (horaLocal.isBefore(sesion.fechaInicio().minusMinutes(15))
 				|| horaLocal.isAfter(sesion.fechaFin().plusHours(1))) {
@@ -132,6 +131,11 @@ public class ControladorLiveKit {
 		}
 
 		String room = "searchteach-" + sesion.id();
+		return crearTokenSala(usuarioId, room);
+	}
+
+	private LiveKitTokenResponse crearTokenSala(String usuarioId, String room) {
+		Instant now = Instant.now();
 		SecretKey signingKey = Keys.hmacShaKeyFor(apiSecret.getBytes(StandardCharsets.UTF_8));
 		String token = Jwts.builder()
 				.issuer(apiKey)

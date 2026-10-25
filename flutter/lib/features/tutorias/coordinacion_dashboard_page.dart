@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/api_client.dart';
 import '../auth/auth_repository.dart';
+import '../auth/profile_change_dialog.dart';
 import '../notifications/notifications_page.dart';
 import 'coordinacion_horarios_page.dart';
 import 'coordinacion_solicitudes_page.dart';
@@ -31,7 +32,6 @@ class _CoordinacionDashboardPageState
   List<Map<String, dynamic>> _teachers = [];
   List<Map<String, dynamic>> _schedules = [];
   List<Map<String, dynamic>> _groups = [];
-  List<Map<String, dynamic>> _reports = [];
   Map<String, dynamic> _profile = {};
 
   @override
@@ -51,7 +51,6 @@ class _CoordinacionDashboardPageState
         dio.get<List<dynamic>>('/api/coordinacion/docentes'),
         dio.get<List<dynamic>>('/api/coordinacion/horarios'),
         dio.get<List<dynamic>>('/api/coordinacion/tutorias-colectivas'),
-        dio.get<List<dynamic>>('/api/coordinacion/informes'),
         dio.get<Map<String, dynamic>>('/api/usuarios/perfil'),
       ]);
       List<Map<String, dynamic>> rows(int index) =>
@@ -63,8 +62,7 @@ class _CoordinacionDashboardPageState
         _teachers = rows(0);
         _schedules = rows(1);
         _groups = rows(2);
-        _reports = rows(3);
-        final profile = responses[4].data;
+        final profile = responses[3].data;
         _profile =
             profile is Map<String, dynamic> ? profile : <String, dynamic>{};
         _loading = false;
@@ -85,7 +83,6 @@ class _CoordinacionDashboardPageState
         'Inicio',
         'Horarios de tutores',
         'Tutores líderes',
-        'Reportes recientes',
         'Solicitudes docentes',
         'Perfil',
       ][_tab];
@@ -135,14 +132,11 @@ class _CoordinacionDashboardPageState
             teachers: _teachers,
             schedules: _schedules,
             groups: _groups,
-            reports: _reports,
             onOpen: (tab) => setState(() => _tab = tab),
           ),
         1 => const CoordinacionHorariosPage(),
         2 => _LeadersView(teachers: _teachers, groups: _groups),
-        3 =>
-          _ReportsView(teachers: _teachers, groups: _groups, reports: _reports),
-        4 => const CoordinacionSolicitudesPage(),
+        3 => const CoordinacionSolicitudesPage(),
         _ => _ProfileView(profile: _profile, onRefresh: _load),
       };
 }
@@ -233,7 +227,6 @@ class _Navigation extends StatelessWidget {
     (Icons.home_outlined, Icons.home_rounded, 'Inicio'),
     (Icons.calendar_month_outlined, Icons.calendar_month_rounded, 'Horarios'),
     (Icons.groups_outlined, Icons.groups_rounded, 'Líderes'),
-    (Icons.inbox_outlined, Icons.inbox_rounded, 'Reportes'),
     (
       Icons.event_available_outlined,
       Icons.event_available_rounded,
@@ -319,9 +312,8 @@ class _HomeView extends StatelessWidget {
       {required this.teachers,
       required this.schedules,
       required this.groups,
-      required this.reports,
       required this.onOpen});
-  final List<Map<String, dynamic>> teachers, schedules, groups, reports;
+  final List<Map<String, dynamic>> teachers, schedules, groups;
   final ValueChanged<int> onOpen;
 
   @override
@@ -346,7 +338,7 @@ class _HomeView extends StatelessWidget {
                   label: 'Con líder')),
           const SizedBox(width: 10),
           Expanded(
-              child: _Metric(value: '${reports.length}', label: 'Informes')),
+              child: _Metric(value: '${groups.length}', label: 'Grupos PA')),
         ]),
         const SizedBox(height: 24),
         _SectionTitle(
@@ -369,26 +361,6 @@ class _HomeView extends StatelessWidget {
               ),
           ]),
         const SizedBox(height: 24),
-        _SectionTitle(
-            title: 'Reportes recientes',
-            action: 'Ver todos',
-            onTap: () => onOpen(3)),
-        const SizedBox(height: 10),
-        if (reports.isEmpty)
-          const _EmptyCard(
-              message: 'Todavía no hay informes de avance registrados.')
-        else
-          _CardList(children: [
-            for (final report in reports.take(3))
-              _RecordRow(
-                icon: Icons.inbox_outlined,
-                title: _projectName(groups, report['proyectoId']),
-                subtitle:
-                    'Avance ${_text(report['puntajeAvance'], '—')}% · ${_date(report['fechaInforme'])}',
-                badge: 'Informe',
-                onTap: () => onOpen(3),
-              ),
-          ]),
       ],
     );
   }
@@ -448,39 +420,6 @@ class _LeadersView extends StatelessWidget {
   }
 }
 
-class _ReportsView extends StatelessWidget {
-  const _ReportsView(
-      {required this.teachers, required this.groups, required this.reports});
-  final List<Map<String, dynamic>> teachers, groups, reports;
-
-  @override
-  Widget build(BuildContext context) {
-    final names = {
-      for (final teacher in teachers) teacher['id']: teacher['nombre']
-    };
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
-      children: [
-        if (reports.isEmpty)
-          const _EmptyCard(
-              message: 'Todavía no hay informes de avance registrados.')
-        else
-          for (final report in reports)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _RecordRow(
-                icon: Icons.inbox_outlined,
-                title: _projectName(groups, report['proyectoId']),
-                subtitle:
-                    '${_text(names[report['docenteId']], 'Tutor')} · ${_date(report['fechaInforme'])} · Avance ${_text(report['puntajeAvance'], '—')}%',
-                badge: 'Informe',
-              ),
-            ),
-      ],
-    );
-  }
-}
-
 class _ProfileView extends ConsumerWidget {
   const _ProfileView({required this.profile, required this.onRefresh});
   final Map<String, dynamic> profile;
@@ -507,7 +446,7 @@ class _ProfileView extends ConsumerWidget {
             title: 'Teléfono',
             subtitle: _text(profile['telefono'], 'No registrado'),
             badge: 'Editar',
-            onTap: () => _editPhone(context, ref),
+            onTap: () => showProfileChangeDialog(context, ref, onUpdated: onRefresh),
           ),
         ]),
         const SizedBox(height: 20),
@@ -519,7 +458,7 @@ class _ProfileView extends ConsumerWidget {
             icon: Icons.lock_outline_rounded,
             title: 'Cambiar contraseña',
             subtitle: 'Mínimo 8 caracteres.',
-            onTap: () => _editPassword(context, ref),
+            onTap: () => showProfileChangeDialog(context, ref, onUpdated: onRefresh),
           ),
         ]),
         const SizedBox(height: 20),
@@ -527,8 +466,13 @@ class _ProfileView extends ConsumerWidget {
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
         const SizedBox(height: 10),
         _CardList(children: [
-          row(Icons.lock_outline, 'Correo',
-              _text(profile['correo'], 'No registrado')),
+          _RecordRow(
+            icon: Icons.email_outlined,
+            title: 'Correo para códigos de seguridad',
+            subtitle: _text(profile['correo'], 'No registrado'),
+            badge: 'Cambiar',
+            onTap: () => showProfileChangeDialog(context, ref, onUpdated: onRefresh),
+          ),
           row(Icons.lock_outline, 'Documento',
               _text(profile['id'], 'No registrado')),
           row(Icons.lock_outline, 'Programa', 'No registrado'),

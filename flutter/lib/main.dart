@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'core/api_client.dart';
+import 'core/session_persistence.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'features/admin/admin_main_page.dart';
@@ -53,7 +54,11 @@ final _router = GoRouter(
   ],
 );
 
-void main() => runApp(const ProviderScope(child: App()));
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await initializeSessionPersistence();
+  runApp(const ProviderScope(child: App()));
+}
 
 class App extends StatefulWidget {
   const App({super.key});

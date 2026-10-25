@@ -263,16 +263,15 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
     try {
       final dio = ref.read(dioProvider);
       if (space.createOrJoin) {
-        final draft = await _askProjectName(space);
-        if (draft == null) return;
-        final name = draft.name;
+        const name = 'Grupo de proyecto';
         final created = await createOrJoinClassroomProject(
           dio: dio,
           tutoringId: space.tutoringId,
-          name: draft.name,
-          semester: draft.semester,
+          name: 'Grupo de proyecto',
+          semester: space.semester,
         );
         ref.invalidate(studentDashboardProvider);
+        ref.invalidate(studentProjectFollowupProvider);
         final code = created['codigoInscripcion'];
         if (code is String && mounted) {
           await showDialog<void>(

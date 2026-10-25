@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/api_client.dart';
+import '../../core/session_persistence.dart';
 import '../notifications/notification_push_service.dart';
 
 /// Error que viene del backend: {message, retryable, retryAfterSeconds}
@@ -20,11 +21,11 @@ class AuthRepository {
   final Dio _dio;
   final Ref _ref;
 
-  Future<void> login(String identifier, String password) =>
-      _authenticate('/api/auth/login', identifier, password);
+  Future<void> login(String identifier, String password, {required bool rememberMe}) =>
+      _authenticate('/api/auth/login', identifier, password, rememberMe: rememberMe);
 
   Future<void> register(String identifier, String password) =>
-      _authenticate('/api/auth/register', identifier, password);
+      _authenticate('/api/auth/register', identifier, password, rememberMe: true);
 
   Future<void> verifyRegistration(String identifier) async {
     try {
@@ -46,16 +47,21 @@ class AuthRepository {
     }
   }
 
-  Future<void> _authenticate(String path, String id, String pass) async {
+  Future<void> _authenticate(String path, String id, String pass, {required bool rememberMe}) async {
     try {
       final res = await _dio.post(path, data: {
         'identifier': id,
         'password': pass,
+        if (path == '/api/auth/login') 'rememberMe': rememberMe,
       });
       // AuthResponse: { token, tokenType, expiresInSeconds }
       await _ref
           .read(secureStorageProvider)
           .write(key: 'token', value: res.data['token'] as String);
+      await _ref.read(secureStorageProvider).write(
+            key: sessionPersistenceKey,
+            value: rememberMe ? 'true' : 'false',
+          );
     } on DioException catch (e) {
       final data = e.response?.data;
       if (data is Map && data['message'] != null) {
@@ -130,6 +136,7 @@ class AuthRepository {
       // A push token must not prevent the user from ending the session.
     }
     await _ref.read(secureStorageProvider).delete(key: 'token');
+    await _ref.read(secureStorageProvider).delete(key: sessionPersistenceKey);
   }
 }
 

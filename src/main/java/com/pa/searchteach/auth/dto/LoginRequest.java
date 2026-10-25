@@ -10,5 +10,9 @@ public record LoginRequest(
 		String identifier,
 		@NotBlank
 		@Size(min = 8, max = 72)
-		String password) {
+		String password,
+		boolean rememberMe) {
+	public LoginRequest(String identifier, String password) {
+		this(identifier, password, false);
+	}
 }

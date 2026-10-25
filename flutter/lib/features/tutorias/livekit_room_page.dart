@@ -9,7 +9,7 @@ import 'package:livekit_client/livekit_client.dart';
 import '../../core/api_client.dart';
 
 class LiveKitRoomPage extends ConsumerStatefulWidget {
-  const LiveKitRoomPage({required this.sessionId, required this.subject, this.modality = 'VIRTUAL', this.teacherMode = false, this.students = const [], this.ended = false, this.endAt, super.key});
+  const LiveKitRoomPage({required this.sessionId, required this.subject, this.modality = 'VIRTUAL', this.teacherMode = false, this.students = const [], this.ended = false, this.endAt, this.projectTutoringId, this.projectId, this.projectReportSessionId, super.key});
 
   final String sessionId;
   final String subject;
@@ -18,6 +18,11 @@ class LiveKitRoomPage extends ConsumerStatefulWidget {
   final List<String> students;
   final bool ended;
   final DateTime? endAt;
+  final String? projectTutoringId;
+  final String? projectId;
+  final String? projectReportSessionId;
+
+  bool get isProjectMeeting => projectTutoringId != null && projectId != null && projectReportSessionId != null;
 
   @override
   ConsumerState<LiveKitRoomPage> createState() => _LiveKitRoomPageState();
@@ -45,8 +50,10 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
     _ended = widget.ended;
     _loadChatHistory();
     _chatTimer = Timer.periodic(const Duration(seconds: 5), (_) => _loadChatHistory());
-    _loadAttendance();
-    _loadStudentNames();
+    if (!widget.isProjectMeeting) {
+      _loadAttendance();
+      _loadStudentNames();
+    }
     final endAt = widget.endAt;
     if (endAt != null && !widget.ended) {
       final delay = endAt.difference(DateTime.now());
@@ -59,7 +66,7 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
         }
       });
     }
-    if (widget.modality.toUpperCase() == 'PRESENCIAL') {
+    if (widget.ended || widget.modality.toUpperCase() == 'PRESENCIAL') {
       _connecting = false;
     } else {
       _connect();
@@ -96,13 +103,16 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
 
   Future<void> _loadChatHistory() async {
     try {
-      final response = await ref.read(dioProvider).get<List<dynamic>>('/api/tutorias/grupales/${widget.sessionId}/chat');
+      final path = widget.isProjectMeeting
+          ? _projectChatPath
+          : '/api/tutorias/grupales/${widget.sessionId}/chat';
+      final response = await ref.read(dioProvider).get<List<dynamic>>(path);
       if (!mounted) return;
       setState(() {
         _messages
           ..clear()
           ..addAll((response.data ?? const []).whereType<Map<String, dynamic>>().map((message) => _RoomMessage(
-            sender: message['nombre']?.toString() ?? 'Participante',
+            sender: message['nombre']?.toString() ?? message['emisorId']?.toString() ?? 'Participante',
             text: message['texto']?.toString() ?? '',
           )));
       });
@@ -112,7 +122,11 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
   Future<void> _connect() async {
     try {
       final response = await ref.read(dioProvider).post<Map<String, dynamic>>(
-        '/api/tutorias/grupales/${Uri.encodeComponent(widget.sessionId)}/livekit-token',
+        widget.isProjectMeeting
+            ? '/api/tutorias-colectivas/${Uri.encodeComponent(widget.projectTutoringId!)}'
+                '/proyectos/${Uri.encodeComponent(widget.projectId!)}'
+                '/sesiones/${Uri.encodeComponent(widget.projectReportSessionId!)}/livekit-token'
+            : '/api/tutorias/grupales/${Uri.encodeComponent(widget.sessionId)}/livekit-token',
       );
       final credentials = response.data;
       if (credentials == null || credentials['serverUrl'] is! String || credentials['token'] is! String) {
@@ -167,7 +181,14 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
     final text = _message.text.trim();
     if (text.isEmpty || _ended) return;
     try {
-      await ref.read(dioProvider).post('/api/tutorias/grupales/${widget.sessionId}/chat', data: {'texto': text});
+      if (widget.isProjectMeeting) {
+        await ref.read(dioProvider).post(
+          _projectChatPath,
+          data: FormData.fromMap({'texto': text}),
+        );
+      } else {
+        await ref.read(dioProvider).post('/api/tutorias/grupales/${widget.sessionId}/chat', data: {'texto': text});
+      }
       if (_room.localParticipant != null) {
         final payload = utf8.encode(jsonEncode({'text': text, 'sentAt': DateTime.now().toUtc().toIso8601String()}));
         await _room.localParticipant!.publishData(payload, reliable: true, topic: 'searchteach.chat');
@@ -181,6 +202,10 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
       _message.clear();
     }
   }
+
+  String get _projectChatPath => '/api/tutorias-colectivas/${Uri.encodeComponent(widget.projectTutoringId!)}'
+      '/proyectos/${Uri.encodeComponent(widget.projectId!)}'
+      '/sesiones/${Uri.encodeComponent(widget.projectReportSessionId!)}/mensajes';
 
   Future<void> _setAttendance(String studentId, bool attended) async {
     try {
@@ -242,7 +267,7 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
       return Scaffold(
         appBar: AppBar(title: Text(widget.subject)),
         body: Column(children: [
-          const ListTile(title: Text('Clase finalizada'), subtitle: Text('Asistencia guardada'), leading: Icon(Icons.check_circle_outline)),
+            ListTile(title: Text(widget.isProjectMeeting ? 'Reunión de proyecto finalizada' : 'Historial de tutoría'), subtitle: Text(widget.isProjectMeeting ? 'Chat del proyecto guardado' : 'Asistencia y chat guardados'), leading: const Icon(Icons.check_circle_outline)),
           Expanded(child: ListView(children: [
             for (final student in widget.students) ListTile(
               leading: Icon(_attendance[student] == true ? Icons.check_circle : _attendance[student] == false ? Icons.cancel_outlined : Icons.help_outline),
@@ -300,7 +325,7 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
                       icon: const Icon(Icons.call_end),
                     ),
                   ]),
-                  if (widget.teacherMode) ...[
+                  if (widget.teacherMode && !widget.isProjectMeeting) ...[
                     const Padding(padding: EdgeInsets.all(8), child: Text('Asistencia', style: TextStyle(fontWeight: FontWeight.bold))),
                     for (final student in widget.students)
                       ListTile(
@@ -320,7 +345,7 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
                     ]),
                   ],
                   const Divider(),
-                  const Padding(padding: EdgeInsets.all(8), child: Text('Chat de la tutoría', style: TextStyle(fontWeight: FontWeight.bold))),
+                  Padding(padding: const EdgeInsets.all(8), child: Text(widget.isProjectMeeting ? 'Chat del proyecto' : 'Chat de la tutoría', style: const TextStyle(fontWeight: FontWeight.bold))),
                   SizedBox(
                     height: 200,
                     child: ListView.builder(
