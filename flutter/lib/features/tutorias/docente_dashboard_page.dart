@@ -9,6 +9,7 @@ import '../notifications/notifications_page.dart';
 import 'docente_proyectos_aula_page.dart';
 import 'docente_lider_proyectos_page.dart';
 import 'livekit_room_page.dart';
+import 'tutoria_chat_page.dart';
 
 const _teacherGreen = Color(0xFF16834A);
 const _teacherCanvas = Color(0xFFF3F8F4);
@@ -71,6 +72,7 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage> {
                 const DocenteProyectosAulaPage(),
                 const DocenteLiderProyectosPage(),
                 const NotificationsInbox(),
+                _history(),
               ],
             ),
           ),
@@ -87,6 +89,7 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage> {
                   NavigationDestination(icon: Icon(Icons.school_outlined), selectedIcon: Icon(Icons.school), label: 'Proyectos'),
                   NavigationDestination(icon: Icon(Icons.fact_check_outlined), selectedIcon: Icon(Icons.fact_check), label: 'Revisar PA'),
                   NavigationDestination(icon: Icon(Icons.notifications_none_outlined), selectedIcon: Icon(Icons.notifications), label: 'Avisos'),
+                  NavigationDestination(icon: Icon(Icons.history_outlined), selectedIcon: Icon(Icons.history), label: 'Historial'),
                 ],
               ),
       ),
@@ -144,6 +147,15 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage> {
                 onTap: () => setState(() => _tab = 5),
               ),
             ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+              child: ListTile(
+                selected: _tab == 6,
+                leading: const Icon(Icons.history_outlined),
+                title: const Text('Historial'),
+                onTap: () => setState(() => _tab = 6),
+              ),
+            ),
             const Spacer(),
           ]),
         ),
@@ -161,14 +173,17 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage> {
           _TeacherHomeTile(icon: Icons.school_outlined, title: 'Proyectos de aula', subtitle: 'Escribe reportes, programa sesiones y responde a los estudiantes.', onTap: () => setState(() => _tab = 3)),
           _TeacherHomeTile(icon: Icons.fact_check_outlined, title: 'Revisar proyectos PA', subtitle: 'Como docente líder, revisa reportes y confirma cierres.', onTap: () => setState(() => _tab = 4)),
           _TeacherHomeTile(icon: Icons.notifications_none_outlined, title: 'Avisos', subtitle: 'Consulta las notificaciones de tu cuenta.', onTap: () => setState(() => _tab = 5)),
+          _TeacherHomeTile(icon: Icons.history_outlined, title: 'Historial', subtitle: 'Consulta las tutorías finalizadas y sus chats.', onTap: () => setState(() => _tab = 6)),
         ],
       );
 
-  Widget _sessions() => _buildSessions(activeOnly: false);
+  Widget _sessions() => _buildSessions(view: _SessionView.scheduled);
 
-  Widget _startTutoring() => _buildSessions(activeOnly: true);
+  Widget _startTutoring() => _buildSessions(view: _SessionView.start);
 
-  Widget _buildSessions({required bool activeOnly}) => ref.watch(_teacherSessionsProvider).when(
+  Widget _history() => _buildSessions(view: _SessionView.history);
+
+  Widget _buildSessions({required _SessionView view}) => ref.watch(_teacherSessionsProvider).when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Center(
           child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -182,13 +197,17 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage> {
           ]),
         ),
         data: (allSessions) {
-          final sessions = allSessions;
+          final sessions = allSessions.where((session) => switch (view) {
+            _SessionView.history => session.state == 'FINALIZADA',
+            _SessionView.scheduled || _SessionView.start => session.state != 'FINALIZADA',
+          }).toList()
+            ..sort((a, b) => (a.start ?? DateTime(9999)).compareTo(b.start ?? DateTime(9999)));
           return sessions.isEmpty
             ? const Center(child: Text('No tienes tutorías grupales asignadas.'))
             : ListView(
                 padding: const EdgeInsets.all(20),
                 children: [
-                  Text(activeOnly ? 'Empezar tutorías' : 'Mis tutorías', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: _teacherNavy)),
+                  Text(switch (view) { _SessionView.scheduled => 'Mis tutorías', _SessionView.start => 'Empezar tutorías', _SessionView.history => 'Historial' }, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: _teacherNavy)),
                   const SizedBox(height: 10),
                   for (final session in sessions)
                     Card(
@@ -210,18 +229,29 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage> {
                                 )
                               : null,
                         ),
-                        if (activeOnly && session.id.isNotEmpty)
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: Padding(
-                              padding: const EdgeInsets.only(right: 16, bottom: 12),
-                              child: FilledButton.icon(
-                                onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-                                  builder: (_) => LiveKitRoomPage(sessionId: session.id, subject: session.subject, modality: session.modality, teacherMode: true, students: session.students, ended: session.state == 'FINALIZADA', endAt: session.end),
-                                )),
-                                icon: const Icon(Icons.video_call_outlined),
-                                label: Text(session.state == 'FINALIZADA' ? 'Ver historial' : 'Empezar tutoría'),
-                              ),
+                        if (session.id.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                            child: Wrap(
+                              alignment: WrapAlignment.end,
+                              spacing: 8,
+                              children: [
+                                OutlinedButton.icon(
+                                  onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                                    builder: (_) => TutoriaChatPage(sessionId: session.id, subject: session.subject, readOnly: view == _SessionView.history),
+                                  )),
+                                  icon: const Icon(Icons.forum_outlined),
+                                  label: const Text('Abrir chat'),
+                                ),
+                                if (view != _SessionView.scheduled)
+                                  FilledButton.icon(
+                                    onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                                      builder: (_) => LiveKitRoomPage(sessionId: session.id, subject: session.subject, modality: session.modality, teacherMode: true, students: session.students, ended: view == _SessionView.history, endAt: session.end),
+                                    )),
+                                    icon: Icon(view == _SessionView.history ? Icons.history : Icons.video_call_outlined),
+                                    label: Text(view == _SessionView.history ? 'Ver historial' : 'Empezar tutoría'),
+                                  ),
+                              ],
                             ),
                           ),
                       ]),
@@ -268,6 +298,8 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage> {
     if (mounted) context.go('/login');
   }
 }
+
+enum _SessionView { scheduled, start, history }
 
 const _teacherLabels = ['Inicio', 'Tutorías', 'Empezar tutorías'];
 const _teacherIcons = [Icons.home_outlined, Icons.event_note_outlined, Icons.play_circle_outline];

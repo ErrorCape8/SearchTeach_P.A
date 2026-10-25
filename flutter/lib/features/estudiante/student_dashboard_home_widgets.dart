@@ -214,9 +214,10 @@ class _TutoringSummaryCard extends StatelessWidget {
 }
 
 class _ProfileRow extends StatelessWidget {
-  const _ProfileRow({required this.label, required this.value});
+  const _ProfileRow({required this.label, required this.value, this.onEdit});
   final String label;
   final String value;
+  final VoidCallback? onEdit;
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -231,6 +232,12 @@ class _ProfileRow extends StatelessWidget {
                 style: const TextStyle(
                     color: _navy, fontWeight: FontWeight.w600)),
           ),
+          if (onEdit != null)
+            IconButton(
+              tooltip: 'Editar $label',
+              onPressed: onEdit,
+              icon: const Icon(Icons.edit_outlined, color: Color(0xFF1769AA)),
+            ),
         ]),
       );
 }

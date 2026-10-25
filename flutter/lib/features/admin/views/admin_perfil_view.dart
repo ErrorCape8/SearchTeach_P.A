@@ -186,6 +186,7 @@ class AdminPerfilView extends ConsumerWidget {
           onTap: state.isLoadingProfile || profile == null
               ? null
               : () => showProfileChangeDialog(context, ref,
+                    field: ProfileChangeField.phone,
                     onUpdated: () => ref.read(adminControllerProvider.notifier).loadProfile()),
           borderRadius: BorderRadius.circular(18),
           child: Container(
@@ -264,6 +265,7 @@ class AdminPerfilView extends ConsumerWidget {
         const SizedBox(height: 10),
         InkWell(
           onTap: () => showProfileChangeDialog(context, ref,
+              field: ProfileChangeField.password,
               onUpdated: () => ref.read(adminControllerProvider.notifier).loadProfile()),
           borderRadius: BorderRadius.circular(18),
           child: Container(
@@ -359,6 +361,9 @@ class AdminPerfilView extends ConsumerWidget {
               _buildInstitutionalRow(
                 title: 'Correo',
                 value: showValue(profile?.correo),
+                onTap: () => showProfileChangeDialog(context, ref,
+                    field: ProfileChangeField.email,
+                    onUpdated: () => ref.read(adminControllerProvider.notifier).loadProfile()),
               ),
               const Divider(height: 18, color: Color(0xFFF1F5F9)),
               _buildInstitutionalRow(
@@ -385,13 +390,6 @@ class AdminPerfilView extends ConsumerWidget {
             fontSize: 12,
             color: Color(0xFF64748B),
           ),
-        ),
-        const SizedBox(height: 12),
-        OutlinedButton.icon(
-          onPressed: () => showProfileChangeDialog(context, ref,
-              onUpdated: () => ref.read(adminControllerProvider.notifier).loadProfile()),
-          icon: const Icon(Icons.verified_user_outlined),
-          label: const Text('Cambiar correo, teléfono o contraseña'),
         ),
         const SizedBox(height: 26),
 
@@ -430,9 +428,13 @@ class AdminPerfilView extends ConsumerWidget {
   Widget _buildInstitutionalRow({
     required String title,
     required String value,
+    VoidCallback? onTap,
   }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
           Container(
@@ -472,7 +474,10 @@ class AdminPerfilView extends ConsumerWidget {
               ],
             ),
           ),
+          if (onTap != null)
+            const Icon(Icons.edit_outlined, color: Color(0xFFEA580C), size: 19),
         ],
+      ),
       ),
     );
   }

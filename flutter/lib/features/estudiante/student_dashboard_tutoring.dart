@@ -104,16 +104,16 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
             onTap: () => setState(() => _section = 'seguimiento-proyecto'),
           ),
           _MenuTile(
-            icon: Icons.event_available_outlined,
-            title: 'Tutorías grupales disponibles',
-            subtitle: 'Inscríbete en una sesión publicada por coordinación.',
-            onTap: () => setState(() => _section = 'grupales-disponibles'),
-          ),
-          _MenuTile(
             icon: Icons.event_note_outlined,
             title: 'Mis sesiones',
             subtitle: 'Consulta las tutorías programadas y en curso.',
             onTap: () => setState(() => _section = 'sesiones'),
+          ),
+          _MenuTile(
+            icon: Icons.video_call_outlined,
+            title: 'Chats y videoconferencias',
+            subtitle: 'Abre el chat de tus tutorías o únete a una sesión virtual programada.',
+            onTap: () => setState(() => _section = 'chats-videoconferencias'),
           ),
           _MenuTile(
             icon: Icons.history,
@@ -135,9 +135,9 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
           'Inscríbete en el espacio de tu tecnología y semestre.'
         ),
       'sesiones' => ('Mis sesiones', 'Tutorías confirmadas y en curso.'),
-      'grupales-disponibles' => (
-          'Tutorías grupales disponibles',
-          'Elige una sesión de tu tecnología y semestre.'
+      'chats-videoconferencias' => (
+          'Chats y videoconferencias',
+          'Accede a la conversación o entra a la sala de tus sesiones.'
         ),
       _ => ('Historial', 'Tutorías realizadas o canceladas.'),
     };
@@ -161,8 +161,8 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
         return _projectFollowup();
       case 'sesiones':
         return _sessionsList();
-      case 'grupales-disponibles':
-        return _publishedGroupSessions();
+      case 'chats-videoconferencias':
+        return _groupChatsAndCalls();
       case 'historial':
         return _history();
       default:
@@ -470,6 +470,28 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
     );
   }
 
+  Widget _groupChatsAndCalls() {
+    final sessions = widget.data.groupSessions
+        .where((session) => session.state != 'FINALIZADA')
+        .toList()
+      ..sort((a, b) =>
+          (a.start ?? DateTime(9999)).compareTo(b.start ?? DateTime(9999)));
+    if (sessions.isEmpty) {
+      return const _EmptyCard(
+        icon: Icons.forum_outlined,
+        title: 'Aún no tienes tutorías grupales',
+        message: 'Cuando te inscribas en una tutoría, su chat y su videollamada aparecerán aquí.',
+      );
+    }
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
+      children: [
+        for (final session in sessions)
+          _GroupChatAndCallCard(session: session),
+      ],
+    );
+  }
+
   Widget _publishedGroupSessions() {
     final sessions = widget.data.availableGroupSessions;
     if (sessions.isEmpty) {
@@ -599,6 +621,80 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
                     : null,
               )),
       ],
+    );
+  }
+}
+
+class _GroupChatAndCallCard extends StatelessWidget {
+  const _GroupChatAndCallCard({required this.session});
+
+  final StudentGroupSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final start = session.start?.toLocal();
+    final end = session.end?.toLocal();
+    final virtual = session.modality.toUpperCase() == 'VIRTUAL' ||
+        session.modality.toUpperCase() == 'HIBRIDA';
+    final canJoin = virtual &&
+        session.state != 'FINALIZADA' &&
+        start != null &&
+        end != null &&
+        !now.isBefore(start.subtract(const Duration(minutes: 15))) &&
+        !now.isAfter(end.add(const Duration(hours: 1)));
+    final joinLabel = session.state == 'FINALIZADA'
+        ? 'Videollamada finalizada'
+        : !virtual
+            ? 'Sesión presencial'
+            : start != null && now.isBefore(start.subtract(const Duration(minutes: 15)))
+                ? 'Disponible 15 min antes'
+                : canJoin
+                    ? 'Unirme a videoconferencia'
+                    : 'Videollamada cerrada';
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(session.subject,
+              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+          const SizedBox(height: 5),
+          Text('Docente ${session.teacherId} · Semestre ${session.semester}'),
+          if (start != null) Text(_longDate(start)),
+          Text('Modalidad: ${session.modality}'),
+          const SizedBox(height: 12),
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            OutlinedButton.icon(
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => TutoriaChatPage(
+                  sessionId: session.id,
+                  subject: session.subject,
+                  readOnly: session.state == 'FINALIZADA' ||
+                      (end != null && !end.isAfter(now)),
+                ),
+              )),
+              icon: const Icon(Icons.chat_outlined),
+              label: const Text('Abrir chat'),
+            ),
+            if (virtual)
+              FilledButton.icon(
+                onPressed: canJoin
+                    ? () => Navigator.of(context).push(MaterialPageRoute(
+                          builder: (_) => LiveKitRoomPage(
+                            sessionId: session.id,
+                            subject: session.subject,
+                            modality: session.modality,
+                          ),
+                        ))
+                    : null,
+                icon: const Icon(Icons.video_call_outlined),
+                label: Text(joinLabel),
+              ),
+          ]),
+        ]),
+      ),
     );
   }
 }

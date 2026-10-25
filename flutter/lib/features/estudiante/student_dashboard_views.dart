@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../tutorias/livekit_room_page.dart';
 import '../tutorias/proyecto_aula_chat_page.dart';
+import '../tutorias/tutoria_chat_page.dart';
 import '../auth/profile_change_dialog.dart';
 import 'student_dashboard_models.dart';
 

@@ -9,10 +9,9 @@ import org.springframework.data.mongodb.core.mapping.Document;
 public record CambioPerfilPendiente(
 		@Id String usuarioId,
 		String codigoHash,
-		String correoNuevo,
-		String telefonoNuevo,
-		String contrasenaHashNueva,
+		String campo,
 		int intentos,
+		boolean verificado,
 		LocalDateTime creadoEn,
 		LocalDateTime expiraEn) {
 }

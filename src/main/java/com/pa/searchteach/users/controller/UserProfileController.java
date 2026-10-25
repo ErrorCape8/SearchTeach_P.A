@@ -4,6 +4,7 @@ import com.pa.searchteach.common.exception.NotFoundException;
 import com.pa.searchteach.coordinators.model.Coordinator;
 import com.pa.searchteach.coordinators.repository.CoordinatorRepository;
 import com.pa.searchteach.users.dto.PerfilUsuarioResponse;
+import com.pa.searchteach.users.dto.AplicarCambioPerfilSolicitud;
 import com.pa.searchteach.users.dto.SolicitudCambioPerfil;
 import com.pa.searchteach.users.dto.VerificarCambioPerfilSolicitud;
 import com.pa.searchteach.users.model.User;
@@ -57,6 +58,14 @@ public class UserProfileController {
 			@AuthenticationPrincipal String usuarioId,
 			@Valid @RequestBody VerificarCambioPerfilSolicitud solicitud) {
 		verificacionCambioPerfil.verificar(usuarioId, solicitud.codigo());
+	}
+
+	@PostMapping("/api/usuarios/perfil/cambios/aplicar")
+	@ResponseStatus(org.springframework.http.HttpStatus.NO_CONTENT)
+	public void aplicarCambioPerfil(
+			@AuthenticationPrincipal String usuarioId,
+			@Valid @RequestBody AplicarCambioPerfilSolicitud solicitud) {
+		verificacionCambioPerfil.aplicar(usuarioId, solicitud.nuevoValor());
 	}
 
 	private PerfilUsuarioResponse respuesta(User user) {

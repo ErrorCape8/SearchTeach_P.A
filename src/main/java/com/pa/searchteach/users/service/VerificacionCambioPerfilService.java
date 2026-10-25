@@ -64,29 +64,10 @@ public class VerificacionCambioPerfilService {
 			throw new ResponseStatusException(HttpStatus.CONFLICT,
 					"Tu cuenta no tiene un correo registrado para recibir el código de seguridad.");
 		}
-		String correoNuevo = limpiar(solicitud.correo());
-		String telefonoNuevo = limpiar(solicitud.telefono());
-		String contrasenaNueva = solicitud.nuevaContrasena();
-		if (correoNuevo == null && telefonoNuevo == null && (contrasenaNueva == null || contrasenaNueva.isBlank())) {
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Indica al menos un dato que quieras cambiar.");
-		}
-		if (correoNuevo != null) {
-			correoNuevo = correoNuevo.toLowerCase(Locale.ROOT);
-			if (!correoNuevo.matches("[^\\s@]+@[^\\s@]+\\.[^\\s@]+")) {
-				throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Escribe un correo electrónico válido.");
-			}
-			validarCorreoDisponible(correoNuevo, usuarioId);
-		}
-		if (telefonoNuevo != null && !telefonoNuevo.matches("[0-9+() .-]{7,30}")) {
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Escribe un número de teléfono válido.");
-		}
-		String contrasenaHashNueva = null;
-		if (contrasenaNueva != null && !contrasenaNueva.isBlank()) {
-			if (contrasenaNueva.length() < 8 || contrasenaNueva.getBytes(StandardCharsets.UTF_8).length > 72) {
-				throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-						"La nueva contraseña debe tener al menos 8 caracteres y máximo 72 bytes.");
-			}
-			contrasenaHashNueva = passwordEncoder.encode(contrasenaNueva);
+		String campo = solicitud == null || solicitud.campo() == null
+				? "" : solicitud.campo().trim().toLowerCase(Locale.ROOT);
+		if (!java.util.Set.of("correo", "telefono", "contrasena").contains(campo)) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Selecciona qué dato quieres cambiar.");
 		}
 		LocalDateTime ahora = LocalDateTime.now();
 		cambios.findById(usuarioId).ifPresent(anterior -> {
@@ -104,8 +85,8 @@ public class VerificacionCambioPerfilService {
 		}
 		String codigo = String.format(Locale.ROOT, "%06d", random.nextInt(1_000_000));
 		CambioPerfilPendiente cambio = new CambioPerfilPendiente(
-				usuarioId, passwordEncoder.encode(codigo), correoNuevo, telefonoNuevo,
-				contrasenaHashNueva, 0, ahora, ahora.plusMinutes(VIGENCIA_MINUTOS));
+				usuarioId, passwordEncoder.encode(codigo), campo, 0, false,
+				ahora, ahora.plusMinutes(VIGENCIA_MINUTOS));
 		cambios.save(cambio);
 		try {
 			ResponseEntity<String> respuesta = restClient.post()
@@ -157,30 +138,73 @@ public class VerificacionCambioPerfilService {
 				cambios.delete(cambio);
 			} else {
 				cambios.save(new CambioPerfilPendiente(cambio.usuarioId(), cambio.codigoHash(),
-						cambio.correoNuevo(), cambio.telefonoNuevo(), cambio.contrasenaHashNueva(),
-						intentos, cambio.creadoEn(), cambio.expiraEn()));
+						cambio.campo(), intentos, false, cambio.creadoEn(), cambio.expiraEn()));
 			}
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El código no es correcto.");
 		}
+		cambios.save(new CambioPerfilPendiente(cambio.usuarioId(), cambio.codigoHash(),
+				cambio.campo(), cambio.intentos(), true, cambio.creadoEn(), cambio.expiraEn()));
+	}
+
+	public void aplicar(String usuarioId, String valorNuevo) {
+		CambioPerfilPendiente cambio = cambios.findById(usuarioId)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+						"No hay una autorización pendiente."));
+		if (!cambio.expiraEn().isAfter(LocalDateTime.now())) {
+			cambios.delete(cambio);
+			throw new ResponseStatusException(HttpStatus.GONE, "La autorización venció; solicita otro código.");
+		}
+		if (!cambio.verificado()) {
+			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Verifica primero el código enviado a tu correo.");
+		}
+		String valor = "contrasena".equals(cambio.campo())
+				? (valorNuevo == null || valorNuevo.isEmpty() ? null : valorNuevo)
+				: limpiar(valorNuevo);
+		if (valor == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Escribe el nuevo dato.");
 		Cuenta cuenta = buscarCuenta(usuarioId);
-		if (cambio.correoNuevo() != null) validarCorreoDisponible(cambio.correoNuevo(), usuarioId);
+		String correoNuevo = null;
+		String telefonoNuevo = null;
+		String contrasenaHashNueva = null;
+		switch (cambio.campo()) {
+			case "correo" -> {
+				correoNuevo = valor.toLowerCase(Locale.ROOT);
+				if (!correoNuevo.matches("[^\\s@]+@[^\\s@]+\\.[^\\s@]+")) {
+					throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Escribe un correo electrónico válido.");
+				}
+				validarCorreoDisponible(correoNuevo, usuarioId);
+			}
+			case "telefono" -> {
+				if (!valor.matches("[0-9+() .-]{7,30}")) {
+					throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Escribe un número de teléfono válido.");
+				}
+				telefonoNuevo = valor;
+			}
+			case "contrasena" -> {
+				if (valor.length() < 8 || valor.getBytes(StandardCharsets.UTF_8).length > 72) {
+					throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+							"La nueva contraseña debe tener al menos 8 caracteres y máximo 72 bytes.");
+				}
+				contrasenaHashNueva = passwordEncoder.encode(valor);
+			}
+			default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El tipo de cambio no es válido.");
+		}
 		if (cuenta.usuario() != null) {
 			User user = cuenta.usuario();
-			if (cambio.correoNuevo() != null) user.setCorreo(cambio.correoNuevo());
-			if (cambio.telefonoNuevo() != null) user.setTelefono(cambio.telefonoNuevo());
-			if (cambio.contrasenaHashNueva() != null) user.setPasswordHash(cambio.contrasenaHashNueva());
+			if (correoNuevo != null) user.setCorreo(correoNuevo);
+			if (telefonoNuevo != null) user.setTelefono(telefonoNuevo);
+			if (contrasenaHashNueva != null) user.setPasswordHash(contrasenaHashNueva);
 			userRepository.save(user);
 		} else if (cuenta.admin() != null) {
 			ItAdmin admin = cuenta.admin();
-			if (cambio.correoNuevo() != null) admin.setCorreo(cambio.correoNuevo());
-			if (cambio.telefonoNuevo() != null) admin.setTelefono(cambio.telefonoNuevo());
-			if (cambio.contrasenaHashNueva() != null) admin.setPasswordHash(cambio.contrasenaHashNueva());
+			if (correoNuevo != null) admin.setCorreo(correoNuevo);
+			if (telefonoNuevo != null) admin.setTelefono(telefonoNuevo);
+			if (contrasenaHashNueva != null) admin.setPasswordHash(contrasenaHashNueva);
 			itAdminRepository.save(admin);
 		} else {
 			Coordinator coordinator = cuenta.coordinator();
-			if (cambio.correoNuevo() != null) coordinator.setCorreo(cambio.correoNuevo());
-			if (cambio.telefonoNuevo() != null) coordinator.setTelefono(cambio.telefonoNuevo());
-			if (cambio.contrasenaHashNueva() != null) coordinator.setPasswordHash(cambio.contrasenaHashNueva());
+			if (correoNuevo != null) coordinator.setCorreo(correoNuevo);
+			if (telefonoNuevo != null) coordinator.setTelefono(telefonoNuevo);
+			if (contrasenaHashNueva != null) coordinator.setPasswordHash(contrasenaHashNueva);
 			coordinatorRepository.save(coordinator);
 		}
 		cambios.delete(cambio);
