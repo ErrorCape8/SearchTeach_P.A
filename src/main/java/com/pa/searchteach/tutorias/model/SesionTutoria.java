@@ -25,7 +25,19 @@ public record SesionTutoria(
 		String materia,
 		List<@NotBlank String> tecnologias,
 		ModalidadTutoria modalidad,
-		String ubicacion) {
+		String ubicacion,
+		String estadoClase,
+		String motivoCierre,
+		LocalDateTime finalizadaEn,
+		List<MensajeChatTutoria> historialChat) {
+
+	public SesionTutoria(String id, String docenteId, List<String> estudianteIds,
+			LocalDateTime fechaInicio, LocalDateTime fechaFin, String tecnologia, int semestre,
+			List<AsistenciaEstudiante> asistencias, String materia, List<String> tecnologias,
+			ModalidadTutoria modalidad, String ubicacion) {
+		this(id, docenteId, estudianteIds, fechaInicio, fechaFin, tecnologia, semestre, asistencias,
+				materia, tecnologias, modalidad, ubicacion, "PROGRAMADA", null, null, List.of());
+	}
 
 	public SesionTutoria {
 		if (docenteId == null || docenteId.isBlank()) {
@@ -52,6 +64,8 @@ public record SesionTutoria(
 			throw new IllegalArgumentException("Debe existir un registro de asistencia por estudiante.");
 		}
 		asistencias = List.copyOf(asistencias);
+		estadoClase = estadoClase == null || estadoClase.isBlank() ? "PROGRAMADA" : estadoClase;
+		historialChat = historialChat == null ? List.of() : List.copyOf(historialChat);
 		if (tecnologias == null || tecnologias.isEmpty()) {
 			tecnologias = List.of(tecnologia);
 		} else {
@@ -154,7 +168,11 @@ public record SesionTutoria(
 				materia,
 				tecnologias,
 				modalidad,
-				ubicacion);
+				ubicacion,
+				estadoClase,
+				motivoCierre,
+				finalizadaEn,
+				historialChat);
 	}
 
 	public SesionTutoria inscribir(String estudianteId, String tecnologiaEstudiante) {
@@ -171,7 +189,8 @@ public record SesionTutoria(
 				.concat(tecnologias.stream(), java.util.stream.Stream.of(tecnologiaEstudiante))
 				.distinct().toList();
 		return new SesionTutoria(id, docenteId, nuevosEstudiantes, fechaInicio, fechaFin,
-				tecnologia, semestre, nuevasAsistencias, materia, nuevasTecnologias, modalidad, ubicacion);
+				tecnologia, semestre, nuevasAsistencias, materia, nuevasTecnologias, modalidad, ubicacion,
+				estadoClase, motivoCierre, finalizadaEn, historialChat);
 	}
 
 	public SesionTutoria desistir(String estudianteId) {
@@ -180,6 +199,19 @@ public record SesionTutoria(
 		List<AsistenciaEstudiante> nuevasAsistencias = asistencias.stream()
 				.filter(actual -> !actual.estudianteId().equals(estudianteId)).toList();
 		return new SesionTutoria(id, docenteId, nuevosEstudiantes, fechaInicio, fechaFin,
-				tecnologia, semestre, nuevasAsistencias, materia, tecnologias, modalidad, ubicacion);
+				tecnologia, semestre, nuevasAsistencias, materia, tecnologias, modalidad, ubicacion,
+				estadoClase, motivoCierre, finalizadaEn, historialChat);
+	}
+
+	public SesionTutoria agregarMensaje(MensajeChatTutoria mensaje) {
+		return new SesionTutoria(id, docenteId, estudianteIds, fechaInicio, fechaFin, tecnologia, semestre,
+				asistencias, materia, tecnologias, modalidad, ubicacion, estadoClase, motivoCierre, finalizadaEn,
+				java.util.stream.Stream.concat(historialChat.stream(), java.util.stream.Stream.of(mensaje)).toList());
+	}
+
+	public SesionTutoria cerrar(String motivo, LocalDateTime hora) {
+		if ("FINALIZADA".equals(estadoClase)) return this;
+		return new SesionTutoria(id, docenteId, estudianteIds, fechaInicio, fechaFin, tecnologia, semestre,
+				asistencias, materia, tecnologias, modalidad, ubicacion, "FINALIZADA", motivo, hora, historialChat);
 	}
 }

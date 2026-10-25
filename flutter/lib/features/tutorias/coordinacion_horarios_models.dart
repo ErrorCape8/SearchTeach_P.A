@@ -76,6 +76,7 @@ class TutorSchedule {
 
 class PublishedTutoringSession {
   const PublishedTutoringSession({
+    required this.id,
     required this.teacherId,
     required this.subject,
     required this.technology,
@@ -86,6 +87,7 @@ class PublishedTutoringSession {
     required this.location,
   });
 
+  final String id;
   final String teacherId;
   final String subject;
   final String technology;
@@ -97,6 +99,7 @@ class PublishedTutoringSession {
 
   factory PublishedTutoringSession.fromJson(Map<String, dynamic> json) =>
       PublishedTutoringSession(
+        id: json['id'] is String ? json['id'] as String : '',
         teacherId: json['docenteId'] is String ? json['docenteId'] as String : '',
         subject: json['materia'] is String ? json['materia'] as String : 'Tutoría',
         technology: json['tecnologia'] is String ? json['tecnologia'] as String : '',

@@ -18,12 +18,15 @@ import org.springframework.web.server.ResponseStatusException;
 public class ServicioTutoriasImpl implements ServicioTutorias {
 
 	private final TutoriaRepositorio tutoriaRepositorio;
+	private final InscripcionesTutoriasEstudianteService inscripcionesEstudiante;
 	private final NotificationService notificationService;
 
 	public ServicioTutoriasImpl(
 			TutoriaRepositorio tutoriaRepositorio,
+			InscripcionesTutoriasEstudianteService inscripcionesEstudiante,
 			NotificationService notificationService) {
 		this.tutoriaRepositorio = tutoriaRepositorio;
+		this.inscripcionesEstudiante = inscripcionesEstudiante;
 		this.notificationService = notificationService;
 	}
 
@@ -34,6 +37,8 @@ public class ServicioTutoriasImpl implements ServicioTutorias {
 					"Solo puedes solicitar tutorías con tu propio identificador de estudiante.");
 		}
 		validarRango(solicitud.fechaInicio(), solicitud.fechaFin());
+		inscripcionesEstudiante.validarNuevaInscripcion(usuarioId,
+				solicitud.fechaInicio(), solicitud.fechaFin(), null, null);
 
 		Tutoria tutoria = new Tutoria();
 		tutoria.setEstudianteId(solicitud.estudianteId());
@@ -68,6 +73,8 @@ public class ServicioTutoriasImpl implements ServicioTutorias {
 		Tutoria tutoria = buscarExistente(id);
 		validarDocente(tutoria, usuarioId);
 		exigirEstado(tutoria, EstadoTutoria.SOLICITADA);
+		inscripcionesEstudiante.validarNuevaInscripcion(tutoria.getEstudianteId(),
+				tutoria.getFechaInicio(), tutoria.getFechaFin(), null, tutoria.getId());
 		validarConflictoEstudiante(tutoria, tutoria.getFechaInicio(), tutoria.getFechaFin());
 		tutoria.setEstado(EstadoTutoria.PROGRAMADA);
 		Tutoria guardada = tutoriaRepositorio.save(tutoria);
@@ -97,6 +104,8 @@ public class ServicioTutoriasImpl implements ServicioTutorias {
 		Tutoria tutoria = buscarExistente(id);
 		validarEstudiante(tutoria, usuarioId);
 		exigirEstado(tutoria, EstadoTutoria.ALTERNATIVA_PROPUESTA);
+		inscripcionesEstudiante.validarNuevaInscripcion(tutoria.getEstudianteId(),
+				tutoria.getFechaAlternativaInicio(), tutoria.getFechaAlternativaFin(), null, tutoria.getId());
 		validarConflictoEstudiante(
 				tutoria, tutoria.getFechaAlternativaInicio(), tutoria.getFechaAlternativaFin());
 		tutoria.setFechaInicio(tutoria.getFechaAlternativaInicio());
@@ -163,6 +172,8 @@ public class ServicioTutoriasImpl implements ServicioTutorias {
 
 	private void validarConflictoEstudiante(
 			Tutoria actual, LocalDateTime fechaInicio, LocalDateTime fechaFin) {
+		inscripcionesEstudiante.validarConflictoActual(
+				actual.getEstudianteId(), fechaInicio, fechaFin, actual.getId());
 		boolean hayCruce = tutoriaRepositorio.findByEstudianteId(actual.getEstudianteId()).stream()
 				.filter(otra -> !otra.getId().equals(actual.getId()))
 				.filter(otra -> otra.getEstado() == EstadoTutoria.PROGRAMADA

@@ -146,6 +146,23 @@ class StudentDashboardData {
   final List<ClassroomProjectSpace> projectSpaces;
   final List<StudentGroupSession> groupSessions;
   final List<StudentGroupSession> availableGroupSessions;
+
+  StudentDashboardData withGroupSessions(StudentGroupSessionsData value) =>
+      StudentDashboardData(
+        profile: profile,
+        tutors: tutors,
+        tutorings: tutorings,
+        projectSpaces: projectSpaces,
+        groupSessions: value.enrolled,
+        availableGroupSessions: value.available,
+      );
+}
+
+class StudentGroupSessionsData {
+  const StudentGroupSessionsData({required this.enrolled, required this.available});
+
+  final List<StudentGroupSession> enrolled;
+  final List<StudentGroupSession> available;
 }
 
 class StudentGroupSession {
@@ -261,16 +278,11 @@ final studentDashboardProvider =
   final tutoringsRequest = dio.get<List<dynamic>>('/api/tutorias');
   final projectsRequest =
       dio.get<List<dynamic>>('/api/estudiante/tutorias-colectivas/espacios');
-  final groupSessionsRequest = dio.get<List<dynamic>>('/api/tutorias/grupales');
-  final availableGroupSessionsRequest =
-      dio.get<List<dynamic>>('/api/tutorias/grupales/disponibles');
   await Future.wait<Object>([
     profileRequest,
     tutorsRequest,
     tutoringsRequest,
     projectsRequest,
-    groupSessionsRequest,
-    availableGroupSessionsRequest,
   ]);
   final profileJson = (await profileRequest).data;
   if (profileJson == null) {
@@ -279,9 +291,6 @@ final studentDashboardProvider =
   final tutorsJson = (await tutorsRequest).data ?? const [];
   final tutoringsJson = (await tutoringsRequest).data ?? const [];
   final projectsJson = (await projectsRequest).data ?? const [];
-  final groupSessionsJson = (await groupSessionsRequest).data ?? const [];
-  final availableGroupSessionsJson =
-      (await availableGroupSessionsRequest).data ?? const [];
   final profile = StudentProfile.fromJson(profileJson);
   final tutors = tutorsJson
       .whereType<Map<String, dynamic>>()
@@ -316,21 +325,35 @@ final studentDashboardProvider =
       ));
     }
   }
-  final groupSessions = groupSessionsJson
-      .whereType<Map<String, dynamic>>()
-      .map(StudentGroupSession.fromJson)
-      .toList();
-  final availableGroupSessions = availableGroupSessionsJson
-      .whereType<Map<String, dynamic>>()
-      .map(StudentGroupSession.fromJson)
-      .toList();
   return StudentDashboardData(
     profile: profile,
     tutors: tutors,
     tutorings: tutorings,
     projectSpaces: projectSpaces,
-    groupSessions: groupSessions,
-    availableGroupSessions: availableGroupSessions,
+  );
+});
+
+final studentGroupSessionsProvider =
+    FutureProvider.autoDispose<StudentGroupSessionsData>((ref) async {
+  final dio = ref.read(dioProvider);
+  final enrolledRequest = dio.get<List<dynamic>>('/api/tutorias/grupales');
+  final availableRequest =
+      dio.get<List<dynamic>>('/api/tutorias/grupales/disponibles');
+  final results = await Future.wait([
+    enrolledRequest,
+    availableRequest,
+  ]);
+  final enrolled = results[0].data ?? const <dynamic>[];
+  final available = results[1].data ?? const <dynamic>[];
+  return StudentGroupSessionsData(
+    enrolled: enrolled
+        .whereType<Map<String, dynamic>>()
+        .map(StudentGroupSession.fromJson)
+        .toList(),
+    available: available
+        .whereType<Map<String, dynamic>>()
+        .map(StudentGroupSession.fromJson)
+        .toList(),
   );
 });
 

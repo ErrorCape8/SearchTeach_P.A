@@ -8,6 +8,8 @@ import com.pa.searchteach.tutorias.dto.InscripcionTutoriaGrupal;
 import com.pa.searchteach.tutorias.dto.ProgramarTutoriasSolicitud;
 import com.pa.searchteach.tutorias.dto.SolicitudCambioFechaTutoria;
 import com.pa.searchteach.tutorias.model.SesionTutoria;
+import com.pa.searchteach.tutorias.model.AsistenciaEstudiante;
+import com.pa.searchteach.tutorias.model.MensajeChatTutoria;
 import com.pa.searchteach.tutorias.model.ModalidadTutoria;
 import com.pa.searchteach.tutorias.model.CatalogoTecnologias;
 import com.pa.searchteach.tutorias.repository.SesionTutoriaRepositorio;
@@ -22,14 +24,18 @@ import com.pa.searchteach.users.repository.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.scheduling.annotation.Scheduled;
 
 @Service
 public class SesionesGrupalesTutoriaService {
+	private static final java.util.Set<String> MOTIVOS_CIERRE = java.util.Set.of(
+			"FINALIZADA", "FALTA_ESTUDIANTES", "PROBLEMAS_EXTERNOS", "PROBLEMAS_INTERNET", "FINALIZACION_AUTOMATICA");
 
 	private final SesionTutoriaRepositorio sesiones;
 	private final UserRepository usuarios;
 	private final CoordinatorRepository coordinadores;
 	private final HorariosTutoresService horarios;
+	private final InscripcionesTutoriasEstudianteService inscripcionesEstudiante;
 	private final NotificationService notificationService;
 	private final SolicitudCambioFechaSesionRepositorio solicitudesCambio;
 
@@ -38,12 +44,14 @@ public class SesionesGrupalesTutoriaService {
 			UserRepository usuarios,
 			CoordinatorRepository coordinadores,
 			HorariosTutoresService horarios,
+			InscripcionesTutoriasEstudianteService inscripcionesEstudiante,
 			NotificationService notificationService,
 			SolicitudCambioFechaSesionRepositorio solicitudesCambio) {
 		this.sesiones = sesiones;
 		this.usuarios = usuarios;
 		this.coordinadores = coordinadores;
 		this.horarios = horarios;
+		this.inscripcionesEstudiante = inscripcionesEstudiante;
 		this.notificationService = notificationService;
 		this.solicitudesCambio = solicitudesCambio;
 	}
@@ -53,14 +61,65 @@ public class SesionesGrupalesTutoriaService {
 	}
 
 	public List<SesionTutoria> listarDeDocente(String docenteId) {
-		return sesiones.findByDocenteId(docenteId);
+		return sesiones.findByDocenteId(docenteId).stream().map(this::cerrarSiVencida).toList();
+	}
+
+	public SesionTutoria registrarAsistencia(String sesionId, String docenteId, String estudianteId, boolean asistio) {
+		SesionTutoria sesion = obtenerSesionDocente(sesionId, docenteId);
+		sesion = cerrarSiVencida(sesion);
+		if ("FINALIZADA".equals(sesion.estadoClase())) throw new ResponseStatusException(HttpStatus.CONFLICT, "La tutoría ya finalizó.");
+		return sesiones.save(sesion.registrarAsistencia(estudianteId, asistio));
+	}
+
+	public SesionTutoria cerrarClase(String sesionId, String docenteId, String motivo) {
+		SesionTutoria sesion = obtenerSesionDocente(sesionId, docenteId);
+		String normalizado = motivo == null ? "" : motivo.trim().toUpperCase(java.util.Locale.ROOT);
+		if (!MOTIVOS_CIERRE.contains(normalizado)) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Selecciona un motivo de cierre válido.");
+		return sesiones.save(sesion.cerrar(normalizado, LocalDateTime.now()));
+	}
+
+	public SesionTutoria registrarMensaje(String sesionId, String usuarioId, String texto) {
+		SesionTutoria sesion = sesiones.findById(sesionId)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No se encontró la tutoría."));
+		if (!sesion.docenteId().equals(usuarioId) && !sesion.estudianteIds().contains(usuarioId)) {
+			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No perteneces a esta tutoría.");
+		}
+		sesion = cerrarSiVencida(sesion);
+		if ("FINALIZADA".equals(sesion.estadoClase())) throw new ResponseStatusException(HttpStatus.CONFLICT, "El chat de esta tutoría ya se cerró.");
+		String mensaje = texto == null ? "" : texto.trim();
+		if (mensaje.isEmpty() || mensaje.length() > 500) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El mensaje debe tener entre 1 y 500 caracteres.");
+		User autor = usuarios.findById(usuarioId).orElse(null);
+		return sesiones.save(sesion.agregarMensaje(new MensajeChatTutoria(usuarioId,
+				autor == null || autor.getNombre() == null ? usuarioId : autor.getNombre(), mensaje, LocalDateTime.now())));
+	}
+
+	private SesionTutoria obtenerSesionDocente(String sesionId, String docenteId) {
+		SesionTutoria sesion = sesiones.findById(sesionId)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No se encontró la tutoría."));
+		if (!sesion.docenteId().equals(docenteId)) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Solo el docente asignado puede administrar esta tutoría.");
+		return sesion;
+	}
+
+	private SesionTutoria cerrarSiVencida(SesionTutoria sesion) {
+		if (!"FINALIZADA".equals(sesion.estadoClase()) && !LocalDateTime.now().isBefore(sesion.fechaFin())) {
+			return sesiones.save(sesion.cerrar("FINALIZACION_AUTOMATICA", sesion.fechaFin()));
+		}
+		return sesion;
+	}
+
+	@Scheduled(fixedDelay = 30000)
+	public void finalizarClasesVencidas() {
+		LocalDateTime ahora = LocalDateTime.now();
+		sesiones.findAll().stream()
+				.filter(sesion -> !"FINALIZADA".equals(sesion.estadoClase()))
+				.filter(sesion -> !sesion.fechaFin().isAfter(ahora))
+				.forEach(sesion -> sesiones.save(sesion.cerrar("FINALIZACION_AUTOMATICA", sesion.fechaFin())));
 	}
 
 	public List<SesionTutoria> listarPublicadas() {
 		LocalDateTime ahora = LocalDateTime.now();
 		return sesiones.findAll().stream()
 				.filter(sesion -> sesion.fechaInicio().isAfter(ahora))
-				.filter(sesion -> sesion.estudianteIds().size() < 5)
 				.sorted((left, right) -> left.fechaInicio().compareTo(right.fechaInicio()))
 				.toList();
 	}
@@ -250,6 +309,51 @@ public class SesionesGrupalesTutoriaService {
 		return guardadas;
 	}
 
+	public SesionTutoria editarPublicada(String sesionId, ProgramarTutoriasSolicitud solicitud) {
+		SesionTutoria actual = sesiones.findById(sesionId)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No se encontrÃ³ la tutorÃ­a."));
+		if (solicitud.bloques().size() != 1) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Edita una tutorÃ­a a la vez.");
+		}
+		if (!actual.fechaInicio().isAfter(LocalDateTime.now())) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT, "No puedes editar una tutorÃ­a que ya comenzÃ³.");
+		}
+		ProgramarTutoriasSolicitud.Bloque bloque = solicitud.bloques().get(0);
+		if (!CatalogoTecnologias.contiene(solicitud.tecnologia()) || solicitud.semestre() < 1 || solicitud.semestre() > 6
+				|| bloque.fechaInicio() == null || bloque.fechaFin() == null
+				|| !bloque.fechaInicio().isAfter(LocalDateTime.now()) || !bloque.fechaFin().isAfter(bloque.fechaInicio())
+				|| !bloque.fechaInicio().toLocalDate().equals(bloque.fechaFin().toLocalDate())) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Selecciona una fecha futura y un horario vÃ¡lido.");
+		}
+		if (bloque.modalidad() != ModalidadTutoria.VIRTUAL && (bloque.ubicacion() == null || bloque.ubicacion().isBlank())) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Indica el lugar de la tutorÃ­a.");
+		}
+		horarios.validarDocenteParaTecnologia(bloque.docenteId(), solicitud.tecnologia(), solicitud.semestre(), bloque.materia());
+		boolean conflicto = sesiones.findByDocenteId(bloque.docenteId()).stream()
+				.filter(otra -> !otra.id().equals(sesionId))
+				.anyMatch(otra -> bloque.fechaInicio().isBefore(otra.fechaFin()) && otra.fechaInicio().isBefore(bloque.fechaFin()));
+		if (conflicto) throw new ResponseStatusException(HttpStatus.CONFLICT, "El docente ya tiene una tutorÃ­a en ese horario.");
+		for (String estudianteId : actual.estudianteIds()) {
+			inscripcionesEstudiante.validarConflictoActual(estudianteId, bloque.fechaInicio(), bloque.fechaFin(), sesionId);
+		}
+		return sesiones.save(new SesionTutoria(actual.id(), bloque.docenteId(), actual.estudianteIds(),
+				bloque.fechaInicio(), bloque.fechaFin(), solicitud.tecnologia(), solicitud.semestre(), actual.asistencias(),
+				bloque.materia().trim(), List.of(solicitud.tecnologia()), bloque.modalidad(),
+				bloque.ubicacion() == null ? null : bloque.ubicacion().trim()));
+	}
+
+	public void eliminarPublicada(String sesionId) {
+		SesionTutoria sesion = sesiones.findById(sesionId)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No se encontrÃ³ la tutorÃ­a."));
+		sesiones.delete(sesion);
+		for (String estudianteId : sesion.estudianteIds()) {
+			notificationService.notifyUser(estudianteId, "TutorÃ­a cancelada",
+					"La tutorÃ­a de " + sesion.materia() + " fue cancelada por coordinaciÃ³n.", "/estudiante");
+		}
+		notificationService.notifyUser(sesion.docenteId(), "TutorÃ­a cancelada",
+				"La tutorÃ­a de " + sesion.materia() + " fue cancelada por coordinaciÃ³n.", "/docente");
+	}
+
 	public SesionTutoria inscribir(InscripcionTutoriaGrupal solicitud, String estudianteId) {
 		User estudiante = buscarEstudiante(estudianteId);
 		String tecnologia = estudiante.getCarrera();
@@ -273,6 +377,8 @@ public class SesionesGrupalesTutoriaService {
 				throw new ResponseStatusException(HttpStatus.CONFLICT,
 						"La sesión grupal ya alcanzó su cupo de cinco estudiantes.");
 			}
+			inscripcionesEstudiante.validarNuevaInscripcion(estudianteId,
+					existente.fechaInicio(), existente.fechaFin(), existente.id(), null);
 			SesionTutoria guardada = sesiones.save(existente.inscribir(estudianteId, tecnologia));
 			notificarInscripcionGrupal(guardada, estudianteId);
 			return guardada;
@@ -280,6 +386,8 @@ public class SesionesGrupalesTutoriaService {
 		horarios.validarDisponibilidad(solicitud.docenteId(), solicitud.modalidad().name(),
 				solicitud.fechaInicio(), solicitud.fechaFin());
 		horarios.validarMateria(solicitud.docenteId(), estudianteId, solicitud.materia());
+		inscripcionesEstudiante.validarNuevaInscripcion(estudianteId,
+				solicitud.fechaInicio(), solicitud.fechaFin(), null, null);
 		SesionTutoria guardada = sesiones.save(SesionTutoria.crear(solicitud.docenteId(), List.of(estudianteId),
 				solicitud.fechaInicio(), solicitud.fechaFin(), solicitud.materia(),
 				List.of(tecnologia), tecnologia, solicitud.semestre()));

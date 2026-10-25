@@ -31,6 +31,7 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
   @override
   Widget build(BuildContext context) {
     final data = ref.watch(studentDashboardProvider);
+    final groupSessions = ref.watch(studentGroupSessionsProvider);
     final wide = MediaQuery.sizeOf(context).width >= 850;
     return Scaffold(
       backgroundColor: _canvas,
@@ -40,7 +41,16 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
           error: error,
           onRetry: () => ref.invalidate(studentDashboardProvider),
         ),
-        data: (value) => Column(
+        data: (value) => groupSessions.when(
+          skipLoadingOnRefresh: true,
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, _) => _LoadFailure(
+            error: error,
+            onRetry: () => ref.invalidate(studentGroupSessionsProvider),
+          ),
+          data: (groups) {
+            final dashboard = value.withGroupSessions(groups);
+            return Column(
           children: [
             _TopBar(profile: value.profile, wide: wide, onLogout: _logout),
             Expanded(
@@ -58,12 +68,12 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
                       index: _tab,
                       children: [
                         StudentHomeView(
-                          data: value,
+                          data: dashboard,
                           onBrowse: () => _openTutorSection('disponibles'),
                           onHistory: () => _openTutorSection('historial'),
                         ),
                         StudentTutoringView(
-                          data: value,
+                          data: dashboard,
                           focusSection: _focusTutoring,
                           focusRequest: _focusRequest,
                           onEnroll: (tutor) => _enroll(value, tutor),
@@ -90,6 +100,8 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
               ),
             ),
           ],
+            );
+          },
         ),
       ),
       bottomNavigationBar: wide
@@ -149,9 +161,8 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
             item.careers.contains(data.profile.career.trim()))
         .map((item) => item.name)
         .toSet()
-        .toList()
-      ..sort();
-    String? selectedSubject;
+        .toList();
+    String? selectedSubject = availableSubjects.isEmpty ? null : availableSubjects.first;
     final date = _nextDate(tutor.day);
     if (availableSubjects.isEmpty) {
       _showMessage(
@@ -173,19 +184,9 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
                         Text('${tutor.name} · ${tutor.day} '
                             '${tutor.startTime}–${tutor.endTime}'),
                         const SizedBox(height: 16),
-                        DropdownButtonFormField<String>(
-                          decoration: const InputDecoration(
-                            labelText: 'Materia',
-                            border: OutlineInputBorder(),
-                          ),
-                          items: availableSubjects
-                              .map((name) => DropdownMenuItem(
-                                    value: name,
-                                    child: Text(name),
-                                  ))
-                              .toList(),
-                          onChanged: (value) =>
-                              setDialogState(() => selectedSubject = value),
+                        Text(
+                          'Materia asignada por coordinación: $selectedSubject',
+                          style: Theme.of(context).textTheme.bodyMedium,
                         ),
                         const SizedBox(height: 12),
                         Row(
@@ -229,7 +230,7 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
         subject: selectedSubject!,
         start: date,
       );
-      ref.invalidate(studentDashboardProvider);
+      ref.invalidate(studentGroupSessionsProvider);
       _showMessage('Te inscribiste en la sesión grupal.');
     } on DioException catch (error) {
       _showMessage(_apiMessage(error));
@@ -322,7 +323,7 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
     try {
       await leaveGroupTutoring(
           dio: ref.read(dioProvider), sessionId: session.id);
-      ref.invalidate(studentDashboardProvider);
+      ref.invalidate(studentGroupSessionsProvider);
       _showMessage('Saliste de la sesión grupal.');
     } on DioException catch (error) {
       _showMessage(_apiMessage(error));
@@ -347,7 +348,7 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
         session: session,
         modality: tutor.modality,
       );
-      ref.invalidate(studentDashboardProvider);
+      ref.invalidate(studentGroupSessionsProvider);
       _showMessage('Te inscribiste en la tutoría grupal.');
     } on DioException catch (error) {
       _showMessage(_apiMessage(error));

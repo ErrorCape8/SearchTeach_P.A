@@ -13,6 +13,9 @@ services:
     environment:
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env to a private value of at least 32 bytes}
       JWT_EXPIRATION_SECONDS: ${JWT_EXPIRATION_SECONDS:-900}
+      LIVEKIT_URL: ${LIVEKIT_URL:-}
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-}
       MONGODB_URI: ${MONGODB_URI:-${MONGO_URI:-mongodb://mongodb:27017/Searchteach}}
       SPRING_DATA_REDIS_URL: ${SPRING_DATA_REDIS_URL:-redis://redis:6379}
       JAVA_TOOL_OPTIONS: "-Xms128m -Xmx512m"

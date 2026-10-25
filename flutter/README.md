@@ -29,6 +29,19 @@ To start only one frontend, use `.\start-searchteach.ps1 -Frontend web` or
 `.\start-searchteach.ps1 -Frontend windows`. The backend API is at
 `http://localhost:8081`.
 
+## Virtual and hybrid tutoring rooms
+
+Virtual and hybrid group sessions use LiveKit for audio, video, and in-room
+chat. Configure `LIVEKIT_URL`, `LIVEKIT_API_KEY`, and `LIVEKIT_API_SECRET` in
+the root `.env` for local Docker Compose, or set the same environment variables
+on the API service in production. The URL is the LiveKit WebSocket URL (usually
+`wss://...` for a hosted deployment). Keep the API secret on the backend; the
+Flutter app receives only a short-lived room token after the backend confirms
+the user is the session teacher or an enrolled student. The room opens 15
+minutes before its scheduled start and closes to new tokens one hour after its
+scheduled end. Chat messages are exchanged live through LiveKit data packets
+and are not stored as chat history.
+
 ## Program-leader menu and account data
 
 The program-leader panel provides **Inicio**, **Calidad**, **Pronóstico**,

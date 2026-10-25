@@ -204,6 +204,23 @@ class _GroupSessionCard extends StatelessWidget {
                   style: const TextStyle(color: _muted)),
               Text('${session.studentCount}/5 estudiantes inscritos',
                   style: const TextStyle(color: _muted)),
+              if (session.modality.toUpperCase() == 'VIRTUAL' ||
+                  session.modality.toUpperCase() == 'HIBRIDA') ...[
+                const SizedBox(height: 10),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: FilledButton.icon(
+                    onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => LiveKitRoomPage(
+                        sessionId: session.id,
+                        subject: session.subject,
+                      ),
+                    )),
+                    icon: const Icon(Icons.video_call_outlined),
+                    label: const Text('Entrar a la sala'),
+                  ),
+                ),
+              ],
               const SizedBox(height: 10),
               Align(
                 alignment: Alignment.centerRight,

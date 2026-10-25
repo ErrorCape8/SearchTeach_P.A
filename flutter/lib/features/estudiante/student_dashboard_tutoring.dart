@@ -387,6 +387,25 @@ class _StudentTutoringViewState extends State<StudentTutoringView> {
         }
         final start = session.start?.toLocal();
         final end = session.end?.toLocal();
+        final now = DateTime.now();
+        final enrolledGroups = widget.data.groupSessions
+            .where((item) => item.end?.isAfter(now) ?? false)
+            .toList();
+        final enrolledIndividual = widget.data.tutorings.where((item) =>
+            (item.status == 'SOLICITADA' ||
+                item.status == 'ALTERNATIVA_PROPUESTA' ||
+                item.status == 'PROGRAMADA' ||
+                item.status == 'EN_CURSO') &&
+            (item.end?.isAfter(now) ?? false));
+        final maximumReached =
+            enrolledGroups.length + enrolledIndividual.length >= 3;
+        final overlapsGroup = start != null && end != null && enrolledGroups.any(
+            (item) => item.start != null && item.end != null &&
+                start.isBefore(item.end!) && item.start!.isBefore(end));
+        final overlapsIndividual = start != null && end != null &&
+            enrolledIndividual.any((item) => item.start != null && item.end != null &&
+                start.isBefore(item.end!) && item.start!.isBefore(end));
+        final hasScheduleConflict = overlapsGroup || overlapsIndividual;
         return Card(
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -408,11 +427,27 @@ class _StudentTutoringViewState extends State<StudentTutoringView> {
                 const SizedBox(height: 8),
                 Text('${5 - session.studentCount} cupos disponibles',
                     style: const TextStyle(color: _muted)),
+                if (maximumReached || hasScheduleConflict)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      maximumReached
+                          ? 'Ya tienes tres tutorías inscritas.'
+                          : 'Esta sesión se cruza con otra tutoría tuya.',
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                  ),
                 Align(
                   alignment: Alignment.centerRight,
                   child: FilledButton(
-                    onPressed: () => widget.onJoinPublishedSession(session),
-                    child: const Text('Inscribirme'),
+                    onPressed: maximumReached || hasScheduleConflict || start == null || end == null
+                        ? null
+                        : () => widget.onJoinPublishedSession(session),
+                    child: Text(maximumReached
+                        ? 'Límite alcanzado'
+                        : hasScheduleConflict
+                            ? 'Cruce de horario'
+                            : 'Inscribirme'),
                   ),
                 ),
               ],

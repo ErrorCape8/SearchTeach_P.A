@@ -101,6 +101,114 @@ class _CoordinacionHorariosPageState
     }
   }
 
+  Future<void> _deleteSession(PublishedTutoringSession session) async {
+    final controller = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(builder: (dialogContext, setDialogState) => AlertDialog(
+        title: const Text('Eliminar tutoría'),
+        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('Para confirmar, escribe eliminar.'),
+          const SizedBox(height: 12),
+          TextField(controller: controller, autofocus: true, onChanged: (_) => setDialogState(() {}), decoration: const InputDecoration(labelText: 'Escribe eliminar')),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancelar')),
+          FilledButton(
+            onPressed: controller.text.trim().toLowerCase() == 'eliminar'
+                ? () => Navigator.pop(dialogContext, true)
+                : null,
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      )),
+    );
+    controller.dispose();
+    if (confirmed != true || !mounted) return;
+    try {
+      await ref.read(dioProvider).delete<void>('/api/coordinacion/sesiones-grupales/${session.id}');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tutoría eliminada.')));
+      await _load();
+    } on DioException catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(apiError(error, 'No se pudo eliminar la tutoría.'))));
+    }
+  }
+
+  Future<void> _editSession(PublishedTutoringSession session) async {
+    final subjectController = TextEditingController(text: session.subject);
+    final locationController = TextEditingController(text: session.location);
+    DateTime start = session.start?.toLocal() ?? DateTime.now().add(const Duration(days: 1));
+    final duration = session.end != null && session.start != null
+        ? session.end!.difference(session.start!)
+        : const Duration(hours: 1);
+    String modality = session.modality.toUpperCase();
+    if (!const ['PRESENCIAL', 'VIRTUAL', 'HIBRIDA'].contains(modality)) modality = 'PRESENCIAL';
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(builder: (context, setDialogState) => AlertDialog(
+        title: const Text('Editar tutoría'),
+        content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
+          TextField(controller: subjectController, decoration: const InputDecoration(labelText: 'Materia')),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: () async {
+              final picked = await showDatePicker(context: context, initialDate: start, firstDate: DateTime.now(), lastDate: DateTime.now().add(const Duration(days: 365)));
+              if (picked != null) setDialogState(() => start = DateTime(picked.year, picked.month, picked.day, start.hour, start.minute));
+            },
+            icon: const Icon(Icons.calendar_month),
+            label: Text('${start.day.toString().padLeft(2, '0')}/${start.month.toString().padLeft(2, '0')}/${start.year}'),
+          ),
+          OutlinedButton.icon(
+            onPressed: () async {
+              final picked = await showTimePicker(context: context, initialTime: TimeOfDay.fromDateTime(start));
+              if (picked != null) setDialogState(() => start = DateTime(start.year, start.month, start.day, picked.hour, picked.minute));
+            },
+            icon: const Icon(Icons.schedule),
+            label: Text(TimeOfDay.fromDateTime(start).format(context)),
+          ),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(initialValue: modality, decoration: const InputDecoration(labelText: 'Modalidad'), items: const [
+            DropdownMenuItem(value: 'PRESENCIAL', child: Text('Presencial')),
+            DropdownMenuItem(value: 'VIRTUAL', child: Text('Virtual')),
+            DropdownMenuItem(value: 'HIBRIDA', child: Text('Híbrida')),
+          ], onChanged: (value) { if (value != null) setDialogState(() => modality = value); }),
+          if (modality != 'VIRTUAL') TextField(controller: locationController, decoration: const InputDecoration(labelText: 'Lugar')),
+        ])),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancelar')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Guardar')),
+        ],
+      )),
+    );
+    if (result != true || !mounted) { subjectController.dispose(); locationController.dispose(); return; }
+    final end = start.add(duration);
+    try {
+      await ref.read(dioProvider).put<void>('/api/coordinacion/sesiones-grupales/${session.id}', data: {
+        'tecnologia': session.technology,
+        'semestre': session.semester,
+        'bloques': [{
+          'docenteId': session.teacherId,
+          'materia': subjectController.text.trim(),
+          'modalidad': modality,
+          'ubicacion': modality == 'VIRTUAL' ? null : locationController.text.trim(),
+          'fechaInicio': start.toIso8601String(),
+          'fechaFin': end.toIso8601String(),
+        }],
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tutoría actualizada.')));
+        await _load();
+      }
+    } on DioException catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(apiError(error, 'No se pudo editar la tutoría.'))));
+    } finally {
+      subjectController.dispose();
+      locationController.dispose();
+    }
+  }
+
   List<String> get _careers {
     final careers = _schedules
         .expand((item) => [
@@ -258,6 +366,8 @@ class _CoordinacionHorariosPageState
                                       teachers: _visibleTeachers,
                                       schedules: _scheduleByTeacher,
                                       sessions: _sessionsByTeacher,
+                                      onEditSession: _editSession,
+                                      onDeleteSession: _deleteSession,
                                     ),
                             ),
                           ],

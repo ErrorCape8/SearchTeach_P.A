@@ -7,6 +7,7 @@ import '../../core/api_client.dart';
 import '../auth/auth_repository.dart';
 import '../notifications/notifications_page.dart';
 import 'docente_informes_page.dart';
+import 'livekit_room_page.dart';
 
 const _teacherGreen = Color(0xFF16834A);
 const _teacherCanvas = Color(0xFFF3F8F4);
@@ -65,6 +66,7 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage> {
               children: [
                 _home(),
                 _sessions(),
+                _startTutoring(),
                 const DocenteInformesPage(),
                 const NotificationsInbox(),
               ],
@@ -79,6 +81,7 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage> {
                 destinations: const [
                   NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Inicio'),
                   NavigationDestination(icon: Icon(Icons.event_note_outlined), selectedIcon: Icon(Icons.event_note), label: 'Tutorías'),
+                  NavigationDestination(icon: Icon(Icons.play_circle_outline), selectedIcon: Icon(Icons.play_circle), label: 'Empezar'),
                   NavigationDestination(icon: Icon(Icons.assignment_outlined), selectedIcon: Icon(Icons.assignment), label: 'Informes'),
                   NavigationDestination(icon: Icon(Icons.notifications_none_outlined), selectedIcon: Icon(Icons.notifications), label: 'Avisos'),
                 ],
@@ -98,7 +101,7 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage> {
             ),
             const Divider(height: 1),
             const SizedBox(height: 10),
-            for (var i = 0; i < 4; i++)
+            for (var i = 0; i < 5; i++)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                 child: ListTile(
@@ -124,12 +127,16 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage> {
           const Text('Consulta tus tutorías, solicita cambios de fecha y reporta avances.'),
           const SizedBox(height: 20),
           _TeacherHomeTile(icon: Icons.event_note_outlined, title: 'Mis tutorías', subtitle: 'Revisa sesiones y solicita a coordinación cambiar una fecha.', onTap: () => setState(() => _tab = 1)),
-          _TeacherHomeTile(icon: Icons.assignment_outlined, title: 'Informes de avance', subtitle: 'Envía el seguimiento de tus proyectos asignados.', onTap: () => setState(() => _tab = 2)),
-          _TeacherHomeTile(icon: Icons.notifications_none_outlined, title: 'Avisos', subtitle: 'Consulta las notificaciones de tu cuenta.', onTap: () => setState(() => _tab = 3)),
+          _TeacherHomeTile(icon: Icons.assignment_outlined, title: 'Informes de avance', subtitle: 'Envía el seguimiento de tus proyectos asignados.', onTap: () => setState(() => _tab = 3)),
+          _TeacherHomeTile(icon: Icons.notifications_none_outlined, title: 'Avisos', subtitle: 'Consulta las notificaciones de tu cuenta.', onTap: () => setState(() => _tab = 4)),
         ],
       );
 
-  Widget _sessions() => ref.watch(_teacherSessionsProvider).when(
+  Widget _sessions() => _buildSessions(activeOnly: false);
+
+  Widget _startTutoring() => _buildSessions(activeOnly: true);
+
+  Widget _buildSessions({required bool activeOnly}) => ref.watch(_teacherSessionsProvider).when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Center(
           child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -142,32 +149,52 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage> {
             ),
           ]),
         ),
-        data: (sessions) => sessions.isEmpty
+        data: (allSessions) {
+          final sessions = allSessions;
+          return sessions.isEmpty
             ? const Center(child: Text('No tienes tutorías grupales asignadas.'))
             : ListView(
                 padding: const EdgeInsets.all(20),
                 children: [
-                  const Text('Mis tutorías', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: _teacherNavy)),
+                  Text(activeOnly ? 'Empezar tutorías' : 'Mis tutorías', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: _teacherNavy)),
                   const SizedBox(height: 10),
                   for (final session in sessions)
                     Card(
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.all(16),
-                        leading: const CircleAvatar(backgroundColor: Color(0xFFE6F4EA), child: Icon(Icons.event_available, color: _teacherGreen)),
-                        title: Text(session.subject, style: const TextStyle(fontWeight: FontWeight.w700)),
-                        subtitle: Text('${session.start == null ? 'Fecha no disponible' : _dateTimeLabel(session.start!)} · Semestre ${session.semester} · ${session.technologies.join(', ')}\n${session.students.isEmpty ? 'Publicada · sin inscritos' : 'Estudiantes: ${session.students.join(', ')}'}'),
-                        isThreeLine: true,
-                        trailing: session.start != null && session.start!.isAfter(DateTime.now())
-                            ? IconButton.filledTonal(
-                                tooltip: 'Solicitar cambio de fecha',
-                                onPressed: () => _requestDateChange(session),
-                                icon: const Icon(Icons.edit_calendar_outlined),
-                              )
-                            : null,
-                      ),
+                      child: Column(children: [
+                        ListTile(
+                          contentPadding: const EdgeInsets.all(16),
+                          leading: const CircleAvatar(backgroundColor: Color(0xFFE6F4EA), child: Icon(Icons.event_available, color: _teacherGreen)),
+                          title: Text(session.subject, style: const TextStyle(fontWeight: FontWeight.w700)),
+                          subtitle: Text('${session.start == null ? 'Fecha no disponible' : _dateTimeLabel(session.start!)} · Semestre ${session.semester} · ${session.technologies.join(', ')}\n${session.students.isEmpty ? 'Publicada · sin inscritos' : 'Estudiantes: ${session.students.join(', ')}'}'),
+                          isThreeLine: true,
+                          trailing: session.start != null && session.start!.isAfter(DateTime.now())
+                              ? IconButton.filledTonal(
+                                  tooltip: 'Solicitar cambio de fecha',
+                                  onPressed: () => _requestDateChange(session),
+                                  icon: const Icon(Icons.edit_calendar_outlined),
+                                )
+                              : null,
+                        ),
+                        if (activeOnly && session.id.isNotEmpty)
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: Padding(
+                              padding: const EdgeInsets.only(right: 16, bottom: 12),
+                              child: FilledButton.icon(
+                                onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                                  builder: (_) => LiveKitRoomPage(sessionId: session.id, subject: session.subject, teacherMode: true, students: session.students, ended: session.state == 'FINALIZADA', endAt: session.end),
+                                )),
+                                icon: const Icon(Icons.video_call_outlined),
+                                label: Text(session.state == 'FINALIZADA' ? 'Ver historial' : 'Empezar tutoría'),
+                              ),
+                            ),
+                          ),
+                      ]),
                     ),
                 ],
               ),
+          );
+        },
       );
 
   Future<void> _requestDateChange(_TeacherTutoringSession session) async {
@@ -208,8 +235,8 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage> {
   }
 }
 
-const _teacherLabels = ['Inicio', 'Tutorías', 'Informes', 'Avisos'];
-const _teacherIcons = [Icons.home_outlined, Icons.event_note_outlined, Icons.assignment_outlined, Icons.notifications_none_outlined];
+const _teacherLabels = ['Inicio', 'Tutorías', 'Empezar tutorías', 'Informes', 'Avisos'];
+const _teacherIcons = [Icons.home_outlined, Icons.event_note_outlined, Icons.play_circle_outline, Icons.assignment_outlined, Icons.notifications_none_outlined];
 
 class _TeacherHomeTile extends StatelessWidget {
   const _TeacherHomeTile({required this.icon, required this.title, required this.subtitle, required this.onTap});
@@ -232,7 +259,7 @@ class _TeacherHomeTile extends StatelessWidget {
 }
 
 class _TeacherTutoringSession {
-  const _TeacherTutoringSession({required this.id, required this.subject, required this.technologies, required this.students, required this.start, required this.end, required this.semester});
+  const _TeacherTutoringSession({required this.id, required this.subject, required this.technologies, required this.students, required this.start, required this.end, required this.semester, required this.modality, required this.state});
   final String id;
   final String subject;
   final List<String> technologies;
@@ -240,6 +267,8 @@ class _TeacherTutoringSession {
   final DateTime? start;
   final DateTime? end;
   final int semester;
+  final String modality;
+  final String state;
 
   factory _TeacherTutoringSession.fromJson(Map<String, dynamic> json) =>
       _TeacherTutoringSession(
@@ -250,6 +279,8 @@ class _TeacherTutoringSession {
         start: DateTime.tryParse(json['fechaInicio']?.toString() ?? ''),
         end: DateTime.tryParse(json['fechaFin']?.toString() ?? ''),
         semester: json['semestre'] is num ? (json['semestre'] as num).toInt() : 0,
+        modality: json['modalidad'] is String ? json['modalidad'] as String : '',
+        state: json['estadoClase'] is String ? json['estadoClase'] as String : 'PROGRAMADA',
       );
 }
 

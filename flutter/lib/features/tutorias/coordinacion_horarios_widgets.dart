@@ -181,12 +181,16 @@ class TeacherScheduleGrid extends StatelessWidget {
     required this.teachers,
     required this.schedules,
     required this.sessions,
+    required this.onEditSession,
+    required this.onDeleteSession,
     super.key,
   });
 
   final List<Teacher> teachers;
   final Map<String, TutorSchedule> schedules;
   final Map<String, List<PublishedTutoringSession>> sessions;
+  final ValueChanged<PublishedTutoringSession> onEditSession;
+  final ValueChanged<PublishedTutoringSession> onDeleteSession;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
@@ -202,7 +206,7 @@ class TeacherScheduleGrid extends StatelessWidget {
               crossAxisCount: columns,
               crossAxisSpacing: 14,
               mainAxisSpacing: 14,
-              mainAxisExtent: 190,
+              mainAxisExtent: 290,
             ),
             itemCount: teachers.length,
             itemBuilder: (context, index) {
@@ -211,6 +215,8 @@ class TeacherScheduleGrid extends StatelessWidget {
                 teacher: teacher,
                 schedule: schedules[teacher.id],
                 sessions: sessions[teacher.id] ?? const [],
+                onEditSession: onEditSession,
+                onDeleteSession: onDeleteSession,
               );
             },
           );
@@ -223,11 +229,15 @@ class _TeacherCard extends StatelessWidget {
     required this.teacher,
     required this.schedule,
     required this.sessions,
+    required this.onEditSession,
+    required this.onDeleteSession,
   });
 
   final Teacher teacher;
   final TutorSchedule? schedule;
   final List<PublishedTutoringSession> sessions;
+  final ValueChanged<PublishedTutoringSession> onEditSession;
+  final ValueChanged<PublishedTutoringSession> onDeleteSession;
 
   @override
   Widget build(BuildContext context) {
@@ -284,13 +294,18 @@ class _TeacherCard extends StatelessWidget {
                   : 'Este docente aún no tiene tutorías asignadas.',
               style: const TextStyle(color: _muted, height: 1.4),
             ),
-            for (final session in sessions.take(2))
+            for (final session in sessions.take(3)) ...[
               Text(
                 '${session.subject} · ${_sessionDateTime(session)}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(color: _muted, fontSize: 12),
               ),
+              Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+                IconButton(tooltip: 'Editar tutoría', visualDensity: VisualDensity.compact, onPressed: () => onEditSession(session), icon: const Icon(Icons.edit_outlined, size: 18)),
+                IconButton(tooltip: 'Eliminar tutoría', visualDensity: VisualDensity.compact, onPressed: () => onDeleteSession(session), icon: const Icon(Icons.delete_outline, color: Colors.red, size: 18)),
+              ]),
+            ],
           ],
         ),
       ),
