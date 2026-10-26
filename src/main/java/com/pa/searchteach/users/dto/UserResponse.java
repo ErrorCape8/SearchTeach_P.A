@@ -8,6 +8,7 @@ public class UserResponse {
 	private String rol;
 	private String estado;
 	private String carrera;
+	private int semestre;
 	private java.util.List<String> titulosAcademicos = java.util.List.of();
 
 	public UserResponse() {
@@ -22,6 +23,10 @@ public class UserResponse {
 	}
 
 	public UserResponse(String id, String nombre, String correo, String telefono, String rol, String estado, String carrera, java.util.List<String> titulosAcademicos) {
+		this(id, nombre, correo, telefono, rol, estado, carrera, titulosAcademicos, 0);
+	}
+
+	public UserResponse(String id, String nombre, String correo, String telefono, String rol, String estado, String carrera, java.util.List<String> titulosAcademicos, int semestre) {
 		this.id = id;
 		this.nombre = nombre;
 		this.correo = correo;
@@ -30,6 +35,7 @@ public class UserResponse {
 		this.estado = estado;
 		this.carrera = carrera;
 		this.titulosAcademicos = titulosAcademicos == null ? java.util.List.of() : java.util.List.copyOf(titulosAcademicos);
+		this.semestre = semestre;
 	}
 
 	public String getId() {
@@ -86,6 +92,14 @@ public class UserResponse {
 
 	public void setCarrera(String carrera) {
 		this.carrera = carrera;
+	}
+
+	public int getSemestre() {
+		return semestre;
+	}
+
+	public void setSemestre(int semestre) {
+		this.semestre = semestre;
 	}
 
 	public java.util.List<String> getTitulosAcademicos() {

@@ -70,6 +70,7 @@ public class UserUpdateRequest {
 		this.carrera = carrera;
 	}
 
+
 	public java.util.List<String> getTitulosAcademicos() {
 		return titulosAcademicos;
 	}

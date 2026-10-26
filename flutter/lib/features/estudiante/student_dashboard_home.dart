@@ -158,6 +158,11 @@ class StudentProfileView extends ConsumerWidget {
                   const SizedBox(height: 24),
                   const Divider(height: 1),
                   _ProfileRow(label: 'Documento', value: profile.id),
+                  if (profile.role.toLowerCase().contains('estudiante'))
+                    _ProfileRow(
+                      label: 'Semestre',
+                      value: profile.semester > 0 ? '${profile.semester}' : 'Sin registrar',
+                    ),
                   _ProfileRow(
                     label: 'Correo',
                     value: profile.email,

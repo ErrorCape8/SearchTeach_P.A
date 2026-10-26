@@ -38,7 +38,7 @@ public class UserAdminController {
 	public List<UserResponse> listUsers() {
 		return userRepository.findAll().stream()
 				.map(u -> new UserResponse(u.getId(), u.getNombre(),
-					 u.getCorreo(), u.getTelefono(), u.getRol(), u.getEstado(), u.getCarrera(), u.getTitulosAcademicos()))
+					 u.getCorreo(), u.getTelefono(), u.getRol(), u.getEstado(), u.getCarrera(), u.getTitulosAcademicos(), u.getSemestre()))
 				.toList();
 	}
 
@@ -56,6 +56,8 @@ public class UserAdminController {
 					|| blank(row.nombre()) || blank(row.correo()) || blank(row.telefono())
 					|| blank(row.rol()) || blank(row.estado())
 					|| (row.rol().toLowerCase(Locale.ROOT).contains("estudiante") && blank(row.carrera()))
+					|| (row.rol().toLowerCase(Locale.ROOT).contains("estudiante") && (row.semestre() == null || row.semestre() < 1 || row.semestre() > 10))
+					|| (row.semestre() != null && (row.semestre() < 1 || row.semestre() > 10))
 					|| !row.correo().matches("[^\\s@]+@[^\\s@]+\\.[^\\s@]+")
 					|| (!blank(row.carrera()) && !CatalogoTecnologias.contiene(row.carrera()))
 					|| !(row.estado().equalsIgnoreCase("Activo") || row.estado().equalsIgnoreCase("Revocado"))
@@ -77,15 +79,18 @@ public class UserAdminController {
 			return invalidImport();
 		}
 
-		List<User> users = rows.stream().map(row -> new User(
-				row.id().trim(), null, row.nombre().trim(), row.correo().trim().toLowerCase(Locale.ROOT),
-				row.telefono().trim(), row.rol().trim(),
-				row.estado().equalsIgnoreCase("activo") ? "Activo" : "Revocado",
-				row.carrera() == null ? "" : row.carrera().trim()))
+		List<User> users = rows.stream().map(row -> {
+			User user = new User(row.id().trim(), null, row.nombre().trim(),
+					row.correo().trim().toLowerCase(Locale.ROOT), row.telefono().trim(), row.rol().trim(),
+					row.estado().equalsIgnoreCase("activo") ? "Activo" : "Revocado",
+					row.carrera() == null ? "" : row.carrera().trim());
+			user.setSemestre(row.semestre() == null ? 0 : row.semestre());
+			return user;
+		})
 				.toList();
 		List<UserResponse> created = userRepository.saveAll(users).stream()
 				.map(u -> new UserResponse(u.getId(), u.getNombre(), u.getCorreo(),
-					u.getTelefono(), u.getRol(), u.getEstado(), u.getCarrera(), u.getTitulosAcademicos()))
+					 u.getTelefono(), u.getRol(), u.getEstado(), u.getCarrera(), u.getTitulosAcademicos(), u.getSemestre()))
 				.toList();
 		return ResponseEntity.status(HttpStatus.CREATED).body(created);
 	}
@@ -104,7 +109,7 @@ public class UserAdminController {
 		User user = userRepository.findById(id)
 				.orElseThrow(() -> new NotFoundException("Usuario no encontrado con ID: " + id));
 		return ResponseEntity.ok(new UserResponse(user.getId(), user.getNombre(), user.getCorreo(),
-				user.getTelefono(), user.getRol(), user.getEstado(), user.getCarrera(), user.getTitulosAcademicos()));
+				user.getTelefono(), user.getRol(), user.getEstado(), user.getCarrera(), user.getTitulosAcademicos(), user.getSemestre()));
 	}
 
 	@PutMapping("/users/{id}")
@@ -140,13 +145,17 @@ public class UserAdminController {
 				&& blank(user.getCarrera())) {
 			throw new IllegalArgumentException("Asigna una tecnología al estudiante antes de guardar.");
 		}
+		if (user.getRol() != null && user.getRol().toLowerCase(Locale.ROOT).contains("estudiante")
+				&& (user.getSemestre() < 1 || user.getSemestre() > 10)) {
+			throw new IllegalArgumentException("Asigna un semestre entre 1 y 10 al estudiante antes de guardar.");
+		}
 		if (request.getNuevaContrasena() != null && !request.getNuevaContrasena().trim().isEmpty()) {
 			user.setPasswordHash(passwordEncoder.encode(request.getNuevaContrasena().trim()));
 		}
 
 		User saved = userRepository.save(user);
 		return ResponseEntity.ok(new UserResponse(saved.getId(), saved.getNombre(), saved.getCorreo(),
-				saved.getTelefono(), saved.getRol(), saved.getEstado(), saved.getCarrera(), saved.getTitulosAcademicos()));
+				saved.getTelefono(), saved.getRol(), saved.getEstado(), saved.getCarrera(), saved.getTitulosAcademicos(), saved.getSemestre()));
 	}
 
 	@PatchMapping("/users/{id}/estado")
@@ -162,7 +171,7 @@ public class UserAdminController {
 		}
 		User saved = userRepository.save(user);
 		return ResponseEntity.ok(new UserResponse(saved.getId(), saved.getNombre(), saved.getCorreo(),
-				saved.getTelefono(), saved.getRol(), saved.getEstado(), saved.getCarrera(), saved.getTitulosAcademicos()));
+				saved.getTelefono(), saved.getRol(), saved.getEstado(), saved.getCarrera(), saved.getTitulosAcademicos(), saved.getSemestre()));
 	}
 
 	@GetMapping("/stats")

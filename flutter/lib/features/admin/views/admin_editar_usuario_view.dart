@@ -132,6 +132,7 @@ class _AdminEditarUsuarioViewState
     final state = ref.watch(adminControllerProvider);
     final isActivo = _selectedEstado.trim().toLowerCase() == 'activo';
     final isTeacher = _selectedRol.toLowerCase().contains('docente');
+    final isStudent = _selectedRol.toLowerCase().contains('estudiante');
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
@@ -189,6 +190,21 @@ class _AdminEditarUsuarioViewState
           ),
         ),
         const SizedBox(height: 18),
+
+        if (isStudent) ...[
+          const _FieldLabel('SEMESTRE'),
+          const SizedBox(height: 6),
+          InputDecorator(
+            decoration: const InputDecoration(
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.layers_outlined),
+            ),
+            child: Text(widget.user.semestre > 0
+                ? 'Semestre ${widget.user.semestre}'
+                : 'Sin registrar'),
+          ),
+          const SizedBox(height: 18),
+        ],
 
         if (isTeacher) ...[
           const _FieldLabel('ESTUDIOS DEL DOCENTE'),

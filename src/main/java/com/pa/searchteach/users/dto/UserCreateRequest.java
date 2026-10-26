@@ -7,5 +7,6 @@ public record UserCreateRequest(
 		String telefono,
 		String rol,
 		String estado,
-		String carrera) {
+		String carrera,
+		Integer semestre) {
 }

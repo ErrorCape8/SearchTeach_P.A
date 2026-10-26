@@ -10,6 +10,7 @@ class StudentProfile {
     required this.phone,
     required this.role,
     this.career = '',
+    this.semester = 0,
   });
 
   final String id;
@@ -18,6 +19,7 @@ class StudentProfile {
   final String phone;
   final String role;
   final String career;
+  final int semester;
 
   factory StudentProfile.fromJson(Map<String, dynamic> json) => StudentProfile(
         id: _string(json['id']),
@@ -26,6 +28,7 @@ class StudentProfile {
         phone: _string(json['telefono']),
         role: _string(json['rol']),
         career: _string(json['carrera']),
+        semester: json['semestre'] is num ? (json['semestre'] as num).toInt() : 0,
       );
 }
 

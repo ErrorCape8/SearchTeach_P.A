@@ -41,7 +41,7 @@ public class UserProfileController {
 		Coordinator coordinator = coordinatorRepository.findById(usuarioId)
 				.orElseThrow(() -> new NotFoundException("No se encontro el perfil del usuario."));
 		return new PerfilUsuarioResponse(
-				coordinator.getId(), "", valor(coordinator.getCorreo()), valor(coordinator.getTelefono()), "Coordinador", "");
+				coordinator.getId(), "", valor(coordinator.getCorreo()), valor(coordinator.getTelefono()), "Coordinador", "", 0);
 	}
 
 	@PostMapping("/api/usuarios/perfil/cambios/solicitar")
@@ -71,7 +71,7 @@ public class UserProfileController {
 	private PerfilUsuarioResponse respuesta(User user) {
 		return new PerfilUsuarioResponse(
 				user.getId(), valor(user.getNombre()), valor(user.getCorreo()),
-				valor(user.getTelefono()), valor(user.getRol()), valor(user.getCarrera()));
+				valor(user.getTelefono()), valor(user.getRol()), valor(user.getCarrera()), user.getSemestre());
 	}
 
 	private String valor(String value) {

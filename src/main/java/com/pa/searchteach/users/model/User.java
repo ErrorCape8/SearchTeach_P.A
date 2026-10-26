@@ -15,6 +15,7 @@ public class User {
 	private String rol;
 	private String estado;
 	private String carrera;
+	private int semestre;
 	private java.util.List<String> titulosAcademicos = java.util.List.of();
 	private java.util.List<String> materiasAsignadas = java.util.List.of();
 
@@ -98,6 +99,14 @@ public class User {
 
 	public void setCarrera(String carrera) {
 		this.carrera = carrera;
+	}
+
+	public int getSemestre() {
+		return semestre;
+	}
+
+	public void setSemestre(int semestre) {
+		this.semestre = semestre;
 	}
 
 	public java.util.List<String> getTitulosAcademicos() {

@@ -43,7 +43,12 @@ class _AdminUsuariosViewState extends ConsumerState<AdminUsuariosView> {
       setState(() => _importingUsers = true);
       await ref.read(dioProvider).post<void>(
         '/api/admin/users/import',
-        data: {'usuarios': users},
+        data: {
+          'usuarios': users.map((user) => <String, dynamic>{
+            ...user,
+            'semestre': int.tryParse(user['semestre'] ?? ''),
+          }).toList(),
+        },
       );
       await ref.read(adminControllerProvider.notifier).loadUsers();
       if (mounted) {
@@ -114,16 +119,20 @@ class _AdminUsuariosViewState extends ConsumerState<AdminUsuariosView> {
         for (var i = 0; i < headers.length; i++) headers[i]: values[i],
       };
       record.putIfAbsent('carrera', () => '');
+      record.putIfAbsent('semestre', () => '');
       final id = record['id']!;
       final email = record['correo']!.toLowerCase();
       final status = record['estado']!.toLowerCase();
       final career = record['carrera']!.trim();
       final role = record['rol']!.toLowerCase();
+      final semester = int.tryParse(record['semestre']!.trim());
       if (!RegExp(r'^\d{6,10}$').hasMatch(id) ||
           !RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email) ||
           required.any((key) => record[key]!.isEmpty) ||
           (career.isNotEmpty && !careerCatalog.contains(career)) ||
           (role.contains('estudiante') && career.isEmpty) ||
+          (role.contains('estudiante') && (semester == null || semester < 1 || semester > 10)) ||
+          (record['semestre']!.trim().isNotEmpty && (semester == null || semester < 1 || semester > 10)) ||
           !const {'activo', 'revocado'}.contains(status) ||
           !ids.add(id) ||
           !emails.add(email)) {
@@ -349,7 +358,7 @@ class _AdminUsuariosViewState extends ConsumerState<AdminUsuariosView> {
               const SizedBox(width: 8),
               Tooltip(
                 message:
-                    'CSV: id,nombre,correo,telefono,rol,estado,carrera; requerida para estudiantes',
+                    'CSV: id,nombre,correo,telefono,rol,estado,carrera,semestre; semestre requerido para estudiantes',
                 child: IconButton(
                   onPressed: _importingUsers ? null : _importCsv,
                   icon: _importingUsers
@@ -558,6 +567,16 @@ class _UserListTile extends StatelessWidget {
                       user.carrera,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        color: Color(0xFF8C95A6),
+                      ),
+                    ),
+                  ],
+                  if (user.rol.toLowerCase().contains('estudiante') && user.semestre > 0) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      'Semestre ${user.semestre}',
                       style: const TextStyle(
                         fontSize: 11.5,
                         color: Color(0xFF8C95A6),
