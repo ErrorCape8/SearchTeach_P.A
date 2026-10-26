@@ -123,11 +123,10 @@ public class ControladorLiveKit {
 		if (!sesion.docenteId().equals(usuarioId) && !sesion.estudianteIds().contains(usuarioId)) {
 			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No perteneces a esta sesión.");
 		}
-		LocalDateTime horaLocal = LocalDateTime.now();
-		if (horaLocal.isBefore(sesion.fechaInicio().minusMinutes(15))
-				|| horaLocal.isAfter(sesion.fechaFin().plusHours(1))) {
+		LocalDateTime horaLocal = LocalDateTime.now(java.time.ZoneId.of("America/Bogota"));
+		if (horaLocal.isAfter(sesion.fechaFin().plusHours(1))) {
 			throw new ResponseStatusException(HttpStatus.CONFLICT,
-					"La sala estará disponible 15 minutos antes de iniciar y hasta una hora después de finalizar.");
+				"La sesion ya termino y su sala fue cerrada.");
 		}
 
 		String room = "searchteach-" + sesion.id();

@@ -33,31 +33,15 @@ class StudentTutoringView extends ConsumerStatefulWidget {
 class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
   String? _section;
   String _query = '';
-  String _career = 'Todas';
-  String _semester = 'Todos';
 
   @override
   void initState() {
     super.initState();
-    final studentCareer = widget.data.profile.career.trim();
-    if (studentCareer.isNotEmpty) _career = studentCareer;
-    if (widget.data.profile.semester > 0) {
-      _semester = '${widget.data.profile.semester}';
-    }
   }
 
   @override
   void didUpdateWidget(covariant StudentTutoringView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.data.profile.semester != oldWidget.data.profile.semester &&
-        widget.data.profile.semester > 0) {
-      _semester = '${widget.data.profile.semester}';
-    }
-    if (widget.data.profile.career != oldWidget.data.profile.career) {
-      _career = widget.data.profile.career.trim().isEmpty
-          ? 'Todas'
-          : widget.data.profile.career.trim();
-    }
     if (widget.focusRequest != oldWidget.focusRequest) {
       _section = widget.focusSection;
     }
@@ -281,45 +265,26 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
   }
 
   Widget _availableTutors() {
-    final careers = {
-      'Todas',
-      if (_career != 'Todas') _career,
-      ...widget.data.tutors
-          .expand(
-              (tutor) => tutor.careers.isEmpty ? [tutor.career] : tutor.careers)
-          .where((v) => v.isNotEmpty)
-    }.toList()
-      ..sort();
-    final semesters = {
-      'Todos',
-      if (widget.data.profile.semester > 0)
-        '${widget.data.profile.semester}',
-      ...widget.data.tutors
-          .map((tutor) => '${tutor.semester}')
-          .where((v) => v != '0')
-    }.toList()
-      ..sort((a, b) => a == 'Todos'
-          ? -1
-          : b == 'Todos'
-              ? 1
-              : a.compareTo(b));
+    final career = widget.data.profile.career.trim().toLowerCase();
+    final semester = widget.data.profile.semester;
     final filtered = widget.data.tutors.where((tutor) {
       final matchesQuery = '${tutor.name} ${tutor.teacherId}'
           .toLowerCase()
           .contains(_query.trim().toLowerCase());
-      return matchesQuery &&
-          (_career == 'Todas' ||
-              tutor.careers.any((career) => career.trim().toLowerCase() == _career.trim().toLowerCase()) ||
-              tutor.career.trim().toLowerCase() == _career.trim().toLowerCase()) &&
-          (_semester == 'Todos' || '${tutor.semester}' == _semester);
+      final matchesCareer = career.isEmpty ||
+          tutor.career.trim().toLowerCase() == career ||
+          tutor.careers.any((item) => item.trim().toLowerCase() == career);
+      final matchesSemester = semester <= 0 || tutor.semester == semester;
+      return matchesQuery && matchesCareer && matchesSemester;
     }).toList();
+    final published = widget.data.availableGroupSessions;
     return ListView(
       padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
       children: [
         TextField(
           onChanged: (value) => setState(() => _query = value),
           decoration: InputDecoration(
-            hintText: 'Buscar tutor por nombre o identificación',
+            hintText: 'Buscar tutor por nombre o identificacion',
             prefixIcon: const Icon(Icons.search),
             filled: true,
             fillColor: Colors.white,
@@ -334,46 +299,67 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
           ),
         ),
         const SizedBox(height: 12),
-        Wrap(
-          spacing: 12,
-          runSpacing: 10,
-          children: [
-            _FilterDropdown(
-              label: 'Carrera',
-              value: _career,
-              values: careers,
-              onChanged: (value) => setState(() => _career = value),
+        Wrap(spacing: 8, children: [
+          Chip(label: Text(widget.data.profile.career.isEmpty
+              ? 'Carrera sin registrar'
+              : widget.data.profile.career)),
+          Chip(label: Text(semester > 0 ? 'Semestre $semester' : 'Semestre sin registrar')),
+        ]),
+        const SizedBox(height: 8),
+        const Text('Tutorias publicadas', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+        const SizedBox(height: 8),
+        if (published.isEmpty)
+          const _EmptyCard(
+            icon: Icons.event_busy_outlined,
+            title: 'No hay sesiones disponibles',
+            message: 'Las tutorias que publique coordinacion para tu carrera y semestre apareceran aqui.',
+          )
+        else
+          for (final session in published)
+            Card(
+              margin: const EdgeInsets.only(bottom: 10),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(session.subject, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                  const SizedBox(height: 5),
+                  Text('Docente ${session.teacherId} | ${session.technology} | Semestre ${session.semester}'),
+                  if (session.start != null && session.end != null)
+                    Text('${_longDate(session.start!.toLocal())} | ${TimeOfDay.fromDateTime(session.start!.toLocal()).format(context)}-${TimeOfDay.fromDateTime(session.end!.toLocal()).format(context)}'),
+                  if (session.modality.isNotEmpty) Text('Modalidad: ${_groupSessionModality(session.modality)}'),
+                  Text('${5 - session.studentCount} cupos disponibles'),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: FilledButton(
+                      onPressed: session.start == null || session.end == null
+                          ? null
+                          : () => widget.onJoinPublishedSession(session),
+                      child: const Text('Inscribirme'),
+                    ),
+                  ),
+                ]),
+              ),
             ),
-            _FilterDropdown(
-              label: 'Semestre',
-              value: _semester,
-              values: semesters,
-              onChanged: (value) => setState(() => _semester = value),
-            ),
-          ],
-        ),
         const SizedBox(height: 16),
+        const Text('Disponibilidad de tutores', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
         if (filtered.isEmpty)
           _EmptyCard(
             icon: Icons.search_off,
-            title: widget.data.profile.semester <= 0
-                ? 'Registra tu semestre para ver tutorías'
-                : 'No encontramos tutorías de tu semestre',
-            message: widget.data.profile.semester <= 0
-                ? 'Ve a Mi perfil y registra tu semestre. Después aparecerán las materias y horarios correspondientes.'
-                : 'Aún no hay docentes con horarios publicados para las materias de ${widget.data.profile.career}, semestre ${widget.data.profile.semester}.',
+            title: semester <= 0
+                ? 'Registra tu semestre para ver tutorias'
+                : 'No encontramos horarios de tutor disponible',
+            message: semester <= 0
+                ? 'Ve a Mi perfil y registra tu semestre.'
+                : 'No hay docentes con horarios recurrentes para ${widget.data.profile.career}, semestre $semester.',
           )
         else
-          ...filtered.map(
-            (tutor) => _TutorCard(
-              tutor: tutor,
-              onEnroll: () => widget.onEnroll(tutor),
-            ),
-          ),
+          ...filtered.map((tutor) => _TutorCard(
+                tutor: tutor,
+                onEnroll: () => widget.onEnroll(tutor),
+              )),
       ],
     );
   }
-
   Widget _projectSpaces() {
     final career = widget.data.profile.career.trim();
     final spaces = widget.data.projectSpaces
@@ -659,17 +645,14 @@ class _GroupChatAndCallCard extends StatelessWidget {
         session.state != 'FINALIZADA' &&
         start != null &&
         end != null &&
-        !now.isBefore(start.subtract(const Duration(minutes: 15))) &&
         !now.isAfter(end.add(const Duration(hours: 1)));
     final joinLabel = session.state == 'FINALIZADA'
         ? 'Videollamada finalizada'
         : !virtual
             ? 'Sesión presencial'
-            : start != null && now.isBefore(start.subtract(const Duration(minutes: 15)))
-                ? 'Disponible 15 min antes'
-                : canJoin
-                    ? 'Unirme a videoconferencia'
-                    : 'Videollamada cerrada';
+            : canJoin
+                ? 'Unirme a videoconferencia'
+                : 'Videollamada cerrada';
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),

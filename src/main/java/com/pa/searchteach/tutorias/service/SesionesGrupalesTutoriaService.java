@@ -13,6 +13,7 @@ import com.pa.searchteach.tutorias.model.AsistenciaEstudiante;
 import com.pa.searchteach.tutorias.model.MensajeChatTutoria;
 import com.pa.searchteach.tutorias.model.ModalidadTutoria;
 import com.pa.searchteach.tutorias.model.CatalogoTecnologias;
+import com.pa.searchteach.tutorias.model.CatalogoMateriasTecnologia;
 import com.pa.searchteach.tutorias.repository.SesionTutoriaRepositorio;
 import com.pa.searchteach.tutorias.repository.SolicitudCambioFechaSesionRepositorio;
 import com.pa.searchteach.tutorias.model.SolicitudCambioFechaSesion;
@@ -252,7 +253,7 @@ public class SesionesGrupalesTutoriaService {
 				.filter(sesion -> sesion.fechaFin().isAfter(ahora()))
 				.filter(sesion -> sesion.estudianteIds().size() < 5)
 				.filter(sesion -> !sesion.estudianteIds().contains(estudianteId))
-				.filter(sesion -> sesion.tecnologias().stream().anyMatch(tecnologia::equalsIgnoreCase))
+				.filter(sesion -> sesion.tecnologias().stream().anyMatch(oferta -> CatalogoMateriasTecnologia.normalizar(oferta).equals(CatalogoMateriasTecnologia.normalizar(tecnologia))))
 				.filter(sesion -> sesion.semestre() == estudiante.getSemestre())
 				.sorted((left, right) -> left.fechaInicio().compareTo(right.fechaInicio()))
 				.toList();
@@ -384,7 +385,7 @@ public class SesionesGrupalesTutoriaService {
 				.findFirst().orElse(null);
 		if (existente != null) {
 			if (existente.semestre() != estudiante.getSemestre()
-					|| existente.tecnologias().stream().noneMatch(tecnologia::equalsIgnoreCase)) {
+					|| existente.tecnologias().stream().noneMatch(oferta -> CatalogoMateriasTecnologia.normalizar(oferta).equals(CatalogoMateriasTecnologia.normalizar(tecnologia)))) {
 				throw new ResponseStatusException(HttpStatus.CONFLICT,
 						"La tutoría no corresponde a tu tecnología y semestre.");
 			}
