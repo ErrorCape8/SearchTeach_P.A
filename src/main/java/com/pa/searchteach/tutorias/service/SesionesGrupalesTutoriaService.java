@@ -127,7 +127,7 @@ public class SesionesGrupalesTutoriaService {
 	public List<SesionTutoria> listarPublicadas() {
 		LocalDateTime ahora = ahora();
 		return sesiones.findAll().stream()
-				.filter(sesion -> sesion.fechaInicio().isAfter(ahora))
+				.filter(sesion -> sesion.fechaFin().isAfter(ahora))
 				.sorted((left, right) -> left.fechaInicio().compareTo(right.fechaInicio()))
 				.toList();
 	}
@@ -249,7 +249,7 @@ public class SesionesGrupalesTutoriaService {
 		String tecnologia = estudiante.getCarrera() == null ? "" : estudiante.getCarrera().trim();
 		if (tecnologia.isEmpty() || estudiante.getSemestre() < 1 || estudiante.getSemestre() > 6) return List.of();
 		return sesiones.findAll().stream()
-				.filter(sesion -> sesion.fechaInicio().isAfter(ahora()))
+				.filter(sesion -> sesion.fechaFin().isAfter(ahora()))
 				.filter(sesion -> sesion.estudianteIds().size() < 5)
 				.filter(sesion -> !sesion.estudianteIds().contains(estudianteId))
 				.filter(sesion -> sesion.tecnologias().stream().anyMatch(tecnologia::equalsIgnoreCase))

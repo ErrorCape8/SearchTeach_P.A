@@ -152,7 +152,7 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
       _listener.on<ParticipantDisconnectedEvent>((_) { if (mounted) setState(() {}); });
       _listener.on<TrackSubscribedEvent>((_) { if (mounted) setState(() {}); });
       _listener.on<TrackUnsubscribedEvent>((_) { if (mounted) setState(() {}); });
-      await _room.connect(credentials['serverUrl'] as String, credentials['token'] as String);
+      await _room.connect(credentials['serverUrl'] as String, credentials['token'] as String).timeout(const Duration(seconds: 30));
       if (mounted) setState(() { _connected = true; _connecting = false; });
       final warnings = <String>[];
       try {
@@ -450,6 +450,7 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
       );
 
   Widget _teacherSessionPanel() => ExpansionTile(
+        initiallyExpanded: true,
         collapsedBackgroundColor: const Color(0xFF1C1F26),
         backgroundColor: const Color(0xFF1C1F26),
         textColor: Colors.white,

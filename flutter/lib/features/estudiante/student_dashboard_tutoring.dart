@@ -53,6 +53,11 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
         widget.data.profile.semester > 0) {
       _semester = '${widget.data.profile.semester}';
     }
+    if (widget.data.profile.career != oldWidget.data.profile.career) {
+      _career = widget.data.profile.career.trim().isEmpty
+          ? 'Todas'
+          : widget.data.profile.career.trim();
+    }
     if (widget.focusRequest != oldWidget.focusRequest) {
       _section = widget.focusSection;
     }
@@ -304,8 +309,8 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
           .contains(_query.trim().toLowerCase());
       return matchesQuery &&
           (_career == 'Todas' ||
-              tutor.careers.contains(_career) ||
-              tutor.career == _career) &&
+              tutor.careers.any((career) => career.trim().toLowerCase() == _career.trim().toLowerCase()) ||
+              tutor.career.trim().toLowerCase() == _career.trim().toLowerCase()) &&
           (_semester == 'Todos' || '${tutor.semester}' == _semester);
     }).toList();
     return ListView(

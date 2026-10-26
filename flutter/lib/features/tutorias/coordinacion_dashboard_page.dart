@@ -111,7 +111,10 @@ class _CoordinacionDashboardPageState
                 _Navigation(
                   index: _tab,
                   wide: true,
-                  onSelect: (index) => setState(() => _tab = index),
+                  onSelect: (index) {
+                    setState(() => _tab = index);
+                    if (index == 0) _load();
+                  },
                 ),
                 Expanded(child: content),
               ],
@@ -122,7 +125,10 @@ class _CoordinacionDashboardPageState
           : _Navigation(
               index: _tab,
               wide: false,
-              onSelect: (index) => setState(() => _tab = index),
+              onSelect: (index) {
+                setState(() => _tab = index);
+                if (index == 0) _load();
+              },
             ),
     );
   }
