@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:dio/dio.dart';
 import '../../core/api_client.dart';
 import '../tutorias/livekit_room_page.dart';
 import '../tutorias/proyecto_aula_chat_page.dart';
