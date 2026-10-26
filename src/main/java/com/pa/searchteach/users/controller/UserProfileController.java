@@ -4,6 +4,7 @@ import com.pa.searchteach.common.exception.NotFoundException;
 import com.pa.searchteach.coordinators.model.Coordinator;
 import com.pa.searchteach.coordinators.repository.CoordinatorRepository;
 import com.pa.searchteach.users.dto.PerfilUsuarioResponse;
+import com.pa.searchteach.users.dto.ActualizarSemestreSolicitud;
 import com.pa.searchteach.users.dto.AplicarCambioPerfilSolicitud;
 import com.pa.searchteach.users.dto.SolicitudCambioPerfil;
 import com.pa.searchteach.users.dto.VerificarCambioPerfilSolicitud;
@@ -13,6 +14,7 @@ import com.pa.searchteach.users.service.VerificacionCambioPerfilService;
 import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -42,6 +44,25 @@ public class UserProfileController {
 				.orElseThrow(() -> new NotFoundException("No se encontro el perfil del usuario."));
 		return new PerfilUsuarioResponse(
 				coordinator.getId(), "", valor(coordinator.getCorreo()), valor(coordinator.getTelefono()), "Coordinador", "", 0);
+	}
+
+	@PatchMapping("/api/usuarios/perfil/semestre")
+	@ResponseStatus(org.springframework.http.HttpStatus.NO_CONTENT)
+	public void actualizarSemestre(
+			@AuthenticationPrincipal String usuarioId,
+			@Valid @RequestBody ActualizarSemestreSolicitud solicitud) {
+		User user = userRepository.findById(usuarioId)
+				.orElseThrow(() -> new NotFoundException("No se encontrÃ³ el perfil del estudiante."));
+		if (user.getRol() == null || !user.getRol().toLowerCase(java.util.Locale.ROOT).contains("estudiante")) {
+			throw new org.springframework.web.server.ResponseStatusException(
+					org.springframework.http.HttpStatus.FORBIDDEN, "Esta opciÃ³n es solo para estudiantes.");
+		}
+		if (user.getSemestre() >= 1 && user.getSemestre() <= 6) {
+			throw new org.springframework.web.server.ResponseStatusException(
+					org.springframework.http.HttpStatus.CONFLICT, "Tu semestre ya estÃ¡ registrado.");
+		}
+		user.setSemestre(solicitud.semestre());
+		userRepository.save(user);
 	}
 
 	@PostMapping("/api/usuarios/perfil/cambios/solicitar")

@@ -41,11 +41,18 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
     super.initState();
     final studentCareer = widget.data.profile.career.trim();
     if (studentCareer.isNotEmpty) _career = studentCareer;
+    if (widget.data.profile.semester > 0) {
+      _semester = '${widget.data.profile.semester}';
+    }
   }
 
   @override
   void didUpdateWidget(covariant StudentTutoringView oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (widget.data.profile.semester != oldWidget.data.profile.semester &&
+        widget.data.profile.semester > 0) {
+      _semester = '${widget.data.profile.semester}';
+    }
     if (widget.focusRequest != oldWidget.focusRequest) {
       _section = widget.focusSection;
     }
@@ -280,6 +287,8 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
       ..sort();
     final semesters = {
       'Todos',
+      if (widget.data.profile.semester > 0)
+        '${widget.data.profile.semester}',
       ...widget.data.tutors
           .map((tutor) => '${tutor.semester}')
           .where((v) => v != '0')
@@ -340,10 +349,14 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
         ),
         const SizedBox(height: 16),
         if (filtered.isEmpty)
-          const _EmptyCard(
+          _EmptyCard(
             icon: Icons.search_off,
-            title: 'No encontramos tutores con esos filtros',
-            message: 'Prueba con otro nombre, carrera o semestre.',
+            title: widget.data.profile.semester <= 0
+                ? 'Registra tu semestre para ver tutorías'
+                : 'No encontramos tutorías de tu semestre',
+            message: widget.data.profile.semester <= 0
+                ? 'Ve a Mi perfil y registra tu semestre. Después aparecerán las materias y horarios correspondientes.'
+                : 'Aún no hay docentes con horarios publicados para las materias de ${widget.data.profile.career}, semestre ${widget.data.profile.semester}.',
           )
         else
           ...filtered.map(

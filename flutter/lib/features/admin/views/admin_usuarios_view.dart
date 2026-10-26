@@ -131,8 +131,8 @@ class _AdminUsuariosViewState extends ConsumerState<AdminUsuariosView> {
           required.any((key) => record[key]!.isEmpty) ||
           (career.isNotEmpty && !careerCatalog.contains(career)) ||
           (role.contains('estudiante') && career.isEmpty) ||
-          (role.contains('estudiante') && (semester == null || semester < 1 || semester > 10)) ||
-          (record['semestre']!.trim().isNotEmpty && (semester == null || semester < 1 || semester > 10)) ||
+          (role.contains('estudiante') && (semester == null || semester < 1 || semester > 6)) ||
+          (record['semestre']!.trim().isNotEmpty && (semester == null || semester < 1 || semester > 6)) ||
           !const {'activo', 'revocado'}.contains(status) ||
           !ids.add(id) ||
           !emails.add(email)) {

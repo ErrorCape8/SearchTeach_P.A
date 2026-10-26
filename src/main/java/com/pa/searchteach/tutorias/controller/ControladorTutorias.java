@@ -45,8 +45,8 @@ public class ControladorTutorias {
 	}
 
 	@GetMapping("/disponibles")
-	public List<TutorDisponible> listarTutoresDisponibles() {
-		return horariosTutoresService.listarDisponibles();
+	public List<TutorDisponible> listarTutoresDisponibles(@AuthenticationPrincipal String estudianteId) {
+		return horariosTutoresService.listarDisponibles(estudianteId);
 	}
 
 	@GetMapping("/grupales")

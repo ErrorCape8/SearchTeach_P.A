@@ -163,6 +163,73 @@ class StudentProfileView extends ConsumerWidget {
                       label: 'Semestre',
                       value: profile.semester > 0 ? '${profile.semester}' : 'Sin registrar',
                     ),
+                  if (profile.role.toLowerCase().contains('estudiante') &&
+                      profile.semester == 0) ...[
+                    const SizedBox(height: 8),
+                    OutlinedButton.icon(
+                      onPressed: () async {
+                        var selectedSemester = 1;
+                        final semester = await showDialog<int>(
+                          context: context,
+                          builder: (dialogContext) => StatefulBuilder(
+                            builder: (context, setDialogState) => AlertDialog(
+                              title: const Text('Registrar semestre'),
+                              content: DropdownButtonFormField<int>(
+                                initialValue: selectedSemester,
+                                decoration: const InputDecoration(
+                                  labelText: 'Semestre actual',
+                                  border: OutlineInputBorder(),
+                                ),
+                                items: [
+                                  for (var value = 1; value <= 6; value++)
+                                    DropdownMenuItem(
+                                      value: value,
+                                      child: Text('Semestre $value'),
+                                    ),
+                                ],
+                                onChanged: (value) {
+                                  if (value != null) {
+                                    setDialogState(() => selectedSemester = value);
+                                  }
+                                },
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(dialogContext),
+                                  child: const Text('Cancelar'),
+                                ),
+                                FilledButton(
+                                  onPressed: () => Navigator.pop(
+                                      dialogContext, selectedSemester),
+                                  child: const Text('Guardar'),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                        if (semester == null) return;
+                        try {
+                          await ref.read(dioProvider).patch<void>(
+                            '/api/usuarios/perfil/semestre',
+                            data: {'semestre': semester},
+                          );
+                          ref.invalidate(studentDashboardProvider);
+                        } on DioException catch (error) {
+                          final data = error.response?.data;
+                          final message = data is Map && data['message'] is String
+                              ? data['message'] as String
+                              : 'No se pudo guardar el semestre.';
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(message)),
+                            );
+                          }
+                        }
+                      },
+                      icon: const Icon(Icons.edit_outlined),
+                      label: const Text('Registrar semestre'),
+                    ),
+                  ],
                   _ProfileRow(
                     label: 'Correo',
                     value: profile.email,

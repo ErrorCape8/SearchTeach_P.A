@@ -247,12 +247,13 @@ public class SesionesGrupalesTutoriaService {
 	public List<SesionTutoria> listarDisponibles(String estudianteId) {
 		User estudiante = buscarEstudiante(estudianteId);
 		String tecnologia = estudiante.getCarrera() == null ? "" : estudiante.getCarrera().trim();
-		if (tecnologia.isEmpty()) return List.of();
+		if (tecnologia.isEmpty() || estudiante.getSemestre() < 1 || estudiante.getSemestre() > 6) return List.of();
 		return sesiones.findAll().stream()
 				.filter(sesion -> sesion.fechaInicio().isAfter(ahora()))
 				.filter(sesion -> sesion.estudianteIds().size() < 5)
 				.filter(sesion -> !sesion.estudianteIds().contains(estudianteId))
 				.filter(sesion -> sesion.tecnologias().stream().anyMatch(tecnologia::equalsIgnoreCase))
+				.filter(sesion -> sesion.semestre() == estudiante.getSemestre())
 				.sorted((left, right) -> left.fechaInicio().compareTo(right.fechaInicio()))
 				.toList();
 	}
@@ -369,7 +370,9 @@ public class SesionesGrupalesTutoriaService {
 			throw new ResponseStatusException(HttpStatus.CONFLICT,
 					"Completa tu tecnología en el perfil antes de inscribirte.");
 		}
-		if (solicitud.semestre() < 1 || solicitud.semestre() > 6
+		if (estudiante.getSemestre() < 1 || estudiante.getSemestre() > 6
+				|| solicitud.semestre() != estudiante.getSemestre()
+				|| solicitud.semestre() < 1 || solicitud.semestre() > 6
 				|| !solicitud.fechaFin().isAfter(solicitud.fechaInicio())) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
 					"Selecciona un semestre y un horario válidos.");
@@ -380,6 +383,11 @@ public class SesionesGrupalesTutoriaService {
 				.stream().filter(sesion -> sesion.fechaFin().equals(solicitud.fechaFin()))
 				.findFirst().orElse(null);
 		if (existente != null) {
+			if (existente.semestre() != estudiante.getSemestre()
+					|| existente.tecnologias().stream().noneMatch(tecnologia::equalsIgnoreCase)) {
+				throw new ResponseStatusException(HttpStatus.CONFLICT,
+						"La tutoría no corresponde a tu tecnología y semestre.");
+			}
 			if (existente.estudianteIds().contains(estudianteId)) return existente;
 			if (existente.estudianteIds().size() >= 5) {
 				throw new ResponseStatusException(HttpStatus.CONFLICT,

@@ -56,24 +56,33 @@ public class HorariosTutoresService {
 		return CatalogoMateriasTecnologia.listar(tecnologia, semestre);
 	}
 
-	public List<TutorDisponible> listarDisponibles() {
+	public List<TutorDisponible> listarDisponibles(String estudianteId) {
+		User estudiante = usuarios.findById(estudianteId)
+				.orElseThrow(() -> new NotFoundException("No se encontrÃ³ el perfil del estudiante."));
+		String tecnologiaEstudiante = valor(estudiante.getCarrera());
+		int semestreEstudiante = estudiante.getSemestre();
+		if (tecnologiaEstudiante.isBlank() || semestreEstudiante < 1 || semestreEstudiante > 6) return List.of();
 		var nombres = listarDocentes().stream()
 				.collect(java.util.stream.Collectors.toMap(
 						DocenteCoordinacion::id, DocenteCoordinacion::nombre));
 		return listarHorarios().stream()
 				.filter(horario -> nombres.containsKey(horario.docenteId()))
-				.map(horario -> new TutorDisponible(
-						horario.docenteId(),
-						nombres.get(horario.docenteId()),
-						horario.carrera(),
-						horario.semestre(),
-						horario.dia(),
-						horario.horaInicio(),
-						horario.horaFin(),
-						horario.modalidad(),
-						horario.ubicacion(),
-						carrerasDe(horario),
-						materiasCompartidas(horario)))
+				.filter(horario -> horario.semestre() == semestreEstudiante)
+				.filter(horario -> materiasCompartidas(horario).stream()
+						.anyMatch(materia -> materia.carreras().stream()
+								.anyMatch(carrera -> CatalogoMateriasTecnologia.normalizar(carrera)
+										.equals(CatalogoMateriasTecnologia.normalizar(tecnologiaEstudiante)))))
+				.map(horario -> {
+					List<MateriaHorario> materiasEstudiante = materiasCompartidas(horario).stream()
+							.filter(materia -> materia.carreras().stream()
+									.anyMatch(carrera -> CatalogoMateriasTecnologia.normalizar(carrera)
+											.equals(CatalogoMateriasTecnologia.normalizar(tecnologiaEstudiante))))
+							.toList();
+					return new TutorDisponible(
+						horario.docenteId(), nombres.get(horario.docenteId()), horario.carrera(),
+						horario.semestre(), horario.dia(), horario.horaInicio(), horario.horaFin(),
+						horario.modalidad(), horario.ubicacion(), List.of(tecnologiaEstudiante), materiasEstudiante);
+				})
 				.toList();
 	}
 
@@ -120,6 +129,10 @@ public class HorariosTutoresService {
 		User estudiante = usuarios.findById(estudianteId)
 				.orElseThrow(() -> new NotFoundException("No se encontrÃ³ el estudiante seleccionado."));
 		String carrera = valor(estudiante.getCarrera());
+		if (horario.semestre() != estudiante.getSemestre()) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT,
+					"El horario no corresponde al semestre del estudiante.");
+		}
 		boolean disponible = materiasCompartidas(horario).stream()
 				.filter(item -> CatalogoMateriasTecnologia.normalizar(item.nombre())
 						.equals(CatalogoMateriasTecnologia.normalizar(materia)))

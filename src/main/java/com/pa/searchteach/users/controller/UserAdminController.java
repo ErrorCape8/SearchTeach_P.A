@@ -56,8 +56,8 @@ public class UserAdminController {
 					|| blank(row.nombre()) || blank(row.correo()) || blank(row.telefono())
 					|| blank(row.rol()) || blank(row.estado())
 					|| (row.rol().toLowerCase(Locale.ROOT).contains("estudiante") && blank(row.carrera()))
-					|| (row.rol().toLowerCase(Locale.ROOT).contains("estudiante") && (row.semestre() == null || row.semestre() < 1 || row.semestre() > 10))
-					|| (row.semestre() != null && (row.semestre() < 1 || row.semestre() > 10))
+					|| (row.rol().toLowerCase(Locale.ROOT).contains("estudiante") && (row.semestre() == null || row.semestre() < 1 || row.semestre() > 6))
+					|| (row.semestre() != null && (row.semestre() < 1 || row.semestre() > 6))
 					|| !row.correo().matches("[^\\s@]+@[^\\s@]+\\.[^\\s@]+")
 					|| (!blank(row.carrera()) && !CatalogoTecnologias.contiene(row.carrera()))
 					|| !(row.estado().equalsIgnoreCase("Activo") || row.estado().equalsIgnoreCase("Revocado"))
@@ -147,7 +147,7 @@ public class UserAdminController {
 		}
 		if (user.getRol() != null && user.getRol().toLowerCase(Locale.ROOT).contains("estudiante")
 				&& (user.getSemestre() < 1 || user.getSemestre() > 10)) {
-			throw new IllegalArgumentException("Asigna un semestre entre 1 y 10 al estudiante antes de guardar.");
+			throw new IllegalArgumentException("Asigna un semestre entre 1 y 6 al estudiante antes de guardar.");
 		}
 		if (request.getNuevaContrasena() != null && !request.getNuevaContrasena().trim().isEmpty()) {
 			user.setPasswordHash(passwordEncoder.encode(request.getNuevaContrasena().trim()));
