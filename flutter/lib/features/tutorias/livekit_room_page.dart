@@ -50,6 +50,7 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
   void initState() {
     super.initState();
     _ended = widget.ended;
+    _showChat = widget.ended;
     _loadChatHistory();
     _chatTimer = Timer.periodic(const Duration(seconds: 5), (_) => _loadChatHistory());
     if (!widget.isProjectMeeting) {
@@ -63,7 +64,8 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
         if (widget.teacherMode) {
           _finish('FINALIZACION_AUTOMATICA');
         } else if (mounted) {
-          setState(() => _ended = true);
+          setState(() { _ended = true; _showChat = true; });
+          unawaited(Future.wait([_loadChatHistory(), _loadAttendance(), _loadStudentNames()]));
           _room.disconnect();
         }
       });
@@ -245,7 +247,10 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
   Future<void> _finish(String reason) async {
     try {
       await ref.read(dioProvider).patch('/api/tutorias/grupales/${widget.sessionId}/finalizar', data: {'motivo': reason});
-      if (mounted) setState(() => _ended = true);
+      if (mounted) {
+        setState(() { _ended = true; _showChat = true; });
+        await Future.wait([_loadChatHistory(), _loadAttendance(), _loadStudentNames()]);
+      }
       await _room.disconnect();
     } on DioException catch (error) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message ?? 'No se pudo finalizar la tutoría.')));
@@ -359,7 +364,7 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
                   if (_showChat) SizedBox(height: 220, child: _chatPanel()),
                 ]),
         ),
-        if (widget.teacherMode && !widget.isProjectMeeting) _teacherSessionPanel(),
+        if (widget.teacherMode && !_ended && !widget.isProjectMeeting) _teacherSessionPanel(),
         _callControls(),
       ]),
     );

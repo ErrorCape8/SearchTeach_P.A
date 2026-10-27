@@ -81,13 +81,11 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
           ),
           const SizedBox(height: 20),
           _MenuTile(
-            icon: Icons.search,
-            title: 'Tutorías retroalimentativas',
-            subtitle:
-                'Encuentra un tutor y solicita acompañamiento para una materia.',
-            onTap: () => setState(() => _section = 'disponibles'),
-          ),
-          _MenuTile(
+            icon: Icons.event_available_outlined,
+            title: 'Tutor\u00EDas grupales disponibles',
+            subtitle: 'Inscr\u00EDbete en una sesi\u00F3n publicada para tu carrera y semestre.',
+            onTap: () => setState(() => _section = 'publicadas'),
+          ),          _MenuTile(
             icon: Icons.groups_outlined,
             title: 'Tutorías de proyectos de aula',
             subtitle: 'Inscríbete o desiste de un espacio de tu tecnología.',
@@ -100,16 +98,16 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
             onTap: () => setState(() => _section = 'seguimiento-proyecto'),
           ),
           _MenuTile(
+            icon: Icons.video_call_outlined,
+            title: 'Unirse a videoconferencias',
+            subtitle: 'Entra al chat y a la sala de las tutorias en las que estas inscrita.',
+            onTap: () => setState(() => _section = 'chats-videoconferencias'),
+          ),
+          _MenuTile(
             icon: Icons.event_note_outlined,
             title: 'Mis sesiones',
             subtitle: 'Consulta las tutorías programadas y en curso.',
             onTap: () => setState(() => _section = 'sesiones'),
-          ),
-          _MenuTile(
-            icon: Icons.video_call_outlined,
-            title: 'Chats y videoconferencias',
-            subtitle: 'Abre el chat de tus tutorías o únete a una sesión virtual programada.',
-            onTap: () => setState(() => _section = 'chats-videoconferencias'),
           ),
           _MenuTile(
             icon: Icons.history,
@@ -122,9 +120,9 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
 
   Widget _sectionHeader() {
     final content = switch (_section) {
-      'disponibles' || 'solicitar' => (
-          'Tutorías retroalimentativas',
-          'Explora la disponibilidad publicada por los tutores.'
+      'publicadas' => (
+          'Tutor\u00EDas grupales disponibles',
+          'Inscr\u00EDbete en una sesi\u00F3n publicada para tu carrera y semestre.'
         ),
       'proyectos' => (
           'Tutorías de proyectos de aula',
@@ -132,7 +130,7 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
         ),
       'sesiones' => ('Mis sesiones', 'Tutorías confirmadas y en curso.'),
       'chats-videoconferencias' => (
-          'Chats y videoconferencias',
+          'Unirse a videoconferencias',
           'Accede a la conversación o entra a la sala de tus sesiones.'
         ),
       _ => ('Historial', 'Tutorías realizadas o canceladas.'),
@@ -148,9 +146,8 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
 
   Widget _sectionContent() {
     switch (_section) {
-      case 'disponibles':
-      case 'solicitar':
-        return _availableTutors();
+      case 'publicadas':
+        return _publishedGroupSessions();
       case 'proyectos':
         return _projectSpaces();
       case 'seguimiento-proyecto':

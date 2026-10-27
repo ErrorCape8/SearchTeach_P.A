@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/api_client.dart';
 import 'coordinacion_horarios_models.dart';
+import 'coordinacion_horarios_form.dart';
 import 'coordinacion_horarios_widgets.dart';
 
 class CoordinacionHorariosPage extends ConsumerStatefulWidget {
@@ -101,6 +102,20 @@ class _CoordinacionHorariosPageState
     }
   }
 
+  Future<void> _editTeacherSchedule(
+    Teacher teacher,
+    TutorSchedule? existing,
+  ) async {
+    final saved = await Navigator.of(context).push<TutorSchedule>(
+      MaterialPageRoute(
+        builder: (_) => CoordinacionHorariosFormPage(
+          teacher: teacher,
+          existing: existing,
+        ),
+      ),
+    );
+    if (saved != null && mounted) await _load();
+  }
   Future<void> _deleteSession(PublishedTutoringSession session) async {
     final controller = TextEditingController();
     final confirmed = await showDialog<bool>(
@@ -429,6 +444,7 @@ class _CoordinacionHorariosPageState
                                       sessions: _sessionsByTeacher,
                                       onEditSession: _editSession,
                                       onDeleteSession: _deleteSession,
+                                      onEditSchedule: _editTeacherSchedule,
                                     ),
                             ),
                           ],

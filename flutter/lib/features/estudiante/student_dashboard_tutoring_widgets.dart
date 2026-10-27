@@ -208,7 +208,8 @@ class _GroupSessionCard extends StatelessWidget {
                   session.state != 'FINALIZADA' &&
                   session.end != null &&
                   session.end!.isAfter(DateTime.now()) &&
-                  session.modality.toUpperCase() == 'VIRTUAL') ...[
+                  (session.modality.toUpperCase() == 'VIRTUAL' ||
+                  session.modality.toUpperCase() == 'HIBRIDA')) ...[
                 const SizedBox(height: 10),
                 Align(
                   alignment: Alignment.centerRight,
@@ -221,7 +222,7 @@ class _GroupSessionCard extends StatelessWidget {
                       ),
                     )),
                     icon: const Icon(Icons.video_call_outlined),
-                    label: const Text('Unirme a tutoría virtual'),
+                    label: const Text('Unirme a videoconferencia'),
                   ),
                 ),
               ],

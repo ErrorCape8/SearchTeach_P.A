@@ -190,6 +190,7 @@ class TeacherScheduleGrid extends StatelessWidget {
     required this.sessions,
     required this.onEditSession,
     required this.onDeleteSession,
+    required this.onEditSchedule,
     super.key,
   });
 
@@ -198,6 +199,7 @@ class TeacherScheduleGrid extends StatelessWidget {
   final Map<String, List<PublishedTutoringSession>> sessions;
   final ValueChanged<PublishedTutoringSession> onEditSession;
   final ValueChanged<PublishedTutoringSession> onDeleteSession;
+  final void Function(Teacher teacher, TutorSchedule? schedule) onEditSchedule;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
@@ -224,6 +226,7 @@ class TeacherScheduleGrid extends StatelessWidget {
                 sessions: sessions[teacher.id] ?? const [],
                 onEditSession: onEditSession,
                 onDeleteSession: onDeleteSession,
+                onEditSchedule: onEditSchedule,
               );
             },
           );
@@ -238,6 +241,7 @@ class _TeacherCard extends StatelessWidget {
     required this.sessions,
     required this.onEditSession,
     required this.onDeleteSession,
+    required this.onEditSchedule,
   });
 
   final Teacher teacher;
@@ -245,6 +249,7 @@ class _TeacherCard extends StatelessWidget {
   final List<PublishedTutoringSession> sessions;
   final ValueChanged<PublishedTutoringSession> onEditSession;
   final ValueChanged<PublishedTutoringSession> onDeleteSession;
+  final void Function(Teacher teacher, TutorSchedule? schedule) onEditSchedule;
 
   @override
   Widget build(BuildContext context) {
@@ -290,6 +295,13 @@ class _TeacherCard extends StatelessWidget {
                   ),
                 ),
                 _ScheduleBadge(assigned: hasAvailability),
+                IconButton(
+                  tooltip: schedule == null
+                      ? 'Asignar horario'
+                      : 'Editar horario',
+                  onPressed: () => onEditSchedule(teacher, schedule),
+                  icon: const Icon(Icons.edit_calendar_outlined, color: _brand),
+                ),
               ],
             ),
             const SizedBox(height: 14),

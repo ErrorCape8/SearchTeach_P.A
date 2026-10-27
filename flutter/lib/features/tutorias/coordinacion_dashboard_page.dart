@@ -31,6 +31,7 @@ class _CoordinacionDashboardPageState
   String? _error;
   List<Map<String, dynamic>> _teachers = [];
   List<Map<String, dynamic>> _schedules = [];
+  List<Map<String, dynamic>> _publishedSessions = [];
   List<Map<String, dynamic>> _groups = [];
   Map<String, dynamic> _profile = {};
 
@@ -51,6 +52,7 @@ class _CoordinacionDashboardPageState
         dio.get<List<dynamic>>('/api/coordinacion/docentes'),
         dio.get<List<dynamic>>('/api/coordinacion/horarios'),
         dio.get<List<dynamic>>('/api/coordinacion/tutorias-colectivas'),
+        dio.get<List<dynamic>>('/api/coordinacion/sesiones-grupales'),
         dio.get<Map<String, dynamic>>('/api/usuarios/perfil'),
       ]);
       List<Map<String, dynamic>> rows(int index) =>
@@ -62,7 +64,8 @@ class _CoordinacionDashboardPageState
         _teachers = rows(0);
         _schedules = rows(1);
         _groups = rows(2);
-        final profile = responses[3].data;
+        _publishedSessions = rows(3);
+        final profile = responses[4].data;
         _profile =
             profile is Map<String, dynamic> ? profile : <String, dynamic>{};
         _loading = false;
@@ -138,6 +141,7 @@ class _CoordinacionDashboardPageState
             teachers: _teachers,
             schedules: _schedules,
             groups: _groups,
+            publishedSessions: _publishedSessions,
             onOpen: (tab) => setState(() => _tab = tab),
           ),
         1 => const CoordinacionHorariosPage(),
@@ -318,13 +322,17 @@ class _HomeView extends StatelessWidget {
       {required this.teachers,
       required this.schedules,
       required this.groups,
+      required this.publishedSessions,
       required this.onOpen});
-  final List<Map<String, dynamic>> teachers, schedules, groups;
+  final List<Map<String, dynamic>> teachers, schedules, groups, publishedSessions;
   final ValueChanged<int> onOpen;
 
   @override
   Widget build(BuildContext context) {
-    final scheduledIds = schedules.map((row) => row['docenteId']).toSet();
+    final scheduledIds = schedules
+        .map((row) => row['docenteId'])
+        .followedBy(publishedSessions.map((session) => session['docenteId']))
+        .toSet();
     final unscheduled = teachers
         .where((teacher) => !scheduledIds.contains(teacher['id']))
         .toList();

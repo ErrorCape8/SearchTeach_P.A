@@ -69,7 +69,7 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
                       children: [
                         StudentHomeView(
                           data: dashboard,
-                          onBrowse: () => _openTutorSection('disponibles'),
+                          onBrowse: () => _openTutorSection('publicadas'),
                           onHistory: () => _openTutorSection('historial'),
                         ),
                         StudentTutoringView(
