@@ -19,7 +19,7 @@ Future<void> showDeviceNotification(String title, String body) async {
       android: AndroidNotificationDetails(
         'searchteach_notifications',
         'Notificaciones de SearchTeach',
-        channelDescription: 'Avisos de tutor?as y actividad acad?mica.',
+        channelDescription: 'Avisos de tutorías y actividad académica.',
         importance: Importance.high,
         priority: Priority.high,
       ),

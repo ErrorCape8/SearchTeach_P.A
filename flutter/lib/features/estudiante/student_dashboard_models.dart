@@ -421,7 +421,7 @@ final studentGroupSessionsProvider =
   final enrolledRequest = dio.get<List<dynamic>>('/api/tutorias/grupales');
   final availableRequest =
       dio.get<List<dynamic>>('/api/tutorias/grupales/disponibles');
-  final results = await Future.wait([
+  final results = await Future.wait<Response<List<dynamic>>>([
     enrolledRequest,
     availableRequest,
   ]);

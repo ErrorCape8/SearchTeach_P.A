@@ -22,12 +22,14 @@ class StudentTutoringView extends ConsumerStatefulWidget {
   final Future<void> Function(ClassroomProjectSpace space) onProjectEnrollment;
   final Future<void> Function() onJoinProjectCode;
   final Future<void> Function(StudentGroupSession session) onLeaveGroupSession;
-  final Future<void> Function(StudentGroupSession session) onJoinPublishedSession;
+  final Future<void> Function(StudentGroupSession session)
+      onJoinPublishedSession;
   final Future<void> Function(StudentTutoring tutoring, String action) onAction;
   final void Function(String message) onShowMessage;
 
   @override
-  ConsumerState<StudentTutoringView> createState() => _StudentTutoringViewState();
+  ConsumerState<StudentTutoringView> createState() =>
+      _StudentTutoringViewState();
 }
 
 class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
@@ -83,9 +85,11 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
           _MenuTile(
             icon: Icons.event_available_outlined,
             title: 'Tutor\u00EDas grupales disponibles',
-            subtitle: 'Inscr\u00EDbete en una sesi\u00F3n publicada para tu carrera y semestre.',
+            subtitle:
+                'Inscr\u00EDbete en una sesi\u00F3n publicada para tu carrera y semestre.',
             onTap: () => setState(() => _section = 'publicadas'),
-          ),          _MenuTile(
+          ),
+          _MenuTile(
             icon: Icons.groups_outlined,
             title: 'Tutorías de proyectos de aula',
             subtitle: 'Inscríbete o desiste de un espacio de tu tecnología.',
@@ -94,13 +98,15 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
           _MenuTile(
             icon: Icons.assignment_outlined,
             title: 'Seguimiento de mi proyecto',
-            subtitle: 'Consulta los reportes del tutor, el horario y las respuestas.',
+            subtitle:
+                'Consulta los reportes del tutor, el horario y las respuestas.',
             onTap: () => setState(() => _section = 'seguimiento-proyecto'),
           ),
           _MenuTile(
             icon: Icons.video_call_outlined,
             title: 'Unirse a videoconferencias',
-            subtitle: 'Entra al chat y a la sala de las tutorias en las que estas inscrita.',
+            subtitle:
+                'Entra al chat y a la sala de las tutorias en las que estas inscrita.',
             onTap: () => setState(() => _section = 'chats-videoconferencias'),
           ),
           _MenuTile(
@@ -170,69 +176,101 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
 
   Widget _projectFollowup() => ref.watch(studentProjectFollowupProvider).when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Center(child: Padding(
+        error: (error, _) => Center(
+            child: Padding(
           padding: const EdgeInsets.all(24),
-          child: Text('No se pudo cargar el seguimiento de tu proyecto: $error'),
+          child:
+              Text('No se pudo cargar el seguimiento de tu proyecto: $error'),
         )),
         data: (projects) => projects.isEmpty
             ? const _EmptyCard(
                 icon: Icons.assignment_outlined,
                 title: 'Aún no tienes un proyecto inscrito',
-                message: 'Cuando te inscribas, aquí verás el horario y los reportes de tu tutor.',
+                message:
+                    'Cuando te inscribas, aquí verás el horario y los reportes de tu tutor.',
               )
             : ListView(
                 padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
                 children: [
-                  for (final item in projects) Card(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text(item.project.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: _navy)),
-                        Text('${item.project.career} · Semestre ${item.project.semester} · Tutor ${item.project.teacherId}'),
-                        Text(item.status == 'FINALIZADO'
-                            ? 'Proyecto finalizado por el docente líder.'
-                            : item.status == 'PENDIENTE_CONFIRMACION'
-                                ? 'El cierre del proyecto está pendiente de revisión del docente líder.'
-                                : 'Proyecto en curso.'),
-                        if (item.meetingAt != null) Text(
-                          'Reunión de PA: ${_longDate(item.meetingAt!.toLocal())} · ${TimeOfDay.fromDateTime(item.meetingAt!.toLocal()).format(context)}',
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        const SizedBox(height: 12),
-                        const Text('Horario e historial de sesiones', style: TextStyle(fontWeight: FontWeight.w700)),
-                        if (item.nextSession != null) ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: const Icon(Icons.event_available, color: _blue),
-                          title: const Text('Próxima sesión', style: TextStyle(fontWeight: FontWeight.w700)),
-                          subtitle: Text('${_longDate(item.nextSession!.start!.toLocal())} · ${TimeOfDay.fromDateTime(item.nextSession!.start!.toLocal()).format(context)} – ${TimeOfDay.fromDateTime(item.nextSession!.end!.toLocal()).format(context)}'),
-                        ),
-                        if (item.sessions.isEmpty) const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 8),
-                          child: Text('El tutor aún no ha registrado un horario.'),
-                        ),
-                        for (final session in item.sessions) ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: const Icon(Icons.event_note_outlined),
-                          title: Text(session.start == null ? 'Fecha pendiente' : _longDate(session.start!.toLocal())),
-                          subtitle: Text('${session.start == null ? '' : TimeOfDay.fromDateTime(session.start!.toLocal()).format(context)} – ${session.end == null ? '' : TimeOfDay.fromDateTime(session.end!.toLocal()).format(context)}\n${session.notes}', maxLines: 5, overflow: TextOverflow.ellipsis),
-                          isThreeLine: true,
-                          onTap: () async {
-                            await Navigator.of(context).push(MaterialPageRoute(
-                              builder: (_) => ProyectoAulaChatPage(
-                                tutoringId: item.tutoringId,
-                                projectId: item.project.projectId,
-                                sessionId: session.id,
-                                title: item.project.name,
-                                teacherMode: false,
-                              ),
-                            ));
-                            if (mounted) ref.invalidate(studentProjectFollowupProvider);
-                          },
-                        ),
-                      ]),
+                  for (final item in projects)
+                    Card(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(item.project.name,
+                                  style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w800,
+                                      color: _navy)),
+                              Text(
+                                  '${item.project.career} · Semestre ${item.project.semester} · Tutor ${item.project.teacherId}'),
+                              Text(item.status == 'FINALIZADO'
+                                  ? 'Proyecto finalizado por el docente líder.'
+                                  : item.status == 'PENDIENTE_CONFIRMACION'
+                                      ? 'El cierre del proyecto está pendiente de revisión del docente líder.'
+                                      : 'Proyecto en curso.'),
+                              if (item.meetingAt != null)
+                                Text(
+                                  'Reunión de PA: ${_longDate(item.meetingAt!.toLocal())} · ${TimeOfDay.fromDateTime(item.meetingAt!.toLocal()).format(context)}',
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w600),
+                                ),
+                              const SizedBox(height: 12),
+                              const Text('Horario e historial de sesiones',
+                                  style:
+                                      TextStyle(fontWeight: FontWeight.w700)),
+                              if (item.nextSession != null)
+                                ListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  leading: const Icon(Icons.event_available,
+                                      color: _blue),
+                                  title: const Text('Próxima sesión',
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.w700)),
+                                  subtitle: Text(
+                                      '${_longDate(item.nextSession!.start!.toLocal())} · ${TimeOfDay.fromDateTime(item.nextSession!.start!.toLocal()).format(context)} – ${TimeOfDay.fromDateTime(item.nextSession!.end!.toLocal()).format(context)}'),
+                                ),
+                              if (item.sessions.isEmpty)
+                                const Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 8),
+                                  child: Text(
+                                      'El tutor aún no ha registrado un horario.'),
+                                ),
+                              for (final session in item.sessions)
+                                ListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  leading:
+                                      const Icon(Icons.event_note_outlined),
+                                  title: Text(session.start == null
+                                      ? 'Fecha pendiente'
+                                      : _longDate(session.start!.toLocal())),
+                                  subtitle: Text(
+                                      '${session.start == null ? '' : TimeOfDay.fromDateTime(session.start!.toLocal()).format(context)} – ${session.end == null ? '' : TimeOfDay.fromDateTime(session.end!.toLocal()).format(context)}\n${session.notes}',
+                                      maxLines: 5,
+                                      overflow: TextOverflow.ellipsis),
+                                  isThreeLine: true,
+                                  onTap: () async {
+                                    await Navigator.of(context)
+                                        .push(MaterialPageRoute(
+                                      builder: (_) => ProyectoAulaChatPage(
+                                        tutoringId: item.tutoringId,
+                                        projectId: item.project.projectId,
+                                        sessionId: session.id,
+                                        title: item.project.name,
+                                        teacherMode: false,
+                                      ),
+                                    ));
+                                    if (mounted)
+                                      ref.invalidate(
+                                          studentProjectFollowupProvider);
+                                  },
+                                ),
+                            ]),
+                      ),
                     ),
-                  ),
                 ],
               ),
       );
@@ -241,7 +279,8 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
     final completedGroups = widget.data.groupSessions
         .where((session) => session.state == 'FINALIZADA')
         .toList()
-      ..sort((a, b) => (b.start ?? DateTime(0)).compareTo(a.start ?? DateTime(0)));
+      ..sort(
+          (a, b) => (b.start ?? DateTime(0)).compareTo(a.start ?? DateTime(0)));
     final individualHistory = widget.data.tutorings
         .where((t) => t.status == 'REALIZADA' || t.status == 'CANCELADA')
         .toList();
@@ -255,12 +294,15 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
       children: [
-        ...completedGroups.map((session) => _GroupHistoryCard(session: session)),
-        ...individualHistory.map((tutoring) => _TutoringCard(tutoring: tutoring)),
+        ...completedGroups
+            .map((session) => _GroupHistoryCard(session: session)),
+        ...individualHistory
+            .map((tutoring) => _TutoringCard(tutoring: tutoring)),
       ],
     );
   }
 
+  // ignore: unused_element
   Widget _availableTutors() {
     final career = widget.data.profile.career.trim().toLowerCase();
     final semester = widget.data.profile.semester;
@@ -297,19 +339,25 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
         ),
         const SizedBox(height: 12),
         Wrap(spacing: 8, children: [
-          Chip(label: Text(widget.data.profile.career.isEmpty
-              ? 'Carrera sin registrar'
-              : widget.data.profile.career)),
-          Chip(label: Text(semester > 0 ? 'Semestre $semester' : 'Semestre sin registrar')),
+          Chip(
+              label: Text(widget.data.profile.career.isEmpty
+                  ? 'Carrera sin registrar'
+                  : widget.data.profile.career)),
+          Chip(
+              label: Text(semester > 0
+                  ? 'Semestre $semester'
+                  : 'Semestre sin registrar')),
         ]),
         const SizedBox(height: 8),
-        const Text('Tutorias publicadas', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+        const Text('Tutorias publicadas',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
         const SizedBox(height: 8),
         if (published.isEmpty)
           const _EmptyCard(
             icon: Icons.event_busy_outlined,
             title: 'No hay sesiones disponibles',
-            message: 'Las tutorias que publique coordinacion para tu carrera y semestre apareceran aqui.',
+            message:
+                'Las tutorias que publique coordinacion para tu carrera y semestre apareceran aqui.',
           )
         else
           for (final session in published)
@@ -317,28 +365,38 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
               margin: const EdgeInsets.only(bottom: 10),
               child: Padding(
                 padding: const EdgeInsets.all(16),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(session.subject, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-                  const SizedBox(height: 5),
-                  Text('Docente ${session.teacherId} | ${session.technology} | Semestre ${session.semester}'),
-                  if (session.start != null && session.end != null)
-                    Text('${_longDate(session.start!.toLocal())} | ${TimeOfDay.fromDateTime(session.start!.toLocal()).format(context)}-${TimeOfDay.fromDateTime(session.end!.toLocal()).format(context)}'),
-                  if (session.modality.isNotEmpty) Text('Modalidad: ${_groupSessionModality(session.modality)}'),
-                  Text('${5 - session.studentCount} cupos disponibles'),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: FilledButton(
-                      onPressed: session.start == null || session.end == null
-                          ? null
-                          : () => widget.onJoinPublishedSession(session),
-                      child: const Text('Inscribirme'),
-                    ),
-                  ),
-                ]),
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(session.subject,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w800, fontSize: 16)),
+                      const SizedBox(height: 5),
+                      Text(
+                          'Docente ${session.teacherId} | ${session.technology} | Semestre ${session.semester}'),
+                      if (session.start != null && session.end != null)
+                        Text(
+                            '${_longDate(session.start!.toLocal())} | ${TimeOfDay.fromDateTime(session.start!.toLocal()).format(context)}-${TimeOfDay.fromDateTime(session.end!.toLocal()).format(context)}'),
+                      if (session.modality.isNotEmpty)
+                        Text(
+                            'Modalidad: ${_groupSessionModality(session.modality)}'),
+                      Text('${5 - session.studentCount} cupos disponibles'),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: FilledButton(
+                          onPressed: session.start == null ||
+                                  session.end == null
+                              ? null
+                              : () => widget.onJoinPublishedSession(session),
+                          child: const Text('Inscribirme'),
+                        ),
+                      ),
+                    ]),
               ),
             ),
         const SizedBox(height: 16),
-        const Text('Disponibilidad de tutores', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+        const Text('Disponibilidad de tutores',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
         if (filtered.isEmpty)
           _EmptyCard(
             icon: Icons.search_off,
@@ -357,6 +415,7 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
       ],
     );
   }
+
   Widget _projectSpaces() {
     final career = widget.data.profile.career.trim();
     final spaces = widget.data.projectSpaces
@@ -379,7 +438,8 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
           const _EmptyCard(
             icon: Icons.groups_outlined,
             title: 'No hay proyectos de aula disponibles',
-            message: 'Cuando coordinación cree un espacio para tu tecnología aparecerá aquí.',
+            message:
+                'Cuando coordinación cree un espacio para tu tecnología aparecerá aquí.',
           ),
         ],
       );
@@ -481,14 +541,14 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
       return const _EmptyCard(
         icon: Icons.forum_outlined,
         title: 'Aún no tienes tutorías grupales',
-        message: 'Cuando te inscribas en una tutoría, su chat y su videollamada aparecerán aquí.',
+        message:
+            'Cuando te inscribas en una tutoría, su chat y su videollamada aparecerán aquí.',
       );
     }
     return ListView(
       padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
       children: [
-        for (final session in sessions)
-          _GroupChatAndCallCard(session: session),
+        for (final session in sessions) _GroupChatAndCallCard(session: session),
       ],
     );
   }
@@ -499,7 +559,8 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
       return const _EmptyCard(
         icon: Icons.event_busy_outlined,
         title: 'No hay sesiones disponibles',
-        message: 'Cuando coordinación publique tutorías para tu tecnología, aparecerán aquí.',
+        message:
+            'Cuando coordinación publique tutorías para tu tecnología, aparecerán aquí.',
       );
     }
     return ListView.separated(
@@ -526,12 +587,20 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
             (item.end?.isAfter(now) ?? false));
         final maximumReached =
             enrolledGroups.length + enrolledIndividual.length >= 3;
-        final overlapsGroup = start != null && end != null && enrolledGroups.any(
-            (item) => item.start != null && item.end != null &&
-                start.isBefore(item.end!) && item.start!.isBefore(end));
-        final overlapsIndividual = start != null && end != null &&
-            enrolledIndividual.any((item) => item.start != null && item.end != null &&
-                start.isBefore(item.end!) && item.start!.isBefore(end));
+        final overlapsGroup = start != null &&
+            end != null &&
+            enrolledGroups.any((item) =>
+                item.start != null &&
+                item.end != null &&
+                start.isBefore(item.end!) &&
+                item.start!.isBefore(end));
+        final overlapsIndividual = start != null &&
+            end != null &&
+            enrolledIndividual.any((item) =>
+                item.start != null &&
+                item.end != null &&
+                start.isBefore(item.end!) &&
+                item.start!.isBefore(end));
         final hasScheduleConflict = overlapsGroup || overlapsIndividual;
         return Card(
           child: Padding(
@@ -540,15 +609,18 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(session.subject,
-                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w800, fontSize: 16)),
                 const SizedBox(height: 6),
-                Text('${teacher?.name ?? 'Docente'} · ${session.technology} · Semestre ${session.semester}'),
+                Text(
+                    '${teacher?.name ?? 'Docente'} · ${session.technology} · Semestre ${session.semester}'),
                 if (session.modality.isNotEmpty)
                   Text(
                     '${_groupSessionModality(session.modality)}${session.location.isEmpty ? '' : ' · ${session.location}'}',
                   ),
                 if (start != null && end != null)
-                  Text('${start.day.toString().padLeft(2, '0')}/${start.month.toString().padLeft(2, '0')}/${start.year} · '
+                  Text(
+                      '${start.day.toString().padLeft(2, '0')}/${start.month.toString().padLeft(2, '0')}/${start.year} · '
                       '${start.hour.toString().padLeft(2, '0')}:${start.minute.toString().padLeft(2, '0')}–'
                       '${end.hour.toString().padLeft(2, '0')}:${end.minute.toString().padLeft(2, '0')}'),
                 const SizedBox(height: 8),
@@ -567,7 +639,10 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
                 Align(
                   alignment: Alignment.centerRight,
                   child: FilledButton(
-                    onPressed: maximumReached || hasScheduleConflict || start == null || end == null
+                    onPressed: maximumReached ||
+                            hasScheduleConflict ||
+                            start == null ||
+                            end == null
                         ? null
                         : () => widget.onJoinPublishedSession(session),
                     child: Text(maximumReached
@@ -657,7 +732,8 @@ class _GroupChatAndCallCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(session.subject,
-              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+              style:
+                  const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
           const SizedBox(height: 5),
           Text('Docente ${session.teacherId} · Semestre ${session.semester}'),
           if (start != null) Text(_longDate(start)),

@@ -237,11 +237,7 @@ class _Navigation extends StatelessWidget {
     (Icons.home_outlined, Icons.home_rounded, 'Inicio'),
     (Icons.calendar_month_outlined, Icons.calendar_month_rounded, 'Horarios'),
     (Icons.groups_outlined, Icons.groups_rounded, 'Líderes'),
-    (
-      Icons.event_available_outlined,
-      Icons.event_available_rounded,
-      'Cambios'
-    ),
+    (Icons.event_available_outlined, Icons.event_available_rounded, 'Cambios'),
     (Icons.person_outline_rounded, Icons.person_rounded, 'Perfil'),
   ];
 
@@ -324,7 +320,10 @@ class _HomeView extends StatelessWidget {
       required this.groups,
       required this.publishedSessions,
       required this.onOpen});
-  final List<Map<String, dynamic>> teachers, schedules, groups, publishedSessions;
+  final List<Map<String, dynamic>> teachers,
+      schedules,
+      groups,
+      publishedSessions;
   final ValueChanged<int> onOpen;
 
   @override
@@ -517,6 +516,7 @@ class _ProfileView extends ConsumerWidget {
     );
   }
 
+  // ignore: unused_element
   Future<void> _editPhone(BuildContext context, WidgetRef ref) async {
     final scaffoldMessenger = ScaffoldMessenger.maybeOf(context);
     final controller =
@@ -559,6 +559,7 @@ class _ProfileView extends ConsumerWidget {
     }
   }
 
+  // ignore: unused_element
   Future<void> _editPassword(BuildContext context, WidgetRef ref) async {
     final scaffoldMessenger = ScaffoldMessenger.maybeOf(context);
     final current = TextEditingController();
@@ -787,6 +788,7 @@ String _text(Object? value, String fallback) =>
         ? fallback
         : value.toString();
 
+// ignore: unused_element
 String _projectName(List<Map<String, dynamic>> groups, Object? projectId) {
   for (final group in groups) {
     final projects = group['proyectos'];
@@ -801,6 +803,7 @@ String _projectName(List<Map<String, dynamic>> groups, Object? projectId) {
   return 'Proyecto';
 }
 
+// ignore: unused_element
 String _date(Object? value) {
   final date = DateTime.tryParse(value?.toString() ?? '');
   if (date == null) return 'Fecha no disponible';

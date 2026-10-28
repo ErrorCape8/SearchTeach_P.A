@@ -20,6 +20,7 @@ const _tokenKey = 'token';
 final _authExpiredController = StreamController<void>.broadcast(sync: true);
 Stream<void> get authExpiredEvents => _authExpiredController.stream;
 
+// ignore: unused_element
 final secureStorageProvider = Provider((_) => const FlutterSecureStorage());
 
 final dioProvider = Provider<Dio>((ref) {
@@ -33,8 +34,8 @@ final dioProvider = Provider<Dio>((ref) {
 
   var redirectingAfterExpiredToken = false;
 
-  // Agrega el JWT a las llamadas protegidas y cierra la sesiÛn si el servidor
-  // informa que el token venciÛ o dejÛ de ser v·lido.
+  // Agrega el JWT a las llamadas protegidas y cierra la sesi√≥n si el servidor
+  // informa que el token venci√≥ o dej√≥ de ser v√°lido.
   dio.interceptors.add(InterceptorsWrapper(
     onRequest: (options, handler) async {
       if (!options.path.startsWith('/api/auth')) {

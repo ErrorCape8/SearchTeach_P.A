@@ -209,12 +209,13 @@ class _GroupSessionCard extends StatelessWidget {
                   session.end != null &&
                   session.end!.isAfter(DateTime.now()) &&
                   (session.modality.toUpperCase() == 'VIRTUAL' ||
-                  session.modality.toUpperCase() == 'HIBRIDA')) ...[
+                      session.modality.toUpperCase() == 'HIBRIDA')) ...[
                 const SizedBox(height: 10),
                 Align(
                   alignment: Alignment.centerRight,
                   child: FilledButton.icon(
-                    onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                    onPressed: () =>
+                        Navigator.of(context).push(MaterialPageRoute(
                       builder: (_) => LiveKitRoomPage(
                         sessionId: session.id,
                         subject: session.subject,
@@ -250,8 +251,10 @@ class _GroupHistoryCard extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 12),
         child: ListTile(
           leading: const CircleAvatar(child: Icon(Icons.history)),
-          title: Text(session.subject, style: const TextStyle(fontWeight: FontWeight.w700)),
-          subtitle: Text('${session.start == null ? 'Fecha no disponible' : _longDate(session.start!)} · Tutoría grupal finalizada'),
+          title: Text(session.subject,
+              style: const TextStyle(fontWeight: FontWeight.w700)),
+          subtitle: Text(
+              '${session.start == null ? 'Fecha no disponible' : _longDate(session.start!)} · Tutoría grupal finalizada'),
           trailing: const Icon(Icons.chevron_right),
           onTap: () => Navigator.of(context).push(MaterialPageRoute(
             builder: (_) => LiveKitRoomPage(
@@ -266,6 +269,7 @@ class _GroupHistoryCard extends StatelessWidget {
       );
 }
 
+// ignore: unused_element
 class _FilterDropdown extends StatelessWidget {
   const _FilterDropdown({
     required this.label,

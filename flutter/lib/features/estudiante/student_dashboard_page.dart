@@ -51,55 +51,56 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
           data: (groups) {
             final dashboard = value.withGroupSessions(groups);
             return Column(
-          children: [
-            _TopBar(profile: value.profile, wide: wide, onLogout: _logout),
-            Expanded(
-              child: Row(
-                children: [
-                  if (wide)
-                    _DesktopNavigation(
-                      tab: _tab,
-                      profile: value.profile,
-                      onSelect: _selectTab,
-                      onLogout: _logout,
-                    ),
-                  Expanded(
-                    child: IndexedStack(
-                      index: _tab,
-                      children: [
-                        StudentHomeView(
-                          data: dashboard,
-                          onBrowse: () => _openTutorSection('publicadas'),
-                          onHistory: () => _openTutorSection('historial'),
-                        ),
-                        StudentTutoringView(
-                          data: dashboard,
-                          focusSection: _focusTutoring,
-                          focusRequest: _focusRequest,
-                          onEnroll: (tutor) => _enroll(value, tutor),
-                          onProjectEnrollment: _toggleProjectEnrollment,
-                          onJoinProjectCode: _joinProjectByCode,
-                          onLeaveGroupSession: _leaveGroupSession,
-                          onJoinPublishedSession: (session) => _joinPublishedSession(session),
-                          onAction: _tutoringAction,
-                          onShowMessage: _showMessage,
-                        ),
-                        StudentProfileView(
+              children: [
+                _TopBar(profile: value.profile, wide: wide, onLogout: _logout),
+                Expanded(
+                  child: Row(
+                    children: [
+                      if (wide)
+                        _DesktopNavigation(
+                          tab: _tab,
                           profile: value.profile,
-                          onTeacherMode: value.profile.role
-                                  .toLowerCase()
-                                  .contains('docente')
-                              ? () => context.go('/docente')
-                              : null,
+                          onSelect: _selectTab,
+                          onLogout: _logout,
                         ),
-                        const NotificationsInbox(),
-                      ],
-                    ),
+                      Expanded(
+                        child: IndexedStack(
+                          index: _tab,
+                          children: [
+                            StudentHomeView(
+                              data: dashboard,
+                              onBrowse: () => _openTutorSection('publicadas'),
+                              onHistory: () => _openTutorSection('historial'),
+                            ),
+                            StudentTutoringView(
+                              data: dashboard,
+                              focusSection: _focusTutoring,
+                              focusRequest: _focusRequest,
+                              onEnroll: (tutor) => _enroll(value, tutor),
+                              onProjectEnrollment: _toggleProjectEnrollment,
+                              onJoinProjectCode: _joinProjectByCode,
+                              onLeaveGroupSession: _leaveGroupSession,
+                              onJoinPublishedSession: (session) =>
+                                  _joinPublishedSession(session),
+                              onAction: _tutoringAction,
+                              onShowMessage: _showMessage,
+                            ),
+                            StudentProfileView(
+                              profile: value.profile,
+                              onTeacherMode: value.profile.role
+                                      .toLowerCase()
+                                      .contains('docente')
+                                  ? () => context.go('/docente')
+                                  : null,
+                            ),
+                            const NotificationsInbox(),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
-          ],
+                ),
+              ],
             );
           },
         ),
@@ -162,7 +163,8 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
         .map((item) => item.name)
         .toSet()
         .toList();
-    String? selectedSubject = availableSubjects.isEmpty ? null : availableSubjects.first;
+    String? selectedSubject =
+        availableSubjects.isEmpty ? null : availableSubjects.first;
     final date = _nextDate(tutor.day);
     if (availableSubjects.isEmpty) {
       _showMessage(
@@ -278,13 +280,22 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
             builder: (dialogContext) => AlertDialog(
               title: const Text('Proyecto creado'),
               content: Column(mainAxisSize: MainAxisSize.min, children: [
-                Text('Comparte este código para que tus integrantes se unan a “${name.trim()}”:'),
+                Text(
+                    'Comparte este código para que tus integrantes se unan a “${name.trim()}”:'),
                 const SizedBox(height: 12),
-                SelectableText(code, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, letterSpacing: 5)),
+                SelectableText(code,
+                    style: const TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 5)),
                 const SizedBox(height: 8),
                 Text('Semestre ${space.semester}'),
               ]),
-              actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Listo'))],
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(dialogContext),
+                    child: const Text('Listo'))
+              ],
             ),
           );
         }
@@ -304,46 +315,61 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
     }
   }
 
-  Future<({int semester, String name})?> _askProjectName(ClassroomProjectSpace space) async {
+  // ignore: unused_element
+  Future<({int semester, String name})?> _askProjectName(
+      ClassroomProjectSpace space) async {
     final controller = TextEditingController();
     var semester = space.semester;
     try {
       return await showDialog<({int semester, String name})>(
         context: context,
-        builder: (dialogContext) => StatefulBuilder(builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Registrar proyecto de aula'),
-          content: Column(mainAxisSize: MainAxisSize.min, children: [
-            Text(space.career),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<int>(
-              value: semester,
-              decoration: const InputDecoration(labelText: 'Semestre', border: OutlineInputBorder()),
-              items: [for (var value = 1; value <= 6; value++) DropdownMenuItem(value: value, child: Text('$value'))],
-              onChanged: (value) { if (value != null) setDialogState(() => semester = value); },
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: controller,
-              maxLength: 120,
-              autofocus: true,
-              onChanged: (_) => setDialogState(() {}),
-              decoration: const InputDecoration(
-                labelText: 'Nombre del proyecto de aula',
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ]),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Cancelar'),
-            ),
-            FilledButton(
-              onPressed: controller.text.trim().isEmpty ? null : () => Navigator.pop(dialogContext, (semester: semester, name: controller.text.trim())),
-              child: const Text('Continuar'),
-            ),
-          ],
-        )),
+        builder: (dialogContext) => StatefulBuilder(
+            builder: (context, setDialogState) => AlertDialog(
+                  title: const Text('Registrar proyecto de aula'),
+                  content: Column(mainAxisSize: MainAxisSize.min, children: [
+                    Text(space.career),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<int>(
+                      value: semester,
+                      decoration: const InputDecoration(
+                          labelText: 'Semestre', border: OutlineInputBorder()),
+                      items: [
+                        for (var value = 1; value <= 6; value++)
+                          DropdownMenuItem(value: value, child: Text('$value'))
+                      ],
+                      onChanged: (value) {
+                        if (value != null)
+                          setDialogState(() => semester = value);
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: controller,
+                      maxLength: 120,
+                      autofocus: true,
+                      onChanged: (_) => setDialogState(() {}),
+                      decoration: const InputDecoration(
+                        labelText: 'Nombre del proyecto de aula',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ]),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(dialogContext),
+                      child: const Text('Cancelar'),
+                    ),
+                    FilledButton(
+                      onPressed: controller.text.trim().isEmpty
+                          ? null
+                          : () => Navigator.pop(dialogContext, (
+                                semester: semester,
+                                name: controller.text.trim()
+                              )),
+                      child: const Text('Continuar'),
+                    ),
+                  ],
+                )),
       );
     } finally {
       controller.dispose();
@@ -368,8 +394,13 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancelar')),
-            FilledButton(onPressed: () => Navigator.pop(dialogContext, controller.text.trim()), child: const Text('Buscar proyecto')),
+            TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Cancelar')),
+            FilledButton(
+                onPressed: () =>
+                    Navigator.pop(dialogContext, controller.text.trim()),
+                child: const Text('Buscar proyecto')),
           ],
         ),
       );
@@ -392,8 +423,12 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
             '¿Quieres unirte a este proyecto?',
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancelar')),
-            FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Confirmar inscripción')),
+            TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('Cancelar')),
+            FilledButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: const Text('Confirmar inscripción')),
           ],
         ),
       );

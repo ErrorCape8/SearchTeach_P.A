@@ -8,6 +8,7 @@ import '../admin_controller.dart';
 class AdminPerfilView extends ConsumerWidget {
   const AdminPerfilView({super.key});
 
+  // ignore: unused_element
   void _showEditPhoneDialog(
     BuildContext context,
     WidgetRef ref,
@@ -79,6 +80,7 @@ class AdminPerfilView extends ConsumerWidget {
     );
   }
 
+  // ignore: unused_element
   void _showChangePasswordDialog(BuildContext context) {
     final passCtrl = TextEditingController();
     showDialog<void>(
@@ -186,8 +188,9 @@ class AdminPerfilView extends ConsumerWidget {
           onTap: state.isLoadingProfile || profile == null
               ? null
               : () => showProfileChangeDialog(context, ref,
-                    field: ProfileChangeField.phone,
-                    onUpdated: () => ref.read(adminControllerProvider.notifier).loadProfile()),
+                  field: ProfileChangeField.phone,
+                  onUpdated: () =>
+                      ref.read(adminControllerProvider.notifier).loadProfile()),
           borderRadius: BorderRadius.circular(18),
           child: Container(
             padding: const EdgeInsets.all(16),
@@ -266,7 +269,8 @@ class AdminPerfilView extends ConsumerWidget {
         InkWell(
           onTap: () => showProfileChangeDialog(context, ref,
               field: ProfileChangeField.password,
-              onUpdated: () => ref.read(adminControllerProvider.notifier).loadProfile()),
+              onUpdated: () =>
+                  ref.read(adminControllerProvider.notifier).loadProfile()),
           borderRadius: BorderRadius.circular(18),
           child: Container(
             padding: const EdgeInsets.all(16),
@@ -363,7 +367,9 @@ class AdminPerfilView extends ConsumerWidget {
                 value: showValue(profile?.correo),
                 onTap: () => showProfileChangeDialog(context, ref,
                     field: ProfileChangeField.email,
-                    onUpdated: () => ref.read(adminControllerProvider.notifier).loadProfile()),
+                    onUpdated: () => ref
+                        .read(adminControllerProvider.notifier)
+                        .loadProfile()),
               ),
               const Divider(height: 18, color: Color(0xFFF1F5F9)),
               _buildInstitutionalRow(
@@ -435,49 +441,50 @@ class AdminPerfilView extends ConsumerWidget {
       borderRadius: BorderRadius.circular(10),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFF1E6),
-              borderRadius: BorderRadius.circular(10),
+        child: Row(
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF1E6),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(
+                Icons.lock_outline_rounded,
+                color: Color(0xFFEA580C),
+                size: 20,
+              ),
             ),
-            child: const Icon(
-              Icons.lock_outline_rounded,
-              color: Color(0xFFEA580C),
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 14.5,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF1E293B),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF1E293B),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 1),
-                Text(
-                  value,
-                  style: const TextStyle(
-                    fontSize: 12.5,
-                    color: Color(0xFF64748B),
+                  const SizedBox(height: 1),
+                  Text(
+                    value,
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      color: Color(0xFF64748B),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          if (onTap != null)
-            const Icon(Icons.edit_outlined, color: Color(0xFFEA580C), size: 19),
-        ],
-      ),
+            if (onTap != null)
+              const Icon(Icons.edit_outlined,
+                  color: Color(0xFFEA580C), size: 19),
+          ],
+        ),
       ),
     );
   }

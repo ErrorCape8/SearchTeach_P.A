@@ -45,15 +45,17 @@ class _CoordinacionTutoriasPageState
 
   Future<void> _loadTeachers() async {
     try {
-      final response = await ref.read(dioProvider)
+      final response = await ref
+          .read(dioProvider)
           .get<List<dynamic>>('/api/coordinacion/docentes');
       if (!mounted) return;
       setState(() => _teachers = (response.data ?? const [])
           .whereType<Map<String, dynamic>>()
           .toList());
     } on DioException catch (error) {
-      if (mounted) setState(() => _error = _apiError(error,
-          fallback: 'No se pudieron cargar los docentes.'));
+      if (mounted)
+        setState(() => _error =
+            _apiError(error, fallback: 'No se pudieron cargar los docentes.'));
     }
   }
 
@@ -107,8 +109,10 @@ class _CoordinacionTutoriasPageState
   Future<void> _create() async {
     if (!_formKey.currentState!.validate()) return;
     final supportIds = _supportIds.whereType<String>().toList();
-    if (_leaderId == null || supportIds.length != 5 ||
-        supportIds.toSet().length != 5 || supportIds.contains(_leaderId)) {
+    if (_leaderId == null ||
+        supportIds.length != 5 ||
+        supportIds.toSet().length != 5 ||
+        supportIds.contains(_leaderId)) {
       setState(() {
         _error =
             'El docente lÃ­der y los cinco docentes de apoyo deben ser distintos.';
@@ -130,9 +134,11 @@ class _CoordinacionTutoriasPageState
       };
       final response = _editingId == null
           ? await dio.post<Map<String, dynamic>>(
-              '/api/coordinacion/tutorias-colectivas', data: payload)
+              '/api/coordinacion/tutorias-colectivas',
+              data: payload)
           : await dio.put<Map<String, dynamic>>(
-              '/api/coordinacion/tutorias-colectivas/$_editingId', data: payload);
+              '/api/coordinacion/tutorias-colectivas/$_editingId',
+              data: payload);
       final body = response.data;
       if (body == null || body['id'] is! String) {
         throw const FormatException(
@@ -171,9 +177,8 @@ class _CoordinacionTutoriasPageState
     setState(() {
       _editingId = id;
       _career = careerCatalog.contains(career) ? career : careerCatalog.first;
-      _semester = tutoria['semestre'] is num
-          ? (tutoria['semestre'] as num).toInt()
-          : 1;
+      _semester =
+          tutoria['semestre'] is num ? (tutoria['semestre'] as num).toInt() : 1;
       _leaderId = tutoria['docenteLiderId'] as String?;
       _supportIds = supports.cast<String?>();
       _selectedSection = 0;
@@ -181,6 +186,7 @@ class _CoordinacionTutoriasPageState
     });
   }
 
+  // ignore: unused_element
   void _cancelEdit() {
     setState(() {
       _editingId = null;
@@ -242,12 +248,23 @@ class _CoordinacionTutoriasPageState
         builder: (context, refresh) => AlertDialog(
           title: const Text('Eliminar tutoría colectiva'),
           content: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Text('Escribe ELIMINAR para borrar la tutoría y sus proyectos asociados.'),
-            TextField(controller: controller, onChanged: (_) => refresh(() {}), decoration: const InputDecoration(labelText: 'Escribe ELIMINAR')),
+            const Text(
+                'Escribe ELIMINAR para borrar la tutoría y sus proyectos asociados.'),
+            TextField(
+                controller: controller,
+                onChanged: (_) => refresh(() {}),
+                decoration:
+                    const InputDecoration(labelText: 'Escribe ELIMINAR')),
           ]),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancelar')),
-            FilledButton(onPressed: controller.text.trim().toUpperCase() == 'ELIMINAR' ? () => Navigator.pop(dialogContext, true) : null, child: const Text('Eliminar')),
+            TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('Cancelar')),
+            FilledButton(
+                onPressed: controller.text.trim().toUpperCase() == 'ELIMINAR'
+                    ? () => Navigator.pop(dialogContext, true)
+                    : null,
+                child: const Text('Eliminar')),
           ],
         ),
       ),
@@ -342,7 +359,12 @@ class _CoordinacionTutoriasPageState
                                     .toList(),
                                 onChanged: (value) {
                                   if (value != null) {
-                                    setState(() { _career = value; _leaderId = null; _supportIds = List<String?>.filled(5, null); });
+                                    setState(() {
+                                      _career = value;
+                                      _leaderId = null;
+                                      _supportIds =
+                                          List<String?>.filled(5, null);
+                                    });
                                   }
                                 },
                               ),
@@ -367,11 +389,25 @@ class _CoordinacionTutoriasPageState
                                 },
                               ),
                               const SizedBox(height: 12),
-                              _teacherDropdown(label: 'Docente líder', value: _leaderId, excluded: _supportIds.whereType<String>().toSet(), onChanged: (value) => setState(() => _leaderId = value)),
+                              _teacherDropdown(
+                                  label: 'Docente líder',
+                                  value: _leaderId,
+                                  excluded:
+                                      _supportIds.whereType<String>().toSet(),
+                                  onChanged: (value) =>
+                                      setState(() => _leaderId = value)),
                               const SizedBox(height: 12),
                               for (var index = 0; index < 5; index++) ...[
                                 _sectionTitle('Docente de apoyo ${index + 1}'),
-                                _teacherDropdown(label: 'Seleccionar docente', value: _supportIds[index], excluded: {if (_leaderId != null) _leaderId!, ..._supportIds.whereType<String>()}..remove(_supportIds[index]), onChanged: (value) => setState(() => _supportIds[index] = value)),
+                                _teacherDropdown(
+                                    label: 'Seleccionar docente',
+                                    value: _supportIds[index],
+                                    excluded: {
+                                      if (_leaderId != null) _leaderId!,
+                                      ..._supportIds.whereType<String>()
+                                    }..remove(_supportIds[index]),
+                                    onChanged: (value) => setState(
+                                        () => _supportIds[index] = value)),
                                 const SizedBox(height: 10),
                               ],
                               if (_error != null)
@@ -463,7 +499,10 @@ class _CoordinacionTutoriasPageState
                   ],
                 ),
               ),
-              IconButton(tooltip: 'Editar', onPressed: () => _editTutoria(_createdTutorias[index]), icon: const Icon(Icons.edit_outlined)),
+              IconButton(
+                  tooltip: 'Editar',
+                  onPressed: () => _editTutoria(_createdTutorias[index]),
+                  icon: const Icon(Icons.edit_outlined)),
               IconButton(
                 tooltip: 'Eliminar tutorÃ­a colectiva',
                 onPressed: () => _deleteTutoria(_createdTutorias[index]),
@@ -481,9 +520,33 @@ class _CoordinacionTutoriasPageState
         child: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
       );
 
-  Widget _teacherDropdown({required String label, required String? value, required Set<String> excluded, required ValueChanged<String?> onChanged}) {
-    final options = _teachers.where((teacher) => (teacher['tecnologia'] as String? ?? '').toLowerCase() == _career.toLowerCase() && teacher['id'] is String && (!excluded.contains(teacher['id']) || teacher['id'] == value)).toList();
-    return DropdownButtonFormField<String>(value: value, decoration: InputDecoration(labelText: label, border: const OutlineInputBorder()), items: options.map((teacher) => DropdownMenuItem<String>(value: teacher['id'] as String, child: Text(teacher['nombre'] as String? ?? 'Docente'))).toList(), onChanged: _teachers.isEmpty ? null : onChanged, validator: (selected) => selected == null ? 'Selecciona un docente.' : null, hint: Text(options.isEmpty ? 'No hay docentes para esta tecnología' : 'Selecciona'));
+  Widget _teacherDropdown(
+      {required String label,
+      required String? value,
+      required Set<String> excluded,
+      required ValueChanged<String?> onChanged}) {
+    final options = _teachers
+        .where((teacher) =>
+            (teacher['tecnologia'] as String? ?? '').toLowerCase() ==
+                _career.toLowerCase() &&
+            teacher['id'] is String &&
+            (!excluded.contains(teacher['id']) || teacher['id'] == value))
+        .toList();
+    return DropdownButtonFormField<String>(
+        value: value,
+        decoration: InputDecoration(
+            labelText: label, border: const OutlineInputBorder()),
+        items: options
+            .map((teacher) => DropdownMenuItem<String>(
+                value: teacher['id'] as String,
+                child: Text(teacher['nombre'] as String? ?? 'Docente')))
+            .toList(),
+        onChanged: _teachers.isEmpty ? null : onChanged,
+        validator: (selected) =>
+            selected == null ? 'Selecciona un docente.' : null,
+        hint: Text(options.isEmpty
+            ? 'No hay docentes para esta tecnología'
+            : 'Selecciona'));
   }
 }
 

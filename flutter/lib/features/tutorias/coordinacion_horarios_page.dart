@@ -48,7 +48,7 @@ class _CoordinacionHorariosPageState
     });
     try {
       final dio = ref.read(dioProvider);
-      final results = await Future.wait([
+      final results = await Future.wait<Response<List<dynamic>>>([
         dio.get<List<dynamic>>('/api/coordinacion/docentes'),
         dio.get<List<dynamic>>('/api/coordinacion/horarios'),
         dio.get<List<dynamic>>('/api/coordinacion/sesiones-grupales'),
