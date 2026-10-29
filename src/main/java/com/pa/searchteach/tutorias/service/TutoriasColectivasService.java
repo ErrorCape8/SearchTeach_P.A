@@ -150,7 +150,9 @@ public class TutoriasColectivasService {
 				.flatMap(tutoria -> tutoria.proyectos().stream()
 						.filter(proyecto -> proyecto.estudianteIds().contains(estudianteId))
 						.map(proyecto -> new ProyectoAulaSeguimientoEstudiante(
-								tutoria.id(), proyecto,
+								tutoria.id(), proyecto, proyecto.codigoInscripcion(),
+								userRepository.findById(proyecto.docenteResponsableId()).map(User::getNombre)
+										.orElse(proyecto.docenteResponsableId()),
 								sesionProyectoRepositorio.findByTutoriaColectivaIdAndProyectoIdOrderByFechaInicioDesc(
 										tutoria.id(), proyecto.proyectoId()))))
 				.toList();
@@ -476,18 +478,6 @@ public class TutoriasColectivasService {
 					"El semestre ingresado no corresponde al espacio de proyecto seleccionado.");
 		}
 		validarInscripcionUnica(tutoria, estudianteId, null);
-		List<ProyectoAula> gruposConCupo = tutoria.proyectos().stream()
-				.filter(proyecto -> proyecto.estudianteIds().size() < 4
-						&& "EN_CURSO".equals(proyecto.estadoCierre()))
-				.toList();
-		if (!gruposConCupo.isEmpty()) {
-			int menorTamano = gruposConCupo.stream().mapToInt(proyecto -> proyecto.estudianteIds().size()).min().orElse(0);
-			List<ProyectoAula> menosLlenos = gruposConCupo.stream()
-					.filter(proyecto -> proyecto.estudianteIds().size() == menorTamano).toList();
-			ProyectoAula asignado = menosLlenos.get(ThreadLocalRandom.current().nextInt(menosLlenos.size()));
-			return new ProyectoAulaCreado(
-					inscribirEnProyecto(tutoria, asignado, estudianteId), null);
-		}
 		List<String> docentesApoyo = tutoria.docentesApoyoIds();
 		int menorCarga = docentesApoyo.stream()
 				.mapToInt(docenteId -> tutoria.proyectos().stream()
@@ -508,14 +498,15 @@ public class TutoriasColectivasService {
 				responsable,
 				List.of(estudianteId),
 				tutoria.tecnologia(),
-				tutoria.semestre(), codigo, estudianteId);
+				tutoria.semestre(), codigo, estudianteId, "EN_CURSO", null, null, null,
+				null, null, null, null, solicitud.descripcion().trim());
 		TutoriaColectiva actualizado = tutoria.actualizarProyecto(proyecto);
 		tutoriaColectivaRepositorio.save(actualizado);
 		notificationService.notifyUser(responsable, "Nuevo estudiante en tu proyecto",
 				"Un estudiante se unio al proyecto " + proyecto.nombre() + ".", "/notificaciones");
 		notificationService.notifyUser(estudianteId, "Proyecto creado",
 				"Creaste el proyecto " + proyecto.nombre() + " y quedaste inscrito.", "/notificaciones");
-		return new ProyectoAulaCreado(disponible(tutoriaId, proyecto, estudianteId), null);
+		return new ProyectoAulaCreado(disponible(tutoriaId, proyecto, estudianteId), codigo);
 	}
 
 	public ProyectoAulaInscripcionPreview previsualizarInscripcion(String codigo, String estudianteId) {
@@ -535,7 +526,7 @@ public class TutoriasColectivasService {
 				? "Estudiante"
 				: userRepository.findById(creadorId).map(User::getNombre).orElse("Estudiante");
 		return new ProyectoAulaInscripcionPreview(ubicado.tutoria().id(), ubicado.proyecto().proyectoId(),
-				ubicado.proyecto().nombre(), creador, ubicado.proyecto().tecnologia(), ubicado.proyecto().semestre(),
+				ubicado.proyecto().nombre(), ubicado.proyecto().descripcion(), creador, ubicado.proyecto().tecnologia(), ubicado.proyecto().semestre(),
 				ubicado.proyecto().estudianteIds().size());
 	}
 

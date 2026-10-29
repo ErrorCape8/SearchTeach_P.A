@@ -205,8 +205,16 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
                                       fontSize: 18,
                                       fontWeight: FontWeight.w800,
                                       color: _navy)),
+                              if (item.project.description.isNotEmpty)
+                                Text(item.project.description),
+                              if (item.invitationCode.isNotEmpty)
+                                SelectableText(
+                                  'Código para integrantes: ${item.invitationCode}',
+                                  style: const TextStyle(fontWeight: FontWeight.w700),
+                                ),
                               Text(
                                   '${item.project.career} · Semestre ${item.project.semester} · Tutor ${item.project.teacherId}'),
+                              Text('Docente asignado: ${item.assignedTeacher}'),
                               Text(item.status == 'FINALIZADO'
                                   ? 'Proyecto finalizado por el docente líder.'
                                   : item.status == 'PENDIENTE_CONFIRMACION'
@@ -242,16 +250,12 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
                               for (final session in item.sessions)
                                 ListTile(
                                   contentPadding: EdgeInsets.zero,
-                                  leading:
-                                      const Icon(Icons.event_note_outlined),
+                                  leading: const Icon(Icons.chat_bubble_outline),
                                   title: Text(session.start == null
                                       ? 'Fecha pendiente'
                                       : _longDate(session.start!.toLocal())),
                                   subtitle: Text(
-                                      '${session.start == null ? '' : TimeOfDay.fromDateTime(session.start!.toLocal()).format(context)} – ${session.end == null ? '' : TimeOfDay.fromDateTime(session.end!.toLocal()).format(context)}\n${session.notes}',
-                                      maxLines: 5,
-                                      overflow: TextOverflow.ellipsis),
-                                  isThreeLine: true,
+                                      '${session.start == null ? '' : TimeOfDay.fromDateTime(session.start!.toLocal()).format(context)} – ${session.end == null ? '' : TimeOfDay.fromDateTime(session.end!.toLocal()).format(context)} · Abrir conversación'),
                                   onTap: () async {
                                     await Navigator.of(context)
                                         .push(MaterialPageRoute(
@@ -435,6 +439,13 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
       return ListView(
         padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
         children: [
+          Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('¿Tu compañero ya creó el proyecto?', style: TextStyle(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 8),
+            const Text('Ingresa el código de 6 dígitos para revisar sus datos y unirte.'),
+            const SizedBox(height: 12),
+            FilledButton.icon(onPressed: widget.onJoinProjectCode, icon: const Icon(Icons.search), label: const Text('Buscar proyecto por código')),
+          ]))),
           const _EmptyCard(
             icon: Icons.groups_outlined,
             title: 'No hay proyectos de aula disponibles',
@@ -446,9 +457,16 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
     }
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
-      itemCount: spaces.length,
+      itemCount: spaces.length + 1,
       separatorBuilder: (_, __) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
+        if (index == 0) {
+          return Card(child: Padding(padding: const EdgeInsets.all(16), child: Row(children: [
+            const Expanded(child: Text('¿Tienes un código de proyecto?', style: TextStyle(fontWeight: FontWeight.w700))),
+            FilledButton.icon(onPressed: widget.onJoinProjectCode, icon: const Icon(Icons.search), label: const Text('Buscar')),
+          ])));
+        }
+        index -= 1;
         final space = spaces[index];
         final full = space.enrolledCount >= 4;
         return Card(
@@ -479,7 +497,7 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
                                 ? null
                                 : widget.onJoinProjectCode,
                     child: Text(space.createOrJoin
-                        ? 'Asignarme a un grupo'
+                        ? 'Crear proyecto de aula'
                         : space.enrolled
                             ? 'Desistir de esta tutoría'
                             : full

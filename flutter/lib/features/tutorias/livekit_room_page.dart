@@ -43,6 +43,7 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
   bool _ended = false;
   Timer? _endTimer;
   Timer? _chatTimer;
+  Timer? _roomStatusTimer;
   String? _error;
   String? _mediaWarning;
 
@@ -56,6 +57,12 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
     if (!widget.isProjectMeeting) {
       _loadAttendance();
       _loadStudentNames();
+      if (!widget.teacherMode && !widget.ended) {
+        _roomStatusTimer = Timer.periodic(
+          const Duration(seconds: 3),
+          (_) => _checkIfSessionEnded(),
+        );
+      }
     }
     final endAt = widget.endAt;
     if (endAt != null && !widget.ended) {
@@ -105,6 +112,22 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
     } on DioException { }
   }
 
+  Future<void> _checkIfSessionEnded() async {
+    if (_ended || widget.isProjectMeeting) return;
+    try {
+      final response = await ref.read(dioProvider).get<Map<String, dynamic>>(
+        '/api/tutorias/grupales/${Uri.encodeComponent(widget.sessionId)}',
+      );
+      if (response.data?['estadoClase'] != 'FINALIZADA' || !mounted) return;
+      _roomStatusTimer?.cancel();
+      setState(() { _ended = true; _showChat = true; _connected = false; });
+      await _room.disconnect();
+      await Future.wait([_loadChatHistory(), _loadAttendance(), _loadStudentNames()]);
+    } on DioException {
+      // The server-side timer or LiveKit room deletion can still end the call.
+    }
+  }
+
   Future<void> _loadChatHistory() async {
     try {
       final path = widget.isProjectMeeting
@@ -142,7 +165,10 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
           final decoded = jsonDecode(utf8.decode(event.data));
           if (decoded is Map && decoded['text'] is String && mounted) {
             setState(() => _messages.add(_RoomMessage(
-              sender: event.participant?.identity ?? 'Participante',
+              sender: _participantLabel(
+                event.participant?.identity ?? '',
+                event.participant?.name,
+              ),
               text: (decoded['text'] as String).trim(),
             )));
           }
@@ -152,10 +178,31 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
       });
       _listener.on<ParticipantConnectedEvent>((_) { if (mounted) setState(() {}); });
       _listener.on<ParticipantDisconnectedEvent>((_) { if (mounted) setState(() {}); });
+      _listener.on<RoomDisconnectedEvent>((_) {
+        if (!mounted) return;
+        setState(() { _connected = false; _connecting = false; _ended = true; _showChat = true; });
+        if (!widget.isProjectMeeting) {
+          unawaited(Future.wait([_loadChatHistory(), _loadAttendance(), _loadStudentNames()]));
+        }
+      });
       _listener.on<TrackSubscribedEvent>((_) { if (mounted) setState(() {}); });
       _listener.on<TrackUnsubscribedEvent>((_) { if (mounted) setState(() {}); });
       await _room.connect(credentials['serverUrl'] as String, credentials['token'] as String).timeout(const Duration(seconds: 30));
       if (mounted) setState(() { _connected = true; _connecting = false; });
+      if (!widget.teacherMode && !widget.isProjectMeeting) {
+        final identity = _room.localParticipant?.identity;
+        if (identity != null && identity.isNotEmpty) {
+          try {
+            await ref.read(dioProvider).patch(
+              '/api/tutorias/grupales/${widget.sessionId}/asistencia',
+              data: {'estudianteId': identity, 'asistio': true},
+            );
+            if (mounted) setState(() => _attendance[identity] = true);
+          } on DioException {
+            if (mounted) setState(() => _mediaWarning = 'La llamada está activa, pero no se pudo guardar tu asistencia.');
+          }
+        }
+      }
       final warnings = <String>[];
       try {
         await _room.localParticipant?.setMicrophoneEnabled(true);
@@ -235,6 +282,14 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
       '/proyectos/${Uri.encodeComponent(widget.projectId!)}'
       '/sesiones/${Uri.encodeComponent(widget.projectReportSessionId!)}/mensajes';
 
+  String _participantLabel(String identity, [String? liveKitName]) {
+    final name = liveKitName?.trim();
+    if (name != null && name.isNotEmpty) return name;
+    final knownName = _studentNames[identity]?.trim();
+    if (knownName != null && knownName.isNotEmpty) return knownName;
+    return identity.isEmpty ? 'Participante' : identity;
+  }
+
   Future<void> _setAttendance(String studentId, bool attended) async {
     try {
       await ref.read(dioProvider).patch('/api/tutorias/grupales/${widget.sessionId}/asistencia', data: {'estudianteId': studentId, 'asistio': attended});
@@ -276,10 +331,10 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
         final track = publication.track;
         if (track != null) {
           participantHasVideo = true;
-          yield _VideoTile(label: participant.identity, track: track);
+          yield _VideoTile(label: _participantLabel(participant.identity, participant.name), track: track);
         }
       }
-      if (!participantHasVideo) yield _VideoTile(label: participant.identity, track: null);
+      if (!participantHasVideo) yield _VideoTile(label: _participantLabel(participant.identity, participant.name), track: null);
     }
     if (_room.remoteParticipants.isEmpty) yield const _WaitingParticipantTile();
   }
@@ -288,6 +343,7 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
   void dispose() {
     _endTimer?.cancel();
     _chatTimer?.cancel();
+    _roomStatusTimer?.cancel();
     _message.dispose();
     unawaited(_closeRoom());
     super.dispose();

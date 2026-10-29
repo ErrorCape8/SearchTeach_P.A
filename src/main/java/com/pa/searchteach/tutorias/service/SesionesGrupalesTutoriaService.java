@@ -41,6 +41,7 @@ public class SesionesGrupalesTutoriaService {
 	private final InscripcionesTutoriasEstudianteService inscripcionesEstudiante;
 	private final NotificationService notificationService;
 	private final SolicitudCambioFechaSesionRepositorio solicitudesCambio;
+	private final LiveKitRoomAdminService liveKitRooms;
 
 	private static LocalDateTime ahora() {
 		return LocalDateTime.now(ZONA_LOCAL);
@@ -53,7 +54,8 @@ public class SesionesGrupalesTutoriaService {
 			HorariosTutoresService horarios,
 			InscripcionesTutoriasEstudianteService inscripcionesEstudiante,
 			NotificationService notificationService,
-			SolicitudCambioFechaSesionRepositorio solicitudesCambio) {
+			SolicitudCambioFechaSesionRepositorio solicitudesCambio,
+			LiveKitRoomAdminService liveKitRooms) {
 		this.sesiones = sesiones;
 		this.usuarios = usuarios;
 		this.coordinadores = coordinadores;
@@ -61,6 +63,7 @@ public class SesionesGrupalesTutoriaService {
 		this.inscripcionesEstudiante = inscripcionesEstudiante;
 		this.notificationService = notificationService;
 		this.solicitudesCambio = solicitudesCambio;
+		this.liveKitRooms = liveKitRooms;
 	}
 
 	public List<SesionTutoria> listarDeEstudiante(String estudianteId) {
@@ -74,7 +77,13 @@ public class SesionesGrupalesTutoriaService {
 	}
 
 	public SesionTutoria registrarAsistencia(String sesionId, String docenteId, String estudianteId, boolean asistio) {
-		SesionTutoria sesion = obtenerSesionDocente(sesionId, docenteId);
+		SesionTutoria sesion = sesiones.findById(sesionId)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No se encontró la tutoría."));
+		if (!sesion.docenteId().equals(docenteId)
+				&& !(docenteId.equals(estudianteId) && asistio && sesion.estudianteIds().contains(estudianteId))) {
+			throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+					"Solo el docente o el estudiante conectado pueden registrar su asistencia.");
+		}
 		sesion = cerrarSiVencida(sesion);
 		if ("FINALIZADA".equals(sesion.estadoClase())) throw new ResponseStatusException(HttpStatus.CONFLICT, "La tutoría ya finalizó.");
 		return sesiones.save(sesion.registrarAsistencia(estudianteId, asistio));
@@ -84,7 +93,9 @@ public class SesionesGrupalesTutoriaService {
 		SesionTutoria sesion = obtenerSesionDocente(sesionId, docenteId);
 		String normalizado = motivo == null ? "" : motivo.trim().toUpperCase(java.util.Locale.ROOT);
 		if (!MOTIVOS_CIERRE.contains(normalizado)) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Selecciona un motivo de cierre válido.");
-		return sesiones.save(sesion.cerrar(normalizado, ahora()));
+		SesionTutoria cerrada = sesiones.save(sesion.cerrar(normalizado, ahora()));
+		liveKitRooms.closeGroupTutoringRoom(sesionId);
+		return cerrada;
 	}
 
 	public SesionTutoria registrarMensaje(String sesionId, String usuarioId, String texto) {
@@ -111,7 +122,9 @@ public class SesionesGrupalesTutoriaService {
 
 	private SesionTutoria cerrarSiVencida(SesionTutoria sesion) {
 		if (!"FINALIZADA".equals(sesion.estadoClase()) && !ahora().isBefore(sesion.fechaFin())) {
-			return sesiones.save(sesion.cerrar("FINALIZACION_AUTOMATICA", sesion.fechaFin()));
+			SesionTutoria cerrada = sesiones.save(sesion.cerrar("FINALIZACION_AUTOMATICA", sesion.fechaFin()));
+			liveKitRooms.closeGroupTutoringRoom(sesion.id());
+			return cerrada;
 		}
 		return sesion;
 	}
@@ -122,7 +135,7 @@ public class SesionesGrupalesTutoriaService {
 		sesiones.findAll().stream()
 				.filter(sesion -> !"FINALIZADA".equals(sesion.estadoClase()))
 				.filter(sesion -> !sesion.fechaFin().isAfter(ahora))
-				.forEach(sesion -> sesiones.save(sesion.cerrar("FINALIZACION_AUTOMATICA", sesion.fechaFin())));
+				.forEach(this::cerrarSiVencida);
 	}
 
 	public List<SesionTutoria> listarPublicadas() {

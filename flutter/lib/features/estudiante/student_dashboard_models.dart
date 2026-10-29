@@ -235,6 +235,7 @@ class ClassroomProjectSpace {
     required this.enrolledCount,
     required this.enrolled,
     this.createOrJoin = false,
+    this.description = '',
   });
 
   final String tutoringId;
@@ -246,6 +247,7 @@ class ClassroomProjectSpace {
   final int enrolledCount;
   final bool enrolled;
   final bool createOrJoin;
+  final String description;
 
   factory ClassroomProjectSpace.fromJson(Map<String, dynamic> json) =>
       ClassroomProjectSpace(
@@ -261,6 +263,7 @@ class ClassroomProjectSpace {
             : 0,
         enrolled: json['inscrito'] == true,
         createOrJoin: false,
+        description: _string(json['descripcion']),
       );
 
   factory ClassroomProjectSpace.createOrJoin({
@@ -288,12 +291,16 @@ class StudentProjectFollowup {
     required this.sessions,
     required this.status,
     required this.meetingAt,
+    required this.invitationCode,
+    required this.assignedTeacher,
   });
   final String tutoringId;
   final ClassroomProjectSpace project;
   final List<StudentProjectSession> sessions;
   final String status;
   final DateTime? meetingAt;
+  final String invitationCode;
+  final String assignedTeacher;
   StudentProjectSession? get nextSession {
     final upcoming = sessions
         .where((session) => session.start?.isAfter(DateTime.now()) ?? false)
@@ -317,7 +324,10 @@ class StudentProjectFollowup {
         semester: projectJson['semestre'] is num ? (projectJson['semestre'] as num).toInt() : 0,
         enrolledCount: (projectJson['estudianteIds'] is List ? (projectJson['estudianteIds'] as List).length : 0),
         enrolled: true,
+        description: _string(projectJson['descripcion']),
       ),
+      invitationCode: _string(json['codigoInscripcion']),
+      assignedTeacher: _string(json['docenteResponsable']),
       status: _string(projectJson['estadoCierre'], fallback: 'EN_CURSO'),
       meetingAt: _date(projectJson['fechaReunion']),
       sessions: (json['sesiones'] is List ? json['sesiones'] as List : const [])
@@ -443,11 +453,12 @@ Future<Map<String, dynamic>> createOrJoinClassroomProject({
   required Dio dio,
   required String tutoringId,
   required String name,
+  required String description,
   required int semester,
 }) async {
   final response = await dio.post<Map<String, dynamic>>(
     '/api/estudiante/tutorias-colectivas/$tutoringId/proyectos',
-    data: {'nombre': name, 'semestre': semester},
+    data: {'nombre': name, 'descripcion': description, 'semestre': semester},
   );
   return response.data ?? const {};
 }

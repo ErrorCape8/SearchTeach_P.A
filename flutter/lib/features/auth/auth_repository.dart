@@ -62,6 +62,13 @@ class AuthRepository {
             key: sessionPersistenceKey,
             value: rememberMe ? 'true' : 'false',
           );
+      if (rememberMe) {
+        await _ref.read(secureStorageProvider).delete(
+              key: 'transient_session_last_active_at',
+            );
+      } else {
+        await markTransientSessionActive();
+      }
     } on DioException catch (e) {
       final data = e.response?.data;
       if (data is Map && data['message'] != null) {
@@ -137,6 +144,9 @@ class AuthRepository {
     }
     await _ref.read(secureStorageProvider).delete(key: 'token');
     await _ref.read(secureStorageProvider).delete(key: sessionPersistenceKey);
+    await _ref
+        .read(secureStorageProvider)
+        .delete(key: 'transient_session_last_active_at');
   }
 }
 

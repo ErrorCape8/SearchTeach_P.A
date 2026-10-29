@@ -12,12 +12,15 @@ import com.pa.searchteach.tutorias.dto.ProyectoAsignadoDocente;
 import com.pa.searchteach.tutorias.dto.ProyectoAulaDisponible;
 import com.pa.searchteach.tutorias.dto.ProyectoAulaNombreSolicitud;
 import com.pa.searchteach.tutorias.dto.ProyectoAulaCreado;
+import com.pa.searchteach.tutorias.dto.ProyectoAulaCodigoSolicitud;
+import com.pa.searchteach.tutorias.dto.ProyectoAulaInscripcionPreview;
 import com.pa.searchteach.tutorias.dto.TutoriaColectivaEstudiante;
 import com.pa.searchteach.tutorias.dto.TutoriaColectivaSolicitud;
 import com.pa.searchteach.tutorias.model.SesionProyectoAula;
 import com.pa.searchteach.tutorias.model.MensajeProyectoAula;
 import com.pa.searchteach.tutorias.model.TutoriaColectiva;
 import com.pa.searchteach.tutorias.service.TutoriasColectivasService;
+import com.pa.searchteach.tutorias.service.ProyectoAulaChatRedisService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -36,14 +39,17 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @RestController
 public class ControladorTutoriasColectivas {
 
 	private final TutoriasColectivasService servicio;
+	private final ProyectoAulaChatRedisService chatRedis;
 
-	public ControladorTutoriasColectivas(TutoriasColectivasService servicio) {
+	public ControladorTutoriasColectivas(TutoriasColectivasService servicio, ProyectoAulaChatRedisService chatRedis) {
 		this.servicio = servicio;
+		this.chatRedis = chatRedis;
 	}
 
 	@PostMapping("/api/coordinacion/tutorias-colectivas")
@@ -122,6 +128,15 @@ public class ControladorTutoriasColectivas {
 		return servicio.listarMensajesProyecto(tutoriaId, proyectoId, sesionId, usuarioId);
 	}
 
+	@GetMapping(value = "/api/tutorias-colectivas/{tutoriaId}/proyectos/{proyectoId}/sesiones/{sesionId}/mensajes/stream",
+			produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+	public SseEmitter escucharMensajesDelReporte(
+			@PathVariable String tutoriaId, @PathVariable String proyectoId,
+			@PathVariable String sesionId, @AuthenticationPrincipal String usuarioId) {
+		servicio.obtenerProyectoEnChat(tutoriaId, proyectoId, sesionId, usuarioId);
+		return chatRedis.subscribe(tutoriaId, proyectoId, sesionId, usuarioId);
+	}
+
 	@GetMapping("/api/tutorias-colectivas/{tutoriaId}/proyectos/{proyectoId}/sesiones/{sesionId}/estado")
 	public com.pa.searchteach.tutorias.model.ProyectoAula consultarEstadoDelProyectoEnChat(
 			@PathVariable String tutoriaId, @PathVariable String proyectoId,
@@ -137,7 +152,10 @@ public class ControladorTutoriasColectivas {
 			@PathVariable String sesionId, @AuthenticationPrincipal String usuarioId,
 			@RequestParam(value = "texto", required = false) String texto,
 			@RequestPart(value = "archivo", required = false) MultipartFile archivo) {
-		return servicio.registrarMensajeProyecto(tutoriaId, proyectoId, sesionId, usuarioId, texto, archivo);
+		MensajeProyectoAulaVista mensaje = servicio.registrarMensajeProyecto(
+				tutoriaId, proyectoId, sesionId, usuarioId, texto, archivo);
+		chatRedis.publish(tutoriaId, proyectoId, sesionId, mensaje);
+		return mensaje;
 	}
 
 	@GetMapping("/api/tutorias-colectivas/{tutoriaId}/proyectos/{proyectoId}/sesiones/{sesionId}/mensajes/{mensajeId}/archivo")
@@ -189,6 +207,20 @@ public class ControladorTutoriasColectivas {
 	public List<ProyectoAulaSeguimientoEstudiante> listarSeguimientoDeProyectosParaEstudiante(
 			@AuthenticationPrincipal String estudianteId) {
 		return servicio.listarSeguimientoEstudiante(estudianteId);
+	}
+
+	@GetMapping("/api/estudiante/tutorias-colectivas/proyectos/codigo/{codigo}")
+	public ProyectoAulaInscripcionPreview previsualizarProyectoPorCodigo(
+			@PathVariable String codigo,
+			@AuthenticationPrincipal String estudianteId) {
+		return servicio.previsualizarInscripcion(codigo, estudianteId);
+	}
+
+	@PostMapping("/api/estudiante/tutorias-colectivas/proyectos/inscripcion-codigo")
+	public ProyectoAulaDisponible inscribirEstudiantePorCodigo(
+			@Valid @RequestBody ProyectoAulaCodigoSolicitud solicitud,
+			@AuthenticationPrincipal String estudianteId) {
+		return servicio.inscribirPorCodigo(solicitud, estudianteId);
 	}
 
 	@PostMapping("/api/estudiante/tutorias-colectivas/{tutoriaId}/proyectos")

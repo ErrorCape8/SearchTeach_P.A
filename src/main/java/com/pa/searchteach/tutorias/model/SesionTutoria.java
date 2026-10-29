@@ -211,7 +211,12 @@ public record SesionTutoria(
 
 	public SesionTutoria cerrar(String motivo, LocalDateTime hora) {
 		if ("FINALIZADA".equals(estadoClase)) return this;
+		List<AsistenciaEstudiante> asistenciaFinal = asistencias.stream()
+				.map(asistencia -> asistencia.asistio() == null
+						? new AsistenciaEstudiante(asistencia.estudianteId(), false)
+						: asistencia)
+				.toList();
 		return new SesionTutoria(id, docenteId, estudianteIds, fechaInicio, fechaFin, tecnologia, semestre,
-				asistencias, materia, tecnologias, modalidad, ubicacion, "FINALIZADA", motivo, hora, historialChat);
+				asistenciaFinal, materia, tecnologias, modalidad, ubicacion, "FINALIZADA", motivo, hora, historialChat);
 	}
 }

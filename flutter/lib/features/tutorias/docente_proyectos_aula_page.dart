@@ -97,25 +97,8 @@ class _ClassroomProjectWorkspaceState extends ConsumerState<_ClassroomProjectWor
     if (value != null) setState(() { if (start) { _start = value; } else { _end = value; } });
   }
 
-  void _insert(String left, [String right = '']) {
-    final selection = _notes.selection;
-    final text = _notes.text;
-    final start = selection.start < 0 ? text.length : selection.start;
-    final end = selection.end < 0 ? text.length : selection.end;
-    final selected = text.substring(start, end);
-    final replacement = '$left$selected$right';
-    _notes.value = TextEditingValue(
-      text: text.replaceRange(start, end, replacement),
-      selection: TextSelection.collapsed(offset: start + replacement.length),
-    );
-  }
-
   Future<void> _save() async {
     final content = _notes.text.trim();
-    if (content.isEmpty) {
-      setState(() => _error = 'Escribe las notas de la sesión antes de guardar.');
-      return;
-    }
     final start = DateTime(_date.year, _date.month, _date.day, _start.hour, _start.minute);
     final end = DateTime(_date.year, _date.month, _date.day, _end.hour, _end.minute);
     if (!end.isAfter(start)) {
@@ -124,18 +107,46 @@ class _ClassroomProjectWorkspaceState extends ConsumerState<_ClassroomProjectWor
     }
     setState(() { _saving = true; _error = null; });
     try {
-      await ref.read(dioProvider).post(
+      final created = await ref.read(dioProvider).post<Map<String, dynamic>>(
         '/api/docente/tutorias-colectivas/${Uri.encodeComponent(widget.project.tutoringId)}'
         '/proyectos/${Uri.encodeComponent(widget.project.projectId)}/sesiones',
         data: {
           'fechaInicio': start.toIso8601String(),
           'fechaFin': end.toIso8601String(),
-          'contenido': content,
+          'contenido': content.isEmpty ? 'Conversación de seguimiento' : content,
         },
       );
       ref.invalidate(_projectSessionsProvider(widget.project));
       _notes.clear();
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sesión guardada en el historial del proyecto.')));
+      final sessionId = created.data?['id']?.toString();
+      if (sessionId == null || sessionId.isEmpty) {
+        setState(() => _error = 'Se creó la sesión, pero no llegó su identificador.');
+        return;
+      }
+      if (content.isNotEmpty) {
+        try {
+          await ref.read(dioProvider).post(
+            '/api/tutorias-colectivas/${Uri.encodeComponent(widget.project.tutoringId)}'
+            '/proyectos/${Uri.encodeComponent(widget.project.projectId)}'
+            '/sesiones/${Uri.encodeComponent(sessionId)}/mensajes',
+            data: FormData.fromMap({'texto': content}),
+          );
+        } on DioException {
+          // La sesión ya existe y el docente puede enviar el primer mensaje desde el chat.
+        }
+      }
+      if (mounted) {
+        await Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => ProyectoAulaChatPage(
+            tutoringId: widget.project.tutoringId,
+            projectId: widget.project.projectId,
+            sessionId: sessionId,
+            title: widget.project.name,
+            teacherMode: true,
+          ),
+        ));
+        ref.invalidate(_projectSessionsProvider(widget.project));
+      }
     } on DioException catch (error) {
       final data = error.response?.data;
       setState(() => _error = data is Map && data['message'] is String ? data['message'] as String : 'No se pudo guardar la sesión.');
@@ -151,7 +162,7 @@ class _ClassroomProjectWorkspaceState extends ConsumerState<_ClassroomProjectWor
           Text('${widget.project.technology} · Semestre ${widget.project.semester} · ${widget.project.studentIds.length} estudiantes'),
           const SizedBox(height: 16),
           Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('Programar y documentar sesión', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const Text('Programar conversación', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
             Wrap(spacing: 8, children: [
               OutlinedButton.icon(onPressed: _chooseDate, icon: const Icon(Icons.calendar_month), label: Text('${_date.day.toString().padLeft(2, '0')}/${_date.month.toString().padLeft(2, '0')}/${_date.year}')),
@@ -159,17 +170,12 @@ class _ClassroomProjectWorkspaceState extends ConsumerState<_ClassroomProjectWor
               OutlinedButton.icon(onPressed: () => _chooseTime(start: false), icon: const Icon(Icons.schedule), label: Text('Fin ${_end.format(context)}')),
             ]),
             const SizedBox(height: 12),
-            const Text('Notas de trabajo', style: TextStyle(fontWeight: FontWeight.w600)),
+            const Text('Mensaje inicial (opcional)', style: TextStyle(fontWeight: FontWeight.w600)),
             const SizedBox(height: 6),
-            Wrap(spacing: 4, children: [
-              IconButton(tooltip: 'Negrita', onPressed: () => _insert('**', '**'), icon: const Icon(Icons.format_bold)),
-              IconButton(tooltip: 'Cursiva', onPressed: () => _insert('_', '_'), icon: const Icon(Icons.format_italic)),
-              IconButton(tooltip: 'Lista', onPressed: () => _insert('\n• '), icon: const Icon(Icons.format_list_bulleted)),
-            ]),
-            TextField(controller: _notes, minLines: 12, maxLines: null, maxLength: 12000, decoration: const InputDecoration(hintText: 'Escribe objetivos, acuerdos, avances y tareas…', border: OutlineInputBorder(), alignLabelWithHint: true)),
+            TextField(controller: _notes, minLines: 2, maxLines: 4, maxLength: 4000, decoration: const InputDecoration(hintText: 'Escribe el primer mensaje para iniciar la conversación…', border: OutlineInputBorder(), alignLabelWithHint: true)),
             if (_error != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(_error!, style: const TextStyle(color: Colors.red))),
             const SizedBox(height: 10),
-            FilledButton.icon(onPressed: _saving ? null : _save, icon: _saving ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.save_outlined), label: const Text('Guardar en historial')),
+            FilledButton.icon(onPressed: _saving ? null : _save, icon: _saving ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.chat_bubble_outline), label: const Text('Iniciar conversación')),
           ]))),
           const SizedBox(height: 20),
           const Text('Historial de sesiones y próximos horarios', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
@@ -179,10 +185,9 @@ class _ClassroomProjectWorkspaceState extends ConsumerState<_ClassroomProjectWor
             data: (sessions) => sessions.isEmpty
                 ? const Padding(padding: EdgeInsets.all(12), child: Text('Aún no hay sesiones registradas.'))
                 : Column(children: [for (final session in sessions) Card(child: ListTile(
-                    leading: const Icon(Icons.description_outlined),
+                    leading: const Icon(Icons.chat_bubble_outline),
                     title: Text(_dateLabel(session['fechaInicio'])),
-                    subtitle: Text('${_timeLabel(session['fechaInicio'])} – ${_timeLabel(session['fechaFin'])}\n${session['contenido'] ?? ''}', maxLines: 5, overflow: TextOverflow.ellipsis),
-                    isThreeLine: true,
+                    subtitle: Text('${_timeLabel(session['fechaInicio'])} – ${_timeLabel(session['fechaFin'])} · Abrir conversación'),
                     onTap: () => Navigator.of(context).push(MaterialPageRoute(
                       builder: (_) => ProyectoAulaChatPage(
                         tutoringId: widget.project.tutoringId,

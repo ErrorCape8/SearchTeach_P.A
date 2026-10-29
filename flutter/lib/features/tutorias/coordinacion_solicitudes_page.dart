@@ -57,8 +57,9 @@ class _CoordinacionSolicitudesPageState
 
   @override
   Widget build(BuildContext context) {
-    if (_loading)
+    if (_loading) {
       return const Center(child: CircularProgressIndicator(color: _wine));
+    }
     if (_error != null) {
       return Center(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -263,8 +264,9 @@ class _CoordinacionSolicitudesPageState
               child: const Text('Volver')),
           FilledButton(
             onPressed: () {
-              if (formKey.currentState!.validate())
+              if (formKey.currentState!.validate()) {
                 Navigator.pop(dialogContext, controller.text.trim());
+              }
             },
             child: const Text('Denegar'),
           ),

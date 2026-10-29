@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -36,6 +38,21 @@ class DocenteDashboardPage extends ConsumerStatefulWidget {
 
 class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage> {
   int _tab = 0;
+  Timer? _sessionRefreshTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _sessionRefreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) ref.invalidate(_teacherSessionsProvider);
+    });
+  }
+
+  @override
+  void dispose() {
+    _sessionRefreshTimer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -87,7 +104,7 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage> {
                   NavigationDestination(icon: Icon(Icons.event_note_outlined), selectedIcon: Icon(Icons.event_note), label: 'Tutorías'),
                   NavigationDestination(icon: Icon(Icons.play_circle_outline), selectedIcon: Icon(Icons.play_circle), label: 'Empezar'),
                   NavigationDestination(icon: Icon(Icons.school_outlined), selectedIcon: Icon(Icons.school), label: 'Proyectos'),
-                  NavigationDestination(icon: Icon(Icons.fact_check_outlined), selectedIcon: Icon(Icons.fact_check), label: 'Revisar PA'),
+                  NavigationDestination(icon: Icon(Icons.fact_check_outlined), selectedIcon: Icon(Icons.fact_check), label: 'Líder PA'),
                   NavigationDestination(icon: Icon(Icons.notifications_none_outlined), selectedIcon: Icon(Icons.notifications), label: 'Avisos'),
                   NavigationDestination(icon: Icon(Icons.history_outlined), selectedIcon: Icon(Icons.history), label: 'Historial'),
                 ],
@@ -134,7 +151,7 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage> {
               child: ListTile(
                 selected: _tab == 4,
                 leading: const Icon(Icons.fact_check_outlined),
-                title: const Text('Revisar proyectos PA'),
+                title: const Text('Líder PA'),
                 onTap: () => setState(() => _tab = 4),
               ),
             ),
@@ -171,7 +188,7 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage> {
           _TeacherHomeTile(icon: Icons.event_note_outlined, title: 'Mis tutorías', subtitle: 'Revisa sesiones y solicita a coordinación cambiar una fecha.', onTap: () => setState(() => _tab = 1)),
           _TeacherHomeTile(icon: Icons.play_circle_outline, title: 'Empezar tutorías', subtitle: 'Abre la sala, toma asistencia y consulta el chat de tus sesiones.', onTap: () => setState(() => _tab = 2)),
           _TeacherHomeTile(icon: Icons.school_outlined, title: 'Proyectos de aula', subtitle: 'Escribe reportes, programa sesiones y responde a los estudiantes.', onTap: () => setState(() => _tab = 3)),
-          _TeacherHomeTile(icon: Icons.fact_check_outlined, title: 'Revisar proyectos PA', subtitle: 'Como docente líder, revisa reportes y confirma cierres.', onTap: () => setState(() => _tab = 4)),
+          _TeacherHomeTile(icon: Icons.fact_check_outlined, title: 'Líder PA', subtitle: 'Revisa la documentación de los tutores y confirma el trabajo del proyecto.', onTap: () => setState(() => _tab = 4)),
           _TeacherHomeTile(icon: Icons.notifications_none_outlined, title: 'Avisos', subtitle: 'Consulta las notificaciones de tu cuenta.', onTap: () => setState(() => _tab = 5)),
           _TeacherHomeTile(icon: Icons.history_outlined, title: 'Historial', subtitle: 'Consulta las tutorías finalizadas y sus chats.', onTap: () => setState(() => _tab = 6)),
         ],
@@ -245,9 +262,12 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage> {
                                 ),
                                 if (view != _SessionView.scheduled)
                                   FilledButton.icon(
-                                    onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-                                      builder: (_) => LiveKitRoomPage(sessionId: session.id, subject: session.subject, modality: session.modality, teacherMode: true, students: session.students, ended: view == _SessionView.history, endAt: session.end),
-                                    )),
+                                    onPressed: () async {
+                                      await Navigator.of(context).push(MaterialPageRoute(
+                                        builder: (_) => LiveKitRoomPage(sessionId: session.id, subject: session.subject, modality: session.modality, teacherMode: true, students: session.students, ended: view == _SessionView.history, endAt: session.end),
+                                      ));
+                                      if (mounted) ref.invalidate(_teacherSessionsProvider);
+                                    },
                                     icon: Icon(view == _SessionView.history ? Icons.history : Icons.video_call_outlined),
                                     label: Text(view == _SessionView.history ? 'Ver historial' : 'Empezar tutoría'),
                                   ),

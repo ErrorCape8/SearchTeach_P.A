@@ -264,12 +264,15 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
     try {
       final dio = ref.read(dioProvider);
       if (space.createOrJoin) {
-        const name = 'Grupo de proyecto';
+        final details = await _askProjectName(space);
+        if (details == null) return;
+        final name = details.name;
         final created = await createOrJoinClassroomProject(
           dio: dio,
           tutoringId: space.tutoringId,
-          name: 'Grupo de proyecto',
-          semester: space.semester,
+          name: details.name,
+          description: details.description,
+          semester: details.semester,
         );
         ref.invalidate(studentDashboardProvider);
         ref.invalidate(studentProjectFollowupProvider);
@@ -290,6 +293,8 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
                         letterSpacing: 5)),
                 const SizedBox(height: 8),
                 Text('Semestre ${space.semester}'),
+                const SizedBox(height: 8),
+                Text('Descripción: ${details.description}'),
               ]),
               actions: [
                 TextButton(
@@ -299,6 +304,7 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
             ),
           );
         }
+        if (mounted) _openTutorSection('seguimiento-proyecto');
         return;
       } else if (space.enrolled) {
         await leaveClassroomProject(dio: dio, space: space);
@@ -316,12 +322,12 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
   }
 
   // ignore: unused_element
-  Future<({int semester, String name})?> _askProjectName(
+  Future<({int semester, String name, String description})?> _askProjectName(
       ClassroomProjectSpace space) async {
     final controller = TextEditingController();
-    var semester = space.semester;
+    final descriptionController = TextEditingController();
     try {
-      return await showDialog<({int semester, String name})>(
+      return await showDialog<({int semester, String name, String description})>(
         context: context,
         builder: (dialogContext) => StatefulBuilder(
             builder: (context, setDialogState) => AlertDialog(
@@ -329,19 +335,7 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
                   content: Column(mainAxisSize: MainAxisSize.min, children: [
                     Text(space.career),
                     const SizedBox(height: 12),
-                    DropdownButtonFormField<int>(
-                      value: semester,
-                      decoration: const InputDecoration(
-                          labelText: 'Semestre', border: OutlineInputBorder()),
-                      items: [
-                        for (var value = 1; value <= 6; value++)
-                          DropdownMenuItem(value: value, child: Text('$value'))
-                      ],
-                      onChanged: (value) {
-                        if (value != null)
-                          setDialogState(() => semester = value);
-                      },
-                    ),
+                    Text('Semestre ${space.semester}'),
                     const SizedBox(height: 12),
                     TextField(
                       controller: controller,
@@ -353,6 +347,17 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
                         border: OutlineInputBorder(),
                       ),
                     ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: descriptionController,
+                      maxLength: 1000,
+                      maxLines: 3,
+                      onChanged: (_) => setDialogState(() {}),
+                      decoration: const InputDecoration(
+                        labelText: 'Descripción breve del proyecto',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
                   ]),
                   actions: [
                     TextButton(
@@ -360,11 +365,12 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
                       child: const Text('Cancelar'),
                     ),
                     FilledButton(
-                      onPressed: controller.text.trim().isEmpty
+                      onPressed: controller.text.trim().isEmpty || descriptionController.text.trim().isEmpty
                           ? null
                           : () => Navigator.pop(dialogContext, (
-                                semester: semester,
-                                name: controller.text.trim()
+                                semester: space.semester,
+                                name: controller.text.trim(),
+                                description: descriptionController.text.trim(),
                               )),
                       child: const Text('Continuar'),
                     ),
@@ -373,6 +379,7 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
       );
     } finally {
       controller.dispose();
+      descriptionController.dispose();
     }
   }
 
@@ -419,7 +426,8 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
           content: Text(
             'Lo registra ${project['creador'] ?? 'un estudiante'}\n'
             'Semestre ${project['semestre'] ?? '—'} · ${project['tecnologia'] ?? ''}\n'
-            'Proyecto: ${project['nombre'] ?? 'Proyecto de aula'}\n\n'
+            'Proyecto: ${project['nombre'] ?? 'Proyecto de aula'}\n'
+            'Descripción: ${project['descripcion'] ?? 'Sin descripción'}\n\n'
             '¿Quieres unirte a este proyecto?',
           ),
           actions: [
@@ -435,7 +443,9 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
       if (confirmed != true) return;
       await enrollInClassroomProjectCode(dio: dio, code: code);
       ref.invalidate(studentDashboardProvider);
+      ref.invalidate(studentProjectFollowupProvider);
       _showMessage('Te uniste al proyecto de aula.');
+      if (mounted) _openTutorSection('seguimiento-proyecto');
     } on DioException catch (error) {
       _showMessage(_apiMessage(error));
     } finally {

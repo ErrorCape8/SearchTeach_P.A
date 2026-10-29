@@ -11,6 +11,8 @@ import javax.crypto.SecretKey;
 import com.pa.searchteach.tutorias.dto.LiveKitTokenResponse;
 import com.pa.searchteach.tutorias.model.ProyectoAula;
 import com.pa.searchteach.tutorias.service.TutoriasColectivasService;
+import com.pa.searchteach.users.model.User;
+import com.pa.searchteach.users.repository.UserRepository;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,16 +26,19 @@ import org.springframework.web.server.ResponseStatusException;
 @RestController
 public class ControladorLiveKitProyectoAula {
 	private final TutoriasColectivasService proyectosAula;
+	private final UserRepository usuarios;
 	private final String serverUrl;
 	private final String apiKey;
 	private final String apiSecret;
 
 	public ControladorLiveKitProyectoAula(
 			TutoriasColectivasService proyectosAula,
+			UserRepository usuarios,
 			@Value("${livekit.url:}") String serverUrl,
 			@Value("${livekit.api-key:}") String apiKey,
 			@Value("${livekit.api-secret:}") String apiSecret) {
 		this.proyectosAula = proyectosAula;
+		this.usuarios = usuarios;
 		this.serverUrl = serverUrl;
 		this.apiKey = apiKey;
 		this.apiSecret = apiSecret;
@@ -63,6 +68,8 @@ public class ControladorLiveKitProyectoAula {
 		}
 		String room = "searchteach-pa-" + proyecto.proyectoId();
 		Instant now = Instant.now();
+		String participantName = usuarios.findById(usuarioId).map(User::getNombre)
+				.filter(nombre -> nombre != null && !nombre.isBlank()).orElse(usuarioId);
 		SecretKey signingKey = Keys.hmacShaKeyFor(apiSecret.getBytes(StandardCharsets.UTF_8));
 		String token = Jwts.builder()
 				.issuer(apiKey)
@@ -70,6 +77,7 @@ public class ControladorLiveKitProyectoAula {
 				.issuedAt(Date.from(now))
 				.notBefore(Date.from(now.minusSeconds(5)))
 				.expiration(Date.from(now.plusSeconds(3600)))
+				.claim("name", participantName)
 				.claim("video", Map.of("room", room, "roomJoin", true, "canPublish", true,
 						"canSubscribe", true, "canPublishData", true))
 				.claim("roomConfig", Map.of("maxParticipants", 6))

@@ -53,9 +53,10 @@ class _CoordinacionTutoriasPageState
           .whereType<Map<String, dynamic>>()
           .toList());
     } on DioException catch (error) {
-      if (mounted)
+      if (mounted) {
         setState(() => _error =
             _apiError(error, fallback: 'No se pudieron cargar los docentes.'));
+      }
     }
   }
 
@@ -533,7 +534,7 @@ class _CoordinacionTutoriasPageState
             (!excluded.contains(teacher['id']) || teacher['id'] == value))
         .toList();
     return DropdownButtonFormField<String>(
-        value: value,
+        initialValue: value,
         decoration: InputDecoration(
             labelText: label, border: const OutlineInputBorder()),
         items: options

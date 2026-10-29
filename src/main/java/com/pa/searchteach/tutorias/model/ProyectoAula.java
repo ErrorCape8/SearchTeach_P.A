@@ -23,13 +23,25 @@ public record ProyectoAula(
 		String reunionSesionId,
 		LocalDateTime reunionMensajePublicadoEn,
 		String cierreConfirmadoPorId,
-		LocalDateTime finalizadaEn) {
+		LocalDateTime finalizadaEn,
+		String descripcion) {
 
 	public ProyectoAula(String proyectoId, String nombre, String docenteResponsableId,
 			List<String> estudianteIds, String tecnologia, int semestre,
 			String codigoInscripcion, String creadorId) {
 		this(proyectoId, nombre, docenteResponsableId, estudianteIds, tecnologia, semestre,
-				codigoInscripcion, creadorId, "EN_CURSO", null, null, null, null, null, null, null);
+				codigoInscripcion, creadorId, "EN_CURSO", null, null, null, null, null, null, null, "");
+	}
+
+	public ProyectoAula(String proyectoId, String nombre, String docenteResponsableId,
+			List<String> estudianteIds, String tecnologia, int semestre, String codigoInscripcion,
+			String creadorId, String estadoCierre, String motivoCierre, LocalDateTime fechaReunion,
+			String reunionCreadaPorId, String reunionSesionId, LocalDateTime reunionMensajePublicadoEn,
+			String cierreConfirmadoPorId, LocalDateTime finalizadaEn) {
+		this(proyectoId, nombre, docenteResponsableId, estudianteIds, tecnologia, semestre,
+				codigoInscripcion, creadorId, estadoCierre, motivoCierre, fechaReunion,
+				reunionCreadaPorId, reunionSesionId, reunionMensajePublicadoEn,
+				cierreConfirmadoPorId, finalizadaEn, "");
 	}
 
 	public ProyectoAula {
@@ -59,43 +71,43 @@ public record ProyectoAula(
 				java.util.stream.Stream.concat(estudianteIds.stream(), java.util.stream.Stream.of(estudianteId)).toList(),
 				tecnologia, semestre, codigoInscripcion, creadorId,
 				estadoCierre, motivoCierre, fechaReunion, reunionCreadaPorId, reunionSesionId,
-				reunionMensajePublicadoEn, cierreConfirmadoPorId, finalizadaEn);
+				reunionMensajePublicadoEn, cierreConfirmadoPorId, finalizadaEn, descripcion);
 	}
 
 	public ProyectoAula desistir(String estudianteId) {
 		return new ProyectoAula(proyectoId, nombre, docenteResponsableId,
 				estudianteIds.stream().filter(id -> !id.equals(estudianteId)).toList(), tecnologia, semestre,
 				codigoInscripcion, creadorId, estadoCierre, motivoCierre, fechaReunion,
-				reunionCreadaPorId, reunionSesionId, reunionMensajePublicadoEn, cierreConfirmadoPorId, finalizadaEn);
+				reunionCreadaPorId, reunionSesionId, reunionMensajePublicadoEn, cierreConfirmadoPorId, finalizadaEn, descripcion);
 	}
 
 	public ProyectoAula programarReunion(LocalDateTime fecha, String docenteId, String sesionId) {
 		return new ProyectoAula(proyectoId, nombre, docenteResponsableId, estudianteIds, tecnologia, semestre,
 				codigoInscripcion, creadorId, estadoCierre, motivoCierre, fecha, docenteId, sesionId,
-				null, cierreConfirmadoPorId, finalizadaEn);
+				null, cierreConfirmadoPorId, finalizadaEn, descripcion);
 	}
 
 	public ProyectoAula marcarMensajeReunionPublicado(LocalDateTime fecha) {
 		return new ProyectoAula(proyectoId, nombre, docenteResponsableId, estudianteIds, tecnologia, semestre,
 				codigoInscripcion, creadorId, estadoCierre, motivoCierre, fechaReunion, reunionCreadaPorId,
-				reunionSesionId, fecha, cierreConfirmadoPorId, finalizadaEn);
+				reunionSesionId, fecha, cierreConfirmadoPorId, finalizadaEn, descripcion);
 	}
 
 	public ProyectoAula solicitarCierre(String motivo) {
 		return new ProyectoAula(proyectoId, nombre, docenteResponsableId, estudianteIds, tecnologia, semestre,
 				codigoInscripcion, creadorId, "PENDIENTE_CONFIRMACION", motivo, fechaReunion,
-				reunionCreadaPorId, reunionSesionId, reunionMensajePublicadoEn, null, null);
+				reunionCreadaPorId, reunionSesionId, reunionMensajePublicadoEn, null, null, descripcion);
 	}
 
 	public ProyectoAula confirmarCierre(String liderId, LocalDateTime fecha) {
 		return new ProyectoAula(proyectoId, nombre, docenteResponsableId, estudianteIds, tecnologia, semestre,
 				codigoInscripcion, creadorId, "FINALIZADO", motivoCierre, fechaReunion,
-				reunionCreadaPorId, reunionSesionId, reunionMensajePublicadoEn, liderId, fecha);
+				reunionCreadaPorId, reunionSesionId, reunionMensajePublicadoEn, liderId, fecha, descripcion);
 	}
 
 	public ProyectoAula rechazarCierre() {
 		return new ProyectoAula(proyectoId, nombre, docenteResponsableId, estudianteIds, tecnologia, semestre,
 				codigoInscripcion, creadorId, "EN_CURSO", null, fechaReunion,
-				reunionCreadaPorId, reunionSesionId, reunionMensajePublicadoEn, null, null);
+				reunionCreadaPorId, reunionSesionId, reunionMensajePublicadoEn, null, null, descripcion);
 	}
 }

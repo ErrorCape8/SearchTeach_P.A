@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:async';
 
@@ -39,6 +40,8 @@ class _ProyectoAulaChatPageState extends ConsumerState<ProyectoAulaChatPage> {
   String? _error;
   Map<String, dynamic>? _projectState;
   Timer? _refreshTimer;
+  CancelToken? _streamCancel;
+  StreamSubscription<String>? _streamSubscription;
 
   String get _path => '/api/tutorias-colectivas/${Uri.encodeComponent(widget.tutoringId)}'
       '/proyectos/${Uri.encodeComponent(widget.projectId)}'
@@ -51,7 +54,8 @@ class _ProyectoAulaChatPageState extends ConsumerState<ProyectoAulaChatPage> {
   void initState() {
     super.initState();
     _load();
-    _refreshTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+    _connectStream();
+    _refreshTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       if (mounted) _load();
     });
   }
@@ -60,17 +64,61 @@ class _ProyectoAulaChatPageState extends ConsumerState<ProyectoAulaChatPage> {
   void dispose() {
     _text.dispose();
     _refreshTimer?.cancel();
+    _streamCancel?.cancel('Chat cerrado');
+    _streamSubscription?.cancel();
     super.dispose();
+  }
+
+  Future<void> _connectStream() async {
+    final cancel = CancelToken();
+    _streamCancel = cancel;
+    try {
+      final response = await ref.read(dioProvider).get<ResponseBody>(
+        '$_path/stream',
+        cancelToken: cancel,
+        options: Options(responseType: ResponseType.stream, receiveTimeout: Duration.zero),
+      );
+      final body = response.data;
+      if (body == null || cancel.isCancelled) return;
+      _streamSubscription = body.stream
+          .map((chunk) => utf8.decode(chunk))
+          .transform(const LineSplitter())
+          .where((line) => line.startsWith('data:'))
+          .map((line) => line.substring(5).trim())
+          .where((line) => line.isNotEmpty && line != 'connected')
+          .listen(_receiveStreamMessage, onError: (_) {});
+    } on DioException {
+      // La consulta periódica mantiene el chat actualizado si SSE no está disponible.
+    }
+  }
+
+  void _receiveStreamMessage(String json) {
+    try {
+      final decoded = jsonDecode(json);
+      if (decoded is! Map<String, dynamic> || !mounted) return;
+      final id = decoded['id']?.toString();
+      setState(() {
+        if (id == null || !_messages.any((message) => message['id']?.toString() == id)) {
+          _messages = [..._messages, decoded];
+        }
+      });
+    } on FormatException {
+      // Ignora eventos incompletos o no válidos.
+    }
   }
 
   Future<void> _load() async {
     try {
       final response = await ref.read(dioProvider).get<List<dynamic>>(_path);
       if (!mounted) return;
+      final loaded = (response.data ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .toList(growable: true);
+      final loadedIds = loaded.map((message) => message['id']?.toString()).toSet();
+      loaded.addAll(_messages.where((message) =>
+          message['id'] == null || !loadedIds.contains(message['id']?.toString())));
       setState(() {
-        _messages = (response.data ?? const [])
-            .whereType<Map<String, dynamic>>()
-            .toList(growable: false);
+        _messages = loaded;
         _loading = false;
         _error = null;
       });
@@ -117,7 +165,7 @@ class _ProyectoAulaChatPageState extends ConsumerState<ProyectoAulaChatPage> {
         ]),
         actions: [
           TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancelar')),
-          FilledButton(onPressed: () => Navigator.pop(dialogContext, DateTime(date.year, date.month, date.day, time.hour, time.minute)), child: const Text('Programar')),
+          FilledButton.icon(onPressed: () => Navigator.pop(dialogContext, DateTime(date.year, date.month, date.day, time.hour, time.minute)), icon: const Icon(Icons.video_call_outlined), label: const Text('Crear videoconferencia')),
         ],
       )),
     );
@@ -250,6 +298,12 @@ class _ProyectoAulaChatPageState extends ConsumerState<ProyectoAulaChatPage> {
         appBar: AppBar(
           title: Text(widget.title),
           actions: [
+            if (widget.teacherMode && widget.supportMode && _projectState?['estadoCierre'] != 'FINALIZADO')
+              IconButton(
+                tooltip: 'Crear videoconferencia',
+                onPressed: _scheduleMeeting,
+                icon: const Icon(Icons.video_call_outlined),
+              ),
             if (widget.teacherMode && widget.supportMode && _projectState?['estadoCierre'] != 'FINALIZADO')
               PopupMenuButton<String>(
                 tooltip: 'Acciones del proyecto',

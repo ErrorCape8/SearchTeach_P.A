@@ -68,11 +68,12 @@ class _CoordinacionProgramarTutoriasPageState
         });
       }
     } on FormatException catch (error) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _error = error.message;
           _loading = false;
         });
+      }
     }
   }
 
@@ -142,7 +143,9 @@ class _CoordinacionProgramarTutoriasPageState
         time == null ||
         endTime == null ||
         selectedTeacher == null ||
-        subject == null) return;
+        subject == null) {
+      return;
+    }
     final location = _locationController.text.trim();
     if (_modality != 'Virtual' && location.isEmpty) {
       setState(() => _error =
@@ -223,9 +226,10 @@ class _CoordinacionProgramarTutoriasPageState
         const SnackBar(content: Text('Tutorías programadas y publicadas.')),
       );
     } on DioException catch (error) {
-      if (mounted)
+      if (mounted) {
         setState(() =>
             _error = apiError(error, 'No se pudieron programar las tutorías.'));
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -360,18 +364,22 @@ class _CoordinacionProgramarTutoriasPageState
                             children: [
                               OutlinedButton.icon(
                                 onPressed: () async {
-                                  final today = DateUtils.dateOnly(DateTime.now());
+                                  final today =
+                                      DateUtils.dateOnly(DateTime.now());
                                   final value = await showDatePicker(
                                     context: context,
                                     firstDate: today,
-                                    lastDate: today.add(const Duration(days: 180)),
-                                    initialDate: _date ?? today.add(const Duration(days: 1)),
+                                    lastDate:
+                                        today.add(const Duration(days: 180)),
+                                    initialDate: _date ??
+                                        today.add(const Duration(days: 1)),
                                   );
-                                  if (value != null)
+                                  if (value != null) {
                                     setState(() {
                                       _date = value;
                                       _teacherId = null;
                                     });
+                                  }
                                 },
                                 icon: const Icon(Icons.calendar_month_outlined),
                                 label: Text(_date == null
@@ -385,11 +393,12 @@ class _CoordinacionProgramarTutoriasPageState
                                     initialTime: _start ??
                                         const TimeOfDay(hour: 8, minute: 0),
                                   );
-                                  if (value != null)
+                                  if (value != null) {
                                     setState(() {
                                       _start = value;
                                       _teacherId = null;
                                     });
+                                  }
                                 },
                                 icon: const Icon(Icons.schedule),
                                 label: Text(_start == null
@@ -403,11 +412,12 @@ class _CoordinacionProgramarTutoriasPageState
                                     initialTime: _end ??
                                         const TimeOfDay(hour: 9, minute: 0),
                                   );
-                                  if (value != null)
+                                  if (value != null) {
                                     setState(() {
                                       _end = value;
                                       _teacherId = null;
                                     });
+                                  }
                                 },
                                 icon: const Icon(Icons.schedule_outlined),
                                 label: Text(_end == null

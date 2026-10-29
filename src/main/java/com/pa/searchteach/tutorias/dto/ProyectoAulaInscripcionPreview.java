@@ -4,6 +4,7 @@ public record ProyectoAulaInscripcionPreview(
 		String tutoriaColectivaId,
 		String proyectoId,
 		String nombre,
+		String descripcion,
 		String creador,
 		String tecnologia,
 		int semestre,
