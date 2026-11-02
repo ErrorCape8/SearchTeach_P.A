@@ -2,13 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../auth/auth_repository.dart';
-import '../../auth/profile_change_dialog.dart';
 import '../admin_controller.dart';
 
 class AdminPerfilView extends ConsumerWidget {
   const AdminPerfilView({super.key});
 
-  // ignore: unused_element
   void _showEditPhoneDialog(
     BuildContext context,
     WidgetRef ref,
@@ -80,67 +78,6 @@ class AdminPerfilView extends ConsumerWidget {
     );
   }
 
-  // ignore: unused_element
-  void _showChangePasswordDialog(BuildContext context) {
-    final passCtrl = TextEditingController();
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          'Cambiar contraseña',
-          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
-        ),
-        content: TextField(
-          controller: passCtrl,
-          obscureText: true,
-          decoration: InputDecoration(
-            labelText: 'Nueva contraseña',
-            helperText: 'Mínimo 8 caracteres.',
-            filled: true,
-            fillColor: const Color(0xFFF1F4F9),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide.none,
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar',
-                style: TextStyle(color: Color(0xFF64748B))),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFEA580C),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-            ),
-            onPressed: () {
-              if (passCtrl.text.length < 8) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content: Text('Debe tener al menos 8 caracteres.')),
-                );
-                return;
-              }
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Contraseña actualizada con éxito.'),
-                  backgroundColor: Color(0xFF16A34A),
-                ),
-              );
-            },
-            child: const Text('Guardar'),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(adminControllerProvider);
@@ -187,10 +124,8 @@ class AdminPerfilView extends ConsumerWidget {
         InkWell(
           onTap: state.isLoadingProfile || profile == null
               ? null
-              : () => showProfileChangeDialog(context, ref,
-                  field: ProfileChangeField.phone,
-                  onUpdated: () =>
-                      ref.read(adminControllerProvider.notifier).loadProfile()),
+              : () => _showEditPhoneDialog(
+                  context, ref, profile.telefono),
           borderRadius: BorderRadius.circular(18),
           child: Container(
             padding: const EdgeInsets.all(16),
@@ -266,12 +201,7 @@ class AdminPerfilView extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 10),
-        InkWell(
-          onTap: () => showProfileChangeDialog(context, ref,
-              field: ProfileChangeField.password,
-              onUpdated: () =>
-                  ref.read(adminControllerProvider.notifier).loadProfile()),
-          borderRadius: BorderRadius.circular(18),
+        Container(
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -307,7 +237,7 @@ class AdminPerfilView extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Cambiar contraseña',
+                        'Restablecimiento de contraseña',
                         style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
@@ -316,7 +246,7 @@ class AdminPerfilView extends ConsumerWidget {
                       ),
                       SizedBox(height: 2),
                       Text(
-                        'Mínimo 8 caracteres.',
+                        'Solicita el restablecimiento al administrador.',
                         style: TextStyle(
                           fontSize: 12,
                           color: Color(0xFF64748B),
@@ -324,11 +254,6 @@ class AdminPerfilView extends ConsumerWidget {
                       ),
                     ],
                   ),
-                ),
-                const Icon(
-                  Icons.chevron_right_rounded,
-                  color: Color(0xFF94A3B8),
-                  size: 24,
                 ),
               ],
             ),
@@ -338,7 +263,7 @@ class AdminPerfilView extends ConsumerWidget {
 
         // Datos institucionales
         const Text(
-          'Correo actual y datos institucionales',
+          'Datos institucionales',
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w800,
@@ -365,11 +290,6 @@ class AdminPerfilView extends ConsumerWidget {
               _buildInstitutionalRow(
                 title: 'Correo',
                 value: showValue(profile?.correo),
-                onTap: () => showProfileChangeDialog(context, ref,
-                    field: ProfileChangeField.email,
-                    onUpdated: () => ref
-                        .read(adminControllerProvider.notifier)
-                        .loadProfile()),
               ),
               const Divider(height: 18, color: Color(0xFFF1F5F9)),
               _buildInstitutionalRow(
@@ -390,13 +310,6 @@ class AdminPerfilView extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 6),
-        const Text(
-          'El correo actual recibe los códigos de seguridad. Puedes solicitar su cambio con verificación.',
-          style: TextStyle(
-            fontSize: 12,
-            color: Color(0xFF64748B),
-          ),
-        ),
         const SizedBox(height: 26),
 
         // Botón Cerrar sesión

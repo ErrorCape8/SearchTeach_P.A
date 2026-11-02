@@ -3,10 +3,7 @@ package com.pa.searchteach.users.config;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.mongodb.core.index.Index;
 import org.springframework.stereotype.Component;
-import java.time.Duration;
 
 @Component
 public class UserCollectionInitializer implements ApplicationRunner {
@@ -20,7 +17,6 @@ public class UserCollectionInitializer implements ApplicationRunner {
 	private static final String PROJECT_SESSIONS_COLLECTION = "sesiones_proyecto_aula";
 	private static final String PROJECT_MESSAGES_COLLECTION = "mensajes_proyecto_aula";
 	private static final String IT_COLLECTION = "it";
-	private static final String PROFILE_CHANGE_COLLECTION = "cambios_perfil_pendientes";
 
 	private final MongoTemplate mongoTemplate;
 
@@ -57,10 +53,5 @@ public class UserCollectionInitializer implements ApplicationRunner {
 		if (!mongoTemplate.collectionExists(PROJECT_MESSAGES_COLLECTION)) {
 			mongoTemplate.createCollection(PROJECT_MESSAGES_COLLECTION);
 		}
-		if (!mongoTemplate.collectionExists(PROFILE_CHANGE_COLLECTION)) {
-			mongoTemplate.createCollection(PROFILE_CHANGE_COLLECTION);
-		}
-		mongoTemplate.indexOps(PROFILE_CHANGE_COLLECTION).ensureIndex(
-				new Index().on("expiraEn", Sort.Direction.ASC).expire(Duration.ZERO));
 	}
 }

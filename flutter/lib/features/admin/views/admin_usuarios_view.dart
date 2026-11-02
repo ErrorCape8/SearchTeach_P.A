@@ -19,7 +19,6 @@ class AdminUsuariosView extends ConsumerStatefulWidget {
 class _AdminUsuariosViewState extends ConsumerState<AdminUsuariosView> {
   final _searchController = TextEditingController();
   static const _pageSize = 10;
-  int _currentPage = 0;
   bool _importingUsers = false;
 
   static const _invalidCsvMessage =
@@ -229,7 +228,6 @@ class _AdminUsuariosViewState extends ConsumerState<AdminUsuariosView> {
                         ref
                             .read(adminControllerProvider.notifier)
                             .setFilter(opt);
-                        setState(() => _currentPage = 0);
                         Navigator.pop(ctx);
                       },
                     );
@@ -248,7 +246,7 @@ class _AdminUsuariosViewState extends ConsumerState<AdminUsuariosView> {
     final state = ref.watch(adminControllerProvider);
     final users = state.filteredUsers;
     final pageCount = (users.length / _pageSize).ceil();
-    final page = pageCount == 0 ? 0 : _currentPage.clamp(0, pageCount - 1);
+    final page = pageCount == 0 ? 0 : state.usersPage.clamp(0, pageCount - 1);
     final firstUserIndex = page * _pageSize;
     final pageUsers = users.skip(firstUserIndex).take(_pageSize).toList();
 
@@ -270,13 +268,13 @@ class _AdminUsuariosViewState extends ConsumerState<AdminUsuariosView> {
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: TextField(
                     controller: _searchController,
+                    textInputAction: TextInputAction.search,
                     onChanged: (val) {
                       ref
                           .read(adminControllerProvider.notifier)
                           .setSearchQuery(val);
-                      setState(() => _currentPage = 0);
                     },
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       hintText: 'Buscar por nombre, correo o ID',
                       hintStyle: TextStyle(
                         color: Color(0xFF8C95A6),
@@ -287,6 +285,19 @@ class _AdminUsuariosViewState extends ConsumerState<AdminUsuariosView> {
                         Icons.search_rounded,
                         color: Color(0xFF8C95A6),
                       ),
+                      suffixIcon: _searchController.text.isEmpty
+                          ? null
+                          : IconButton(
+                              tooltip: 'Limpiar búsqueda',
+                              onPressed: () {
+                                _searchController.clear();
+                                ref
+                                    .read(adminControllerProvider.notifier)
+                                    .setSearchQuery('');
+                                setState(() {});
+                              },
+                              icon: const Icon(Icons.close_rounded),
+                            ),
                       border: InputBorder.none,
                       isDense: true,
                     ),
@@ -460,8 +471,9 @@ class _AdminUsuariosViewState extends ConsumerState<AdminUsuariosView> {
                                       IconButton(
                                         tooltip: 'Página anterior',
                                         onPressed: page > 0
-                                            ? () => setState(
-                                                () => _currentPage = page - 1)
+                                            ? () => ref
+                                                .read(adminControllerProvider.notifier)
+                                                .setUsersPage(page - 1)
                                             : null,
                                         icon: const Icon(Icons.chevron_left),
                                       ),
@@ -469,8 +481,9 @@ class _AdminUsuariosViewState extends ConsumerState<AdminUsuariosView> {
                                       IconButton(
                                         tooltip: 'Página siguiente',
                                         onPressed: page + 1 < pageCount
-                                            ? () => setState(
-                                                () => _currentPage = page + 1)
+                                            ? () => ref
+                                                .read(adminControllerProvider.notifier)
+                                                .setUsersPage(page + 1)
                                             : null,
                                         icon: const Icon(Icons.chevron_right),
                                       ),

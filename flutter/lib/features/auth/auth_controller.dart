@@ -8,13 +8,27 @@ class AuthController extends AutoDisposeAsyncNotifier<void> {
   Future<void> build() async {}
 
   Future<bool> login(String id, String password, {required bool rememberMe}) =>
-      _run(() => ref.read(authRepositoryProvider).login(id, password, rememberMe: rememberMe));
+      _run(() => ref
+          .read(authRepositoryProvider)
+          .login(id, password, rememberMe: rememberMe));
 
   Future<bool> register(String id, String password) =>
       _run(() => ref.read(authRepositoryProvider).register(id, password));
 
-  Future<bool> verifyRegistration(String id) =>
-      _run(() => ref.read(authRepositoryProvider).verifyRegistration(id));
+  Future<bool> verifyRegistration(String id, String email) => _run(
+      () => ref.read(authRepositoryProvider).verifyRegistration(id, email));
+
+  Future<bool> verifyRegistrationCode(String id, String code) => _run(
+      () => ref.read(authRepositoryProvider).verifyRegistrationCode(id, code));
+
+  Future<bool> requestPasswordReset(String id, String email) => _run(
+      () => ref.read(authRepositoryProvider).requestPasswordReset(id, email));
+
+  Future<bool> verifyPasswordResetCode(String id, String code) => _run(
+      () => ref.read(authRepositoryProvider).verifyPasswordResetCode(id, code));
+
+  Future<bool> resetPassword(String id, String password) =>
+      _run(() => ref.read(authRepositoryProvider).resetPassword(id, password));
 
   /// Borra el error/cargando al entrar o salir de una pantalla.
   void reset() => state = const AsyncData(null);

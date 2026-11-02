@@ -33,6 +33,7 @@ public class AuthServiceImpl implements AuthService {
 	private final PasswordEncoder passwordEncoder;
 	private final JwtService jwtService;
 	private final AuthAttemptLimiter attemptLimiter;
+	private final RegistrationEmailVerificationService emailVerificationService;
 
 	public AuthServiceImpl(
 			UserRepository userRepository,
@@ -45,7 +46,6 @@ public class AuthServiceImpl implements AuthService {
 		this(userRepository, repositorioLiderPrograma, coordinatorRepository, null, mongoTemplate, passwordEncoder, jwtService, attemptLimiter);
 	}
 
-	@Autowired
 	public AuthServiceImpl(
 			UserRepository userRepository,
 			RepositorioLiderPrograma repositorioLiderPrograma,
@@ -55,6 +55,21 @@ public class AuthServiceImpl implements AuthService {
 			PasswordEncoder passwordEncoder,
 			JwtService jwtService,
 			AuthAttemptLimiter attemptLimiter) {
+		this(userRepository, repositorioLiderPrograma, coordinatorRepository, itAdminRepository, mongoTemplate,
+				passwordEncoder, jwtService, attemptLimiter, null);
+	}
+
+	@Autowired
+	public AuthServiceImpl(
+			UserRepository userRepository,
+			RepositorioLiderPrograma repositorioLiderPrograma,
+			CoordinatorRepository coordinatorRepository,
+			ItAdminRepository itAdminRepository,
+			MongoTemplate mongoTemplate,
+			PasswordEncoder passwordEncoder,
+			JwtService jwtService,
+			AuthAttemptLimiter attemptLimiter,
+			RegistrationEmailVerificationService emailVerificationService) {
 		this.userRepository = userRepository;
 		this.repositorioLiderPrograma = repositorioLiderPrograma;
 		this.coordinatorRepository = coordinatorRepository;
@@ -63,12 +78,20 @@ public class AuthServiceImpl implements AuthService {
 		this.passwordEncoder = passwordEncoder;
 		this.jwtService = jwtService;
 		this.attemptLimiter = attemptLimiter;
+		this.emailVerificationService = emailVerificationService;
 	}
 
 	@Override
 	public AuthResponse register(String identifier, String password, String clientIp) {
 		attemptLimiter.assertAllowed(identifier, clientIp);
 		validatePasswordLength(password);
+		if (emailVerificationService == null) {
+			throw new IllegalStateException("El servicio de verificación de correo no está configurado.");
+		}
+		boolean institutionalUser = userRepository.existsById(identifier);
+		if (institutionalUser) {
+			emailVerificationService.requireVerified(identifier);
+		}
 
 		ItAdmin itAdmin = itAdminRepository != null
 				? itAdminRepository.findById(identifier).orElse(null)
@@ -120,42 +143,79 @@ public class AuthServiceImpl implements AuthService {
 		}
 
 		attemptLimiter.recordSuccess(identifier);
+		if (institutionalUser) {
+			emailVerificationService.consume(identifier);
+		}
 		return issueToken(identifier, roleFor(itAdmin, liderPrograma, legacyCoordinator));
 	}
 
 	@Override
-	public void verifyRegistration(String identifier, String clientIp) {
+	public void verifyRegistration(String identifier, String email, String clientIp) {
 		attemptLimiter.assertAllowed(identifier, clientIp);
+		if (emailVerificationService == null) {
+			throw new IllegalStateException("El servicio de verificación de correo no está configurado.");
+		}
+		emailVerificationService.sendCode(identifier, email);
+	}
 
-		ItAdmin itAdmin = itAdminRepository != null
-				? itAdminRepository.findById(identifier).orElse(null)
-				: null;
-		LiderPrograma liderPrograma = itAdmin == null
-				? repositorioLiderPrograma.findById(identifier).orElse(null)
-				: null;
-		Coordinator legacyCoordinator = itAdmin == null && liderPrograma == null
-				? coordinatorRepository.findById(identifier).orElse(null)
-				: null;
-		User user = itAdmin == null && liderPrograma == null && legacyCoordinator == null
-				? userRepository.findById(identifier).orElse(null)
-				: null;
-
-		if (itAdmin == null && liderPrograma == null && legacyCoordinator == null && user == null) {
+	@Override
+	public void verifyRegistrationCode(String identifier, String code, String clientIp) {
+		attemptLimiter.assertAllowed(identifier, clientIp);
+		if (emailVerificationService == null) {
+			throw new IllegalStateException("El servicio de verificación de correo no está configurado.");
+		}
+		try {
+			emailVerificationService.verifyCode(identifier, code);
+			attemptLimiter.recordSuccess(identifier);
+		} catch (AuthException exception) {
 			attemptLimiter.recordFailure(identifier, clientIp);
-			throw new AuthException(HttpStatus.NOT_FOUND,
-					"No encontramos una cuenta autorizada con ese documento. Verificalo e intentalo de nuevo.", true);
+			throw exception;
 		}
 
-		String passwordHash = itAdmin != null ? itAdmin.getPasswordHash()
-				: liderPrograma != null ? liderPrograma.getPasswordHash()
-						: legacyCoordinator != null ? legacyCoordinator.getPasswordHash()
-								: user.getPasswordHash();
-		if (passwordHash != null && !passwordHash.isBlank()) {
+	}
+
+	@Override
+	public void requestPasswordReset(String identifier, String email, String clientIp) {
+		attemptLimiter.assertAllowed(identifier, clientIp);
+		if (emailVerificationService == null) {
+			throw new IllegalStateException("El servicio de verificación de correo no está configurado.");
+		}
+		emailVerificationService.sendPasswordResetCode(identifier, email);
+	}
+
+	@Override
+	public void verifyPasswordResetCode(String identifier, String code, String clientIp) {
+		attemptLimiter.assertAllowed(identifier, clientIp);
+		if (emailVerificationService == null) {
+			throw new IllegalStateException("El servicio de verificación de correo no está configurado.");
+		}
+		try {
+			emailVerificationService.verifyPasswordResetCode(identifier, code);
+			attemptLimiter.recordSuccess(identifier);
+		} catch (AuthException exception) {
 			attemptLimiter.recordFailure(identifier, clientIp);
+			throw exception;
+		}
+	}
+
+	@Override
+	public void resetPassword(String identifier, String password, String clientIp) {
+		attemptLimiter.assertAllowed(identifier, clientIp);
+		validatePasswordLength(password);
+		if (emailVerificationService == null) {
+			throw new IllegalStateException("El servicio de verificación de correo no está configurado.");
+		}
+		emailVerificationService.requirePasswordResetVerified(identifier);
+		long modified = mongoTemplate.updateFirst(
+				Query.query(Criteria.where("_id").is(identifier)
+						.and("passwordHash").exists(true).ne(null).ne("")),
+				Update.update("passwordHash", passwordEncoder.encode(password)), User.class)
+				.getModifiedCount();
+		if (modified != 1) {
 			throw new AuthException(HttpStatus.CONFLICT,
-					"Esta cuenta ya tiene una contrasena. Inicia sesion para continuar.", false);
+					"No se pudo restablecer la contraseña de esta cuenta. Solicita un nuevo código.", true);
 		}
-
+		emailVerificationService.consumePasswordReset(identifier);
 		attemptLimiter.recordSuccess(identifier);
 	}
 

@@ -156,8 +156,8 @@ class _EmptyCard extends StatelessWidget {
             const SizedBox(height: 10),
             Text(title,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                    color: _navy, fontWeight: FontWeight.w700)),
+                style:
+                    const TextStyle(color: _navy, fontWeight: FontWeight.w700)),
             const SizedBox(height: 5),
             Text(message,
                 textAlign: TextAlign.center,
@@ -179,8 +179,8 @@ class _TutorSummaryCard extends StatelessWidget {
             child: Icon(Icons.person_outline, color: _blue),
           ),
           title: Text(tutor.name,
-              style: const TextStyle(
-                  color: _navy, fontWeight: FontWeight.w700)),
+              style:
+                  const TextStyle(color: _navy, fontWeight: FontWeight.w700)),
           subtitle: Text(
               '${tutor.career} · ${tutor.day} ${tutor.startTime}–${tutor.endTime}'),
           trailing: const Icon(Icons.arrow_forward_ios, size: 14),
@@ -200,8 +200,8 @@ class _TutoringSummaryCard extends StatelessWidget {
             child: Icon(Icons.menu_book_outlined, color: Color(0xFF2B8A65)),
           ),
           title: Text(tutoring.subject,
-              style: const TextStyle(
-                  color: _navy, fontWeight: FontWeight.w700)),
+              style:
+                  const TextStyle(color: _navy, fontWeight: FontWeight.w700)),
           subtitle: Text(_statusLabel(tutoring.status)),
           trailing: Text(
             tutoring.start == null
@@ -214,7 +214,7 @@ class _TutoringSummaryCard extends StatelessWidget {
 }
 
 class _ProfileRow extends StatelessWidget {
-  const _ProfileRow({required this.label, required this.value, this.onEdit});
+  const _ProfileRow({required this.label, required this.value}) : onEdit = null;
   final String label;
   final String value;
   final VoidCallback? onEdit;
@@ -229,8 +229,8 @@ class _ProfileRow extends StatelessWidget {
           ),
           Expanded(
             child: Text(value.isEmpty ? 'No registrado' : value,
-                style: const TextStyle(
-                    color: _navy, fontWeight: FontWeight.w600)),
+                style:
+                    const TextStyle(color: _navy, fontWeight: FontWeight.w600)),
           ),
           if (onEdit != null)
             IconButton(
@@ -242,8 +242,20 @@ class _ProfileRow extends StatelessWidget {
       );
 }
 
-String _shortDate(DateTime date) =>
-    '${date.day} ${const ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'][date.month - 1]}';
+String _shortDate(DateTime date) => '${date.day} ${const [
+      'ene',
+      'feb',
+      'mar',
+      'abr',
+      'may',
+      'jun',
+      'jul',
+      'ago',
+      'sep',
+      'oct',
+      'nov',
+      'dic'
+    ][date.month - 1]}';
 
 String _roleLabel(String role) {
   final normalized = role.toLowerCase();

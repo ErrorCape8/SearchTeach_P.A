@@ -98,17 +98,19 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               contentPadding: EdgeInsets.zero,
               controlAffinity: ListTileControlAffinity.leading,
               value: _rememberMe,
-              onChanged: state.isLoading ? null : (value) => setState(() => _rememberMe = value ?? false),
+              onChanged: state.isLoading
+                  ? null
+                  : (value) => setState(() => _rememberMe = value ?? false),
               title: const Text('Mantener sesión iniciada'),
             ),
             DarkButton('Iniciar sesión',
                 loading: state.isLoading, onPressed: _submit),
             const SizedBox(height: 20),
             TextButton(
-              onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content: Text(
-                          'Para recuperar tu contraseña contacta a administración.'))),
+              onPressed: () {
+                ref.read(authControllerProvider.notifier).reset();
+                context.go('/forgot-password');
+              },
               child: const Text('¿Olvidaste la contraseña?'),
             ),
             Row(mainAxisAlignment: MainAxisAlignment.center, children: [

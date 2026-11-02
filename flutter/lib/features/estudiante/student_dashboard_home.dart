@@ -233,29 +233,13 @@ class StudentProfileView extends ConsumerWidget {
                   _ProfileRow(
                     label: 'Correo',
                     value: profile.email,
-                    onEdit: () => showProfileChangeDialog(context, ref,
-                        field: ProfileChangeField.email,
-                        onUpdated: () => ref.invalidate(studentDashboardProvider)),
                   ),
                   _ProfileRow(
                     label: 'Teléfono',
                     value: profile.phone,
-                    onEdit: () => showProfileChangeDialog(context, ref,
-                        field: ProfileChangeField.phone,
-                        onUpdated: () => ref.invalidate(studentDashboardProvider)),
                   ),
                   _ProfileRow(label: 'Rol académico', value: _roleLabel(profile.role)),
                   const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () => showProfileChangeDialog(context, ref,
-                          field: ProfileChangeField.password,
-                          onUpdated: () => ref.invalidate(studentDashboardProvider)),
-                      icon: const Icon(Icons.lock_outline_rounded),
-                      label: const Text('Cambiar contraseña'),
-                    ),
-                  ),
                   if (onTeacherMode != null) ...[
                     const SizedBox(height: 8),
                     SizedBox(

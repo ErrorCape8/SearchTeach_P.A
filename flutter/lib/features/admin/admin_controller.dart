@@ -86,6 +86,7 @@ class AdminState {
     this.users = const [],
     this.selectedUser,
     this.activeTab = 0,
+    this.usersPage = 0,
     this.searchQuery = '',
     this.filter = 'Todos',
     this.stats,
@@ -103,6 +104,7 @@ class AdminState {
   final List<AdminUser> users;
   final AdminUser? selectedUser;
   final int activeTab;
+  final int usersPage;
   final String searchQuery;
   final String filter;
   final AdminStats? stats;
@@ -130,9 +132,10 @@ class AdminState {
       if (filter == 'Todos') return true;
       if (filter == 'Activo') return user.isActivo;
       if (filter == 'Revocado') return user.isRevocado;
-      if (filter == 'Estudiante') return user.rol.contains('Estudiante');
-      if (filter == 'Docente') return user.rol.contains('Docente');
-      if (filter == 'Coordinador') return user.rol.contains('Coordinador');
+      final role = user.rol.toLowerCase();
+      if (filter == 'Estudiante') return role.contains('estudiante');
+      if (filter == 'Docente') return role.contains('docente');
+      if (filter == 'Coordinador') return role.contains('coordinador');
       return true;
     }).toList();
   }
@@ -141,6 +144,7 @@ class AdminState {
     List<AdminUser>? users,
     AdminUser? Function()? selectedUser,
     int? activeTab,
+    int? usersPage,
     String? searchQuery,
     String? filter,
     AdminStats? Function()? stats,
@@ -158,6 +162,7 @@ class AdminState {
       users: users ?? this.users,
       selectedUser: selectedUser != null ? selectedUser() : this.selectedUser,
       activeTab: activeTab ?? this.activeTab,
+      usersPage: usersPage ?? this.usersPage,
       searchQuery: searchQuery ?? this.searchQuery,
       filter: filter ?? this.filter,
       stats: stats != null ? stats() : this.stats,
@@ -268,8 +273,6 @@ class AdminController extends StateNotifier<AdminState> {
     }
   }
 
-  // Compatibilidad con el diálogo antiguo; la pantalla actual usa el flujo
-  // verificado por correo de showProfileChangeDialog.
   Future<bool> updateAdminPhone(String phone) async {
     try {
       await _ref.read(dioProvider).put<void>(
@@ -305,7 +308,14 @@ class AdminController extends StateNotifier<AdminState> {
   }
 
   void setSearchQuery(String query) {
-    state = state.copyWith(searchQuery: query);
+    state = state.copyWith(
+      searchQuery: query,
+      usersPage: query.trim().isEmpty ? state.usersPage : 0,
+    );
+  }
+
+  void setUsersPage(int page) {
+    state = state.copyWith(usersPage: page);
   }
 
   void setFilter(String filter) {

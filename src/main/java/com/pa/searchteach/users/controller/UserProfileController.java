@@ -5,17 +5,12 @@ import com.pa.searchteach.coordinators.model.Coordinator;
 import com.pa.searchteach.coordinators.repository.CoordinatorRepository;
 import com.pa.searchteach.users.dto.PerfilUsuarioResponse;
 import com.pa.searchteach.users.dto.ActualizarSemestreSolicitud;
-import com.pa.searchteach.users.dto.AplicarCambioPerfilSolicitud;
-import com.pa.searchteach.users.dto.SolicitudCambioPerfil;
-import com.pa.searchteach.users.dto.VerificarCambioPerfilSolicitud;
 import com.pa.searchteach.users.model.User;
 import com.pa.searchteach.users.repository.UserRepository;
-import com.pa.searchteach.users.service.VerificacionCambioPerfilService;
 import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
@@ -25,15 +20,12 @@ public class UserProfileController {
 
 	private final UserRepository userRepository;
 	private final CoordinatorRepository coordinatorRepository;
-	private final VerificacionCambioPerfilService verificacionCambioPerfil;
 
 	public UserProfileController(
 			UserRepository userRepository,
-			CoordinatorRepository coordinatorRepository,
-			VerificacionCambioPerfilService verificacionCambioPerfil) {
+			CoordinatorRepository coordinatorRepository) {
 		this.userRepository = userRepository;
 		this.coordinatorRepository = coordinatorRepository;
-		this.verificacionCambioPerfil = verificacionCambioPerfil;
 	}
 
 	@GetMapping("/api/usuarios/perfil")
@@ -63,30 +55,6 @@ public class UserProfileController {
 		}
 		user.setSemestre(solicitud.semestre());
 		userRepository.save(user);
-	}
-
-	@PostMapping("/api/usuarios/perfil/cambios/solicitar")
-	@ResponseStatus(org.springframework.http.HttpStatus.ACCEPTED)
-	public void solicitarCambioPerfil(
-			@AuthenticationPrincipal String usuarioId,
-			@RequestBody SolicitudCambioPerfil solicitud) {
-		verificacionCambioPerfil.solicitar(usuarioId, solicitud);
-	}
-
-	@PostMapping("/api/usuarios/perfil/cambios/verificar")
-	@ResponseStatus(org.springframework.http.HttpStatus.NO_CONTENT)
-	public void verificarCambioPerfil(
-			@AuthenticationPrincipal String usuarioId,
-			@Valid @RequestBody VerificarCambioPerfilSolicitud solicitud) {
-		verificacionCambioPerfil.verificar(usuarioId, solicitud.codigo());
-	}
-
-	@PostMapping("/api/usuarios/perfil/cambios/aplicar")
-	@ResponseStatus(org.springframework.http.HttpStatus.NO_CONTENT)
-	public void aplicarCambioPerfil(
-			@AuthenticationPrincipal String usuarioId,
-			@Valid @RequestBody AplicarCambioPerfilSolicitud solicitud) {
-		verificacionCambioPerfil.aplicar(usuarioId, solicitud.nuevoValor());
 	}
 
 	private PerfilUsuarioResponse respuesta(User user) {

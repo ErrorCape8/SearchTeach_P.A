@@ -33,6 +33,8 @@ public class GlobalExceptionHandler {
 		String message = switch (field) {
 			case "identifier" -> "La identificación debe tener entre 6 y 10 dígitos numéricos.";
 			case "password" -> "La contraseña debe tener entre 8 y 72 caracteres.";
+			case "email" -> "Escribe un correo electrónico válido.";
+			case "code" -> "El código debe tener seis dígitos.";
 			case "studentId" -> "El identificador del estudiante es obligatorio.";
 			case "teacherId" -> "El identificador del docente es obligatorio.";
 			case "startDate" -> "La fecha de inicio es obligatoria.";

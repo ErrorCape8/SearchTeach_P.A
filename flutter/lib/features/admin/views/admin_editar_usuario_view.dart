@@ -460,7 +460,20 @@ class _AdminEditarUsuarioViewState
             (role == 'Docente' || role == 'Estudiante'));
 
     return GestureDetector(
-      onTap: () => setState(() => _selectedRol = role),
+      onTap: () => setState(() {
+        final isTeacher = _selectedRol.toLowerCase().contains('docente');
+        final isStudent = _selectedRol.toLowerCase().contains('estudiante');
+        final isCoordinator = _selectedRol.toLowerCase().contains('coordinador');
+        final wasSelected = role == 'Docente' ? isTeacher : isStudent;
+        final nextTeacher = role == 'Docente' ? !wasSelected : isTeacher;
+        final nextStudent = role == 'Estudiante' ? !wasSelected : isStudent;
+        _selectedRol = [
+          if (nextTeacher) 'Docente',
+          if (nextStudent) 'Estudiante',
+          if (isCoordinator) 'Coordinador',
+        ].join(' / ');
+        if (_selectedRol.isEmpty) _selectedRol = role;
+      }),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 8),

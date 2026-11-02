@@ -9,6 +9,7 @@ import 'features/admin/admin_main_page.dart';
 import 'features/auth/login_page.dart';
 import 'features/auth/session_restore_page.dart';
 import 'features/auth/register_page.dart';
+import 'features/auth/forgot_password_page.dart';
 import 'features/dashboard/dashboard_page.dart';
 import 'features/tutorias/coordinacion_tutorias_page.dart';
 import 'features/tutorias/coordinacion_programar_tutorias_page.dart';
@@ -23,6 +24,9 @@ final _router = GoRouter(
     GoRoute(path: '/session', builder: (_, __) => const SessionRestorePage()),
     GoRoute(path: '/login', builder: (_, __) => const LoginPage()),
     GoRoute(path: '/register', builder: (_, __) => const RegisterPage()),
+    GoRoute(
+        path: '/forgot-password',
+        builder: (_, __) => const ForgotPasswordPage()),
     GoRoute(
         path: '/notificaciones', builder: (_, __) => const NotificationsPage()),
     GoRoute(

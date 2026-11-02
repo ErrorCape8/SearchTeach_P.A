@@ -204,6 +204,17 @@ class _GroupSessionCard extends StatelessWidget {
                   style: const TextStyle(color: _muted)),
               Text('${session.studentCount}/5 estudiantes inscritos',
                   style: const TextStyle(color: _muted)),
+              if (session.start != null && session.end != null) ...[
+                const SizedBox(height: 10),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: OutlinedButton.icon(
+                    onPressed: () => _addToGoogleCalendar(context, session),
+                    icon: const Icon(Icons.calendar_month_outlined),
+                    label: const Text('Agregar a Google Calendar'),
+                  ),
+                ),
+              ],
               if (session.id.isNotEmpty &&
                   session.state != 'FINALIZADA' &&
                   session.end != null &&
@@ -240,6 +251,42 @@ class _GroupSessionCard extends StatelessWidget {
           ),
         ),
       );
+
+  Future<void> _addToGoogleCalendar(
+    BuildContext context,
+    StudentGroupSession session,
+  ) async {
+    final start = session.start!.toUtc();
+    final end = session.end!.toUtc();
+    String calendarDate(DateTime value) =>
+        '${value.year.toString().padLeft(4, '0')}'
+        '${value.month.toString().padLeft(2, '0')}'
+        '${value.day.toString().padLeft(2, '0')}T'
+        '${value.hour.toString().padLeft(2, '0')}'
+        '${value.minute.toString().padLeft(2, '0')}'
+        '${value.second.toString().padLeft(2, '0')}Z';
+
+    final details = [
+      'Tutoría grupal de SearchTeach',
+      'Tecnología: ${session.technology}',
+      'Docente: ${session.teacherId}',
+      if (session.modality.isNotEmpty) 'Modalidad: ${session.modality}',
+    ].join('\n');
+    final uri = Uri.https('calendar.google.com', '/calendar/render', {
+      'action': 'TEMPLATE',
+      'text': 'Tutoría: ${session.subject}',
+      'dates': '${calendarDate(start)}/${calendarDate(end)}',
+      'details': details,
+      if (session.location.isNotEmpty) 'location': session.location,
+    });
+
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo abrir Google Calendar.')),
+      );
+    }
+  }
 }
 
 class _GroupHistoryCard extends StatelessWidget {

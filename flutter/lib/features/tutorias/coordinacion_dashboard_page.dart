@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/api_client.dart';
 import '../auth/auth_repository.dart';
-import '../auth/profile_change_dialog.dart';
 import '../notifications/notifications_page.dart';
 import 'coordinacion_horarios_page.dart';
 import 'coordinacion_solicitudes_page.dart';
@@ -440,13 +439,11 @@ class _ProfileView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    Widget row(IconData icon, String title, String value,
-            {bool editable = false}) =>
+    Widget row(IconData icon, String title, String value) =>
         _RecordRow(
             icon: icon,
             title: title,
-            subtitle: value,
-            badge: editable ? 'Editar' : null);
+            subtitle: value);
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
       children: [
@@ -458,9 +455,6 @@ class _ProfileView extends ConsumerWidget {
             icon: Icons.phone_outlined,
             title: 'Teléfono',
             subtitle: _text(profile['telefono'], 'No registrado'),
-            badge: 'Editar',
-            onTap: () => showProfileChangeDialog(context, ref,
-                field: ProfileChangeField.phone, onUpdated: onRefresh),
           ),
         ]),
         const SizedBox(height: 20),
@@ -470,10 +464,8 @@ class _ProfileView extends ConsumerWidget {
         _CardList(children: [
           _RecordRow(
             icon: Icons.lock_outline_rounded,
-            title: 'Cambiar contraseña',
-            subtitle: 'Mínimo 8 caracteres.',
-            onTap: () => showProfileChangeDialog(context, ref,
-                field: ProfileChangeField.password, onUpdated: onRefresh),
+            title: 'Contraseña',
+            subtitle: 'Solicita el restablecimiento al administrador.',
           ),
         ]),
         const SizedBox(height: 20),
@@ -483,11 +475,8 @@ class _ProfileView extends ConsumerWidget {
         _CardList(children: [
           _RecordRow(
             icon: Icons.email_outlined,
-            title: 'Correo para códigos de seguridad',
+            title: 'Correo',
             subtitle: _text(profile['correo'], 'No registrado'),
-            badge: 'Cambiar',
-            onTap: () => showProfileChangeDialog(context, ref,
-                field: ProfileChangeField.email, onUpdated: onRefresh),
           ),
           row(Icons.lock_outline, 'Documento',
               _text(profile['id'], 'No registrado')),

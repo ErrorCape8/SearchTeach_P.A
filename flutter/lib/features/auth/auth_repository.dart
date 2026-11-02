@@ -21,17 +21,20 @@ class AuthRepository {
   final Dio _dio;
   final Ref _ref;
 
-  Future<void> login(String identifier, String password, {required bool rememberMe}) =>
-      _authenticate('/api/auth/login', identifier, password, rememberMe: rememberMe);
+  Future<void> login(String identifier, String password,
+          {required bool rememberMe}) =>
+      _authenticate('/api/auth/login', identifier, password,
+          rememberMe: rememberMe);
 
   Future<void> register(String identifier, String password) =>
-      _authenticate('/api/auth/register', identifier, password, rememberMe: true);
+      _authenticate('/api/auth/register', identifier, password,
+          rememberMe: true);
 
-  Future<void> verifyRegistration(String identifier) async {
+  Future<void> verifyRegistration(String identifier, String email) async {
     try {
       await _dio.post<void>(
         '/api/auth/register/verify',
-        data: {'identifier': identifier},
+        data: {'identifier': identifier, 'email': email},
       );
     } on DioException catch (error) {
       final data = error.response?.data;
@@ -47,7 +50,63 @@ class AuthRepository {
     }
   }
 
-  Future<void> _authenticate(String path, String id, String pass, {required bool rememberMe}) async {
+  Future<void> verifyRegistrationCode(String identifier, String code) async {
+    try {
+      await _dio.post<void>(
+        '/api/auth/register/verify-code',
+        data: {'identifier': identifier, 'code': code},
+      );
+    } on DioException catch (error) {
+      final data = error.response?.data;
+      if (data is Map && data['message'] is String) {
+        throw AuthFailure(
+          data['message'] as String,
+          retryAfterSeconds: (data['retryAfterSeconds'] ?? 0) as int,
+        );
+      }
+      throw AuthFailure(
+        'No se pudo conectar con el servidor (${error.requestOptions.uri.host}:${error.requestOptions.uri.port}).',
+      );
+    }
+  }
+
+  Future<void> requestPasswordReset(String identifier, String email) =>
+      _postAuthAction('/api/auth/password/forgot', {
+        'identifier': identifier,
+        'email': email,
+      });
+
+  Future<void> verifyPasswordResetCode(String identifier, String code) =>
+      _postAuthAction('/api/auth/password/forgot/verify', {
+        'identifier': identifier,
+        'code': code,
+      });
+
+  Future<void> resetPassword(String identifier, String password) =>
+      _postAuthAction('/api/auth/password/reset', {
+        'identifier': identifier,
+        'password': password,
+      });
+
+  Future<void> _postAuthAction(String path, Map<String, dynamic> data) async {
+    try {
+      await _dio.post<void>(path, data: data);
+    } on DioException catch (error) {
+      final response = error.response?.data;
+      if (response is Map && response['message'] is String) {
+        throw AuthFailure(
+          response['message'] as String,
+          retryAfterSeconds: (response['retryAfterSeconds'] ?? 0) as int,
+        );
+      }
+      throw AuthFailure(
+        'No se pudo conectar con el servidor (${error.requestOptions.uri.host}:${error.requestOptions.uri.port}).',
+      );
+    }
+  }
+
+  Future<void> _authenticate(String path, String id, String pass,
+      {required bool rememberMe}) async {
     try {
       final res = await _dio.post(path, data: {
         'identifier': id,
@@ -92,13 +151,15 @@ class AuthRepository {
     if (token == null) return null;
     final parts = token.split('.');
     if (parts.length != 3) {
-      throw const FormatException('El token de sesión no tiene un formato válido.');
+      throw const FormatException(
+          'El token de sesión no tiene un formato válido.');
     }
     final payload = jsonDecode(
       utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
     );
     if (payload is! Map<String, dynamic> || payload['role'] is! String) {
-      throw const FormatException('El token de sesión no contiene un rol válido.');
+      throw const FormatException(
+          'El token de sesión no contiene un rol válido.');
     }
     return payload['role'] as String;
   }

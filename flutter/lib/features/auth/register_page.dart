@@ -6,7 +6,7 @@ import '../../core/widgets/auth_shell.dart';
 import 'auth_repository.dart';
 import 'auth_controller.dart';
 
-/// Paso 1: documento  ->  Paso 2: crear contraseña (aquí se llama a /api/auth/register).
+/// Registro con verificación previa del correo institucional.
 class RegisterPage extends ConsumerStatefulWidget {
   const RegisterPage({super.key});
   @override
@@ -15,14 +15,28 @@ class RegisterPage extends ConsumerStatefulWidget {
 
 class _RegisterPageState extends ConsumerState<RegisterPage> {
   final _idKey = GlobalKey<FormState>();
+  final _codeKey = GlobalKey<FormState>();
   final _passKey = GlobalKey<FormState>();
   final _id = TextEditingController();
+  final _email = TextEditingController();
+  final _code = TextEditingController();
   final _pass = TextEditingController();
   final _pass2 = TextEditingController();
   int _step = 0;
   bool _showPassword = false;
   bool _showConfirmation = false;
   bool _checkingId = false;
+  bool _codeVerified = false;
+
+  @override
+  void dispose() {
+    _id.dispose();
+    _email.dispose();
+    _code.dispose();
+    _pass.dispose();
+    _pass2.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -30,16 +44,39 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     Future.microtask(() => ref.read(authControllerProvider.notifier).reset());
   }
 
-  Future<void> _next(bool loading) async {
-    if (loading || _checkingId || !_idKey.currentState!.validate()) return;
+  Future<void> _sendCode(bool loading) async {
+    if (loading || _checkingId) return;
+    if (_step == 0 && !_idKey.currentState!.validate()) return;
     setState(() => _checkingId = true);
     try {
       final valid = await ref
           .read(authControllerProvider.notifier)
-          .verifyRegistration(_id.text.trim());
-      if (valid && mounted) setState(() => _step = 1);
+          .verifyRegistration(_id.text.trim(), _email.text.trim());
+      if (valid && mounted) {
+        setState(() {
+          _step = 1;
+          _codeVerified = false;
+        });
+      }
     } finally {
       if (mounted) setState(() => _checkingId = false);
+    }
+  }
+
+  Future<void> _verifyCode(bool loading) async {
+    if (_codeVerified) {
+      if (mounted) setState(() => _step = 2);
+      return;
+    }
+    if (loading || !_codeKey.currentState!.validate()) return;
+    final valid = await ref
+        .read(authControllerProvider.notifier)
+        .verifyRegistrationCode(_id.text.trim(), _code.text.trim());
+    if (valid && mounted) {
+      setState(() {
+        _step = 2;
+        _codeVerified = true;
+      });
     }
   }
 
@@ -60,8 +97,15 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
         }
       }
     } else if (mounted) {
-      // Conserva el paso para corregir o reintentar la creación de contraseña.
-      setState(() => _step = 1);
+      final error =
+          ref.read(authControllerProvider.notifier).errorMessage ?? '';
+      if (error.contains('Verifica primero') ||
+          error.contains('correo institucional cambió')) {
+        setState(() {
+          _step = 1;
+          _codeVerified = false;
+        });
+      }
     }
   }
 
@@ -73,8 +117,8 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     return AuthShell(
       onBack: () {
         ref.read(authControllerProvider.notifier).reset();
-        if (_step == 1) {
-          setState(() => _step = 0);
+        if (_step > 0) {
+          setState(() => _step--);
         } else {
           context.go('/login');
         }
@@ -89,8 +133,10 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
           const SizedBox(height: 8),
           Text(
             _step == 0
-                ? 'Escribe tu documento para confirmar que tienes una cuenta autorizada.'
-                : 'Crea una contraseña para tu cuenta.',
+                ? 'Ingresa tu identificación y correo electrónico institucional.'
+                : _step == 1
+                    ? 'Escribe el código de seis dígitos enviado a tu correo.'
+                    : 'Crea una contraseña para tu cuenta.',
             textAlign: TextAlign.center,
             style: const TextStyle(color: Color(0xFF5B6270)),
           ),
@@ -98,6 +144,8 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
           if (error != null) ErrorBanner(error),
           if (_step == 0)
             _stepDocument(state.isLoading)
+          else if (_step == 1)
+            _stepCode(state.isLoading)
           else
             _stepPassword(state.isLoading),
         ],
@@ -119,15 +167,60 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                 ? null
                 : 'Debe tener entre 6 y 10 dígitos',
             enabled: !loading && !_checkingId,
-            onFieldSubmitted: (_) => _next(loading),
+            onFieldSubmitted: (_) => _sendCode(loading),
+          ),
+          const SizedBox(height: 18),
+          const FieldLabel('Correo electrónico institucional'),
+          TextFormField(
+            controller: _email,
+            keyboardType: TextInputType.emailAddress,
+            autofillHints: const [AutofillHints.email],
+            decoration: fieldDecoration('nombre@institucion.edu.co'),
+            validator: (value) {
+              final email = (value ?? '').trim();
+              return RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email)
+                  ? null
+                  : 'Escribe un correo electrónico válido';
+            },
+            enabled: !loading && !_checkingId,
+            onFieldSubmitted: (_) => _sendCode(loading),
           ),
           const SizedBox(height: 24),
           DarkButton(
-            'Continuar',
+            'Enviar código',
             loading: loading || _checkingId,
-            loadingLabel: 'Verificando documento...',
-            onPressed: () => _next(loading),
+            loadingLabel: 'Validando y enviando correo...',
+            onPressed: () => _sendCode(loading),
           ),
+        ]),
+      );
+
+  Widget _stepCode(bool loading) => Form(
+        key: _codeKey,
+        child:
+            Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          const FieldLabel('Código de verificación'),
+          TextFormField(
+            controller: _code,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            maxLength: 6,
+            decoration: fieldDecoration('123456'),
+            validator: (value) => RegExp(r'^[0-9]{6}$').hasMatch(value ?? '')
+                ? null
+                : 'Ingresa los seis dígitos del correo',
+            onFieldSubmitted: (_) => _verifyCode(loading),
+          ),
+          const SizedBox(height: 18),
+          DarkButton(_codeVerified ? 'Continuar' : 'Verificar código',
+              loading: loading,
+              loadingLabel: 'Verificando...',
+              onPressed: () => _verifyCode(loading)),
+          if (!_codeVerified)
+            TextButton(
+              onPressed: loading ? null : () => _sendCode(false),
+              child: const Text('Enviar otro código'),
+            ),
         ]),
       );
 
@@ -141,7 +234,8 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
             obscureText: !_showPassword,
             decoration: fieldDecoration('Mínimo 8 caracteres').copyWith(
               suffixIcon: IconButton(
-                tooltip: _showPassword ? 'Ocultar contraseña' : 'Ver contraseña',
+                tooltip:
+                    _showPassword ? 'Ocultar contraseña' : 'Ver contraseña',
                 onPressed: () => setState(() => _showPassword = !_showPassword),
                 icon: Icon(
                     _showPassword ? Icons.visibility_off : Icons.visibility),
@@ -158,11 +252,10 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
             obscureText: !_showConfirmation,
             decoration: fieldDecoration('Repite la contraseña').copyWith(
               suffixIcon: IconButton(
-                tooltip: _showConfirmation
-                    ? 'Ocultar contraseña'
-                    : 'Ver contraseña',
-                onPressed: () => setState(
-                    () => _showConfirmation = !_showConfirmation),
+                tooltip:
+                    _showConfirmation ? 'Ocultar contraseña' : 'Ver contraseña',
+                onPressed: () =>
+                    setState(() => _showConfirmation = !_showConfirmation),
                 icon: Icon(_showConfirmation
                     ? Icons.visibility_off
                     : Icons.visibility),
