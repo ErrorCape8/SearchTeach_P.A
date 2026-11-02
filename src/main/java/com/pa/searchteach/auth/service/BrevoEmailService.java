@@ -6,12 +6,17 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
+import org.springframework.web.client.RestClientException;
 
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 @Service
 public class BrevoEmailService {
+	private static final Logger LOGGER = Logger.getLogger(BrevoEmailService.class.getName());
 	private final String apiKey;
 	private final String senderEmail;
 	private final String senderName;
@@ -54,7 +59,15 @@ public class BrevoEmailService {
 					.contentType(MediaType.APPLICATION_JSON)
 					.body(body)
 					.retrieve().toBodilessEntity();
-		} catch (Exception exception) {
+		} catch (RestClientResponseException exception) {
+			String response = exception.getResponseBodyAsString()
+					.replaceAll("[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}", "[email redacted]");
+			LOGGER.log(Level.WARNING, "Brevo rechazó el envío (HTTP {0}): {1}",
+					new Object[] { exception.getStatusCode().value(), response });
+			throw new AuthException(HttpStatus.BAD_GATEWAY,
+					"No se pudo enviar el correo de verificación. Inténtalo de nuevo.", true);
+		} catch (RestClientException exception) {
+			LOGGER.log(Level.WARNING, "No fue posible conectar con la API de Brevo: {0}", exception.getMessage());
 			throw new AuthException(HttpStatus.BAD_GATEWAY,
 					"No se pudo enviar el correo de verificación. Inténtalo de nuevo.", true);
 		}
