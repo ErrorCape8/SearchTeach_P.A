@@ -7,6 +7,5 @@ import com.pa.searchteach.tutorias.model.ProyectoAula;
 
 public record ProyectoAulaConAvance(
 		ProyectoAula proyecto,
-		List<InformeAvanceProyecto> informes,
-		PronosticoMejoraProyecto pronosticoMejora) {
+		List<InformeAvanceProyecto> informes) {
 }

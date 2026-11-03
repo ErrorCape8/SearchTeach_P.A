@@ -215,29 +215,6 @@ class _GroupSessionCard extends StatelessWidget {
                   ),
                 ),
               ],
-              if (session.id.isNotEmpty &&
-                  session.state != 'FINALIZADA' &&
-                  session.end != null &&
-                  session.end!.isAfter(DateTime.now()) &&
-                  (session.modality.toUpperCase() == 'VIRTUAL' ||
-                      session.modality.toUpperCase() == 'HIBRIDA')) ...[
-                const SizedBox(height: 10),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: FilledButton.icon(
-                    onPressed: () =>
-                        Navigator.of(context).push(MaterialPageRoute(
-                      builder: (_) => LiveKitRoomPage(
-                        sessionId: session.id,
-                        subject: session.subject,
-                        modality: session.modality,
-                      ),
-                    )),
-                    icon: const Icon(Icons.video_call_outlined),
-                    label: const Text('Unirme a videoconferencia'),
-                  ),
-                ),
-              ],
               const SizedBox(height: 10),
               Align(
                 alignment: Alignment.centerRight,
@@ -289,29 +266,184 @@ class _GroupSessionCard extends StatelessWidget {
   }
 }
 
-class _GroupHistoryCard extends StatelessWidget {
-  const _GroupHistoryCard({required this.session});
+class _GroupHistoryCard extends ConsumerStatefulWidget {
+  const _GroupHistoryCard({required this.session, required this.onRated});
   final StudentGroupSession session;
+  final VoidCallback onRated;
+
+  @override
+  ConsumerState<_GroupHistoryCard> createState() => _GroupHistoryCardState();
+}
+
+class _GroupHistoryCardState extends ConsumerState<_GroupHistoryCard> {
+  bool _sending = false;
+  bool _rated = false;
+
+  Future<void> _rate() async {
+    var stars = 0;
+    final selectedComments = <String>{};
+    final result = await showDialog<(int, String)>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, refresh) {
+          final options = _ratingComments(stars);
+          return AlertDialog(
+            title: const Text('¿Cómo sentiste la atención del tutor?'),
+            content: SingleChildScrollView(
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    for (var index = 1; index <= 5; index++)
+                      IconButton(
+                        tooltip: '$index estrellas',
+                        onPressed: () => refresh(() {
+                          stars = index;
+                          selectedComments.clear();
+                        }),
+                        icon: Icon(
+                          index <= stars ? Icons.star : Icons.star_border,
+                          color: Colors.amber,
+                          size: 32,
+                        ),
+                      ),
+                  ],
+                ),
+                if (stars > 0) ...[
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Selecciona uno o varios comentarios sobre el tutor:',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final option in options)
+                        FilterChip(
+                          label: Text(option),
+                          selected: selectedComments.contains(option),
+                          onSelected: (selected) => refresh(() {
+                            if (selected) {
+                              selectedComments.add(option);
+                            } else {
+                              selectedComments.remove(option);
+                            }
+                          }),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '${'${selectedComments.join('. ')}'
+                        '${selectedComments.isEmpty ? '' : '.'}'.length}/300 '
+                    'caracteres',
+                    style: const TextStyle(color: Colors.grey, fontSize: 12),
+                  ),
+                ],
+              ]),
+            ),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text('Cancelar')),
+              FilledButton(
+                onPressed: stars == 0
+                    ? null
+                    : () => Navigator.pop(dialogContext, (
+                          stars,
+                          '${selectedComments.join('. ')}'
+                              '${selectedComments.isEmpty ? '' : '.'}'
+                        )),
+                child: const Text('Enviar valoración'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+    if (result == null || !mounted) return;
+    setState(() => _sending = true);
+    try {
+      await ref.read(dioProvider).post(
+        '/api/tutorias/grupales/${Uri.encodeComponent(widget.session.id)}/valoracion',
+        data: {'estrellas': result.$1, 'comentario': result.$2},
+      );
+      if (!mounted) return;
+      setState(() => _rated = true);
+      widget.onRated();
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Reporte enviado a coordinación.')));
+    } on DioException catch (error) {
+      if (!mounted) return;
+      final message = error.response?.data is Map &&
+              (error.response!.data as Map)['message'] is String
+          ? (error.response!.data as Map)['message'] as String
+          : 'No se pudo enviar el reporte.';
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  List<String> _ratingComments(int stars) => switch (stars) {
+        1 => const [
+            'El tutor no se presentó',
+            'El tutor no ingresó',
+            'El tutor no explicó bien',
+          ],
+        2 => const [
+            'El tutor llegó tarde',
+            'La explicación fue poco clara',
+            'Necesité más apoyo del tutor',
+          ],
+        3 => const [
+            'La clase estuvo bien',
+            'El tutor explicó lo básico',
+            'El tutor podría mejorar',
+          ],
+        4 => const [
+            'El tutor explicó claramente',
+            'Buena atención del tutor',
+            'El tutor resolvió mis dudas',
+          ],
+        5 => const [
+            'Excelente explicación del tutor',
+            'El tutor fue atento y claro',
+            'Recomiendo a este tutor',
+          ],
+        _ => const [],
+      };
 
   @override
   Widget build(BuildContext context) => Card(
         margin: const EdgeInsets.only(bottom: 12),
-        child: ListTile(
-          leading: const CircleAvatar(child: Icon(Icons.history)),
-          title: Text(session.subject,
-              style: const TextStyle(fontWeight: FontWeight.w700)),
-          subtitle: Text(
-              '${session.start == null ? 'Fecha no disponible' : _longDate(session.start!)} · Tutoría grupal finalizada'),
-          trailing: const Icon(Icons.chevron_right),
-          onTap: () => Navigator.of(context).push(MaterialPageRoute(
-            builder: (_) => LiveKitRoomPage(
-              sessionId: session.id,
-              subject: session.subject,
-              modality: session.modality,
-              students: session.studentIds,
-              ended: true,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(children: [
+            const CircleAvatar(child: Icon(Icons.history)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(widget.session.subject,
+                        style: const TextStyle(fontWeight: FontWeight.w700)),
+                    Text(
+                        '${widget.session.start == null ? 'Fecha no disponible' : _longDate(widget.session.start!)} · Tutoría grupal finalizada'),
+                  ]),
             ),
-          )),
+            IconButton(
+              tooltip: _rated ? 'Reporte enviado' : 'Calificar clase',
+              onPressed: _sending || _rated ? null : _rate,
+              icon: Icon(_rated ? Icons.check_circle : Icons.star_border,
+                  color: _rated ? Colors.green : Colors.amber),
+            ),
+          ]),
         ),
       );
 }

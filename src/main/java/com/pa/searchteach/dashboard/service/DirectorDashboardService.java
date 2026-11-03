@@ -183,13 +183,14 @@ public class DirectorDashboardService {
 					})
 					.toList();
 			if (history.size() >= 4 && history.size() <= HISTORY_WEEKS) {
-				forecasts.put(subject, pronosticarMateria(subject, history, currentWeek));
+				pronosticarMateria(subject, history, currentWeek)
+						.ifPresent(forecast -> forecasts.put(subject, forecast));
 			}
 		});
 		return forecasts;
 	}
 
-	PronosticoDemanda pronosticarMateria(
+	Optional<PronosticoDemanda> pronosticarMateria(
 			String materia,
 			List<WeeklyTutoringCount> historial,
 			LocalDate primeraSemanaPronosticada) {
@@ -197,18 +198,17 @@ public class DirectorDashboardService {
 			Optional<List<Long>> predicciones = pronosticoReptreeService.pronosticar(
 					materia, historial, primeraSemanaPronosticada);
 			if (predicciones.isPresent()) {
-				return crearPronosticoReptree(historial, predicciones.get());
+				return Optional.of(crearPronosticoReptree(historial, predicciones.get()));
 			}
 		} catch (Exception exception) {
-			LOGGER.warn("Falló REPTree para {}; se usará la regresión lineal.", materia, exception);
+			LOGGER.warn("Falló REPTree para {}; no se mostrará pronóstico.", materia, exception);
 		}
-		return RegresionDemandaSemanal.pronosticar(historial);
+		return Optional.empty();
 	}
 
 	private PronosticoDemanda crearPronosticoReptree(
 			List<WeeklyTutoringCount> historial,
 			List<Long> predicciones) {
-		PronosticoDemanda referencia = RegresionDemandaSemanal.pronosticar(historial);
 		long estimadoProximaSemana = predicciones.getFirst();
 		long estimadoProximasCuatroSemanas = 0;
 		for (Long prediccion : predicciones) {
@@ -217,12 +217,6 @@ public class DirectorDashboardService {
 			}
 			estimadoProximasCuatroSemanas += prediccion.longValue();
 		}
-		long minimoProximaSemana = Math.min(referencia.minimoProximaSemana(), estimadoProximaSemana);
-		long maximoProximaSemana = Math.max(referencia.maximoProximaSemana(), estimadoProximaSemana);
-		long minimoProximasCuatroSemanas = Math.min(
-				referencia.minimoProximasCuatroSemanas(), estimadoProximasCuatroSemanas);
-		long maximoProximasCuatroSemanas = Math.max(
-				referencia.maximoProximasCuatroSemanas(), estimadoProximasCuatroSemanas);
 		long solicitudesRecientes = 0;
 		for (int index = historial.size() - 4; index < historial.size(); index++) {
 			solicitudesRecientes += historial.get(index).total();
@@ -236,11 +230,11 @@ public class DirectorDashboardService {
 		return new PronosticoDemanda(
 				List.copyOf(historial),
 				estimadoProximaSemana,
-				minimoProximaSemana,
-				maximoProximaSemana,
+				estimadoProximaSemana,
+				estimadoProximaSemana,
 				estimadoProximasCuatroSemanas,
-				minimoProximasCuatroSemanas,
-				maximoProximasCuatroSemanas,
+				estimadoProximasCuatroSemanas,
+				estimadoProximasCuatroSemanas,
 				tendencia,
 				"SUBE".equals(tendencia),
 				"REPTREE");

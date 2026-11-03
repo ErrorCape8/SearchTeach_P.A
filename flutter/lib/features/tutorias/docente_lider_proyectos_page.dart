@@ -13,12 +13,13 @@ final _leaderProjectsProvider =
   return (response.data ?? const []).whereType<Map<String, dynamic>>().toList();
 });
 
-final _leaderSessionsProvider = FutureProvider.autoDispose.family<
-    List<Map<String, dynamic>>, (String tutoringId, String projectId)>((ref, key) async {
+final _leaderSessionsProvider = FutureProvider.autoDispose
+    .family<List<Map<String, dynamic>>, (String tutoringId, String projectId)>(
+        (ref, key) async {
   final response = await ref.read(dioProvider).get<List<dynamic>>(
-    '/api/docente/tutorias-colectivas/${Uri.encodeComponent(key.$1)}'
-    '/proyectos/${Uri.encodeComponent(key.$2)}/sesiones',
-  );
+        '/api/docente/tutorias-colectivas/${Uri.encodeComponent(key.$1)}'
+        '/proyectos/${Uri.encodeComponent(key.$2)}/sesiones',
+      );
   return (response.data ?? const []).whereType<Map<String, dynamic>>().toList();
 });
 
@@ -30,18 +31,25 @@ class DocenteLiderProyectosPage extends ConsumerWidget {
       .watch(_leaderProjectsProvider)
       .when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Center(child: Text('No se pudieron cargar los reportes: $error')),
+        error: (error, _) =>
+            Center(child: Text('No se pudieron cargar los reportes: $error')),
         data: (items) {
-          final projects = items.where((row) => row['proyecto'] is Map<String, dynamic>).toList();
+          final projects = items
+              .where((row) => row['proyecto'] is Map<String, dynamic>)
+              .toList();
           if (projects.isEmpty) {
-            return const Center(child: Text('No tienes proyectos de aula para revisar como docente líder.'));
+            return const Center(
+                child: Text(
+                    'No tienes proyectos de aula para revisar como docente líder.'));
           }
           return ListView(
             padding: const EdgeInsets.all(20),
             children: [
-              const Text('Revisión de proyectos de aula', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+              const Text('Revisión de proyectos de aula',
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
               const SizedBox(height: 6),
-              const Text('Revisa los reportes del tutor de apoyo y confirma o devuelve las solicitudes de cierre.'),
+              const Text(
+                  'Revisa los reportes del tutor de apoyo y confirma o devuelve las solicitudes de cierre.'),
               const SizedBox(height: 14),
               for (final row in projects)
                 _LeaderProjectCard(
@@ -72,14 +80,28 @@ class _LeaderProjectCard extends ConsumerWidget {
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(project['nombre']?.toString() ?? 'Proyecto de aula', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
-          Text('Tutor de apoyo: ${project['docenteResponsableId'] ?? 'Sin asignar'} · Estado: ${closed ? 'Finalizado' : pending ? 'Pendiente de confirmación' : 'En curso'}'),
+          Text(project['nombre']?.toString() ?? 'Proyecto de aula',
+              style:
+                  const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+          Text(
+              'Tutor de apoyo: ${project['docenteResponsableId'] ?? 'Sin asignar'} · Estado: ${closed ? 'Finalizado' : pending ? 'Pendiente de confirmación' : 'En curso'}'),
           if (project['motivoCierre'] != null)
             Padding(
               padding: const EdgeInsets.only(top: 6),
               child: Text(project['motivoCierre'] == 'SIN_ATENCION'
                   ? 'Motivo: estudiantes sin atención o respuesta.'
                   : 'Motivo: proyecto listo.'),
+            ),
+          if (project['reporteCierre'] is String &&
+              (project['reporteCierre'] as String).trim().isNotEmpty)
+            Card(
+              color: Colors.blueGrey.shade50,
+              child: Padding(
+                padding: const EdgeInsets.all(10),
+                child: Text(
+                  'Reporte de finalización:\n${project['reporteCierre']}',
+                ),
+              ),
             ),
           if (project['fechaReunion'] != null)
             Padding(
@@ -92,12 +114,14 @@ class _LeaderProjectCard extends ConsumerWidget {
             const SizedBox(height: 8),
             Wrap(spacing: 8, runSpacing: 8, children: [
               FilledButton.icon(
-                onPressed: () => _respond(context, ref, tutoringId, projectId, true),
+                onPressed: () =>
+                    _respond(context, ref, tutoringId, projectId, true),
                 icon: const Icon(Icons.check_circle_outline),
                 label: const Text('Confirmar cierre'),
               ),
               OutlinedButton.icon(
-                onPressed: () => _respond(context, ref, tutoringId, projectId, false),
+                onPressed: () =>
+                    _respond(context, ref, tutoringId, projectId, false),
                 icon: const Icon(Icons.undo_outlined),
                 label: const Text('Devolver al tutor'),
               ),
@@ -119,7 +143,8 @@ class _LeaderProjectCard extends ConsumerWidget {
       onChanged();
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(confirm ? 'Cierre confirmado.' : 'Solicitud devuelta al tutor.'),
+          content: Text(
+              confirm ? 'Cierre confirmado.' : 'Solicitud devuelta al tutor.'),
         ));
       }
     } on DioException catch (error) {
@@ -144,56 +169,79 @@ class _LeaderReportsList extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final projectId = project['proyectoId']?.toString() ?? '';
     return ref.watch(_leaderSessionsProvider((tutoringId, projectId))).when(
-      loading: () => const LinearProgressIndicator(),
-      error: (error, _) => Text('No se pudieron cargar las sesiones reportadas: $error'),
-      data: (sessions) => sessions.isEmpty
-          ? const Text('El tutor todavía no ha guardado reportes de sesión.')
-          : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Text('Reportes del tutor', style: TextStyle(fontWeight: FontWeight.w700)),
-              for (final session in sessions)
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.description_outlined),
-                  title: Text(_dateTime(session['fechaInicio'])),
-                  subtitle: Text('${session['contenido']?.toString() ?? ''}\n${session['confirmadoPorLiderId'] == null ? 'Pendiente de confirmación' : 'Trabajo confirmado'}', maxLines: 4, overflow: TextOverflow.ellipsis),
-                  trailing: session['confirmadoPorLiderId'] == null
-                      ? IconButton(
-                          tooltip: 'Confirmar trabajo realizado',
-                          icon: const Icon(Icons.check_circle_outline),
-                          onPressed: () async {
-                            try {
-                              await ref.read(dioProvider).post(
-                                '/api/docente/lider/tutorias-colectivas/${Uri.encodeComponent(tutoringId)}'
-                                '/proyectos/${Uri.encodeComponent(projectId)}'
-                                '/sesiones/${Uri.encodeComponent(session['id']?.toString() ?? '')}/confirmacion',
-                              );
-                              ref.invalidate(_leaderSessionsProvider((tutoringId, projectId)));
-                            } on DioException catch (error) {
-                              final data = error.response?.data;
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                  content: Text(data is Map && data['message'] is String
-                                      ? data['message'] as String
-                                      : 'No se pudo confirmar el reporte.'),
-                                ));
-                              }
-                            }
-                          },
-                        )
-                      : const Icon(Icons.verified_outlined, color: Colors.green),
-                  onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                    builder: (_) => ProyectoAulaChatPage(
-                      tutoringId: tutoringId,
-                      projectId: projectId,
-                      sessionId: session['id']?.toString() ?? '',
-                      title: project['nombre']?.toString() ?? 'Proyecto de aula',
-                      teacherMode: true,
-                      supportMode: false,
+          loading: () => const LinearProgressIndicator(),
+          error: (error, _) =>
+              Text('No se pudieron cargar las sesiones reportadas: $error'),
+          data: (sessions) => sessions.isEmpty
+              ? const Text(
+                  'El tutor todavía no ha guardado reportes de sesión.')
+              : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Text('Reportes del tutor',
+                      style: TextStyle(fontWeight: FontWeight.w700)),
+                  for (final session in sessions)
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.description_outlined),
+                      title: Text(_dateTime(session['fechaInicio'])),
+                      subtitle: Text(
+                          '${session['contenido']?.toString() ?? ''}\n${session['confirmadoPorLiderId'] == null ? 'Pendiente de confirmación' : 'Trabajo confirmado'}',
+                          maxLines: 4,
+                          overflow: TextOverflow.ellipsis),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            tooltip: 'Ver historial del chat',
+                            icon: const Icon(Icons.forum_outlined),
+                            onPressed: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => ProyectoAulaChatPage(
+                                  tutoringId: tutoringId,
+                                  projectId: projectId,
+                                  sessionId: session['id']?.toString() ?? '',
+                                  title: project['nombre']?.toString() ??
+                                      'Historial del chat',
+                                  teacherMode: false,
+                                  supportMode: false,
+                                  readOnly: true,
+                                ),
+                              ),
+                            ),
+                          ),
+                          session['confirmadoPorLiderId'] == null
+                              ? IconButton(
+                                  tooltip: 'Confirmar trabajo realizado',
+                                  icon: const Icon(Icons.check_circle_outline),
+                                  onPressed: () async {
+                                    try {
+                                      await ref.read(dioProvider).post(
+                                            '/api/docente/lider/tutorias-colectivas/${Uri.encodeComponent(tutoringId)}'
+                                            '/proyectos/${Uri.encodeComponent(projectId)}'
+                                            '/sesiones/${Uri.encodeComponent(session['id']?.toString() ?? '')}/confirmacion',
+                                          );
+                                      ref.invalidate(_leaderSessionsProvider(
+                                          (tutoringId, projectId)));
+                                    } on DioException catch (error) {
+                                      final data = error.response?.data;
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(SnackBar(
+                                          content: Text(data is Map &&
+                                                  data['message'] is String
+                                              ? data['message'] as String
+                                              : 'No se pudo confirmar el reporte.'),
+                                        ));
+                                      }
+                                    }
+                                  },
+                                )
+                              : const Icon(Icons.verified_outlined,
+                                  color: Colors.green),
+                        ],
+                      ),
                     ),
-                  )),
-                ),
-            ]),
-    );
+                ]),
+        );
   }
 }
 

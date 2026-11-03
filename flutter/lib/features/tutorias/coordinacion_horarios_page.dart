@@ -7,6 +7,7 @@ import '../../core/api_client.dart';
 import 'coordinacion_horarios_models.dart';
 import 'coordinacion_horarios_form.dart';
 import 'coordinacion_horarios_widgets.dart';
+import '../../core/tutoring_updates.dart';
 
 class CoordinacionHorariosPage extends ConsumerStatefulWidget {
   const CoordinacionHorariosPage({super.key});
@@ -17,7 +18,8 @@ class CoordinacionHorariosPage extends ConsumerStatefulWidget {
 }
 
 class _CoordinacionHorariosPageState
-    extends ConsumerState<CoordinacionHorariosPage> {
+    extends ConsumerState<CoordinacionHorariosPage>
+    with WidgetsBindingObserver {
   final _searchController = TextEditingController();
   List<Teacher> _teachers = const [];
   List<TutorSchedule> _schedules = const [];
@@ -28,15 +30,21 @@ class _CoordinacionHorariosPageState
   bool _loading = true;
   bool _speedDialOpen = false;
   String? _error;
-
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _load();
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) _load();
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _searchController.dispose();
     super.dispose();
   }
@@ -56,7 +64,9 @@ class _CoordinacionHorariosPageState
       final teacherData = results[0].data;
       final scheduleData = results[1].data;
       final publishedData = results[2].data;
-      if (teacherData == null || scheduleData == null || publishedData == null) {
+      if (teacherData == null ||
+          scheduleData == null ||
+          publishedData == null) {
         throw const FormatException(
             'El servidor devolvió una lista incompleta.');
       }
@@ -116,108 +126,182 @@ class _CoordinacionHorariosPageState
     );
     if (saved != null && mounted) await _load();
   }
+
   Future<void> _deleteSession(PublishedTutoringSession session) async {
     final controller = TextEditingController();
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => StatefulBuilder(builder: (dialogContext, setDialogState) => AlertDialog(
-        title: const Text('Eliminar tutoría'),
-        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('Para confirmar, escribe eliminar.'),
-          const SizedBox(height: 12),
-          TextField(controller: controller, autofocus: true, onChanged: (_) => setDialogState(() {}), decoration: const InputDecoration(labelText: 'Escribe eliminar')),
-        ]),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancelar')),
-          FilledButton(
-            onPressed: controller.text.trim().toLowerCase() == 'eliminar'
-                ? () => Navigator.pop(dialogContext, true)
-                : null,
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Eliminar'),
-          ),
-        ],
-      )),
+      builder: (dialogContext) => StatefulBuilder(
+          builder: (dialogContext, setDialogState) => AlertDialog(
+                title: const Text('Eliminar tutoría'),
+                content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Para confirmar, escribe eliminar.'),
+                      const SizedBox(height: 12),
+                      TextField(
+                          controller: controller,
+                          autofocus: true,
+                          onChanged: (_) => setDialogState(() {}),
+                          decoration: const InputDecoration(
+                              labelText: 'Escribe eliminar')),
+                    ]),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(dialogContext, false),
+                      child: const Text('Cancelar')),
+                  FilledButton(
+                    onPressed:
+                        controller.text.trim().toLowerCase() == 'eliminar'
+                            ? () => Navigator.pop(dialogContext, true)
+                            : null,
+                    style: FilledButton.styleFrom(backgroundColor: Colors.red),
+                    child: const Text('Eliminar'),
+                  ),
+                ],
+              )),
     );
     controller.dispose();
     if (confirmed != true || !mounted) return;
     try {
-      await ref.read(dioProvider).delete<void>('/api/coordinacion/sesiones-grupales/${session.id}');
+      await ref
+          .read(dioProvider)
+          .delete<void>('/api/coordinacion/sesiones-grupales/${session.id}');
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tutoría eliminada.')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Tutoría eliminada.')));
       await _load();
     } on DioException catch (error) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(apiError(error, 'No se pudo eliminar la tutoría.'))));
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(apiError(error, 'No se pudo eliminar la tutoría.'))));
     }
   }
 
   Future<void> _editSession(PublishedTutoringSession session) async {
     final subjectController = TextEditingController(text: session.subject);
     final locationController = TextEditingController(text: session.location);
-    DateTime start = session.start?.toLocal() ?? DateTime.now().add(const Duration(days: 1));
+    DateTime start =
+        session.start?.toLocal() ?? DateTime.now().add(const Duration(days: 1));
     final duration = session.end != null && session.start != null
         ? session.end!.difference(session.start!)
         : const Duration(hours: 1);
     String modality = session.modality.toUpperCase();
-    if (!const ['PRESENCIAL', 'VIRTUAL', 'HIBRIDA'].contains(modality)) modality = 'PRESENCIAL';
+    if (!const ['PRESENCIAL', 'VIRTUAL', 'HIBRIDA'].contains(modality))
+      modality = 'PRESENCIAL';
     final result = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => StatefulBuilder(builder: (context, setDialogState) => AlertDialog(
-        title: const Text('Editar tutoría'),
-        content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
-          TextField(controller: subjectController, decoration: const InputDecoration(labelText: 'Materia')),
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            onPressed: () async {
-              final picked = await showDatePicker(context: context, initialDate: start, firstDate: DateTime.now(), lastDate: DateTime.now().add(const Duration(days: 365)));
-              if (picked != null) setDialogState(() => start = DateTime(picked.year, picked.month, picked.day, start.hour, start.minute));
-            },
-            icon: const Icon(Icons.calendar_month),
-            label: Text('${start.day.toString().padLeft(2, '0')}/${start.month.toString().padLeft(2, '0')}/${start.year}'),
-          ),
-          OutlinedButton.icon(
-            onPressed: () async {
-              final picked = await showTimePicker(context: context, initialTime: TimeOfDay.fromDateTime(start));
-              if (picked != null) setDialogState(() => start = DateTime(start.year, start.month, start.day, picked.hour, picked.minute));
-            },
-            icon: const Icon(Icons.schedule),
-            label: Text(TimeOfDay.fromDateTime(start).format(context)),
-          ),
-          const SizedBox(height: 8),
-          DropdownButtonFormField<String>(initialValue: modality, decoration: const InputDecoration(labelText: 'Modalidad'), items: const [
-            DropdownMenuItem(value: 'PRESENCIAL', child: Text('Presencial')),
-            DropdownMenuItem(value: 'VIRTUAL', child: Text('Virtual')),
-            DropdownMenuItem(value: 'HIBRIDA', child: Text('Híbrida')),
-          ], onChanged: (value) { if (value != null) setDialogState(() => modality = value); }),
-          if (modality != 'VIRTUAL') TextField(controller: locationController, decoration: const InputDecoration(labelText: 'Lugar')),
-        ])),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancelar')),
-          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Guardar')),
-        ],
-      )),
+      builder: (dialogContext) => StatefulBuilder(
+          builder: (context, setDialogState) => AlertDialog(
+                title: const Text('Editar tutoría'),
+                content: SingleChildScrollView(
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  TextField(
+                      controller: subjectController,
+                      decoration: const InputDecoration(labelText: 'Materia')),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      final picked = await showDatePicker(
+                          context: context,
+                          initialDate: start,
+                          firstDate: DateTime.now(),
+                          lastDate:
+                              DateTime.now().add(const Duration(days: 365)));
+                      if (picked != null)
+                        setDialogState(() => start = DateTime(
+                            picked.year,
+                            picked.month,
+                            picked.day,
+                            start.hour,
+                            start.minute));
+                    },
+                    icon: const Icon(Icons.calendar_month),
+                    label: Text(
+                        '${start.day.toString().padLeft(2, '0')}/${start.month.toString().padLeft(2, '0')}/${start.year}'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      final picked = await showTimePicker(
+                          context: context,
+                          initialTime: TimeOfDay.fromDateTime(start));
+                      if (picked != null)
+                        setDialogState(() => start = DateTime(
+                            start.year,
+                            start.month,
+                            start.day,
+                            picked.hour,
+                            picked.minute));
+                    },
+                    icon: const Icon(Icons.schedule),
+                    label: Text(TimeOfDay.fromDateTime(start).format(context)),
+                  ),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                      initialValue: modality,
+                      decoration: const InputDecoration(labelText: 'Modalidad'),
+                      items: const [
+                        DropdownMenuItem(
+                            value: 'PRESENCIAL', child: Text('Presencial')),
+                        DropdownMenuItem(
+                            value: 'VIRTUAL', child: Text('Virtual')),
+                        DropdownMenuItem(
+                            value: 'HIBRIDA', child: Text('Híbrida')),
+                      ],
+                      onChanged: (value) {
+                        if (value != null)
+                          setDialogState(() => modality = value);
+                      }),
+                  if (modality != 'VIRTUAL')
+                    TextField(
+                        controller: locationController,
+                        decoration: const InputDecoration(labelText: 'Lugar')),
+                ])),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(dialogContext, false),
+                      child: const Text('Cancelar')),
+                  FilledButton(
+                      onPressed: () => Navigator.pop(dialogContext, true),
+                      child: const Text('Guardar')),
+                ],
+              )),
     );
-    if (result != true || !mounted) { subjectController.dispose(); locationController.dispose(); return; }
+    if (result != true || !mounted) {
+      subjectController.dispose();
+      locationController.dispose();
+      return;
+    }
     final end = start.add(duration);
     try {
-      await ref.read(dioProvider).put<void>('/api/coordinacion/sesiones-grupales/${session.id}', data: {
-        'tecnologia': session.technology,
-        'semestre': session.semester,
-        'bloques': [{
-          'docenteId': session.teacherId,
-          'materia': subjectController.text.trim(),
-          'modalidad': modality,
-          'ubicacion': modality == 'VIRTUAL' ? null : locationController.text.trim(),
-          'fechaInicio': start.toIso8601String(),
-          'fechaFin': end.toIso8601String(),
-        }],
-      });
+      await ref.read(dioProvider).put<void>(
+          '/api/coordinacion/sesiones-grupales/${session.id}',
+          data: {
+            'tecnologia': session.technology,
+            'semestre': session.semester,
+            'bloques': [
+              {
+                'docenteId': session.teacherId,
+                'materia': subjectController.text.trim(),
+                'modalidad': modality,
+                'ubicacion': modality == 'VIRTUAL'
+                    ? null
+                    : locationController.text.trim(),
+                'fechaInicio': start.toIso8601String(),
+                'fechaFin': end.toIso8601String(),
+              }
+            ],
+          });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tutoría actualizada.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Tutoría actualizada.')));
         await _load();
       }
     } on DioException catch (error) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(apiError(error, 'No se pudo editar la tutoría.'))));
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(apiError(error, 'No se pudo editar la tutoría.'))));
     } finally {
       subjectController.dispose();
       locationController.dispose();
@@ -229,7 +313,7 @@ class _CoordinacionHorariosPageState
         .expand((item) => [
               item.carrera,
               ...item.materias.expand((subject) => subject.carreras),
-        ])
+            ])
         .followedBy(_publishedSessions
             .map((session) => session.technology)
             .where((value) => value.isNotEmpty))
@@ -256,7 +340,6 @@ class _CoordinacionHorariosPageState
       _sessionsByTeacher.containsKey(teacherId);
 
   List<Teacher> get _visibleTeachers {
-    if (_section == 2) return const [];
     final query = normalizeSearch(_searchController.text.trim());
     final schedules = _scheduleByTeacher;
     final sessionsByTeacher = _sessionsByTeacher;
@@ -268,8 +351,8 @@ class _CoordinacionHorariosPageState
       final matchesText = query.isEmpty ||
           normalizeSearch(teacher.nombre).contains(query) ||
           normalizeSearch(teacher.id).contains(query);
-      final sessions = sessionsByTeacher[teacher.id] ??
-          const <PublishedTutoringSession>[];
+      final sessions =
+          sessionsByTeacher[teacher.id] ?? const <PublishedTutoringSession>[];
       final matchesCareer = (schedule == null && sessions.isEmpty) ||
           _career == 'Todas' ||
           (schedule != null &&
@@ -285,172 +368,119 @@ class _CoordinacionHorariosPageState
     }).toList(growable: false);
   }
 
-  List<PublishedTutoringSession> get _visiblePublishedSessions {
-    final query = normalizeSearch(_searchController.text.trim());
-    final teacherNames = {for (final teacher in _teachers) teacher.id: teacher.nombre};
-    return _publishedSessions.where((session) {
-      final teacherName = teacherNames[session.teacherId] ?? session.teacherId;
-      final matchesText = query.isEmpty ||
-          normalizeSearch(session.subject).contains(query) ||
-          normalizeSearch(teacherName).contains(query) ||
-          normalizeSearch(session.teacherId).contains(query);
-      final matchesCareer = _career == 'Todas' || session.technology == _career;
-      final matchesSemester = _semester == null || session.semester == _semester;
-      return matchesText && matchesCareer && matchesSemester;
-    }).toList(growable: false);
-  }
-
-  Widget _publishedSessionsView() {
-    final sessions = _visiblePublishedSessions;
-    if (sessions.isEmpty) {
-      return const Center(child: Text('No hay tutorías publicadas que coincidan con los filtros.'));
-    }
-    final teacherNames = {for (final teacher in _teachers) teacher.id: teacher.nombre};
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-      itemCount: sessions.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
-      itemBuilder: (context, index) {
-        final session = sessions[index];
-        final start = session.start?.toLocal();
-        final fecha = start == null ? 'Fecha pendiente' : _formatSessionDate(start);
-        final teacher = teacherNames[session.teacherId] ?? session.teacherId;
-        return Card(
-          color: Colors.white,
-          child: ListTile(
-            leading: const CircleAvatar(child: Icon(Icons.menu_book_outlined)),
-            title: Text(session.subject, style: const TextStyle(fontWeight: FontWeight.w700)),
-            subtitle: Text('$teacher · ${session.technology}, semestre ${session.semester}\n$fecha · ${_modalityLabel(session.modality)}${session.location.isEmpty ? '' : ' · ${session.location}'}'),
-            isThreeLine: true,
-            trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-              IconButton(tooltip: 'Editar tutoría', onPressed: () => _editSession(session), icon: const Icon(Icons.edit_outlined)),
-              IconButton(tooltip: 'Eliminar tutoría', onPressed: () => _deleteSession(session), icon: const Icon(Icons.delete_outline, color: Colors.red)),
-            ]),
-          ),
-        );
-      },
-    );
-  }
-
-  String _formatSessionDate(DateTime value) =>
-      '${value.day.toString().padLeft(2, '0')}/${value.month.toString().padLeft(2, '0')}/${value.year} · ${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
-
-  String _modalityLabel(String value) => switch (value.toUpperCase()) {
-        'VIRTUAL' => 'Virtual',
-        'HIBRIDA' => 'Híbrida',
-        'PRESENCIAL' => 'Presencial',
-        _ => value,
-      };
-
   @override
-  Widget build(BuildContext context) => Scaffold(
-        backgroundColor: const Color(0xFFF3F5FA),
-        appBar: AppBar(
-          backgroundColor: const Color(0xFFA9154F),
-          foregroundColor: Colors.white,
-          elevation: 0,
-          title: const Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Horarios de tutores'),
-              Text(
-                'Asigna y administra su disponibilidad',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
-              ),
-            ],
-          ),
-        ),
-        floatingActionButton: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.end,
+  Widget build(BuildContext context) {
+    ref.listen(tutoringUpdatesProvider, (_, next) {
+      if (next.hasValue && mounted) _load();
+    });
+    return Scaffold(
+      backgroundColor: const Color(0xFFF3F5FA),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFFA9154F),
+        foregroundColor: Colors.white,
+        elevation: 0,
+        title: const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (_speedDialOpen) ...[
-              FloatingActionButton.extended(
-                heroTag: 'tutorias_proyecto_aula',
-                onPressed: () =>
-                    context.push('/coordinacion/tutorias-colectivas'),
-                backgroundColor: Colors.white,
-                foregroundColor: const Color(0xFFA9154F),
-                icon: const Icon(Icons.groups_outlined),
-                label: const Text('Tutorías de proyecto de aula'),
-              ),
-              const SizedBox(height: 12),
-              FloatingActionButton.extended(
-                heroTag: 'tutorias_retroalimentativas',
-                onPressed: () async {
-                  await context.push('/coordinacion/programar-tutorias');
-                  if (mounted) _load();
-                },
-                backgroundColor: Colors.white,
-                foregroundColor: const Color(0xFFA9154F),
-                icon: const Icon(Icons.rate_review_outlined),
-                label: const Text('Tutorías retroalimentativas'),
-              ),
-              const SizedBox(height: 12),
-            ],
-            FloatingActionButton.extended(
-              heroTag: 'programar_tutorias_speed_dial',
-              onPressed: () => setState(() => _speedDialOpen = !_speedDialOpen),
-              backgroundColor: const Color(0xFFA9154F),
-              foregroundColor: Colors.white,
-              icon: Icon(_speedDialOpen ? Icons.close : Icons.add),
-              label: Text(_speedDialOpen ? 'Cerrar' : 'Programar tutorías'),
+            Text('Horarios de tutores'),
+            Text(
+              'Asigna y administra su disponibilidad',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
             ),
           ],
         ),
-        body: SafeArea(
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1280),
-              child: _loading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _error != null
-                      ? ScheduleLoadError(message: _error!, onRetry: _load)
-                      : Column(
-                          children: [
-                            ScheduleSectionSelector(
-                              selected: _section,
-                              withScheduleCount: _teachers
-                                  .where((teacher) => _hasAvailability(teacher.id))
-                                  .length,
-                              withoutScheduleCount: _teachers
-                                  .where((teacher) => !_hasAvailability(teacher.id))
-                                  .length,
-                              publishedSessionCount: _publishedSessions.length,
-                              onChanged: (value) =>
-                                  setState(() => _section = value),
-                            ),
-                            ScheduleFilters(
-                              searchController: _searchController,
-                              careers: _careers,
-                              career: _career,
-                              semester: _semester,
-                              onSearchChanged: (_) => setState(() {}),
-                              onCareerChanged: (value) =>
-                                  setState(() => _career = value),
-                              onSemesterChanged: (value) =>
-                                  setState(() => _semester = value),
-                              onRefresh: _load,
-                              refreshing: _loading,
-                            ),
-                            Expanded(
-                              child: _section == 2
-                                  ? _publishedSessionsView()
-                                  : _visibleTeachers.isEmpty
-                                  ? const ScheduleEmptyResults()
-                                  : TeacherScheduleGrid(
-                                      teachers: _visibleTeachers,
-                                      schedules: _scheduleByTeacher,
-                                      sessions: _sessionsByTeacher,
-                                      onEditSession: _editSession,
-                                      onDeleteSession: _deleteSession,
-                                      onEditSchedule: _editTeacherSchedule,
-                                    ),
-                            ),
-                          ],
-                        ),
+      ),
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          if (_speedDialOpen) ...[
+            FloatingActionButton.extended(
+              heroTag: 'tutorias_proyecto_aula',
+              onPressed: () =>
+                  context.push('/coordinacion/tutorias-colectivas'),
+              backgroundColor: Colors.white,
+              foregroundColor: const Color(0xFFA9154F),
+              icon: const Icon(Icons.groups_outlined),
+              label: const Text('Tutorías de proyecto de aula'),
             ),
+            const SizedBox(height: 12),
+            FloatingActionButton.extended(
+              heroTag: 'tutorias_retroalimentativas',
+              onPressed: () async {
+                await context.push('/coordinacion/programar-tutorias');
+                if (mounted) _load();
+              },
+              backgroundColor: Colors.white,
+              foregroundColor: const Color(0xFFA9154F),
+              icon: const Icon(Icons.rate_review_outlined),
+              label: const Text('Tutorías retroalimentativas'),
+            ),
+            const SizedBox(height: 12),
+          ],
+          FloatingActionButton.extended(
+            heroTag: 'programar_tutorias_speed_dial',
+            onPressed: () => setState(() => _speedDialOpen = !_speedDialOpen),
+            backgroundColor: const Color(0xFFA9154F),
+            foregroundColor: Colors.white,
+            icon: Icon(_speedDialOpen ? Icons.close : Icons.add),
+            label: Text(_speedDialOpen ? 'Cerrar' : 'Programar tutorías'),
+          ),
+        ],
+      ),
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1280),
+            child: _loading
+                ? const Center(child: CircularProgressIndicator())
+                : _error != null
+                    ? ScheduleLoadError(message: _error!, onRetry: _load)
+                    : Column(
+                        children: [
+                          ScheduleSectionSelector(
+                            selected: _section,
+                            withScheduleCount: _teachers
+                                .where(
+                                    (teacher) => _hasAvailability(teacher.id))
+                                .length,
+                            withoutScheduleCount: _teachers
+                                .where(
+                                    (teacher) => !_hasAvailability(teacher.id))
+                                .length,
+                            onChanged: (value) =>
+                                setState(() => _section = value),
+                          ),
+                          ScheduleFilters(
+                            searchController: _searchController,
+                            careers: _careers,
+                            career: _career,
+                            semester: _semester,
+                            onSearchChanged: (_) => setState(() {}),
+                            onCareerChanged: (value) =>
+                                setState(() => _career = value),
+                            onSemesterChanged: (value) =>
+                                setState(() => _semester = value),
+                            onRefresh: _load,
+                            refreshing: _loading,
+                          ),
+                          Expanded(
+                            child: _visibleTeachers.isEmpty
+                                ? const ScheduleEmptyResults()
+                                : TeacherScheduleGrid(
+                                    teachers: _visibleTeachers,
+                                    schedules: _scheduleByTeacher,
+                                    sessions: _sessionsByTeacher,
+                                    onEditSession: _editSession,
+                                    onDeleteSession: _deleteSession,
+                                    onEditSchedule: _editTeacherSchedule,
+                                  ),
+                          ),
+                        ],
+                      ),
           ),
         ),
-      );
+      ),
+    );
+  }
 }

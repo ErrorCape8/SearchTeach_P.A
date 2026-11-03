@@ -295,8 +295,10 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
       children: [
-        ...completedGroups
-            .map((session) => _GroupHistoryCard(session: session)),
+        ...completedGroups.map((session) => _GroupHistoryCard(
+              session: session,
+              onRated: () => ref.invalidate(studentGroupSessionsProvider),
+            )),
         ...individualHistory
             .map((tutoring) => _TutoringCard(tutoring: tutoring)),
       ],
@@ -712,20 +714,6 @@ class _GroupChatAndCallCard extends StatelessWidget {
     final now = DateTime.now();
     final start = session.start?.toLocal();
     final end = session.end?.toLocal();
-    final virtual = session.modality.toUpperCase() == 'VIRTUAL' ||
-        session.modality.toUpperCase() == 'HIBRIDA';
-    final canJoin = virtual &&
-        session.state != 'FINALIZADA' &&
-        start != null &&
-        end != null &&
-        !now.isAfter(end.add(const Duration(hours: 1)));
-    final joinLabel = session.state == 'FINALIZADA'
-        ? 'Videollamada finalizada'
-        : !virtual
-            ? 'Sesión presencial'
-            : canJoin
-                ? 'Unirme a videoconferencia'
-                : 'Videollamada cerrada';
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -753,20 +741,6 @@ class _GroupChatAndCallCard extends StatelessWidget {
               icon: const Icon(Icons.chat_outlined),
               label: const Text('Abrir chat'),
             ),
-            if (virtual)
-              FilledButton.icon(
-                onPressed: canJoin
-                    ? () => Navigator.of(context).push(MaterialPageRoute(
-                          builder: (_) => LiveKitRoomPage(
-                            sessionId: session.id,
-                            subject: session.subject,
-                            modality: session.modality,
-                          ),
-                        ))
-                    : null,
-                icon: const Icon(Icons.video_call_outlined),
-                label: Text(joinLabel),
-              ),
           ]),
         ]),
       ),

@@ -10,7 +10,6 @@ class ScheduleSectionSelector extends StatelessWidget {
     required this.selected,
     required this.withScheduleCount,
     required this.withoutScheduleCount,
-    required this.publishedSessionCount,
     required this.onChanged,
     super.key,
   });
@@ -18,7 +17,6 @@ class ScheduleSectionSelector extends StatelessWidget {
   final int selected;
   final int withScheduleCount;
   final int withoutScheduleCount;
-  final int publishedSessionCount;
   final ValueChanged<int> onChanged;
 
   @override
@@ -35,11 +33,6 @@ class ScheduleSectionSelector extends StatelessWidget {
               value: 1,
               icon: const Icon(Icons.event_available_outlined),
               label: Text('No asignados ($withoutScheduleCount)'),
-            ),
-            ButtonSegment(
-              value: 2,
-              icon: const Icon(Icons.menu_book_outlined),
-              label: Text('Tutorías publicadas ($publishedSessionCount)'),
             ),
           ],
           selected: {selected},
@@ -152,8 +145,8 @@ class ScheduleFilters extends StatelessWidget {
                             ? const SizedBox(
                                 width: 18,
                                 height: 18,
-                                child: CircularProgressIndicator(
-                                    strokeWidth: 2),
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
                               )
                             : const Icon(Icons.refresh),
                       ),
@@ -296,9 +289,8 @@ class _TeacherCard extends StatelessWidget {
                 ),
                 _ScheduleBadge(assigned: hasAvailability),
                 IconButton(
-                  tooltip: schedule == null
-                      ? 'Asignar horario'
-                      : 'Editar horario',
+                  tooltip:
+                      schedule == null ? 'Asignar horario' : 'Editar horario',
                   onPressed: () => onEditSchedule(teacher, schedule),
                   icon: const Icon(Icons.edit_calendar_outlined, color: _brand),
                 ),
@@ -310,7 +302,7 @@ class _TeacherCard extends StatelessWidget {
                   ? '${schedule!.carrera} · Semestre ${schedule!.semestre} · ${schedule!.dia} ${schedule!.horaInicio}–${schedule!.horaFin}'
                   : sessions.isNotEmpty
                       ? 'Tiene ${sessions.length} tutoría(s) publicada(s).'
-                  : 'Este docente aún no tiene tutorías asignadas.',
+                      : 'Este docente aún no tiene tutorías asignadas.',
               style: const TextStyle(color: _muted, height: 1.4),
             ),
             for (final session in sessions.take(3)) ...[
@@ -321,8 +313,17 @@ class _TeacherCard extends StatelessWidget {
                 style: const TextStyle(color: _muted, fontSize: 12),
               ),
               Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-                IconButton(tooltip: 'Editar tutoría', visualDensity: VisualDensity.compact, onPressed: () => onEditSession(session), icon: const Icon(Icons.edit_outlined, size: 18)),
-                IconButton(tooltip: 'Eliminar tutoría', visualDensity: VisualDensity.compact, onPressed: () => onDeleteSession(session), icon: const Icon(Icons.delete_outline, color: Colors.red, size: 18)),
+                IconButton(
+                    tooltip: 'Editar tutoría',
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () => onEditSession(session),
+                    icon: const Icon(Icons.edit_outlined, size: 18)),
+                IconButton(
+                    tooltip: 'Eliminar tutoría',
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () => onDeleteSession(session),
+                    icon: const Icon(Icons.delete_outline,
+                        color: Colors.red, size: 18)),
               ]),
             ],
           ],
@@ -334,8 +335,10 @@ class _TeacherCard extends StatelessWidget {
   String _sessionDateTime(PublishedTutoringSession session) {
     final start = session.start?.toLocal();
     if (start == null) return 'Fecha pendiente';
-    final date = '${start.day.toString().padLeft(2, '0')}/${start.month.toString().padLeft(2, '0')}/${start.year}';
-    final time = '${start.hour.toString().padLeft(2, '0')}:${start.minute.toString().padLeft(2, '0')}';
+    final date =
+        '${start.day.toString().padLeft(2, '0')}/${start.month.toString().padLeft(2, '0')}/${start.year}';
+    final time =
+        '${start.hour.toString().padLeft(2, '0')}:${start.minute.toString().padLeft(2, '0')}';
     final modality = session.modality.isEmpty ? '' : ' · ${session.modality}';
     final location = session.location.isEmpty ? '' : ' · ${session.location}';
     return '$date $time$modality$location';

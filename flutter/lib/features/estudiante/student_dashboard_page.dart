@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/api_client.dart';
+import '../../core/tutoring_updates.dart';
 import '../../core/widgets/brand_logo.dart';
 import '../auth/auth_repository.dart';
 import '../notifications/notifications_page.dart';
@@ -23,13 +24,40 @@ class StudentDashboardPage extends ConsumerStatefulWidget {
       _StudentDashboardPageState();
 }
 
-class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
+class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage>
+    with WidgetsBindingObserver {
   int _tab = 0;
   String? _focusTutoring;
   int _focusRequest = 0;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      ref.invalidate(studentGroupSessionsProvider);
+      ref.invalidate(studentDashboardProvider);
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    ref.listen(tutoringUpdatesProvider, (_, next) {
+      if (next.hasValue && mounted) {
+        ref.invalidate(studentGroupSessionsProvider);
+        ref.invalidate(studentDashboardProvider);
+      }
+    });
     final data = ref.watch(studentDashboardProvider);
     final groupSessions = ref.watch(studentGroupSessionsProvider);
     final wide = MediaQuery.sizeOf(context).width >= 850;

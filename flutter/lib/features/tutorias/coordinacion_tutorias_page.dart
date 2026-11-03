@@ -223,9 +223,10 @@ class _CoordinacionTutoriasPageState
     );*/
     if (confirmed != true || !mounted) return;
     try {
-      await ref
-          .read(dioProvider)
-          .delete<void>('/api/coordinacion/tutorias-colectivas/$id');
+      await ref.read(dioProvider).delete<void>(
+        '/api/coordinacion/tutorias-colectivas/$id',
+        queryParameters: const {'confirmacion': 'eliminar'},
+      );
       await _loadCreatedTutorias();
     } on DioException catch (error) {
       if (mounted) {
@@ -239,6 +240,63 @@ class _CoordinacionTutoriasPageState
         );
       }
     }
+  }
+
+  Future<void> _disolverTutoria(Map<String, dynamic> tutoria) async {
+    final id = tutoria['id'];
+    if (id is! String || id.isEmpty) return;
+    final confirmed = await _confirmDisolve();
+    if (confirmed != true || !mounted) return;
+    try {
+      await ref.read(dioProvider).post<void>(
+        '/api/coordinacion/tutorias-colectivas/$id/disolver',
+        queryParameters: const {'confirmacion': 'disolver'},
+      );
+      await _loadCreatedTutorias();
+    } on DioException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(_apiError(error,
+                  fallback: 'No se pudo disolver la tutoría colectiva.'))),
+        );
+      }
+    }
+  }
+
+  Future<bool> _confirmDisolve() async {
+    final controller = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, refresh) => AlertDialog(
+          title: const Text('Disolver grupo'),
+          content: Column(mainAxisSize: MainAxisSize.min, children: [
+            const Text(
+                'Se archivará el grupo y se conservarán sus proyectos, reportes y chats. Escribe DISOLVER para continuar.'),
+            TextField(
+              controller: controller,
+              autofocus: true,
+              onChanged: (_) => refresh(() {}),
+            ),
+          ]),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: controller.text.trim().toLowerCase() == 'disolver'
+                  ? () => Navigator.pop(dialogContext, true)
+                  : null,
+              child: const Text('Disolver'),
+            ),
+          ],
+        ),
+      ),
+    );
+    controller.dispose();
+    return confirmed == true;
   }
 
   Future<bool> _confirmDelete() async {
@@ -288,7 +346,7 @@ class _CoordinacionTutoriasPageState
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(
-          title: const Text('TutorÃ­as de proyectos de aula'),
+          title: const Text('Proyectos de aula'),
           actions: [
             const NotificationBellButton(),
             IconButton(
@@ -313,12 +371,12 @@ class _CoordinacionTutoriasPageState
                       const ButtonSegment(
                         value: 0,
                         icon: Icon(Icons.add_circle_outline),
-                        label: Text('Nueva tutorÃ­a'),
+                        label: Text('Nuevo proyecto de aula'),
                       ),
                       ButtonSegment(
                         value: 1,
                         icon: const Icon(Icons.folder_outlined),
-                        label: Text('Creadas (${_createdTutorias.length})'),
+                        label: Text('Proyectos (${_createdTutorias.length})'),
                       ),
                     ],
                     selected: {_selectedSection},
@@ -335,7 +393,7 @@ class _CoordinacionTutoriasPageState
                             padding: const EdgeInsets.all(20),
                             children: [
                               const Text(
-                                'Crear acompaÃ±amiento colectivo',
+                                'Crear grupo de proyectos de aula',
                                 style: TextStyle(
                                   fontSize: 22,
                                   fontWeight: FontWeight.bold,
@@ -343,7 +401,7 @@ class _CoordinacionTutoriasPageState
                               ),
                               const SizedBox(height: 8),
                               const Text(
-                                'Define la carrera y el semestre, asigna un docente lÃ­der y cinco docentes de apoyo. Los estudiantes registrarÃ¡n sus proyectos desde su cuenta.',
+                                'Define la carrera y el semestre, asigna un docente líder y cinco docentes de apoyo.',
                               ),
                               const SizedBox(height: 20),
                               DropdownButtonFormField<String>(
@@ -425,7 +483,7 @@ class _CoordinacionTutoriasPageState
                                         ),
                                       )
                                     : const Icon(Icons.save_outlined),
-                                label: const Text('Crear tutorÃ­a colectiva'),
+                                label: const Text('Crear grupo'),
                               ),
                             ],
                           ),
@@ -493,6 +551,11 @@ class _CoordinacionTutoriasPageState
                     const SizedBox(height: 4),
                     Text(
                         'Docente lÃ­der: ${_createdTutorias[index]['docenteLiderId'] ?? 'â€”'}'),
+                    if (_createdTutorias[index]['estado'] == 'DISUELTA')
+                      const Text(
+                        'Grupo disuelto · historial conservado',
+                        style: TextStyle(color: Colors.blueGrey),
+                      ),
                     Text(
                       '${(_createdTutorias[index]['proyectos'] as List?)?.length ?? 0} proyectos Â· '
                       'ID ${_createdTutorias[index]['id'] ?? 'â€”'}',
@@ -500,10 +563,18 @@ class _CoordinacionTutoriasPageState
                   ],
                 ),
               ),
-              IconButton(
-                  tooltip: 'Editar',
-                  onPressed: () => _editTutoria(_createdTutorias[index]),
-                  icon: const Icon(Icons.edit_outlined)),
+              if (_createdTutorias[index]['estado'] != 'DISUELTA') ...[
+                IconButton(
+                    tooltip: 'Editar',
+                    onPressed: () => _editTutoria(_createdTutorias[index]),
+                    icon: const Icon(Icons.edit_outlined)),
+                IconButton(
+                  tooltip: 'Disolver grupo',
+                  onPressed: () => _disolverTutoria(_createdTutorias[index]),
+                  icon: const Icon(Icons.archive_outlined,
+                      color: Colors.blueGrey),
+                ),
+              ],
               IconButton(
                 tooltip: 'Eliminar tutorÃ­a colectiva',
                 onPressed: () => _deleteTutoria(_createdTutorias[index]),

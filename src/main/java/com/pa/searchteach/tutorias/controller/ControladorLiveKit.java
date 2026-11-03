@@ -19,6 +19,7 @@ import com.pa.searchteach.tutorias.model.ModalidadTutoria;
 import com.pa.searchteach.tutorias.model.SesionTutoria;
 import com.pa.searchteach.tutorias.model.MensajeChatTutoria;
 import com.pa.searchteach.tutorias.model.AsistenciaEstudiante;
+import com.pa.searchteach.tutorias.dto.ValoracionTutoriaSolicitud;
 import com.pa.searchteach.tutorias.service.SesionesGrupalesTutoriaService;
 import com.pa.searchteach.tutorias.repository.SesionTutoriaRepositorio;
 import com.pa.searchteach.users.model.User;
@@ -90,6 +91,13 @@ public class ControladorLiveKit {
 			@RequestBody CierreSolicitud solicitud) {
 		SesionTutoria sesion = servicioSesiones.cerrarClase(id, usuarioId, solicitud.motivo());
 		return sesion;
+	}
+
+	@PostMapping("/{id}/valoracion")
+	public SesionTutoria valorar(@PathVariable String id,
+			@RequestBody ValoracionTutoriaSolicitud solicitud,
+			@AuthenticationPrincipal String estudianteId) {
+		return servicioSesiones.valorarClase(id, estudianteId, solicitud.estrellas(), solicitud.comentario());
 	}
 
 	private void cerrarSalaLiveKit(String room) {
@@ -166,6 +174,12 @@ public class ControladorLiveKit {
 		if ("FINALIZADA".equals(sesion.estadoClase())) throw new ResponseStatusException(HttpStatus.CONFLICT, "La tutoría ya finalizó.");
 		if (!sesion.docenteId().equals(usuarioId) && !sesion.estudianteIds().contains(usuarioId)) {
 			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No perteneces a esta sesión.");
+		}
+		if (sesion.docenteId().equals(usuarioId)) {
+			sesion = servicioSesiones.iniciarClase(id, usuarioId);
+		} else if (!"EN_CURSO".equals(sesion.estadoClase())) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT,
+					"El docente debe iniciar la tutoría antes de que puedas unirte.");
 		}
 		LocalDateTime horaLocal = LocalDateTime.now(java.time.ZoneId.of("America/Bogota"));
 		if (horaLocal.isAfter(sesion.fechaFin().plusHours(1))) {

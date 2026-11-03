@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api_client.dart';
+import '../../core/tutoring_updates.dart';
 import '../auth/auth_repository.dart';
 import '../notifications/notifications_page.dart';
 import 'docente_proyectos_aula_page.dart';
@@ -36,30 +37,40 @@ class DocenteDashboardPage extends ConsumerStatefulWidget {
       _DocenteDashboardPageState();
 }
 
-class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage> {
+class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
+    with WidgetsBindingObserver {
   int _tab = 0;
-  Timer? _sessionRefreshTimer;
 
   @override
   void initState() {
     super.initState();
-    _sessionRefreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
-      if (mounted) ref.invalidate(_teacherSessionsProvider);
-    });
+    WidgetsBinding.instance.addObserver(this);
+    ref.invalidate(_teacherSessionsProvider);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      ref.invalidate(_teacherSessionsProvider);
+    }
   }
 
   @override
   void dispose() {
-    _sessionRefreshTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(tutoringUpdatesProvider, (_, next) {
+      if (next.hasValue && mounted) ref.invalidate(_teacherSessionsProvider);
+    });
     final wide = MediaQuery.sizeOf(context).width >= 850;
     return Theme(
       data: Theme.of(context).copyWith(
-        colorScheme: Theme.of(context).colorScheme.copyWith(primary: _teacherGreen),
+        colorScheme:
+            Theme.of(context).colorScheme.copyWith(primary: _teacherGreen),
         scaffoldBackgroundColor: _teacherCanvas,
       ),
       child: Scaffold(
@@ -67,7 +78,8 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage> {
         appBar: AppBar(
           backgroundColor: Colors.white,
           foregroundColor: _teacherNavy,
-          title: const Text('Panel docente', style: TextStyle(fontWeight: FontWeight.w800)),
+          title: const Text('Panel docente',
+              style: TextStyle(fontWeight: FontWeight.w800)),
           actions: [
             const NotificationBellButton(),
             IconButton(
@@ -100,13 +112,34 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage> {
                 selectedIndex: _tab,
                 onDestinationSelected: (value) => setState(() => _tab = value),
                 destinations: const [
-                  NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Inicio'),
-                  NavigationDestination(icon: Icon(Icons.event_note_outlined), selectedIcon: Icon(Icons.event_note), label: 'Tutorías'),
-                  NavigationDestination(icon: Icon(Icons.play_circle_outline), selectedIcon: Icon(Icons.play_circle), label: 'Empezar'),
-                  NavigationDestination(icon: Icon(Icons.school_outlined), selectedIcon: Icon(Icons.school), label: 'Proyectos'),
-                  NavigationDestination(icon: Icon(Icons.fact_check_outlined), selectedIcon: Icon(Icons.fact_check), label: 'Líder PA'),
-                  NavigationDestination(icon: Icon(Icons.notifications_none_outlined), selectedIcon: Icon(Icons.notifications), label: 'Avisos'),
-                  NavigationDestination(icon: Icon(Icons.history_outlined), selectedIcon: Icon(Icons.history), label: 'Historial'),
+                  NavigationDestination(
+                      icon: Icon(Icons.home_outlined),
+                      selectedIcon: Icon(Icons.home),
+                      label: 'Inicio'),
+                  NavigationDestination(
+                      icon: Icon(Icons.event_note_outlined),
+                      selectedIcon: Icon(Icons.event_note),
+                      label: 'Tutorías'),
+                  NavigationDestination(
+                      icon: Icon(Icons.play_circle_outline),
+                      selectedIcon: Icon(Icons.play_circle),
+                      label: 'Empezar'),
+                  NavigationDestination(
+                      icon: Icon(Icons.school_outlined),
+                      selectedIcon: Icon(Icons.school),
+                      label: 'Proyectos'),
+                  NavigationDestination(
+                      icon: Icon(Icons.fact_check_outlined),
+                      selectedIcon: Icon(Icons.fact_check),
+                      label: 'Líder PA'),
+                  NavigationDestination(
+                      icon: Icon(Icons.notifications_none_outlined),
+                      selectedIcon: Icon(Icons.notifications),
+                      label: 'Avisos'),
+                  NavigationDestination(
+                      icon: Icon(Icons.history_outlined),
+                      selectedIcon: Icon(Icons.history),
+                      label: 'Historial'),
                 ],
               ),
       ),
@@ -120,18 +153,22 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage> {
           child: Column(children: [
             const Padding(
               padding: EdgeInsets.all(18),
-              child: Text('Menú docente', style: TextStyle(color: _teacherNavy, fontWeight: FontWeight.w800)),
+              child: Text('Menú docente',
+                  style: TextStyle(
+                      color: _teacherNavy, fontWeight: FontWeight.w800)),
             ),
             const Divider(height: 1),
             const SizedBox(height: 10),
             for (var i = 0; i < 3; i++)
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                 child: ListTile(
                   selected: _tab == i,
                   selectedColor: _teacherGreen,
                   selectedTileColor: const Color(0xFFE6F4EA),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                   leading: Icon(_teacherIcons[i]),
                   title: Text(_teacherLabels[i]),
                   onTap: () => setState(() => _tab = i),
@@ -181,16 +218,49 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage> {
   Widget _home() => ListView(
         padding: const EdgeInsets.all(24),
         children: [
-          const Text('¡Hola, docente!', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: _teacherNavy)),
+          const Text('¡Hola, docente!',
+              style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w800,
+                  color: _teacherNavy)),
           const SizedBox(height: 6),
-          const Text('Consulta tus tutorías, solicita cambios de fecha y acompaña tus proyectos de aula.'),
+          const Text(
+              'Consulta tus tutorías, solicita cambios de fecha y acompaña tus proyectos de aula.'),
           const SizedBox(height: 20),
-          _TeacherHomeTile(icon: Icons.event_note_outlined, title: 'Mis tutorías', subtitle: 'Revisa sesiones y solicita a coordinación cambiar una fecha.', onTap: () => setState(() => _tab = 1)),
-          _TeacherHomeTile(icon: Icons.play_circle_outline, title: 'Empezar tutorías', subtitle: 'Abre la sala, toma asistencia y consulta el chat de tus sesiones.', onTap: () => setState(() => _tab = 2)),
-          _TeacherHomeTile(icon: Icons.school_outlined, title: 'Proyectos de aula', subtitle: 'Escribe reportes, programa sesiones y responde a los estudiantes.', onTap: () => setState(() => _tab = 3)),
-          _TeacherHomeTile(icon: Icons.fact_check_outlined, title: 'Líder PA', subtitle: 'Revisa la documentación de los tutores y confirma el trabajo del proyecto.', onTap: () => setState(() => _tab = 4)),
-          _TeacherHomeTile(icon: Icons.notifications_none_outlined, title: 'Avisos', subtitle: 'Consulta las notificaciones de tu cuenta.', onTap: () => setState(() => _tab = 5)),
-          _TeacherHomeTile(icon: Icons.history_outlined, title: 'Historial', subtitle: 'Consulta las tutorías finalizadas y sus chats.', onTap: () => setState(() => _tab = 6)),
+          _TeacherHomeTile(
+              icon: Icons.event_note_outlined,
+              title: 'Mis tutorías',
+              subtitle:
+                  'Revisa sesiones y solicita a coordinación cambiar una fecha.',
+              onTap: () => setState(() => _tab = 1)),
+          _TeacherHomeTile(
+              icon: Icons.play_circle_outline,
+              title: 'Empezar tutorías',
+              subtitle:
+                  'Abre la sala, toma asistencia y consulta el chat de tus sesiones.',
+              onTap: () => setState(() => _tab = 2)),
+          _TeacherHomeTile(
+              icon: Icons.school_outlined,
+              title: 'Proyectos de aula',
+              subtitle:
+                  'Escribe reportes, programa sesiones y responde a los estudiantes.',
+              onTap: () => setState(() => _tab = 3)),
+          _TeacherHomeTile(
+              icon: Icons.fact_check_outlined,
+              title: 'Líder PA',
+              subtitle:
+                  'Revisa la documentación de los tutores y confirma el trabajo del proyecto.',
+              onTap: () => setState(() => _tab = 4)),
+          _TeacherHomeTile(
+              icon: Icons.notifications_none_outlined,
+              title: 'Avisos',
+              subtitle: 'Consulta las notificaciones de tu cuenta.',
+              onTap: () => setState(() => _tab = 5)),
+          _TeacherHomeTile(
+              icon: Icons.history_outlined,
+              title: 'Historial',
+              subtitle: 'Consulta las tutorías finalizadas y sus chats.',
+              onTap: () => setState(() => _tab = 6)),
         ],
       );
 
@@ -200,7 +270,9 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage> {
 
   Widget _history() => _buildSessions(view: _SessionView.history);
 
-  Widget _buildSessions({required _SessionView view}) => ref.watch(_teacherSessionsProvider).when(
+  Widget _buildSessions({required _SessionView view}) => ref
+      .watch(_teacherSessionsProvider)
+      .when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Center(
           child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -214,77 +286,121 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage> {
           ]),
         ),
         data: (allSessions) {
-          final sessions = allSessions.where((session) => switch (view) {
-            _SessionView.history => session.state == 'FINALIZADA',
-            _SessionView.scheduled || _SessionView.start => session.state != 'FINALIZADA',
-          }).toList()
-            ..sort((a, b) => (a.start ?? DateTime(9999)).compareTo(b.start ?? DateTime(9999)));
+          final sessions = allSessions
+              .where((session) => switch (view) {
+                    _SessionView.history => session.state == 'FINALIZADA',
+                    _SessionView.scheduled ||
+                    _SessionView.start =>
+                      session.state != 'FINALIZADA',
+                  })
+              .toList()
+            ..sort((a, b) => (a.start ?? DateTime(9999))
+                .compareTo(b.start ?? DateTime(9999)));
           return sessions.isEmpty
-            ? const Center(child: Text('No tienes tutorías grupales asignadas.'))
-            : ListView(
-                padding: const EdgeInsets.all(20),
-                children: [
-                  Text(switch (view) { _SessionView.scheduled => 'Mis tutorías', _SessionView.start => 'Empezar tutorías', _SessionView.history => 'Historial' }, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: _teacherNavy)),
-                  const SizedBox(height: 10),
-                  for (final session in sessions)
-                    Card(
-                      child: Column(children: [
-                        ListTile(
-                          contentPadding: const EdgeInsets.all(16),
-                          leading: const CircleAvatar(backgroundColor: Color(0xFFE6F4EA), child: Icon(Icons.event_available, color: _teacherGreen)),
-                          title: Text(session.subject, style: const TextStyle(fontWeight: FontWeight.w700)),
-                          subtitle: Text('${session.start == null ? 'Fecha no disponible' : _dateTimeLabel(session.start!)} · ${_modalityLabel(session.modality)} · Semestre ${session.semester} · ${session.technologies.join(', ')}\n${session.students.isEmpty ? 'Publicada · sin inscritos' : 'Estudiantes inscritos: ${session.students.length}'}${session.state == 'FINALIZADA' ? '\nClase finalizada' : ''}'),
-                          isThreeLine: true,
-                          trailing: session.id.isNotEmpty &&
-                                  session.start != null &&
-                                  session.end != null &&
-                                  session.state != 'FINALIZADA'
-                              ? IconButton.filledTonal(
-                                  tooltip: 'Solicitar cambio de fecha',
-                                  onPressed: () => _requestDateChange(session),
-                                  icon: const Icon(Icons.edit_calendar_outlined),
-                                )
-                              : null,
-                        ),
-                        if (session.id.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                            child: Wrap(
-                              alignment: WrapAlignment.end,
-                              spacing: 8,
-                              children: [
-                                OutlinedButton.icon(
-                                  onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-                                    builder: (_) => TutoriaChatPage(sessionId: session.id, subject: session.subject, readOnly: view == _SessionView.history),
-                                  )),
-                                  icon: const Icon(Icons.forum_outlined),
-                                  label: const Text('Abrir chat'),
-                                ),
-                                if (view != _SessionView.scheduled)
-                                  FilledButton.icon(
-                                    onPressed: () async {
-                                      await Navigator.of(context).push(MaterialPageRoute(
-                                        builder: (_) => LiveKitRoomPage(sessionId: session.id, subject: session.subject, modality: session.modality, teacherMode: true, students: session.students, ended: view == _SessionView.history, endAt: session.end),
-                                      ));
-                                      if (mounted) ref.invalidate(_teacherSessionsProvider);
-                                    },
-                                    icon: Icon(view == _SessionView.history ? Icons.history : Icons.video_call_outlined),
-                                    label: Text(view == _SessionView.history ? 'Ver historial' : 'Empezar tutoría'),
-                                  ),
-                              ],
-                            ),
+              ? const Center(
+                  child: Text('No tienes tutorías grupales asignadas.'))
+              : ListView(
+                  padding: const EdgeInsets.all(20),
+                  children: [
+                    Text(
+                        switch (view) {
+                          _SessionView.scheduled => 'Mis tutorías',
+                          _SessionView.start => 'Empezar tutorías',
+                          _SessionView.history => 'Historial'
+                        },
+                        style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: _teacherNavy)),
+                    const SizedBox(height: 10),
+                    for (final session in sessions)
+                      Card(
+                        child: Column(children: [
+                          ListTile(
+                            contentPadding: const EdgeInsets.all(16),
+                            leading: const CircleAvatar(
+                                backgroundColor: Color(0xFFE6F4EA),
+                                child: Icon(Icons.event_available,
+                                    color: _teacherGreen)),
+                            title: Text(session.subject,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w700)),
+                            subtitle: Text(
+                                '${session.start == null ? 'Fecha no disponible' : _dateTimeLabel(session.start!)} · ${_modalityLabel(session.modality)} · Semestre ${session.semester} · ${session.technologies.join(', ')}\n${session.students.isEmpty ? 'Publicada · sin inscritos' : 'Estudiantes inscritos: ${session.students.length}'}${session.state == 'FINALIZADA' ? '\nClase finalizada' : ''}'),
+                            isThreeLine: true,
+                            trailing: session.id.isNotEmpty &&
+                                    session.start != null &&
+                                    session.end != null &&
+                                    session.state != 'FINALIZADA'
+                                ? IconButton.filledTonal(
+                                    tooltip: 'Solicitar cambio de fecha',
+                                    onPressed: () =>
+                                        _requestDateChange(session),
+                                    icon: const Icon(
+                                        Icons.edit_calendar_outlined),
+                                  )
+                                : null,
                           ),
-                      ]),
-                    ),
-                ],
-              );
+                          if (session.id.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                              child: Wrap(
+                                alignment: WrapAlignment.end,
+                                spacing: 8,
+                                children: [
+                                  OutlinedButton.icon(
+                                    onPressed: () => Navigator.of(context)
+                                        .push(MaterialPageRoute(
+                                      builder: (_) => TutoriaChatPage(
+                                          sessionId: session.id,
+                                          subject: session.subject,
+                                          readOnly:
+                                              view == _SessionView.history),
+                                    )),
+                                    icon: const Icon(Icons.forum_outlined),
+                                    label: const Text('Abrir chat'),
+                                  ),
+                                  if (view != _SessionView.scheduled)
+                                    FilledButton.icon(
+                                      onPressed: () async {
+                                        await Navigator.of(context)
+                                            .push(MaterialPageRoute(
+                                          builder: (_) => LiveKitRoomPage(
+                                              sessionId: session.id,
+                                              subject: session.subject,
+                                              modality: session.modality,
+                                              teacherMode: true,
+                                              students: session.students,
+                                              ended:
+                                                  view == _SessionView.history,
+                                              endAt: session.end),
+                                        ));
+                                        if (mounted)
+                                          ref.invalidate(
+                                              _teacherSessionsProvider);
+                                      },
+                                      icon: Icon(view == _SessionView.history
+                                          ? Icons.history
+                                          : Icons.video_call_outlined),
+                                      label: Text(view == _SessionView.history
+                                          ? 'Ver historial'
+                                          : 'Empezar tutoría'),
+                                    ),
+                                ],
+                              ),
+                            ),
+                        ]),
+                      ),
+                  ],
+                );
         },
       );
 
   Future<void> _requestDateChange(_TeacherTutoringSession session) async {
     final originalStart = session.start;
     final originalEnd = session.end;
-    if (session.id.isEmpty || originalStart == null || originalEnd == null) return;
+    if (session.id.isEmpty || originalStart == null || originalEnd == null)
+      return;
     final draft = await showDialog<_DateChangeDraft>(
       context: context,
       builder: (_) => _DateChangeDialog(start: originalStart, end: originalEnd),
@@ -309,7 +425,8 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage> {
       final message = data is Map && data['message'] is String
           ? data['message'] as String
           : 'No se pudo enviar la solicitud. Inténtalo de nuevo.';
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
     }
   }
 
@@ -322,10 +439,18 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage> {
 enum _SessionView { scheduled, start, history }
 
 const _teacherLabels = ['Inicio', 'Tutorías', 'Empezar tutorías'];
-const _teacherIcons = [Icons.home_outlined, Icons.event_note_outlined, Icons.play_circle_outline];
+const _teacherIcons = [
+  Icons.home_outlined,
+  Icons.event_note_outlined,
+  Icons.play_circle_outline
+];
 
 class _TeacherHomeTile extends StatelessWidget {
-  const _TeacherHomeTile({required this.icon, required this.title, required this.subtitle, required this.onTap});
+  const _TeacherHomeTile(
+      {required this.icon,
+      required this.title,
+      required this.subtitle,
+      required this.onTap});
   final IconData icon;
   final String title;
   final String subtitle;
@@ -335,9 +460,13 @@ class _TeacherHomeTile extends StatelessWidget {
   Widget build(BuildContext context) => Card(
         child: ListTile(
           onTap: onTap,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-          leading: CircleAvatar(backgroundColor: const Color(0xFFE6F4EA), child: Icon(icon, color: _teacherGreen)),
-          title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+          leading: CircleAvatar(
+              backgroundColor: const Color(0xFFE6F4EA),
+              child: Icon(icon, color: _teacherGreen)),
+          title:
+              Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
           subtitle: Text(subtitle),
           trailing: const Icon(Icons.chevron_right),
         ),
@@ -345,7 +474,16 @@ class _TeacherHomeTile extends StatelessWidget {
 }
 
 class _TeacherTutoringSession {
-  const _TeacherTutoringSession({required this.id, required this.subject, required this.technologies, required this.students, required this.start, required this.end, required this.semester, required this.modality, required this.state});
+  const _TeacherTutoringSession(
+      {required this.id,
+      required this.subject,
+      required this.technologies,
+      required this.students,
+      required this.start,
+      required this.end,
+      required this.semester,
+      required this.modality,
+      required this.state});
   final String id;
   final String subject;
   final List<String> technologies;
@@ -359,16 +497,25 @@ class _TeacherTutoringSession {
   factory _TeacherTutoringSession.fromJson(Map<String, dynamic> json) =>
       _TeacherTutoringSession(
         id: json['id'] is String ? json['id'] as String : '',
-        subject: json['materia'] is String ? json['materia'] as String : 'Tutoría',
-        technologies: json['tecnologias'] is List ? (json['tecnologias'] as List).whereType<String>().toList() : const [],
-        students: json['estudianteIds'] is List ? (json['estudianteIds'] as List).whereType<String>().toList() : const [],
+        subject:
+            json['materia'] is String ? json['materia'] as String : 'Tutoría',
+        technologies: json['tecnologias'] is List
+            ? (json['tecnologias'] as List).whereType<String>().toList()
+            : const [],
+        students: json['estudianteIds'] is List
+            ? (json['estudianteIds'] as List).whereType<String>().toList()
+            : const [],
         start: DateTime.tryParse(json['fechaInicio']?.toString() ?? ''),
         end: DateTime.tryParse(json['fechaFin']?.toString() ?? ''),
-        semester: json['semestre'] is num ? (json['semestre'] as num).toInt() : 0,
-        modality: json['modalidad'] is String && (json['modalidad'] as String).isNotEmpty
+        semester:
+            json['semestre'] is num ? (json['semestre'] as num).toInt() : 0,
+        modality: json['modalidad'] is String &&
+                (json['modalidad'] as String).isNotEmpty
             ? json['modalidad'] as String
             : 'PRESENCIAL',
-        state: json['estadoClase'] is String ? json['estadoClase'] as String : 'PROGRAMADA',
+        state: json['estadoClase'] is String
+            ? json['estadoClase'] as String
+            : 'PROGRAMADA',
       );
 }
 
@@ -406,16 +553,19 @@ class _DateChangeDialogState extends State<_DateChangeDialog> {
         content: SizedBox(
           width: 420,
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Text('La solicitud se enviará a coordinación para su aprobación.'),
+            const Text(
+                'La solicitud se enviará a coordinación para su aprobación.'),
             const SizedBox(height: 14),
             Row(children: [
-              Expanded(child: OutlinedButton.icon(
+              Expanded(
+                  child: OutlinedButton.icon(
                 onPressed: () async {
                   final picked = await showDatePicker(
                     context: context,
                     firstDate: DateTime.now(),
                     lastDate: DateTime.now().add(const Duration(days: 365)),
-                    initialDate: _date.isBefore(DateTime.now()) ? DateTime.now() : _date,
+                    initialDate:
+                        _date.isBefore(DateTime.now()) ? DateTime.now() : _date,
                   );
                   if (picked != null) setState(() => _date = picked);
                 },
@@ -423,9 +573,11 @@ class _DateChangeDialogState extends State<_DateChangeDialog> {
                 label: Text(_dateLabel(_date)),
               )),
               const SizedBox(width: 8),
-              Expanded(child: OutlinedButton.icon(
+              Expanded(
+                  child: OutlinedButton.icon(
                 onPressed: () async {
-                  final picked = await showTimePicker(context: context, initialTime: _time);
+                  final picked = await showTimePicker(
+                      context: context, initialTime: _time);
                   if (picked != null) setState(() => _time = picked);
                 },
                 icon: const Icon(Icons.schedule),
@@ -438,16 +590,21 @@ class _DateChangeDialogState extends State<_DateChangeDialog> {
               maxLength: 1000,
               minLines: 2,
               maxLines: 4,
-              decoration: const InputDecoration(labelText: 'Motivo', border: OutlineInputBorder()),
+              decoration: const InputDecoration(
+                  labelText: 'Motivo', border: OutlineInputBorder()),
             ),
-            if (_error != null) Text(_error!, style: const TextStyle(color: Colors.red)),
+            if (_error != null)
+              Text(_error!, style: const TextStyle(color: Colors.red)),
           ]),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar')),
           FilledButton(
             onPressed: () {
-              final start = DateTime(_date.year, _date.month, _date.day, _time.hour, _time.minute);
+              final start = DateTime(
+                  _date.year, _date.month, _date.day, _time.hour, _time.minute);
               if (!start.isAfter(DateTime.now())) {
                 setState(() => _error = 'Selecciona una fecha y hora futura.');
                 return;
@@ -457,7 +614,10 @@ class _DateChangeDialogState extends State<_DateChangeDialog> {
                 return;
               }
               final duration = widget.end.difference(widget.start);
-              Navigator.pop(context, _DateChangeDraft(start, start.add(duration), _reason.text.trim()));
+              Navigator.pop(
+                  context,
+                  _DateChangeDraft(
+                      start, start.add(duration), _reason.text.trim()));
             },
             child: const Text('Enviar solicitud'),
           ),

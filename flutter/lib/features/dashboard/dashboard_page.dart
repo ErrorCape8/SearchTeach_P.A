@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../auth/auth_repository.dart';
 import '../notifications/notifications_page.dart';
+import '../../core/tutoring_updates.dart';
 import 'director_dashboard_provider.dart';
 
 const _purple = Color(0xFF6337BF);
@@ -24,6 +25,11 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(tutoringUpdatesProvider, (_, next) {
+      if (next.hasValue && mounted) {
+        ref.invalidate(directorDashboardProvider);
+      }
+    });
     final dashboard = ref.watch(directorDashboardProvider);
     final screen = switch (_selectedTab) {
       0 => _home(dashboard),
@@ -722,8 +728,8 @@ class _DemandForecastCard extends StatelessWidget {
               ),
               Text(
                 forecast?.modelo == 'REPTREE'
-                    ? 'Rango de referencia lineal: $minimum–$maximum'
-                    : 'Intervalo predictivo 95%: $minimum–$maximum',
+                    ? 'Predicción REPTree: $minimum–$maximum'
+                    : 'Predicción REPTree: $minimum–$maximum',
                 style: const TextStyle(color: _muted, fontSize: 12),
               ),
               const SizedBox(height: 14),
@@ -834,7 +840,7 @@ class _ForecastPageState extends State<_ForecastPage> {
         const SizedBox(height: 16),
         const _InfoNote(
           text:
-              'REPTree predice de forma iterativa usando las últimas 4 semanas completas; requiere al menos 4 semanas de historial. El rango que se muestra para REPTree es una referencia calculada por regresión lineal, no un intervalo calibrado para el árbol. Si REPTree no está disponible o no puede procesar una materia, se usa la regresión lineal. La tendencia se considera estable cuando el cambio es menor a 1 solicitud o al 10% del promedio de las últimas 4 semanas.',
+              'REPTree predice de forma iterativa usando las últimas 4 semanas completas; requiere al menos 4 semanas de historial. Si el modelo no está disponible o no puede procesar una materia, no se muestra un pronóstico. La tendencia se considera estable cuando el cambio es menor a 1 solicitud o al 10% del promedio de las últimas 4 semanas.',
         ),
       ],
     );

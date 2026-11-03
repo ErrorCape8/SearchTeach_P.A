@@ -20,14 +20,17 @@ public class ServicioTutoriasImpl implements ServicioTutorias {
 	private final TutoriaRepositorio tutoriaRepositorio;
 	private final InscripcionesTutoriasEstudianteService inscripcionesEstudiante;
 	private final NotificationService notificationService;
+	private final ActualizacionesTutoriasService actualizacionesTutorias;
 
 	public ServicioTutoriasImpl(
 			TutoriaRepositorio tutoriaRepositorio,
 			InscripcionesTutoriasEstudianteService inscripcionesEstudiante,
-			NotificationService notificationService) {
+			NotificationService notificationService,
+			ActualizacionesTutoriasService actualizacionesTutorias) {
 		this.tutoriaRepositorio = tutoriaRepositorio;
 		this.inscripcionesEstudiante = inscripcionesEstudiante;
 		this.notificationService = notificationService;
+		this.actualizacionesTutorias = actualizacionesTutorias;
 	}
 
 	@Override
@@ -49,6 +52,7 @@ public class ServicioTutoriasImpl implements ServicioTutorias {
 		tutoria.setFechaFin(solicitud.fechaFin());
 		tutoria.setEstado(EstadoTutoria.SOLICITADA);
 		Tutoria guardada = tutoriaRepositorio.save(tutoria);
+		publicarCambio(guardada);
 		notificationService.notifyUser(guardada.getDocenteId(), "Nueva solicitud de tutoria",
 				"Tienes una solicitud de " + guardada.getMateria() + " pendiente de revisar.", "/notificaciones");
 				notificationService.notifyUser(guardada.getEstudianteId(), "Solicitud enviada",
@@ -78,6 +82,7 @@ public class ServicioTutoriasImpl implements ServicioTutorias {
 		validarConflictoEstudiante(tutoria, tutoria.getFechaInicio(), tutoria.getFechaFin());
 		tutoria.setEstado(EstadoTutoria.PROGRAMADA);
 		Tutoria guardada = tutoriaRepositorio.save(tutoria);
+		publicarCambio(guardada);
 		notificationService.notifyUser(guardada.getEstudianteId(), "Tutoria aceptada",
 				"Tu solicitud de " + guardada.getMateria() + " fue aceptada.", "/notificaciones");
 		return guardada;
@@ -94,6 +99,7 @@ public class ServicioTutoriasImpl implements ServicioTutorias {
 		tutoria.setFechaAlternativaFin(propuesta.fechaFin());
 		tutoria.setEstado(EstadoTutoria.ALTERNATIVA_PROPUESTA);
 		Tutoria guardada = tutoriaRepositorio.save(tutoria);
+		publicarCambio(guardada);
 		notificationService.notifyUser(guardada.getEstudianteId(), "Nueva propuesta de horario",
 				"El docente propuso otro horario para " + guardada.getMateria() + ".", "/notificaciones");
 		return guardada;
@@ -114,6 +120,7 @@ public class ServicioTutoriasImpl implements ServicioTutorias {
 		tutoria.setFechaAlternativaFin(null);
 		tutoria.setEstado(EstadoTutoria.PROGRAMADA);
 		Tutoria guardada = tutoriaRepositorio.save(tutoria);
+		publicarCambio(guardada);
 		notificationService.notifyUser(guardada.getDocenteId(), "Horario confirmado",
 				"El estudiante confirmo el horario de " + guardada.getMateria() + ".", "/notificaciones");
 		return guardada;
@@ -130,6 +137,7 @@ public class ServicioTutoriasImpl implements ServicioTutorias {
 		}
 		tutoria.setEstado(EstadoTutoria.CANCELADA);
 		Tutoria guardada = tutoriaRepositorio.save(tutoria);
+		publicarCambio(guardada);
 		String destinatario = usuarioId.equals(guardada.getEstudianteId())
 				? guardada.getDocenteId() : guardada.getEstudianteId();
 		notificationService.notifyUser(destinatario, "Tutoria cancelada",
@@ -146,6 +154,7 @@ public class ServicioTutoriasImpl implements ServicioTutorias {
 		exigirEstado(tutoria, EstadoTutoria.PROGRAMADA);
 		tutoria.setEstado(EstadoTutoria.EN_CURSO);
 		Tutoria guardada = tutoriaRepositorio.save(tutoria);
+		publicarCambio(guardada);
 		notificationService.notifyUser(guardada.getEstudianteId(), "Tutoria iniciada",
 				"El docente inicio tu tutoria de " + guardada.getMateria() + ".", "/notificaciones");
 		return guardada;
@@ -159,6 +168,7 @@ public class ServicioTutoriasImpl implements ServicioTutorias {
 		tutoria.setAsistio(asistencia.asistio());
 		tutoria.setEstado(EstadoTutoria.REALIZADA);
 		Tutoria guardada = tutoriaRepositorio.save(tutoria);
+		publicarCambio(guardada);
 		notificationService.notifyUser(guardada.getEstudianteId(), "Tutoria finalizada",
 				"La tutoria de " + guardada.getMateria() + " finalizo.", "/notificaciones");
 		return guardada;
@@ -168,6 +178,12 @@ public class ServicioTutoriasImpl implements ServicioTutorias {
 		return tutoriaRepositorio.findById(id)
 				.orElseThrow(() -> new ResponseStatusException(
 						HttpStatus.NOT_FOUND, "No se encontró la tutoría solicitada."));
+	}
+
+	private void publicarCambio(Tutoria tutoria) {
+		if (tutoria.getId() != null) {
+			actualizacionesTutorias.publicar("TUTORIA_ACTUALIZADA", tutoria.getId());
+		}
 	}
 
 	private void validarConflictoEstudiante(

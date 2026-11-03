@@ -52,6 +52,7 @@ public class ControladorLiveKitProyectoAula {
 			throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
 					"La videollamada no está configurada en el servidor.");
 		}
+		proyectosAula.validarParticipanteProyecto(tutoriaId, proyectoId, sesionId, usuarioId);
 		ProyectoAula proyecto = proyectosAula.obtenerProyectoEnChat(tutoriaId, proyectoId, sesionId, usuarioId);
 		if (proyecto.fechaReunion() == null || !sesionId.equals(proyecto.reunionSesionId())
 				|| proyecto.reunionMensajePublicadoEn() == null) {

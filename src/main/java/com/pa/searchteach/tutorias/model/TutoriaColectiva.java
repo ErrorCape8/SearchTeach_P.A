@@ -20,7 +20,15 @@ public record TutoriaColectiva(
 		String tecnologia,
 		int semestre,
 		List<@NotNull ProyectoAula> proyectos,
-		@NotNull LocalDateTime creadaEn) {
+		@NotNull LocalDateTime creadaEn,
+		String estado) {
+
+	public TutoriaColectiva(String id, String coordinadoraId, String docenteLiderId,
+			List<String> docentesApoyoIds, String tecnologia, int semestre,
+			List<ProyectoAula> proyectos, LocalDateTime creadaEn) {
+		this(id, coordinadoraId, docenteLiderId, docentesApoyoIds, tecnologia, semestre,
+				proyectos, creadaEn, "ACTIVA");
+	}
 
 	public TutoriaColectiva {
 		if (coordinadoraId == null || coordinadoraId.isBlank()
@@ -61,6 +69,10 @@ public record TutoriaColectiva(
 		}
 		docentesApoyoIds = List.copyOf(docentesApoyoIds);
 		proyectos = List.copyOf(proyectos);
+		estado = estado == null || estado.isBlank() ? "ACTIVA" : estado;
+		if (!List.of("ACTIVA", "DISUELTA").contains(estado)) {
+			throw new IllegalArgumentException("El estado de la tutoría colectiva no es válido.");
+		}
 	}
 
 	public TutoriaColectiva actualizarProyecto(ProyectoAula actualizado) {
@@ -71,6 +83,11 @@ public record TutoriaColectiva(
 			nuevos = java.util.stream.Stream.concat(proyectos.stream(), java.util.stream.Stream.of(actualizado)).toList();
 		}
 		return new TutoriaColectiva(
-				id, coordinadoraId, docenteLiderId, docentesApoyoIds, tecnologia, semestre, nuevos, creadaEn);
+				id, coordinadoraId, docenteLiderId, docentesApoyoIds, tecnologia, semestre, nuevos, creadaEn, estado);
+	}
+
+	public TutoriaColectiva disolver() {
+		return new TutoriaColectiva(id, coordinadoraId, docenteLiderId, docentesApoyoIds,
+				tecnologia, semestre, proyectos, creadaEn, "DISUELTA");
 	}
 }

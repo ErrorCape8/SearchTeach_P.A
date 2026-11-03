@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/tutoring_updates.dart';
 import 'admin_controller.dart';
 import 'views/admin_editar_usuario_view.dart';
 import 'views/admin_inicio_view.dart';
@@ -13,6 +14,11 @@ class AdminMainPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.listen(tutoringUpdatesProvider, (_, next) {
+      if (next.hasValue) {
+        ref.read(adminControllerProvider.notifier).refreshDashboard();
+      }
+    });
     final state = ref.watch(adminControllerProvider);
     final notifier = ref.read(adminControllerProvider.notifier);
 

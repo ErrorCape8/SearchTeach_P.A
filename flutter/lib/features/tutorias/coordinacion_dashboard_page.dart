@@ -1,9 +1,13 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api_client.dart';
+import '../../core/tutoring_updates.dart';
 import '../auth/auth_repository.dart';
 import '../notifications/notifications_page.dart';
 import 'coordinacion_horarios_page.dart';
@@ -24,7 +28,8 @@ class CoordinacionDashboardPage extends ConsumerStatefulWidget {
 }
 
 class _CoordinacionDashboardPageState
-    extends ConsumerState<CoordinacionDashboardPage> {
+    extends ConsumerState<CoordinacionDashboardPage>
+    with WidgetsBindingObserver {
   int _tab = 0;
   bool _loading = true;
   String? _error;
@@ -33,11 +38,22 @@ class _CoordinacionDashboardPageState
   List<Map<String, dynamic>> _publishedSessions = [];
   List<Map<String, dynamic>> _groups = [];
   Map<String, dynamic> _profile = {};
-
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _load();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) _load();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -87,10 +103,14 @@ class _CoordinacionDashboardPageState
         'Tutores líderes',
         'Solicitudes docentes',
         'Perfil',
+        'Reportes de tutorías',
       ][_tab];
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(tutoringUpdatesProvider, (_, next) {
+      if (next.hasValue && mounted) _load();
+    });
     final wide = MediaQuery.sizeOf(context).width >= 760;
     final content = Column(
       children: [
@@ -146,7 +166,8 @@ class _CoordinacionDashboardPageState
         1 => const CoordinacionHorariosPage(),
         2 => _LeadersView(teachers: _teachers, groups: _groups),
         3 => const CoordinacionSolicitudesPage(),
-        _ => _ProfileView(profile: _profile, onRefresh: _load),
+        4 => _ProfileView(profile: _profile, onRefresh: _load),
+        _ => const _FeedbackReportsView(),
       };
 }
 
@@ -238,6 +259,7 @@ class _Navigation extends StatelessWidget {
     (Icons.groups_outlined, Icons.groups_rounded, 'Líderes'),
     (Icons.event_available_outlined, Icons.event_available_rounded, 'Cambios'),
     (Icons.person_outline_rounded, Icons.person_rounded, 'Perfil'),
+    (Icons.assessment_outlined, Icons.assessment_rounded, 'Reportes'),
   ];
 
   @override
@@ -440,10 +462,7 @@ class _ProfileView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     Widget row(IconData icon, String title, String value) =>
-        _RecordRow(
-            icon: icon,
-            title: title,
-            subtitle: value);
+        _RecordRow(icon: icon, title: title, subtitle: value);
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
       children: [
@@ -609,6 +628,93 @@ class _ProfileView extends ConsumerWidget {
           : 'No se pudo actualizar la contraseña.';
       scaffoldMessenger?.showSnackBar(SnackBar(content: Text(message)));
     }
+  }
+}
+
+class _FeedbackReportsView extends ConsumerStatefulWidget {
+  const _FeedbackReportsView();
+
+  @override
+  ConsumerState<_FeedbackReportsView> createState() =>
+      _FeedbackReportsViewState();
+}
+
+class _FeedbackReportsViewState extends ConsumerState<_FeedbackReportsView> {
+  bool _loading = false;
+  String? _preview;
+
+  Future<void> _download() async {
+    final now = DateTime.now();
+    setState(() => _loading = true);
+    try {
+      final response = await ref.read(dioProvider).get<String>(
+            '/api/coordinacion/reportes-tutorias/mensual',
+            queryParameters: {'anio': now.year, 'mes': now.month},
+            options: Options(responseType: ResponseType.plain),
+          );
+      final csv = response.data;
+      if (csv == null || csv.isEmpty) {
+        throw const FormatException('El servidor devolvió un informe vacío.');
+      }
+      if (!mounted) return;
+      setState(() => _preview = csv);
+      final opened = await launchUrl(
+        Uri.dataFromString(csv, mimeType: 'text/csv', encoding: utf8),
+        mode: LaunchMode.externalApplication,
+      );
+      if (!opened && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('No se pudo abrir la descarga del informe.')));
+      }
+    } on DioException catch (error) {
+      if (!mounted) return;
+      final message = error.response?.data is String
+          ? error.response!.data as String
+          : 'No se pudo generar el informe mensual.';
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
+    } on FormatException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final month = DateTime.now();
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        const Text('Reportes de satisfacción',
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        Text(
+            'Descarga el resumen de ${month.month.toString().padLeft(2, '0')}/${month.year} con promedio, categorías frecuentes y comentarios.'),
+        const SizedBox(height: 18),
+        FilledButton.icon(
+          onPressed: _loading ? null : _download,
+          icon: _loading
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2))
+              : const Icon(Icons.download_outlined),
+          label: Text(_loading ? 'Generando...' : 'Descargar informe mensual'),
+        ),
+        if (_preview != null) ...[
+          const SizedBox(height: 18),
+          const Text('Vista previa',
+              style: TextStyle(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 8),
+          SelectableText(_preview!,
+              style: const TextStyle(fontFamily: 'monospace', fontSize: 12)),
+        ],
+      ],
+    );
   }
 }
 

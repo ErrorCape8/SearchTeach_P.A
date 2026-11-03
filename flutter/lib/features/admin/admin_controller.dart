@@ -256,6 +256,7 @@ class AdminController extends StateNotifier<AdminState> {
       if (data == null) {
         throw const FormatException('El servidor no devolvió el perfil de TI.');
       }
+
       state = state.copyWith(
         adminProfile: () => AdminProfile.fromJson(data),
         isLoadingProfile: false,
@@ -271,6 +272,14 @@ class AdminController extends StateNotifier<AdminState> {
         profileError: () => error.message,
       );
     }
+  }
+
+  Future<void> refreshDashboard() async {
+    await Future.wait([
+      loadUsers(),
+      loadStats(),
+      loadProfile(),
+    ]);
   }
 
   Future<bool> updateAdminPhone(String phone) async {
@@ -402,7 +411,6 @@ class AdminController extends StateNotifier<AdminState> {
       state = state.copyWith(errorMessage: () => error.message);
     }
   }
-
 }
 
 final adminControllerProvider =

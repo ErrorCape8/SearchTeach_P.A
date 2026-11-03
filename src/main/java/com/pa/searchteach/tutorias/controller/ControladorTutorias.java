@@ -26,6 +26,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import org.springframework.http.MediaType;
+import com.pa.searchteach.tutorias.service.ActualizacionesTutoriasService;
 
 @RestController
 @RequestMapping("/api/tutorias")
@@ -34,14 +37,25 @@ public class ControladorTutorias {
 	private final ServicioTutorias servicioTutorias;
 	private final HorariosTutoresService horariosTutoresService;
 	private final SesionesGrupalesTutoriaService sesionesGrupalesService;
+	private final ActualizacionesTutoriasService actualizacionesTutorias;
 
 	public ControladorTutorias(
 			ServicioTutorias servicioTutorias,
 			HorariosTutoresService horariosTutoresService,
-			SesionesGrupalesTutoriaService sesionesGrupalesService) {
+			SesionesGrupalesTutoriaService sesionesGrupalesService,
+			ActualizacionesTutoriasService actualizacionesTutorias) {
 		this.servicioTutorias = servicioTutorias;
 		this.horariosTutoresService = horariosTutoresService;
 		this.sesionesGrupalesService = sesionesGrupalesService;
+		this.actualizacionesTutorias = actualizacionesTutorias;
+	}
+
+	@GetMapping(value = "/eventos", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+	public SseEmitter eventosTutorias(@AuthenticationPrincipal String usuarioId) {
+		if (usuarioId == null || usuarioId.isBlank()) {
+			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Debes iniciar sesión.");
+		}
+		return actualizacionesTutorias.suscribir();
 	}
 
 	@GetMapping("/disponibles")

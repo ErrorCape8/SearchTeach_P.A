@@ -18,6 +18,7 @@ class ProyectoAulaChatPage extends ConsumerStatefulWidget {
     required this.title,
     required this.teacherMode,
     this.supportMode = true,
+    this.readOnly = false,
     super.key,
   });
   final String tutoringId;
@@ -26,9 +27,11 @@ class ProyectoAulaChatPage extends ConsumerStatefulWidget {
   final String title;
   final bool teacherMode;
   final bool supportMode;
+  final bool readOnly;
 
   @override
-  ConsumerState<ProyectoAulaChatPage> createState() => _ProyectoAulaChatPageState();
+  ConsumerState<ProyectoAulaChatPage> createState() =>
+      _ProyectoAulaChatPageState();
 }
 
 class _ProyectoAulaChatPageState extends ConsumerState<ProyectoAulaChatPage> {
@@ -37,18 +40,26 @@ class _ProyectoAulaChatPageState extends ConsumerState<ProyectoAulaChatPage> {
   PlatformFile? _attachment;
   bool _loading = true;
   bool _sending = false;
+  String _closureReport = '';
   String? _error;
   Map<String, dynamic>? _projectState;
+  Map<String, dynamic>? _meeting;
   Timer? _refreshTimer;
   CancelToken? _streamCancel;
   StreamSubscription<String>? _streamSubscription;
 
-  String get _path => '/api/tutorias-colectivas/${Uri.encodeComponent(widget.tutoringId)}'
+  String get _path =>
+      '/api/tutorias-colectivas/${Uri.encodeComponent(widget.tutoringId)}'
       '/proyectos/${Uri.encodeComponent(widget.projectId)}'
       '/sesiones/${Uri.encodeComponent(widget.sessionId)}/mensajes';
-  String get _statusPath => '/api/tutorias-colectivas/${Uri.encodeComponent(widget.tutoringId)}'
+  String get _statusPath =>
+      '/api/tutorias-colectivas/${Uri.encodeComponent(widget.tutoringId)}'
       '/proyectos/${Uri.encodeComponent(widget.projectId)}'
       '/sesiones/${Uri.encodeComponent(widget.sessionId)}/estado';
+  String get _meetingPath =>
+      '/api/tutorias-colectivas/${Uri.encodeComponent(widget.tutoringId)}'
+      '/proyectos/${Uri.encodeComponent(widget.projectId)}'
+      '/sesiones/${Uri.encodeComponent(widget.sessionId)}/reunion';
 
   @override
   void initState() {
@@ -74,10 +85,12 @@ class _ProyectoAulaChatPageState extends ConsumerState<ProyectoAulaChatPage> {
     _streamCancel = cancel;
     try {
       final response = await ref.read(dioProvider).get<ResponseBody>(
-        '$_path/stream',
-        cancelToken: cancel,
-        options: Options(responseType: ResponseType.stream, receiveTimeout: Duration.zero),
-      );
+            '$_path/stream',
+            cancelToken: cancel,
+            options: Options(
+                responseType: ResponseType.stream,
+                receiveTimeout: Duration.zero),
+          );
       final body = response.data;
       if (body == null || cancel.isCancelled) return;
       _streamSubscription = body.stream
@@ -98,7 +111,8 @@ class _ProyectoAulaChatPageState extends ConsumerState<ProyectoAulaChatPage> {
       if (decoded is! Map<String, dynamic> || !mounted) return;
       final id = decoded['id']?.toString();
       setState(() {
-        if (id == null || !_messages.any((message) => message['id']?.toString() == id)) {
+        if (id == null ||
+            !_messages.any((message) => message['id']?.toString() == id)) {
           _messages = [..._messages, decoded];
         }
       });
@@ -114,19 +128,30 @@ class _ProyectoAulaChatPageState extends ConsumerState<ProyectoAulaChatPage> {
       final loaded = (response.data ?? const [])
           .whereType<Map<String, dynamic>>()
           .toList(growable: true);
-      final loadedIds = loaded.map((message) => message['id']?.toString()).toSet();
+      final loadedIds =
+          loaded.map((message) => message['id']?.toString()).toSet();
       loaded.addAll(_messages.where((message) =>
-          message['id'] == null || !loadedIds.contains(message['id']?.toString())));
+          message['id'] == null ||
+          !loadedIds.contains(message['id']?.toString())));
       setState(() {
         _messages = loaded;
         _loading = false;
         _error = null;
       });
       try {
-        final project = await ref.read(dioProvider).get<Map<String, dynamic>>(_statusPath);
+        final project =
+            await ref.read(dioProvider).get<Map<String, dynamic>>(_statusPath);
         if (mounted) setState(() => _projectState = project.data);
       } on DioException {
         // The report remains readable if project status cannot be refreshed.
+      }
+      try {
+        final meeting = await ref.read(dioProvider).get<Map<String, dynamic>>(
+              _meetingPath,
+            );
+        if (mounted) setState(() => _meeting = meeting.data);
+      } on DioException {
+        if (mounted) setState(() => _meeting = null);
       }
     } on DioException catch (error) {
       if (!mounted) return;
@@ -137,37 +162,66 @@ class _ProyectoAulaChatPageState extends ConsumerState<ProyectoAulaChatPage> {
     }
   }
 
+  Future<void> _respondMeeting(bool accepts) async {
+    try {
+      await ref.read(dioProvider).post(
+        _meetingPath + '/respuesta',
+        queryParameters: {'acepta': accepts},
+      );
+      await _load();
+    } on DioException catch (error) {
+      if (mounted) setState(() => _error = _apiMessage(error));
+    }
+  }
+
   Future<void> _scheduleMeeting() async {
     final now = DateTime.now();
     var date = now.add(const Duration(days: 1));
     var time = const TimeOfDay(hour: 10, minute: 0);
     final selected = await showDialog<DateTime>(
       context: context,
-      builder: (dialogContext) => StatefulBuilder(builder: (context, setDialogState) => AlertDialog(
-        title: const Text('Organizar reunión de PA'),
-        content: Column(mainAxisSize: MainAxisSize.min, children: [
-          OutlinedButton.icon(
-            onPressed: () async {
-              final picked = await showDatePicker(context: context, initialDate: date, firstDate: now, lastDate: DateTime(now.year + 2));
-              if (picked != null) setDialogState(() => date = DateTime(picked.year, picked.month, picked.day));
-            },
-            icon: const Icon(Icons.calendar_month_outlined),
-            label: Text('${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}'),
-          ),
-          OutlinedButton.icon(
-            onPressed: () async {
-              final picked = await showTimePicker(context: context, initialTime: time);
-              if (picked != null) setDialogState(() => time = picked);
-            },
-            icon: const Icon(Icons.schedule_outlined),
-            label: Text(time.format(context)),
-          ),
-        ]),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancelar')),
-          FilledButton.icon(onPressed: () => Navigator.pop(dialogContext, DateTime(date.year, date.month, date.day, time.hour, time.minute)), icon: const Icon(Icons.video_call_outlined), label: const Text('Crear videoconferencia')),
-        ],
-      )),
+      builder: (dialogContext) => StatefulBuilder(
+          builder: (context, setDialogState) => AlertDialog(
+                title: const Text('Organizar reunión de PA'),
+                content: Column(mainAxisSize: MainAxisSize.min, children: [
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      final picked = await showDatePicker(
+                          context: context,
+                          initialDate: date,
+                          firstDate: now,
+                          lastDate: DateTime(now.year + 2));
+                      if (picked != null)
+                        setDialogState(() => date =
+                            DateTime(picked.year, picked.month, picked.day));
+                    },
+                    icon: const Icon(Icons.calendar_month_outlined),
+                    label: Text(
+                        '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      final picked = await showTimePicker(
+                          context: context, initialTime: time);
+                      if (picked != null) setDialogState(() => time = picked);
+                    },
+                    icon: const Icon(Icons.schedule_outlined),
+                    label: Text(time.format(context)),
+                  ),
+                ]),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(dialogContext),
+                      child: const Text('Cancelar')),
+                  FilledButton.icon(
+                      onPressed: () => Navigator.pop(
+                          dialogContext,
+                          DateTime(date.year, date.month, date.day, time.hour,
+                              time.minute)),
+                      icon: const Icon(Icons.video_call_outlined),
+                      label: const Text('Crear videoconferencia')),
+                ],
+              )),
     );
     if (selected == null) return;
     if (!selected.isAfter(DateTime.now())) {
@@ -191,25 +245,55 @@ class _ProyectoAulaChatPageState extends ConsumerState<ProyectoAulaChatPage> {
     var reason = 'LISTO';
     final selected = await showDialog<String>(
       context: context,
-      builder: (dialogContext) => StatefulBuilder(builder: (context, setDialogState) => AlertDialog(
-        title: const Text('Solicitar finalización de PA'),
-        content: Column(mainAxisSize: MainAxisSize.min, children: [
-          RadioListTile<String>(value: 'LISTO', groupValue: reason, onChanged: (value) => setDialogState(() => reason = value!), title: const Text('El proyecto está listo')),
-          RadioListTile<String>(value: 'SIN_ATENCION', groupValue: reason, onChanged: (value) => setDialogState(() => reason = value!), title: const Text('Los estudiantes dejaron de responder')),
-          const Text('El docente líder revisará el reporte antes de confirmar el cierre.'),
-        ]),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancelar')),
-          FilledButton(onPressed: () => Navigator.pop(dialogContext, reason), child: const Text('Enviar al líder')),
-        ],
-      )),
+      builder: (dialogContext) => StatefulBuilder(
+          builder: (context, setDialogState) => AlertDialog(
+                title: const Text('Solicitar finalización de PA'),
+                content: Column(mainAxisSize: MainAxisSize.min, children: [
+                  RadioListTile<String>(
+                      value: 'LISTO',
+                      groupValue: reason,
+                      onChanged: (value) =>
+                          setDialogState(() => reason = value!),
+                      title: const Text('Dar por completado el asesoramiento')),
+                  RadioListTile<String>(
+                      value: 'SIN_ATENCION',
+                      groupValue: reason,
+                      onChanged: (value) =>
+                          setDialogState(() => reason = value!),
+                      title:
+                          const Text('Finalizar por falta de participación')),
+                  TextField(
+                    maxLines: 4,
+                    maxLength: 4000,
+                    decoration: const InputDecoration(
+                      labelText: 'Reporte obligatorio de lo realizado',
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (value) =>
+                        setDialogState(() => _closureReport = value),
+                  ),
+                  const Text(
+                      'El docente líder revisará el reporte antes de confirmar el cierre.'),
+                ]),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(dialogContext),
+                      child: const Text('Cancelar')),
+                  FilledButton(
+                    onPressed: _closureReport.trim().isEmpty
+                        ? null
+                        : () => Navigator.pop(dialogContext, reason),
+                    child: const Text('Enviar al líder'),
+                  ),
+                ],
+              )),
     );
     if (selected == null) return;
     try {
       await ref.read(dioProvider).post(
         '/api/docente/tutorias-colectivas/${Uri.encodeComponent(widget.tutoringId)}'
         '/proyectos/${Uri.encodeComponent(widget.projectId)}/solicitud-cierre',
-        data: {'motivo': selected},
+        data: {'motivo': selected, 'reporte': _closureReport.trim()},
       );
       await _load();
     } on DioException catch (error) {
@@ -220,14 +304,15 @@ class _ProyectoAulaChatPageState extends ConsumerState<ProyectoAulaChatPage> {
   Future<void> _pickFile() async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: const ['pdf', 'docx'],
+      allowedExtensions: const ['pdf', 'docx', 'webm'],
       withData: true,
     );
     if (result == null || result.files.isEmpty) return;
     final file = result.files.single;
     final extension = file.extension?.toLowerCase();
-    if (!const {'pdf', 'docx'}.contains(extension) || file.bytes == null) {
-      setState(() => _error = 'Selecciona un archivo PDF o Word válido.');
+    if (!const {'pdf', 'docx', 'webm'}.contains(extension) ||
+        file.bytes == null) {
+      setState(() => _error = 'Selecciona un PDF, Word o audio WebM válido.');
       return;
     }
     setState(() {
@@ -269,9 +354,9 @@ class _ProyectoAulaChatPageState extends ConsumerState<ProyectoAulaChatPage> {
     if (id.isEmpty) return;
     try {
       final response = await ref.read(dioProvider).get<List<int>>(
-        '$_path/${Uri.encodeComponent(id)}/archivo',
-        options: Options(responseType: ResponseType.bytes),
-      );
+            '$_path/${Uri.encodeComponent(id)}/archivo',
+            options: Options(responseType: ResponseType.bytes),
+          );
       final bytes = response.data;
       if (bytes == null) throw const FormatException('El archivo está vacío.');
       await FilePicker.platform.saveFile(
@@ -280,9 +365,13 @@ class _ProyectoAulaChatPageState extends ConsumerState<ProyectoAulaChatPage> {
         bytes: Uint8List.fromList(bytes),
       );
     } on DioException catch (error) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_apiMessage(error))));
+      if (mounted)
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(_apiMessage(error))));
     } on FormatException catch (error) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+      if (mounted)
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.message)));
     }
   }
 
@@ -298,26 +387,37 @@ class _ProyectoAulaChatPageState extends ConsumerState<ProyectoAulaChatPage> {
         appBar: AppBar(
           title: Text(widget.title),
           actions: [
-            if (widget.teacherMode && widget.supportMode && _projectState?['estadoCierre'] != 'FINALIZADO')
+            if (!widget.readOnly &&
+                widget.teacherMode &&
+                widget.supportMode &&
+                _projectState?['estadoCierre'] != 'FINALIZADO')
               IconButton(
                 tooltip: 'Crear videoconferencia',
                 onPressed: _scheduleMeeting,
                 icon: const Icon(Icons.video_call_outlined),
               ),
-            if (widget.teacherMode && widget.supportMode && _projectState?['estadoCierre'] != 'FINALIZADO')
+            if (!widget.readOnly &&
+                widget.teacherMode &&
+                widget.supportMode &&
+                _projectState?['estadoCierre'] != 'FINALIZADO')
               PopupMenuButton<String>(
                 tooltip: 'Acciones del proyecto',
-                onSelected: (value) => value == 'reunion' ? _scheduleMeeting() : _requestProjectClosure(),
+                onSelected: (value) => value == 'reunion'
+                    ? _scheduleMeeting()
+                    : _requestProjectClosure(),
                 itemBuilder: (_) => [
-                  const PopupMenuItem(value: 'reunion', child: Text('Programar reunión')),
+                  const PopupMenuItem(
+                      value: 'reunion', child: Text('Programar reunión')),
                   if (_projectState?['estadoCierre'] == 'EN_CURSO')
-                    const PopupMenuItem(value: 'cierre', child: Text('Solicitar finalizar PA')),
+                    const PopupMenuItem(
+                        value: 'cierre', child: Text('Solicitar finalizar PA')),
                 ],
               ),
           ],
         ),
         body: Column(children: [
           if (_projectState != null) _projectWorkflowBanner(),
+          if (_meeting != null && !widget.teacherMode) _meetingCard(),
           Expanded(
             child: _loading
                 ? const Center(child: CircularProgressIndicator())
@@ -329,45 +429,108 @@ class _ProyectoAulaChatPageState extends ConsumerState<ProyectoAulaChatPage> {
                           if (_messages.isEmpty)
                             const Padding(
                               padding: EdgeInsets.all(24),
-                              child: Text('Inicia la conversación sobre este reporte.'),
+                              child: Text(
+                                  'Inicia la conversación sobre este reporte.'),
                             ),
-                          for (final message in _messages) _messageBubble(message),
+                          for (final message in _messages)
+                            _messageBubble(message),
                         ],
                       ),
           ),
           if (_error != null && _messages.isNotEmpty)
-            Padding(padding: const EdgeInsets.symmetric(horizontal: 12), child: Text(_error!, style: const TextStyle(color: Colors.red))),
+            Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child:
+                    Text(_error!, style: const TextStyle(color: Colors.red))),
           if (_attachment != null)
             ListTile(
               dense: true,
               leading: const Icon(Icons.attach_file),
-              title: Text(_attachment!.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-              trailing: IconButton(onPressed: () => setState(() => _attachment = null), icon: const Icon(Icons.close)),
+              title: Text(_attachment!.name,
+                  maxLines: 1, overflow: TextOverflow.ellipsis),
+              trailing: IconButton(
+                  onPressed: () => setState(() => _attachment = null),
+                  icon: const Icon(Icons.close)),
             ),
-          if (_projectState?['estadoCierre'] != 'FINALIZADO') SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                IconButton(tooltip: 'Adjuntar PDF o Word', onPressed: _sending ? null : _pickFile, icon: const Icon(Icons.attach_file)),
-                Expanded(child: TextField(
-                  controller: _text,
-                  minLines: 1,
-                  maxLines: 5,
-                  maxLength: 4000,
-                  decoration: const InputDecoration(hintText: 'Escribe una respuesta…', border: OutlineInputBorder(), counterText: ''),
-                )),
-                const SizedBox(width: 8),
-                IconButton.filled(onPressed: _sending ? null : _send, icon: _sending ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.send)),
-              ]),
+          if (!widget.readOnly &&
+              _projectState?['estadoCierre'] != 'FINALIZADO')
+            SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child:
+                    Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                  IconButton(
+                      tooltip: 'Adjuntar archivo o audio WebM',
+                      onPressed: _sending ? null : _pickFile,
+                      icon: const Icon(Icons.mic_none_outlined)),
+                  Expanded(
+                      child: TextField(
+                    controller: _text,
+                    minLines: 1,
+                    maxLines: 5,
+                    maxLength: 4000,
+                    decoration: const InputDecoration(
+                        hintText: 'Escribe una respuesta…',
+                        border: OutlineInputBorder(),
+                        counterText: ''),
+                  )),
+                  const SizedBox(width: 8),
+                  IconButton.filled(
+                      onPressed: _sending ? null : _send,
+                      icon: _sending
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2))
+                          : const Icon(Icons.send)),
+                ]),
+              ),
             ),
-          ),
         ]),
       );
 
+  Widget _meetingCard() {
+    final state = _meeting?['estado']?.toString() ?? 'PENDIENTE';
+    final date = DateTime.tryParse(_meeting?['fechaReunion']?.toString() ?? '');
+    final responses = (_meeting?['respuestas'] as Map?)?.length ?? 0;
+    return Card(
+      margin: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+      child: ListTile(
+        leading: Icon(
+          state == 'CANCELADA' ? Icons.event_busy : Icons.video_call_outlined,
+        ),
+        title: Text(state == 'CANCELADA'
+            ? 'Videoconferencia cancelada'
+            : 'Videoconferencia propuesta'),
+        subtitle: Text(
+          '${date == null ? 'Fecha pendiente' : date.toLocal()} · '
+          '$responses respuesta(s)',
+        ),
+        trailing: state == 'CANCELADA'
+            ? null
+            : Wrap(
+                spacing: 4,
+                children: [
+                  TextButton(
+                    onPressed: () => _respondMeeting(false),
+                    child: const Text('No puedo'),
+                  ),
+                  FilledButton(
+                    onPressed: () => _respondMeeting(true),
+                    child: const Text('Aceptar'),
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+
   Widget _projectWorkflowBanner() {
     final state = _projectState?['estadoCierre']?.toString() ?? 'EN_CURSO';
-    final meeting = DateTime.tryParse(_projectState?['fechaReunion']?.toString() ?? '')?.toLocal();
+    final meeting =
+        DateTime.tryParse(_projectState?['fechaReunion']?.toString() ?? '')
+            ?.toLocal();
     final reason = _projectState?['motivoCierre']?.toString();
     final status = state == 'FINALIZADO'
         ? 'Proyecto finalizado por el docente líder.'
@@ -378,14 +541,16 @@ class _ProyectoAulaChatPageState extends ConsumerState<ProyectoAulaChatPage> {
       width: double.infinity,
       color: const Color(0xFFE8F3FF),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: Text('$status${meeting == null ? '' : '\nReunión: ${meeting.day.toString().padLeft(2, '0')}/${meeting.month.toString().padLeft(2, '0')}/${meeting.year} ${TimeOfDay.fromDateTime(meeting).format(context)}'}'),
+      child: Text(
+          '$status${meeting == null ? '' : '\nReunión: ${meeting.day.toString().padLeft(2, '0')}/${meeting.month.toString().padLeft(2, '0')}/${meeting.year} ${TimeOfDay.fromDateTime(meeting).format(context)}'}'),
     );
   }
 
   Widget _messageBubble(Map<String, dynamic> message) {
     final own = message['propio'] == true;
     final fileName = message['archivoNombre']?.toString();
-    final sentAt = DateTime.tryParse(message['enviadoEn']?.toString() ?? '')?.toLocal();
+    final sentAt =
+        DateTime.tryParse(message['enviadoEn']?.toString() ?? '')?.toLocal();
     return Align(
       alignment: own ? Alignment.centerRight : Alignment.centerLeft,
       child: ConstrainedBox(
@@ -394,32 +559,47 @@ class _ProyectoAulaChatPageState extends ConsumerState<ProyectoAulaChatPage> {
           color: own ? const Color(0xFFE8F3FF) : Colors.white,
           child: Padding(
             padding: const EdgeInsets.all(12),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(own ? 'Tú' : widget.supportMode ? widget.teacherMode ? 'Estudiante' : 'Tutor' : 'Participante', style: const TextStyle(fontWeight: FontWeight.bold)),
-              if ((message['texto']?.toString() ?? '').isNotEmpty) Padding(
-                padding: const EdgeInsets.only(top: 6),
-                child: Text(message['texto'].toString()),
-              ),
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(
+                  own
+                      ? 'Tú'
+                      : widget.supportMode
+                          ? widget.teacherMode
+                              ? 'Estudiante'
+                              : 'Tutor'
+                          : 'Participante',
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              if ((message['texto']?.toString() ?? '').isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(message['texto'].toString()),
+                ),
               if (fileName != null && fileName.isNotEmpty)
                 TextButton.icon(
                   onPressed: () => _download(message),
                   icon: const Icon(Icons.download_outlined),
-                  label: Text(fileName, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  label: Text(fileName,
+                      maxLines: 1, overflow: TextOverflow.ellipsis),
                 ),
-              if (message['tipo'] == 'REUNION') Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: FilledButton.icon(
-                  onPressed: _projectState?['estadoCierre'] == 'FINALIZADO'
-                      ? null
-                      : () => _enterMeeting(),
-                  icon: const Icon(Icons.video_call_outlined),
-                  label: const Text('Entrar a la reunión de PA'),
+              if (message['tipo'] == 'REUNION')
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: FilledButton.icon(
+                    onPressed: _projectState?['estadoCierre'] == 'FINALIZADO'
+                        ? null
+                        : () => _enterMeeting(),
+                    icon: const Icon(Icons.video_call_outlined),
+                    label: const Text('Entrar a la reunión de PA'),
+                  ),
                 ),
-              ),
-              if (sentAt != null) Align(
-                alignment: Alignment.centerRight,
-                child: Text('${sentAt.day.toString().padLeft(2, '0')}/${sentAt.month.toString().padLeft(2, '0')}/${sentAt.year} ${TimeOfDay.fromDateTime(sentAt).format(context)}', style: Theme.of(context).textTheme.labelSmall),
-              ),
+              if (sentAt != null)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                      '${sentAt.day.toString().padLeft(2, '0')}/${sentAt.month.toString().padLeft(2, '0')}/${sentAt.year} ${TimeOfDay.fromDateTime(sentAt).format(context)}',
+                      style: Theme.of(context).textTheme.labelSmall),
+                ),
             ]),
           ),
         ),

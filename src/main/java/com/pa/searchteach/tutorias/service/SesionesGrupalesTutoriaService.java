@@ -11,6 +11,7 @@ import com.pa.searchteach.tutorias.dto.SolicitudCambioFechaTutoria;
 import com.pa.searchteach.tutorias.model.SesionTutoria;
 import com.pa.searchteach.tutorias.model.AsistenciaEstudiante;
 import com.pa.searchteach.tutorias.model.MensajeChatTutoria;
+import com.pa.searchteach.tutorias.model.ValoracionTutoria;
 import com.pa.searchteach.tutorias.model.ModalidadTutoria;
 import com.pa.searchteach.tutorias.model.CatalogoTecnologias;
 import com.pa.searchteach.tutorias.model.CatalogoMateriasTecnologia;
@@ -42,6 +43,7 @@ public class SesionesGrupalesTutoriaService {
 	private final NotificationService notificationService;
 	private final SolicitudCambioFechaSesionRepositorio solicitudesCambio;
 	private final LiveKitRoomAdminService liveKitRooms;
+	private final ActualizacionesTutoriasService actualizacionesTutorias;
 
 	private static LocalDateTime ahora() {
 		return LocalDateTime.now(ZONA_LOCAL);
@@ -55,7 +57,8 @@ public class SesionesGrupalesTutoriaService {
 			InscripcionesTutoriasEstudianteService inscripcionesEstudiante,
 			NotificationService notificationService,
 			SolicitudCambioFechaSesionRepositorio solicitudesCambio,
-			LiveKitRoomAdminService liveKitRooms) {
+			LiveKitRoomAdminService liveKitRooms,
+			ActualizacionesTutoriasService actualizacionesTutorias) {
 		this.sesiones = sesiones;
 		this.usuarios = usuarios;
 		this.coordinadores = coordinadores;
@@ -64,6 +67,7 @@ public class SesionesGrupalesTutoriaService {
 		this.notificationService = notificationService;
 		this.solicitudesCambio = solicitudesCambio;
 		this.liveKitRooms = liveKitRooms;
+		this.actualizacionesTutorias = actualizacionesTutorias;
 	}
 
 	public List<SesionTutoria> listarDeEstudiante(String estudianteId) {
@@ -95,7 +99,115 @@ public class SesionesGrupalesTutoriaService {
 		if (!MOTIVOS_CIERRE.contains(normalizado)) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Selecciona un motivo de cierre válido.");
 		SesionTutoria cerrada = sesiones.save(sesion.cerrar(normalizado, ahora()));
 		liveKitRooms.closeGroupTutoringRoom(sesionId);
+		actualizacionesTutorias.publicar("FINALIZADA", sesionId);
 		return cerrada;
+	}
+
+	public SesionTutoria iniciarClase(String sesionId, String docenteId) {
+		SesionTutoria sesion = obtenerSesionDocente(sesionId, docenteId);
+		if ("FINALIZADA".equals(sesion.estadoClase())) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT, "La tutoría ya finalizó.");
+		}
+		SesionTutoria iniciada = sesiones.save(sesion.iniciar(ahora()));
+		actualizacionesTutorias.publicar("EN_CURSO", sesionId);
+		return iniciada;
+	}
+
+	public SesionTutoria valorarClase(String sesionId, String estudianteId, Integer estrellas, String comentario) {
+			SesionTutoria sesion = sesiones.findById(sesionId)
+					.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No se encontró la tutoría."));
+			if (!sesion.estudianteIds().contains(estudianteId)) {
+				throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No perteneces a esta tutoría.");
+			}
+			if (!"FINALIZADA".equals(sesion.estadoClase())) {
+				throw new ResponseStatusException(HttpStatus.CONFLICT, "Solo puedes valorar una tutoría finalizada.");
+			}
+			if (estrellas == null || estrellas < 1 || estrellas > 5) {
+				throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La calificación debe estar entre 1 y 5 estrellas.");
+			}
+			String texto = comentario == null ? "" : comentario.trim();
+			if (texto.length() > 300) {
+				throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El comentario no puede superar 300 caracteres.");
+			}
+			SesionTutoria guardada = sesiones.save(sesion.valorar(estudianteId, estrellas, texto, ahora()));
+			actualizacionesTutorias.publicar("VALORACION", sesionId);
+			coordinadores.findAll().forEach(coordinador -> notificationService.notifyUser(
+					coordinador.getId(),
+					"Nuevo reporte de tutoría",
+					"Un estudiante calificó al tutor " + sesion.docenteId()
+							+ " en " + (sesion.materia() == null ? "una tutoría" : sesion.materia()) + ".",
+					"/coordinacion/reportes-tutorias"));
+			return guardada;
+	}
+
+	public boolean esCoordinador(String usuarioId) {
+			return usuarioId != null && coordinadores.existsById(usuarioId);
+	}
+
+	public List<SesionTutoria> sesionesFinalizadasEntre(LocalDateTime inicio, LocalDateTime fin) {
+			return sesiones.findAll().stream()
+					.map(this::cerrarSiVencida)
+					.filter(sesion -> "FINALIZADA".equals(sesion.estadoClase()))
+					.filter(sesion -> sesion.finalizadaEn() != null
+							&& !sesion.finalizadaEn().isBefore(inicio)
+							&& sesion.finalizadaEn().isBefore(fin))
+					.toList();
+	}
+
+	public String generarReporteMensual(LocalDateTime inicio, LocalDateTime fin) {
+			List<SesionTutoria> sesionesDelMes = sesionesFinalizadasEntre(inicio, fin);
+			List<ValoracionTutoria> valoraciones = sesionesDelMes.stream()
+					.flatMap(sesion -> sesion.valoraciones().stream())
+					.toList();
+			double promedio = valoraciones.stream().mapToInt(ValoracionTutoria::estrellas)
+					.average().orElse(0);
+			java.util.Map<String, Long> categorias = new java.util.LinkedHashMap<>();
+			categorias.put("Docente no se presento", contarCategoria(valoraciones, "no se present", "no entro", "no entró", "no asist"));
+			categorias.put("Explicacion insuficiente", contarCategoria(valoraciones, "no explic", "no entiend", "explic"));
+			categorias.put("Problemas de conexion", contarCategoria(valoraciones, "internet", "conexion", "conexión", "audio", "video"));
+			categorias.put("Otros comentarios", Math.max(0, valoraciones.stream()
+					.filter(valoracion -> !valoracion.comentario().isBlank()).count()
+					- categorias.values().stream().mapToLong(Long::longValue).sum()));
+
+			StringBuilder csv = new StringBuilder("\uFEFF");
+			csv.append("REPORTE MENSUAL DE TUTORIAS\n");
+			csv.append("Periodo,").append(inicio.toLocalDate()).append(" a ").append(fin.toLocalDate().minusDays(1)).append('\n');
+			csv.append("Sesiones finalizadas,").append(sesionesDelMes.size()).append('\n');
+			csv.append("Valoraciones recibidas,").append(valoraciones.size()).append('\n');
+			csv.append("Calificacion general,").append(String.format(java.util.Locale.US, "%.2f/5", promedio)).append("\n\n");
+			csv.append("Categoria,Frecuencia\n");
+			categorias.forEach((categoria, cantidad) -> csv.append(escaparCsv(categoria)).append(',').append(cantidad).append('\n'));
+			csv.append("\nSesion,Materia,Tutor,Estudiante,Estrellas,Comentario sobre el tutor,Fecha\n");
+			for (SesionTutoria sesion : sesionesDelMes) {
+				for (ValoracionTutoria valoracion : sesion.valoraciones()) {
+					csv.append(escaparCsv(sesion.id())).append(',')
+							.append(escaparCsv(sesion.materia())).append(',')
+							.append(escaparCsv(sesion.docenteId())).append(',')
+							.append(escaparCsv(valoracion.estudianteId())).append(',')
+							.append(valoracion.estrellas()).append(',')
+							.append(escaparCsv(valoracion.comentario())).append(',')
+							.append(valoracion.creadaEn()).append('\n');
+				}
+			}
+			return csv.toString();
+	}
+
+	private long contarCategoria(List<ValoracionTutoria> valoraciones, String... palabras) {
+			return valoraciones.stream()
+					.map(ValoracionTutoria::comentario)
+					.filter(comentario -> {
+						String normalizado = comentario.toLowerCase(java.util.Locale.ROOT);
+						for (String palabra : palabras) {
+							if (normalizado.contains(palabra)) return true;
+						}
+						return false;
+					})
+					.count();
+	}
+
+	private String escaparCsv(String valor) {
+			String texto = valor == null ? "" : valor;
+			return "\"" + texto.replace("\"", "\"\"").replace("\r", " ").replace("\n", " ") + "\"";
 	}
 
 	public SesionTutoria registrarMensaje(String sesionId, String usuarioId, String texto) {
@@ -124,6 +236,7 @@ public class SesionesGrupalesTutoriaService {
 		if (!"FINALIZADA".equals(sesion.estadoClase()) && !ahora().isBefore(sesion.fechaFin())) {
 			SesionTutoria cerrada = sesiones.save(sesion.cerrar("FINALIZACION_AUTOMATICA", sesion.fechaFin()));
 			liveKitRooms.closeGroupTutoringRoom(sesion.id());
+			actualizacionesTutorias.publicar("FINALIZADA", sesion.id());
 			return cerrada;
 		}
 		return sesion;
@@ -329,6 +442,7 @@ public class SesionesGrupalesTutoriaService {
 				"Nueva tutoría programada",
 				"Coordinación programó una tutoría de " + sesion.materia() + " para " + sesion.tecnologia() + ".",
 				"/docente"));
+		guardadas.forEach(sesion -> actualizacionesTutorias.publicar("PROGRAMADA", sesion.id()));
 		return guardadas;
 	}
 
@@ -359,16 +473,20 @@ public class SesionesGrupalesTutoriaService {
 		for (String estudianteId : actual.estudianteIds()) {
 			inscripcionesEstudiante.validarConflictoActual(estudianteId, bloque.fechaInicio(), bloque.fechaFin(), sesionId);
 		}
-		return sesiones.save(new SesionTutoria(actual.id(), bloque.docenteId(), actual.estudianteIds(),
+		SesionTutoria actualizada = sesiones.save(new SesionTutoria(actual.id(), bloque.docenteId(), actual.estudianteIds(),
 				bloque.fechaInicio(), bloque.fechaFin(), solicitud.tecnologia(), solicitud.semestre(), actual.asistencias(),
 				bloque.materia().trim(), List.of(solicitud.tecnologia()), bloque.modalidad(),
-				bloque.ubicacion() == null ? null : bloque.ubicacion().trim()));
+				bloque.ubicacion() == null ? null : bloque.ubicacion().trim(), actual.estadoClase(),
+				actual.motivoCierre(), actual.finalizadaEn(), actual.historialChat(), actual.valoraciones()));
+		actualizacionesTutorias.publicar("REPROGRAMADA", actualizada.id());
+		return actualizada;
 	}
 
 	public void eliminarPublicada(String sesionId) {
 		SesionTutoria sesion = sesiones.findById(sesionId)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No se encontrÃ³ la tutorÃ­a."));
 		sesiones.delete(sesion);
+		actualizacionesTutorias.publicar("ELIMINADA", sesionId);
 		for (String estudianteId : sesion.estudianteIds()) {
 			notificationService.notifyUser(estudianteId, "TutorÃ­a cancelada",
 					"La tutorÃ­a de " + sesion.materia() + " fue cancelada por coordinaciÃ³n.", "/estudiante");
@@ -410,6 +528,7 @@ public class SesionesGrupalesTutoriaService {
 			inscripcionesEstudiante.validarNuevaInscripcion(estudianteId,
 					existente.fechaInicio(), existente.fechaFin(), existente.id(), null);
 			SesionTutoria guardada = sesiones.save(existente.inscribir(estudianteId, tecnologia));
+			actualizacionesTutorias.publicar("INSCRIPCION", guardada.id());
 			notificarInscripcionGrupal(guardada, estudianteId);
 			return guardada;
 		}
@@ -421,6 +540,7 @@ public class SesionesGrupalesTutoriaService {
 		SesionTutoria guardada = sesiones.save(SesionTutoria.crear(solicitud.docenteId(), List.of(estudianteId),
 				solicitud.fechaInicio(), solicitud.fechaFin(), solicitud.materia(),
 				List.of(tecnologia), tecnologia, solicitud.semestre()));
+		actualizacionesTutorias.publicar("INSCRIPCION", guardada.id());
 		notificarInscripcionGrupal(guardada, estudianteId);
 		return guardada;
 	}
@@ -435,8 +555,10 @@ public class SesionesGrupalesTutoriaService {
 		}
 		if (sesion.estudianteIds().size() == 1) {
 			sesiones.delete(sesion);
+			actualizacionesTutorias.publicar("RETIRO", sesionId);
 		} else {
 			sesiones.save(sesion.desistir(estudianteId));
+			actualizacionesTutorias.publicar("RETIRO", sesionId);
 		}
 		notificationService.notifyUser(sesion.docenteId(), "Inscripcion grupal cancelada",
 				"Un estudiante se retiro de tu sesion de " + sesion.materia() + ".", "/notificaciones");

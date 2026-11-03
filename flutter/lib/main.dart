@@ -17,9 +17,15 @@ import 'features/tutorias/coordinacion_dashboard_page.dart';
 import 'features/tutorias/docente_dashboard_page.dart';
 import 'features/estudiante/student_dashboard_page.dart';
 import 'features/notifications/notifications_page.dart';
+import 'core/widgets/app_error_page.dart';
+import 'core/app_error.dart';
 
 final _router = GoRouter(
   initialLocation: '/session',
+  errorBuilder: (context, state) => AppErrorPage(
+    error: state.error,
+    info: const AppErrorInfo(AppErrorKind.notFound),
+  ),
   routes: [
     GoRoute(path: '/session', builder: (_, __) => const SessionRestorePage()),
     GoRoute(path: '/login', builder: (_, __) => const LoginPage()),
@@ -57,12 +63,21 @@ final _router = GoRouter(
       path: '/admin',
       builder: (_, __) => const AdminMainPage(),
     ),
+    GoRoute(
+      path: '/error',
+      builder: (_, state) => AppErrorPage(
+        info: state.extra is AppErrorInfo
+            ? state.extra! as AppErrorInfo
+            : const AppErrorInfo(AppErrorKind.server),
+      ),
+    ),
   ],
 );
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeSessionPersistence();
+  ErrorWidget.builder = (details) => AppErrorPage(error: details.exception);
   runApp(const ProviderScope(child: App()));
 }
 
@@ -75,6 +90,7 @@ class App extends StatefulWidget {
 
 class _AppState extends State<App> {
   StreamSubscription<void>? _authExpiredSubscription;
+  StreamSubscription<AppErrorInfo>? _appErrorSubscription;
   Timer? _sessionHeartbeat;
   late final _SessionLifecycleObserver _lifecycleObserver =
       _SessionLifecycleObserver(
@@ -89,6 +105,11 @@ class _AppState extends State<App> {
     _startSessionHeartbeat();
     _authExpiredSubscription = authExpiredEvents.listen((_) {
       _router.go('/login');
+    });
+    _appErrorSubscription = appErrorEvents.listen((info) {
+      if (_router.state.uri.path != '/error') {
+        _router.go('/error', extra: info);
+      }
     });
   }
 
@@ -116,6 +137,7 @@ class _AppState extends State<App> {
   void dispose() {
     WidgetsBinding.instance.removeObserver(_lifecycleObserver);
     _authExpiredSubscription?.cancel();
+    _appErrorSubscription?.cancel();
     _sessionHeartbeat?.cancel();
     super.dispose();
   }

@@ -33,7 +33,7 @@ class PronosticoReptreeServiceTest {
 	}
 
 	@Test
-	void usaLaRegresionCuandoReptreeNoEstaDisponible() throws Exception {
+	void omiteElPronosticoCuandoReptreeNoEstaDisponible() throws Exception {
 		PronosticoReptreeService reptreeService = mock(PronosticoReptreeService.class);
 		when(reptreeService.pronosticar(
 				"Algebra Lineal", historial(), LocalDate.of(2026, 10, 19)))
@@ -42,12 +42,10 @@ class PronosticoReptreeServiceTest {
 				mock(MongoTemplate.class), reptreeService);
 		List<WeeklyTutoringCount> historial = historial();
 
-		PronosticoDemanda actual = dashboardService.pronosticarMateria(
+		Optional<PronosticoDemanda> actual = dashboardService.pronosticarMateria(
 				"Algebra Lineal", historial, LocalDate.of(2026, 10, 19));
-		PronosticoDemanda expected = RegresionDemandaSemanal.pronosticar(historial);
 
-		assertEquals(expected, actual);
-		assertEquals("REGRESION", actual.modelo());
+		assertTrue(actual.isEmpty());
 	}
 
 	private static List<WeeklyTutoringCount> historial() {

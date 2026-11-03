@@ -20,6 +20,7 @@ import com.pa.searchteach.tutorias.model.SesionProyectoAula;
 import com.pa.searchteach.tutorias.model.MensajeProyectoAula;
 import com.pa.searchteach.tutorias.model.TutoriaColectiva;
 import com.pa.searchteach.tutorias.service.TutoriasColectivasService;
+import com.pa.searchteach.tutorias.service.SesionesGrupalesTutoriaService;
 import com.pa.searchteach.tutorias.service.ProyectoAulaChatRedisService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -39,6 +40,8 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ContentDisposition;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @RestController
@@ -46,10 +49,14 @@ public class ControladorTutoriasColectivas {
 
 	private final TutoriasColectivasService servicio;
 	private final ProyectoAulaChatRedisService chatRedis;
+	private final SesionesGrupalesTutoriaService sesionesGrupales;
 
-	public ControladorTutoriasColectivas(TutoriasColectivasService servicio, ProyectoAulaChatRedisService chatRedis) {
+	public ControladorTutoriasColectivas(TutoriasColectivasService servicio,
+			ProyectoAulaChatRedisService chatRedis,
+			SesionesGrupalesTutoriaService sesionesGrupales) {
 		this.servicio = servicio;
 		this.chatRedis = chatRedis;
+		this.sesionesGrupales = sesionesGrupales;
 	}
 
 	@PostMapping("/api/coordinacion/tutorias-colectivas")
@@ -66,6 +73,31 @@ public class ControladorTutoriasColectivas {
 		return servicio.listarProyectosDeDocente(docenteId);
 	}
 
+	@GetMapping(value = "/api/coordinacion/reportes-tutorias/mensual", produces = "text/csv")
+	public ResponseEntity<String> descargarReporteMensual(
+			@RequestParam(required = false) Integer anio,
+			@RequestParam(required = false) Integer mes,
+			@AuthenticationPrincipal String coordinadorId) {
+		if (!sesionesGrupales.esCoordinador(coordinadorId)) {
+			return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+		}
+		java.time.LocalDate hoy = java.time.LocalDate.now(java.time.ZoneId.of("America/Bogota"));
+		int year = anio == null ? hoy.getYear() : anio;
+		int month = mes == null ? hoy.getMonthValue() : mes;
+		if (month < 1 || month > 12 || year < 2000 || year > hoy.getYear() + 1) {
+			return ResponseEntity.badRequest().build();
+		}
+		java.time.LocalDateTime inicio = java.time.LocalDateTime.of(year, month, 1, 0, 0);
+		java.time.LocalDateTime fin = inicio.plusMonths(1);
+		String csv = sesionesGrupales.generarReporteMensual(inicio, fin);
+		return ResponseEntity.ok()
+				.header(HttpHeaders.CONTENT_DISPOSITION,
+						ContentDisposition.attachment().filename("reporte-tutorias-" + year + "-"
+								+ String.format("%02d", month) + ".csv").build().toString())
+				.header(HttpHeaders.CONTENT_TYPE, "text/csv; charset=UTF-8")
+				.body(csv);
+	}
+
 	@GetMapping("/api/docente/tutorias-colectivas/lider")
 	public List<ProyectoAsignadoDocente> listarProyectosParaRevisionDelLider(
 			@AuthenticationPrincipal String docenteLiderId) {
@@ -80,12 +112,27 @@ public class ControladorTutoriasColectivas {
 		return servicio.programarReunionProyecto(tutoriaId, proyectoId, sesionId, solicitud, docenteId);
 	}
 
+	@GetMapping("/api/tutorias-colectivas/{tutoriaId}/proyectos/{proyectoId}/sesiones/{sesionId}/reunion")
+	public com.pa.searchteach.tutorias.model.RespuestaReunionProyectoAula consultarReunion(
+			@PathVariable String tutoriaId, @PathVariable String proyectoId, @PathVariable String sesionId,
+			@AuthenticationPrincipal String usuarioId) {
+		return servicio.consultarReunion(tutoriaId, proyectoId, sesionId, usuarioId);
+	}
+
+	@PostMapping("/api/estudiante/tutorias-colectivas/{tutoriaId}/proyectos/{proyectoId}/sesiones/{sesionId}/reunion/respuesta")
+	public com.pa.searchteach.tutorias.model.RespuestaReunionProyectoAula responderReunion(
+			@PathVariable String tutoriaId, @PathVariable String proyectoId, @PathVariable String sesionId,
+			@RequestParam boolean acepta, @AuthenticationPrincipal String estudianteId) {
+		return servicio.responderReunion(tutoriaId, proyectoId, sesionId, estudianteId, acepta);
+	}
+
 	@PostMapping("/api/docente/tutorias-colectivas/{tutoriaId}/proyectos/{proyectoId}/solicitud-cierre")
 	public com.pa.searchteach.tutorias.model.ProyectoAula solicitarCierreDeProyecto(
 			@PathVariable String tutoriaId, @PathVariable String proyectoId,
 			@Valid @RequestBody CierreProyectoAulaSolicitud solicitud,
 			@AuthenticationPrincipal String docenteId) {
-		return servicio.solicitarCierreProyecto(tutoriaId, proyectoId, solicitud.motivo(), docenteId);
+		return servicio.solicitarCierreProyecto(
+				tutoriaId, proyectoId, solicitud.motivo(), solicitud.reporte(), docenteId);
 	}
 
 	@PostMapping("/api/docente/lider/tutorias-colectivas/{tutoriaId}/proyectos/{proyectoId}/confirmacion-cierre")
@@ -193,8 +240,15 @@ public class ControladorTutoriasColectivas {
 
 	@DeleteMapping("/api/coordinacion/tutorias-colectivas/{tutoriaId}")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
-	public void eliminarTutoriaColectiva(@PathVariable String tutoriaId) {
-		servicio.eliminar(tutoriaId);
+	public void eliminarTutoriaColectiva(
+			@PathVariable String tutoriaId, @RequestParam String confirmacion) {
+		servicio.eliminar(tutoriaId, confirmacion);
+	}
+
+	@PostMapping("/api/coordinacion/tutorias-colectivas/{tutoriaId}/disolver")
+	public TutoriaColectiva disolverTutoriaColectiva(
+			@PathVariable String tutoriaId, @RequestParam String confirmacion) {
+		return servicio.disolver(tutoriaId, confirmacion);
 	}
 
 	@GetMapping("/api/estudiante/tutorias-colectivas/espacios")

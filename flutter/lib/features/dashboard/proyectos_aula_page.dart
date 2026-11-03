@@ -10,54 +10,16 @@ final proyectosAulaProvider =
       .get<List<dynamic>>('/api/direccion/tutorias-colectivas');
   final data = response.data;
   if (data == null) {
-    throw const FormatException(
-        'El servidor devolvió una lista de proyectos inválida.');
+    throw const FormatException('El servidor devolvió una lista inválida.');
   }
-  return data.map((entry) {
-    if (entry is! Map<String, dynamic> ||
-        entry['tutoriaColectiva'] is! Map<String, dynamic> ||
-        entry['proyectos'] is! List) {
-      throw const FormatException(
-          'Un grupo de tutorías tiene datos inválidos.');
-    }
-    final projects = (entry['proyectos'] as List).map((item) {
-      if (item is! Map<String, dynamic> ||
-          item['proyecto'] is! Map<String, dynamic> ||
-          item['informes'] is! List ||
-          item['pronosticoMejora'] is! Map<String, dynamic>) {
-        throw const FormatException(
-            'Un resumen de proyecto tiene datos inválidos.');
-      }
-      final project = item['proyecto'] as Map<String, dynamic>;
-      final forecast = item['pronosticoMejora'] as Map<String, dynamic>;
-      if (project['nombre'] is! String ||
-          project['tecnologia'] is! String ||
-          project['semestre'] is! num ||
-          forecast['tendencia'] is! String ||
-          forecast['informesEvaluados'] is! num) {
-        throw const FormatException(
-            'Los datos de avance del proyecto están incompletos.');
-      }
-      return _ProyectoAulaVista(
-        nombre: project['nombre'] as String,
-        tecnologia: project['tecnologia'] as String,
-        semestre: (project['semestre'] as num).toInt(),
-        informes: (item['informes'] as List).length,
-        tendencia: forecast['tendencia'] as String,
-        puntajeActual: (forecast['puntajeActual'] as num?)?.toDouble(),
-        puntajePronosticado:
-            (forecast['puntajePronosticadoEnCuatroSemanas'] as num?)
-                ?.toDouble(),
-        cambio: (forecast['cambioPronosticado'] as num?)?.toDouble(),
-      );
-    }).toList(growable: false);
-    final tutoria = entry['tutoriaColectiva'] as Map<String, dynamic>;
+  return data.whereType<Map<String, dynamic>>().map((entry) {
+    final projects = (entry['proyectos'] as List<dynamic>? ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .map(_ProyectoAulaVista.fromJson)
+        .toList(growable: false);
     return _TutoriaColectivaVista(
-      tecnologia: tutoria['tecnologia'] is String
-          ? tutoria['tecnologia'] as String
-          : '',
-      semestre:
-          tutoria['semestre'] is num ? (tutoria['semestre'] as num).toInt() : 0,
+      tecnologia: entry['tecnologia']?.toString() ?? '',
+      semestre: (entry['semestre'] as num?)?.toInt() ?? 0,
       proyectos: projects,
     );
   }).toList(growable: false);
@@ -75,7 +37,7 @@ class ProyectosAulaPage extends ConsumerWidget {
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Text(
-              'No se pudieron cargar los informes de proyectos: $error',
+              'No se pudieron cargar los proyectos: $error',
               textAlign: TextAlign.center,
             ),
           ),
@@ -86,13 +48,11 @@ class ProyectosAulaPage extends ConsumerWidget {
             padding: const EdgeInsets.all(16),
             children: [
               const Text(
-                'Avance de proyectos de aula',
+                'Proyectos de aula',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 4),
-              const Text(
-                'Tendencia calculada a partir de los informes de los docentes de apoyo.',
-              ),
+              const Text('Estado actual de los proyectos inscritos.'),
               const SizedBox(height: 16),
               if (groups.isEmpty)
                 const Card(
@@ -131,17 +91,18 @@ class _ProyectoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final label = switch (project.tendencia) {
-      'MEJORA_PRONOSTICADA' => 'Mejora pronosticada',
-      'RETROCESO_PRONOSTICADO' => 'Retroceso pronosticado',
-      'ESTABLE' => 'Avance estable',
-      _ => 'Datos insuficientes para evaluar',
-    };
-    final color = switch (project.tendencia) {
-      'MEJORA_PRONOSTICADA' => Colors.green.shade700,
-      'RETROCESO_PRONOSTICADO' => Colors.red.shade700,
-      _ => Colors.blueGrey,
-    };
+    final closed = project.estado == 'FINALIZADO';
+    final pending = project.estado == 'PENDIENTE_CONFIRMACION';
+    final label = closed
+        ? 'Finalizado'
+        : pending
+            ? 'Pendiente de confirmación'
+            : 'En curso';
+    final color = closed
+        ? Colors.blueGrey
+        : pending
+            ? Colors.orange.shade700
+            : Colors.green.shade700;
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
@@ -153,20 +114,15 @@ class _ProyectoCard extends StatelessWidget {
                 style: const TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 4),
             Text('${project.tecnologia} · semestre ${project.semestre}'),
-            const SizedBox(height: 10),
+            Text('Tutor responsable: ${project.docenteResponsableId}'),
+            Text('Estudiantes inscritos: ${project.estudiantes}'),
+            const SizedBox(height: 8),
             Text(label,
                 style: TextStyle(color: color, fontWeight: FontWeight.w700)),
-            Text('Informes recibidos: ${project.informes}'),
-            if (project.puntajeActual != null)
-              Text(
-                'Puntaje actual: ${project.puntajeActual!.toStringAsFixed(1)}/100',
-              ),
-            if (project.puntajePronosticado != null)
-              Text(
-                'Pronóstico en 4 semanas: '
-                '${project.puntajePronosticado!.toStringAsFixed(1)}/100'
-                '${project.cambio == null ? '' : ' (${project.cambio! >= 0 ? '+' : ''}${project.cambio!.toStringAsFixed(1)} puntos)'}',
-              ),
+            if (project.descripcion.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text(project.descripcion),
+            ],
           ],
         ),
       ),
@@ -189,21 +145,31 @@ class _TutoriaColectivaVista {
 class _ProyectoAulaVista {
   const _ProyectoAulaVista({
     required this.nombre,
+    required this.docenteResponsableId,
+    required this.estudiantes,
     required this.tecnologia,
     required this.semestre,
-    required this.informes,
-    required this.tendencia,
-    required this.puntajeActual,
-    required this.puntajePronosticado,
-    required this.cambio,
+    required this.estado,
+    required this.descripcion,
   });
 
+  factory _ProyectoAulaVista.fromJson(Map<String, dynamic> json) =>
+      _ProyectoAulaVista(
+        nombre: json['nombre']?.toString() ?? 'Proyecto sin nombre',
+        docenteResponsableId:
+            json['docenteResponsableId']?.toString() ?? 'Sin asignar',
+        estudiantes: (json['estudianteIds'] as List<dynamic>?)?.length ?? 0,
+        tecnologia: json['tecnologia']?.toString() ?? '',
+        semestre: (json['semestre'] as num?)?.toInt() ?? 0,
+        estado: json['estadoCierre']?.toString() ?? 'EN_CURSO',
+        descripcion: json['descripcion']?.toString() ?? '',
+      );
+
   final String nombre;
+  final String docenteResponsableId;
+  final int estudiantes;
   final String tecnologia;
   final int semestre;
-  final int informes;
-  final String tendencia;
-  final double? puntajeActual;
-  final double? puntajePronosticado;
-  final double? cambio;
+  final String estado;
+  final String descripcion;
 }

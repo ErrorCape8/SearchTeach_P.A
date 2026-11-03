@@ -54,7 +54,7 @@ public class PronosticoReptreeService {
 			LOGGER.info("Modelo Weka REPTree cargado desde {}", MODEL_PATH);
 		} catch (Exception exception) {
 			model = null;
-			LOGGER.error("No se pudo cargar el modelo Weka REPTree desde {}; se usará la regresión.", MODEL_PATH,
+			LOGGER.error("No se pudo cargar el modelo Weka REPTree desde {}; no habrá pronósticos disponibles.", MODEL_PATH,
 					exception);
 		}
 	}

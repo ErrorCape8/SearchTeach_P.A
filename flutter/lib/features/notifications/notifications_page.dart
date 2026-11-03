@@ -122,6 +122,7 @@ class _NotificationsInboxState extends ConsumerState<NotificationsInbox> {
   bool _pushEnabled = false;
   bool _pushStatusLoading = true;
   String? _error;
+  final Set<String> _expandedNotifications = {};
 
   @override
   void initState() {
@@ -213,20 +214,6 @@ class _NotificationsInboxState extends ConsumerState<NotificationsInbox> {
             '/api/notificaciones/${Uri.encodeComponent(item.id)}/leida');
         ref.invalidate(notificationUnreadCountProvider);
         await _load();
-      }
-      const destinations = {
-        '/home',
-        '/coordinacion',
-        '/coordinacion/tutorias-colectivas',
-        '/docente',
-        '/estudiante',
-        '/admin',
-      };
-      if (mounted &&
-          item.route != null &&
-          item.route != '/notificaciones' &&
-          destinations.contains(item.route)) {
-        context.go(item.route!);
       }
     } on DioException catch (error) {
       if (mounted) _show(_messageFrom(error));
@@ -356,7 +343,7 @@ class _NotificationsInboxState extends ConsumerState<NotificationsInbox> {
                             itemBuilder: (context, index) {
                               final item = _items[index];
                               return Card(
-                                  child: ListTile(
+                                  child: ExpansionTile(
                                 leading: CircleAvatar(
                                   backgroundColor: item.read
                                       ? Colors.blueGrey.withValues(alpha: .12)
@@ -382,8 +369,57 @@ class _NotificationsInboxState extends ConsumerState<NotificationsInbox> {
                                 subtitle: Padding(
                                     padding: const EdgeInsets.only(top: 5),
                                     child: Text(
-                                        '${item.message}${item.createdAt == null ? '' : '\n${_dateLabel(item.createdAt!)}'}')),
-                                onTap: () => _markRead(item),
+                                      _notificationPreview(item.message),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    )),
+                                initiallyExpanded:
+                                    _expandedNotifications.contains(item.id),
+                                onExpansionChanged: (expanded) {
+                                  setState(() {
+                                    if (expanded) {
+                                      _expandedNotifications.add(item.id);
+                                    } else {
+                                      _expandedNotifications.remove(item.id);
+                                    }
+                                  });
+                                  if (expanded) _markRead(item);
+                                },
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.fromLTRB(
+                                        16, 0, 16, 12),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(item.message),
+                                        if (item.createdAt != null) ...[
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            _dateLabel(item.createdAt!),
+                                            style: TextStyle(
+                                              color: Colors.grey.shade600,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        ],
+                                        if (item.route != null &&
+                                            item.route != '/notificaciones')
+                                          Align(
+                                            alignment: Alignment.centerRight,
+                                            child: TextButton.icon(
+                                              onPressed: () =>
+                                                  _markReadAndNavigate(item),
+                                              icon:
+                                                  const Icon(Icons.open_in_new),
+                                              label: const Text('Ver detalle'),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ));
                             },
                           )),
@@ -399,5 +435,28 @@ class _NotificationsInboxState extends ConsumerState<NotificationsInbox> {
     final hour = local.hour.toString().padLeft(2, '0');
     final minute = local.minute.toString().padLeft(2, '0');
     return '$day/$month/${local.year} $hour:$minute';
+  }
+
+  String _notificationPreview(String message) {
+    const maxLength = 72;
+    if (message.length <= maxLength) return message;
+    return '${message.substring(0, maxLength).trimRight()}…';
+  }
+
+  Future<void> _markReadAndNavigate(NotificationItem item) async {
+    await _markRead(item);
+    const destinations = {
+      '/home',
+      '/coordinacion',
+      '/coordinacion/tutorias-colectivas',
+      '/coordinacion/programar-tutorias',
+      '/docente',
+      '/estudiante',
+      '/admin',
+    };
+    if (!mounted || item.route == null || !destinations.contains(item.route)) {
+      return;
+    }
+    context.go(item.route!);
   }
 }
