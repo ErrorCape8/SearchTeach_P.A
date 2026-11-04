@@ -73,13 +73,13 @@ class _CoordinacionTutoriasPageState
       final data = response.data;
       if (data == null) {
         throw const FormatException(
-          'El servidor devolviÃ³ una lista de tutorÃ­as vacÃ­a.',
+          'El servidor devolvió una lista de tutorías vacía.',
         );
       }
       final tutorias = data.map((entry) {
         if (entry is! Map<String, dynamic>) {
           throw const FormatException(
-            'El servidor devolviÃ³ una tutorÃ­a colectiva invÃ¡lida.',
+            'El servidor devolvió una tutoría colectiva inválida.',
           );
         }
         return entry;
@@ -95,7 +95,7 @@ class _CoordinacionTutoriasPageState
       setState(() {
         _error = _apiError(
           error,
-          fallback: 'No se pudieron cargar las tutorÃ­as colectivas.',
+          fallback: 'No se pudieron cargar las tutorías colectivas.',
         );
         _loadingTutorias = false;
       });
@@ -117,7 +117,7 @@ class _CoordinacionTutoriasPageState
         supportIds.contains(_leaderId)) {
       setState(() {
         _error =
-            'El docente lÃ­der y los cinco docentes de apoyo deben ser distintos.';
+            'El docente líder y los cinco docentes de apoyo deben ser distintos.';
       });
       return;
     }
@@ -144,7 +144,7 @@ class _CoordinacionTutoriasPageState
       final body = response.data;
       if (body == null || body['id'] is! String) {
         throw const FormatException(
-          'El servidor devolviÃ³ una tutorÃ­a incompleta.',
+          'El servidor devolvió una tutoría incompleta.',
         );
       }
       await _loadCreatedTutorias();
@@ -205,10 +205,10 @@ class _CoordinacionTutoriasPageState
     /*final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Eliminar tutorÃ­a colectiva'),
+        title: const Text('Eliminar tutoría colectiva'),
         content: const Text(
-          'Se eliminarÃ¡n tambiÃ©n los proyectos, las inscripciones y los informes asociados. '
-          'Esta acciÃ³n no se puede deshacer.',
+          'Se eliminarán también los proyectos, las inscripciones y los informes asociados. '
+          'Esta acción no se puede deshacer.',
         ),
         actions: [
           TextButton(
@@ -236,7 +236,7 @@ class _CoordinacionTutoriasPageState
           SnackBar(
             content: Text(
               _apiError(error,
-                  fallback: 'No se pudo eliminar la tutorÃ­a colectiva.'),
+                  fallback: 'No se pudo eliminar la tutoría colectiva.'),
             ),
           ),
         );
@@ -337,13 +337,13 @@ class _CoordinacionTutoriasPageState
 
   String _apiError(
     DioException error, {
-    String fallback = 'No se pudo crear la tutorÃ­a colectiva.',
+    String fallback = 'No se pudo crear la tutoría colectiva.',
   }) {
     final data = error.response?.data;
     if (data is Map && data['message'] is String) {
       return data['message'] as String;
     }
-    return '$fallback Comprueba tu conexiÃ³n e intÃ©ntalo de nuevo.';
+    return '$fallback Comprueba tu conexión e inténtalo de nuevo.';
   }
 
   @override
@@ -355,7 +355,7 @@ class _CoordinacionTutoriasPageState
               accentColor: Color(0xFFA9154F),
             ),
             IconButton(
-              tooltip: 'Cerrar sesiÃ³n',
+              tooltip: 'Cerrar sesión',
               onPressed: () async {
                 await ref.read(authRepositoryProvider).logout();
                 if (context.mounted) context.go('/login');
@@ -528,7 +528,7 @@ class _CoordinacionTutoriasPageState
       return const Center(
         child: Padding(
           padding: EdgeInsets.all(24),
-          child: Text('TodavÃ­a no has creado tutorÃ­as colectivas.'),
+          child: Text('Todavía no has creado tutorías colectivas.'),
         ),
       );
     }
@@ -549,21 +549,21 @@ class _CoordinacionTutoriasPageState
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '${_createdTutorias[index]['tecnologia'] ?? 'Carrera'} Â· '
-                      'Semestre ${_createdTutorias[index]['semestre'] ?? 'â€”'}',
+                      '${_createdTutorias[index]['tecnologia'] ?? 'Carrera'} · '
+                      'Semestre ${_createdTutorias[index]['semestre'] ?? '—'}',
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                        'Docente lÃ­der: ${_createdTutorias[index]['docenteLiderId'] ?? 'â€”'}'),
+                        'Docente líder: ${_createdTutorias[index]['docenteLiderId'] ?? '—'}'),
                     if (_createdTutorias[index]['estado'] == 'DISUELTA')
                       const Text(
                         'Grupo disuelto · historial conservado',
                         style: TextStyle(color: Colors.blueGrey),
                       ),
                     Text(
-                      '${(_createdTutorias[index]['proyectos'] as List?)?.length ?? 0} proyectos Â· '
-                      'ID ${_createdTutorias[index]['id'] ?? 'â€”'}',
+                      '${(_createdTutorias[index]['proyectos'] as List?)?.length ?? 0} proyectos · '
+                      'ID ${_createdTutorias[index]['id'] ?? '—'}',
                     ),
                   ],
                 ),
@@ -581,7 +581,7 @@ class _CoordinacionTutoriasPageState
                 ),
               ],
               IconButton(
-                tooltip: 'Eliminar tutorÃ­a colectiva',
+                tooltip: 'Eliminar tutoría colectiva',
                 onPressed: () => _deleteTutoria(_createdTutorias[index]),
                 icon: const Icon(Icons.delete_outline, color: Colors.red),
               ),

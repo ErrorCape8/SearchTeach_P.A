@@ -16,7 +16,7 @@ class Teacher {
   factory Teacher.fromJson(Map<String, dynamic> json) {
     if (json['id'] is! String || json['nombre'] is! String) {
       throw const FormatException(
-          'El docente no tiene nombre o identificaciÃ³n vÃ¡lida.');
+          'El docente no tiene nombre o identificación válida.');
     }
     return Teacher(
       id: json['id'] as String,
@@ -64,7 +64,7 @@ class TutorSchedule {
         json['horaFin'] is! String ||
         json['modalidad'] is! String) {
       throw const FormatException(
-          'El horario devuelto por el servidor estÃ¡ incompleto.');
+          'El horario devuelto por el servidor está incompleto.');
     }
     return TutorSchedule(
       docenteId: json['docenteId'] as String,
@@ -146,13 +146,13 @@ class ScheduleSubject {
 
 String normalizeSearch(String value) => value
     .toLowerCase()
-    .replaceAll('Ã¡', 'a')
-    .replaceAll('Ã©', 'e')
-    .replaceAll('Ã­', 'i')
-    .replaceAll('Ã³', 'o')
-    .replaceAll('Ãº', 'u')
-    .replaceAll('Ã¼', 'u')
-    .replaceAll('Ã±', 'n');
+    .replaceAll('á', 'a')
+    .replaceAll('é', 'e')
+    .replaceAll('í', 'i')
+    .replaceAll('ó', 'o')
+    .replaceAll('ú', 'u')
+    .replaceAll('ü', 'u')
+    .replaceAll('ñ', 'n');
 
 String apiError(DioException error, String fallback) {
   final response = error.response?.data;

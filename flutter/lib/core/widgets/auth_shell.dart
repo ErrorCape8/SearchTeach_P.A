@@ -5,7 +5,7 @@ const kNavy = Color(0xFF14146B);
 const kInk = Color(0xFF1C1F24);
 const kField = Color(0xFFEDF0F5);
 
-/// Marco comÃºn de las pantallas de autenticaciÃ³n.
+/// Marco común de las pantallas de autenticación.
 /// - Ancho >= 900 (PC/tablet horizontal): panel de marca a la izquierda + formulario a la derecha.
 /// - Ancho < 900 (celular): igual al mockup, cabecera azul + hoja blanca.
 class AuthShell extends StatelessWidget {
@@ -145,7 +145,7 @@ class _AuthBrand extends StatelessWidget {
         ),
         SizedBox(height: compact ? 5 : 14),
         Text(
-          'Aprende y enseÃƒÂ±a,\ncuando y donde quieras.',
+          'Aprende y enseña,\ncuando y donde quieras.',
           textAlign: compact ? TextAlign.center : TextAlign.left,
           style: TextStyle(
             color: Colors.white,
@@ -160,7 +160,7 @@ class _AuthBrand extends StatelessWidget {
   }
 }
 
-/// Panel izquierdo para pantallas grandes: asÃ­ no queda vacÃ­o.
+/// Panel izquierdo para pantallas grandes: así no queda vacío.
 class _BrandPanel extends StatelessWidget {
   const _BrandPanel();
 
@@ -170,7 +170,7 @@ class _BrandPanel extends StatelessWidget {
       decoration: const BoxDecoration(gradient: _gradient),
       padding: const EdgeInsets.all(56),
       child: Stack(children: [
-        // cÃ­rculos decorativos
+        // Círculos decorativos.
         Positioned(right: -80, top: -80, child: _circle(300, .06)),
         Positioned(left: -100, bottom: -120, child: _circle(380, .05)),
         Column(
@@ -179,23 +179,23 @@ class _BrandPanel extends StatelessWidget {
             const _AuthBrand(),
             const Spacer(),
             Text(
-              'Agenda tutorÃ­as, accede a clases virtuales y acompaÃ±a cada proyecto.',
+              'Agenda tutorías, accede a clases virtuales y acompaña cada proyecto.',
               style: TextStyle(
                   color: Colors.white.withValues(alpha: .8),
                   fontSize: 18,
                   height: 1.4),
             ),
             const SizedBox(height: 40),
-            const _Feature(Icons.event_available, 'Agenda tutorÃ­as',
+            const _Feature(Icons.event_available, 'Agenda tutorías',
                 'Solicita, acepta o propone un nuevo horario.'),
             const _Feature(
                 Icons.videocam_outlined,
                 'Clases virtuales o presenciales',
                 'Elige la modalidad que mejor te funcione.'),
             const _Feature(Icons.insights, 'Sigue tu progreso',
-                'Asistencia y estadÃ­sticas en un solo lugar.'),
+                'Asistencia y estadísticas en un solo lugar.'),
             const Spacer(),
-            Text('Â© ${DateTime.now().year} SearchTeach',
+            Text('© ${DateTime.now().year} SearchTeach',
                 style: TextStyle(color: Colors.white.withValues(alpha: .6))),
           ],
         ),
