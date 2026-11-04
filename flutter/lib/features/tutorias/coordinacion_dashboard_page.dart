@@ -17,9 +17,10 @@ import 'coordinacion_solicitudes_page.dart';
 
 const _wine = Color(0xFFA9154F);
 const _wineDark = Color(0xFF86123F);
-const _pink = Colors.white;
+const _pink = Color(0xFFF8EAF0);
 const _canvas = Color(0xFFF3F5FA);
 const _muted = Color(0xFF758093);
+const _border = Color(0xFFE8EAF0);
 
 class CoordinacionDashboardPage extends ConsumerStatefulWidget {
   const CoordinacionDashboardPage({super.key});
@@ -201,51 +202,48 @@ class _Header extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: EdgeInsets.fromLTRB(
-          20, MediaQuery.paddingOf(context).top + 12, 20, 20),
+          28, MediaQuery.paddingOf(context).top + 15, 24, 16),
       decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [_wine, _wineDark],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
+        color: Colors.white,
+        border: Border(bottom: BorderSide(color: _border)),
       ),
       child: Row(children: [
-        Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.white70, width: 2),
-          ),
-          alignment: Alignment.center,
-          child: Text(_initials(display),
-              style: const TextStyle(
-                  color: Colors.white, fontWeight: FontWeight.w800)),
-        ),
-        const SizedBox(width: 14),
         Expanded(
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(isHome ? 'PANEL DE COORDINACIÓN' : 'COORDINACIÓN  /  $title',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                    color: _wine,
+                    fontSize: 10,
+                    letterSpacing: 1.1,
+                    fontWeight: FontWeight.w800)),
+            const SizedBox(height: 4),
             Text(isHome ? 'Hola, $display' : title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
+                    color: Color(0xFF202536),
+                    fontSize: 22,
+                    height: 1.1,
                     fontWeight: FontWeight.w800)),
-            Text(isHome ? 'Coordinador' : display,
+            const SizedBox(height: 3),
+            Text(isHome ? 'Resumen de tutorías y gestión académica' : display,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                    color: Colors.white.withValues(alpha: .82), fontSize: 13)),
+                style: const TextStyle(color: _muted, fontSize: 12)),
           ]),
         ),
-        IconButton(
+        const SizedBox(width: 12),
+        IconButton.filledTonal(
           tooltip: 'Mi perfil',
           onPressed: onProfile,
+          style: IconButton.styleFrom(
+              backgroundColor: const Color(0xFFF8EAF0),
+              foregroundColor: _wineDark),
           icon: CircleAvatar(
-            radius: 14,
+            radius: 15,
             backgroundColor: Colors.white,
             child: Text(_initials(display),
                 style: const TextStyle(
@@ -260,7 +258,8 @@ class _Header extends StatelessWidget {
           onPressed: () => context
               .findAncestorStateOfType<_CoordinacionDashboardPageState>()
               ?._load(),
-          icon: const Icon(Icons.refresh_rounded, color: Colors.white),
+          style: IconButton.styleFrom(foregroundColor: const Color(0xFF596174)),
+          icon: const Icon(Icons.refresh_rounded),
         ),
       ]),
     );
@@ -299,12 +298,14 @@ class _Navigation extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (wide) {
-      final selectedPosition = _tabIndexes.contains(index)
-          ? _tabIndexes.indexOf(index)
-          : null;
+      final selectedPosition =
+          _tabIndexes.contains(index) ? _tabIndexes.indexOf(index) : null;
       return Container(
-        width: 190,
-        color: _wineDark,
+        width: 208,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          border: Border(right: BorderSide(color: _border)),
+        ),
         child: Column(children: [
           const SizedBox(height: 14),
           const SizedBox(
@@ -315,27 +316,25 @@ class _Navigation extends StatelessWidget {
           const SizedBox(height: 8),
           const Text('COORDINACIÓN',
               style: TextStyle(
-                  color: Colors.white70,
+                  color: _muted,
                   fontSize: 10,
                   letterSpacing: .7,
                   fontWeight: FontWeight.w600)),
-          const Divider(color: Colors.white24, indent: 12, endIndent: 12),
+          const Divider(color: _border, indent: 12, endIndent: 12),
           Expanded(
               child: NavigationRail(
-            backgroundColor: _wineDark,
+            backgroundColor: Colors.white,
+            minWidth: 208,
             selectedIndex: selectedPosition,
             onDestinationSelected: (position) =>
                 onSelect(_tabIndexes[position]),
             labelType: NavigationRailLabelType.all,
-            indicatorColor: const Color(0xFF650B2E),
-            selectedIconTheme: const IconThemeData(color: Colors.white),
-            unselectedIconTheme:
-                IconThemeData(color: Colors.white.withValues(alpha: .78)),
-            selectedLabelTextStyle: const TextStyle(
-                color: Colors.white, fontWeight: FontWeight.w700),
-            unselectedLabelTextStyle: TextStyle(
-              color: Colors.white.withValues(alpha: .78),
-            ),
+            indicatorColor: const Color(0xFFF8EAF0),
+            selectedIconTheme: const IconThemeData(color: _wine),
+            unselectedIconTheme: const IconThemeData(color: _muted),
+            selectedLabelTextStyle:
+                const TextStyle(color: _wineDark, fontWeight: FontWeight.w700),
+            unselectedLabelTextStyle: const TextStyle(color: _muted),
             destinations: [
               for (var i = 0; i < _items.length; i++)
                 NavigationRailDestination(
@@ -345,15 +344,15 @@ class _Navigation extends StatelessWidget {
                 ),
             ],
           )),
-          const Divider(color: Colors.white24, indent: 10, endIndent: 10),
+          const Divider(color: _border, indent: 10, endIndent: 10),
           InkWell(
             onTap: () => onSelect(4),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(10, 8, 8, 14),
               child: Row(children: [
                 CircleAvatar(
-                  radius: 14,
-                  backgroundColor: Colors.white,
+                  radius: 16,
+                  backgroundColor: const Color(0xFFF8EAF0),
                   child: Text(_initials(name),
                       style: const TextStyle(
                           color: _wineDark,
@@ -369,14 +368,13 @@ class _Navigation extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                              color: Colors.white,
+                              color: Color(0xFF202536),
                               fontSize: 10,
                               fontWeight: FontWeight.w700)),
                       const Text('Coordinador',
-                          style: TextStyle(color: Colors.white70, fontSize: 9)),
+                          style: TextStyle(color: _muted, fontSize: 10)),
                     ])),
-                const Icon(Icons.chevron_right,
-                    color: Colors.white70, size: 16),
+                const Icon(Icons.chevron_right, color: _muted, size: 16),
               ]),
             ),
           ),
@@ -387,7 +385,7 @@ class _Navigation extends StatelessWidget {
     return SlidingPillNavigationBar(
       selectedIndex: selectedPosition < 0 ? 0 : selectedPosition,
       selectedColor: _wine,
-      indicatorColor: _pink,
+      indicatorColor: const Color(0xFFF8EAF0),
       onDestinationSelected: (position) => onSelect(_tabIndexes[position]),
       destinations: [
         for (final item in _items)
@@ -425,44 +423,112 @@ class _HomeView extends StatelessWidget {
         .toList();
     final assignedLeaders =
         groups.where((group) => group['docenteLiderId'] is String).length;
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
-      children: [
-        Row(children: [
-          Expanded(
-              child: _Metric(
-                  value: '${teachers.length}', label: 'Tutores activos')),
-          const SizedBox(width: 10),
-          Expanded(
-              child: _Metric(
-                  value: '$assignedLeaders/${groups.length}',
-                  label: 'Con líder')),
-          const SizedBox(width: 10),
-          Expanded(
-              child: _Metric(value: '${groups.length}', label: 'Grupos PA')),
-        ]),
-        const SizedBox(height: 24),
-        _SectionTitle(
-            title: 'Por asignar',
-            action: 'Ver horarios',
-            onTap: () => onOpen(1)),
-        const SizedBox(height: 10),
-        if (unscheduled.isEmpty)
-          const _EmptyCard(
-              message: 'Todos los tutores tienen un horario registrado.')
-        else
-          _CardList(children: [
-            for (final teacher in unscheduled.take(4))
-              _RecordRow(
-                icon: Icons.groups_2_outlined,
-                title: _text(teacher['nombre'], 'Tutor'),
-                subtitle: 'ID ${_text(teacher['id'], '—')}',
-                badge: 'Sin horario',
-                onTap: () => onOpen(1),
+    return Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 1120),
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(26, 26, 26, 32),
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [_wine, _wineDark],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: [
+                  BoxShadow(
+                    color: _wine.withValues(alpha: .16),
+                    blurRadius: 22,
+                    offset: const Offset(0, 9),
+                  ),
+                ],
               ),
-          ]),
-        const SizedBox(height: 24),
-      ],
+              child: Row(children: [
+                const Expanded(
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('GESTIÓN DE TUTORÍAS',
+                            style: TextStyle(
+                                color: Color(0xFFEFD3DE),
+                                fontSize: 10,
+                                letterSpacing: 1.2,
+                                fontWeight: FontWeight.w800)),
+                        SizedBox(height: 8),
+                        Text('Todo listo para coordinar',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 22,
+                                fontWeight: FontWeight.w800)),
+                        SizedBox(height: 6),
+                        Text(
+                          'Consulta horarios, asigna liderazgos y atiende solicitudes desde un solo lugar.',
+                          style: TextStyle(
+                              color: Color(0xFFDCC7CF),
+                              fontSize: 13,
+                              height: 1.4),
+                        ),
+                      ]),
+                ),
+                if (MediaQuery.sizeOf(context).width >= 620) ...[
+                  const SizedBox(width: 16),
+                  FilledButton.icon(
+                    onPressed: () => onOpen(1),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: _wineDark,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 14),
+                    ),
+                    icon: const Icon(Icons.calendar_month_rounded, size: 18),
+                    label: const Text('Gestionar horarios'),
+                  ),
+                ],
+              ]),
+            ),
+            const SizedBox(height: 22),
+            Row(children: [
+              Expanded(
+                  child: _Metric(
+                      value: '${teachers.length}', label: 'Tutores activos')),
+              const SizedBox(width: 10),
+              Expanded(
+                  child: _Metric(
+                      value: '$assignedLeaders/${groups.length}',
+                      label: 'Con líder')),
+              const SizedBox(width: 10),
+              Expanded(
+                  child:
+                      _Metric(value: '${groups.length}', label: 'Grupos PA')),
+            ]),
+            const SizedBox(height: 30),
+            _SectionTitle(
+                title: 'Por asignar',
+                action: 'Ver horarios',
+                onTap: () => onOpen(1)),
+            const SizedBox(height: 10),
+            if (unscheduled.isEmpty)
+              const _EmptyCard(
+                  message: 'Todos los tutores tienen un horario registrado.')
+            else
+              _CardList(children: [
+                for (final teacher in unscheduled.take(4))
+                  _RecordRow(
+                    icon: Icons.groups_2_outlined,
+                    title: _text(teacher['nombre'], 'Tutor'),
+                    subtitle: 'ID ${_text(teacher['id'], '—')}',
+                    badge: 'Sin horario',
+                    onTap: () => onOpen(1),
+                  ),
+              ]),
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -790,24 +856,44 @@ class _Metric extends StatelessWidget {
   final String value, label;
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 16),
+        padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                  color: Colors.black.withValues(alpha: .05),
-                  blurRadius: 12,
-                  offset: const Offset(0, 3))
-            ]),
-        child: Column(children: [
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(color: _border),
+          boxShadow: [
+            BoxShadow(
+                color: const Color(0xFF1F2937).withValues(alpha: .035),
+                blurRadius: 14,
+                offset: const Offset(0, 4))
+          ],
+        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(value,
               style: const TextStyle(
-                  color: _wine, fontSize: 21, fontWeight: FontWeight.w900)),
-          const SizedBox(height: 3),
-          Text(label,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: _muted, fontSize: 10.5)),
+                  color: Color(0xFF202536),
+                  fontSize: 25,
+                  height: 1,
+                  fontWeight: FontWeight.w800)),
+          const SizedBox(height: 10),
+          Row(children: [
+            Container(
+              width: 29,
+              height: 29,
+              decoration: BoxDecoration(
+                  color: _pink, borderRadius: BorderRadius.circular(9)),
+              child: const Icon(Icons.insights_rounded, color: _wine, size: 16),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+                child: Text(label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        color: _muted,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600))),
+          ]),
         ]),
       );
 }

@@ -283,55 +283,8 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
         ),
       );
 
-  Widget _home() => ListView(
-        padding: const EdgeInsets.all(24),
-        children: [
-          const Text('¡Hola, docente!',
-              style: TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w800,
-                  color: _teacherNavy)),
-          const SizedBox(height: 6),
-          const Text(
-              'Consulta tus tutorías, solicita cambios de fecha y acompaña tus proyectos de aula.'),
-          const SizedBox(height: 20),
-          _TeacherHomeTile(
-              icon: Icons.event_note_outlined,
-              title: 'Mis tutorías',
-              subtitle:
-                  'Revisa sesiones y solicita a coordinación cambiar una fecha.',
-              onTap: () => setState(() => _tab = 1)),
-          _TeacherHomeTile(
-              icon: Icons.play_circle_outline,
-              title: 'Empezar tutorías',
-              subtitle:
-                  'Abre la sala, toma asistencia y consulta el chat de tus sesiones.',
-              onTap: () => setState(() => _tab = 2)),
-          _TeacherHomeTile(
-              icon: Icons.school_outlined,
-              title: 'Proyectos de aula',
-              subtitle:
-                  'Escribe reportes, programa sesiones y responde a los estudiantes.',
-              onTap: () => setState(() => _tab = 3)),
-          _TeacherHomeTile(
-              icon: Icons.fact_check_outlined,
-              title: 'Líder PA',
-              subtitle:
-                  'Revisa la documentación de los tutores y confirma el trabajo del proyecto.',
-              onTap: () => setState(() => _tab = 4)),
-          _TeacherHomeTile(
-              icon: Icons.notifications_none_outlined,
-              title: 'Avisos',
-              subtitle: 'Consulta las notificaciones de tu cuenta.',
-              onTap: () => setState(() => _tab = 5)),
-          _TeacherHomeTile(
-              icon: Icons.history_outlined,
-              title: 'Historial',
-              subtitle: 'Consulta las tutorías finalizadas y sus chats.',
-              onTap: () => setState(() => _tab = 6)),
-        ],
-      );
-
+  Widget _home() =>
+      _TeacherHomeDashboard(onOpen: (tab) => setState(() => _tab = tab));
   Widget _sessions() => _buildSessions(view: _SessionView.scheduled);
 
   Widget _startTutoring() => _buildSessions(view: _SessionView.start);
@@ -771,6 +724,249 @@ class _HistoryDetail extends StatelessWidget {
 }
 
 const _teacherLabels = ['Inicio', 'Tutorías', 'Empezar tutorías'];
+
+class _TeacherHomeDashboard extends ConsumerWidget {
+  const _TeacherHomeDashboard({required this.onOpen});
+  final ValueChanged<int> onOpen;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) =>
+      ref.watch(_teacherSessionsProvider).when(
+            loading: () => _content(context, ref, const [], loading: true),
+            error: (error, _) => _content(context, ref, const [], error: true),
+            data: (sessions) => _content(context, ref, sessions),
+          );
+
+  Widget _content(BuildContext context, WidgetRef ref,
+      List<_TeacherTutoringSession> sessions,
+      {bool loading = false, bool error = false}) {
+    final active = sessions.where((s) => s.state != 'FINALIZADA').length;
+    final completed = sessions.where((s) => s.state == 'FINALIZADA').length;
+    final students = sessions.expand((s) => s.students).toSet().length;
+    final upcoming = sessions
+        .where((s) =>
+            s.state != 'FINALIZADA' &&
+            s.start != null &&
+            s.start!.isAfter(DateTime.now()))
+        .toList()
+      ..sort((a, b) => a.start!.compareTo(b.start!));
+    final now = DateTime.now();
+    const weekdays = [
+      'lunes',
+      'martes',
+      'miércoles',
+      'jueves',
+      'viernes',
+      'sábado',
+      'domingo'
+    ];
+    const months = [
+      'enero',
+      'febrero',
+      'marzo',
+      'abril',
+      'mayo',
+      'junio',
+      'julio',
+      'agosto',
+      'septiembre',
+      'octubre',
+      'noviembre',
+      'diciembre'
+    ];
+    final shortcuts = [
+      _TeacherHomeTile(
+          icon: Icons.event_note_outlined,
+          title: 'Mis tutorías',
+          subtitle: 'Revisa sesiones y solicita cambios de fecha.',
+          onTap: () => onOpen(1)),
+      _TeacherHomeTile(
+          icon: Icons.play_circle_outline,
+          title: 'Empezar tutorías',
+          subtitle: 'Entra a la sala, toma asistencia y abre el chat.',
+          onTap: () => onOpen(2)),
+      _TeacherHomeTile(
+          icon: Icons.school_outlined,
+          title: 'Proyectos de aula',
+          subtitle: 'Programa sesiones y acompaña a tus estudiantes.',
+          onTap: () => onOpen(3)),
+      _TeacherHomeTile(
+          icon: Icons.fact_check_outlined,
+          title: 'Líder PA',
+          subtitle: 'Revisa documentos y avances del proyecto.',
+          onTap: () => onOpen(4)),
+      _TeacherHomeTile(
+          icon: Icons.notifications_none_outlined,
+          title: 'Avisos',
+          subtitle: 'Consulta las notificaciones de tu cuenta.',
+          onTap: () => onOpen(5)),
+      _TeacherHomeTile(
+          icon: Icons.history_outlined,
+          title: 'Historial',
+          subtitle: 'Consulta tutorías finalizadas y sus chats.',
+          onTap: () => onOpen(6)),
+    ];
+    return Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 1160),
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(28, 22, 28, 32),
+          children: [
+            Container(
+              padding: const EdgeInsets.fromLTRB(24, 22, 24, 22),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                gradient: const LinearGradient(
+                    colors: [Color(0xFF087A49), Color(0xFF075E3B)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight),
+                boxShadow: [
+                  BoxShadow(
+                      color: _teacherGreen.withValues(alpha: .14),
+                      blurRadius: 20,
+                      offset: const Offset(0, 8))
+                ],
+              ),
+              child: Row(children: [
+                Expanded(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                      Text(
+                          '${weekdays[now.weekday - 1]}, ${now.day} de ${months[now.month - 1]} de ${now.year}',
+                          style: TextStyle(
+                              color: Colors.white.withValues(alpha: .78),
+                              fontSize: 12)),
+                      const SizedBox(height: 8),
+                      const Text('Tu actividad docente',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 23,
+                              fontWeight: FontWeight.w800)),
+                      const SizedBox(height: 5),
+                      Text(
+                          loading
+                              ? 'Estamos actualizando tus tutorías.'
+                              : error
+                                  ? 'No se pudieron actualizar tus datos. Reintenta desde Tutorías.'
+                                  : upcoming.isEmpty
+                                      ? 'Revisa tus tutorías, proyectos y avisos desde este panel.'
+                                      : 'Próxima tutoría: ${upcoming.first.subject} · ${_dateTimeLabel(upcoming.first.start!)}',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              color: Colors.white.withValues(alpha: .88),
+                              fontSize: 13,
+                              height: 1.35)),
+                    ])),
+                const SizedBox(width: 14),
+                if (loading)
+                  const SizedBox(
+                      width: 34,
+                      height: 34,
+                      child: CircularProgressIndicator(
+                          color: Colors.white, strokeWidth: 3))
+                else if (error)
+                  IconButton.filledTonal(
+                      tooltip: 'Reintentar',
+                      onPressed: () => ref.invalidate(_teacherSessionsProvider),
+                      icon: const Icon(Icons.refresh_rounded))
+                else
+                  Text('$active',
+                      style: TextStyle(
+                          color: Colors.white.withValues(alpha: .24),
+                          fontSize: 58,
+                          height: 1,
+                          fontWeight: FontWeight.w800)),
+              ]),
+            ),
+            const SizedBox(height: 16),
+            Row(children: [
+              Expanded(
+                  child: _TeacherMetricCard(
+                      value: loading ? '—' : '$active',
+                      label: 'Tutorías activas',
+                      icon: Icons.event_available_outlined)),
+              const SizedBox(width: 12),
+              Expanded(
+                  child: _TeacherMetricCard(
+                      value: loading ? '—' : '$completed',
+                      label: 'Finalizadas',
+                      icon: Icons.task_alt_rounded)),
+              const SizedBox(width: 12),
+              Expanded(
+                  child: _TeacherMetricCard(
+                      value: loading ? '—' : '$students',
+                      label: 'Estudiantes',
+                      icon: Icons.groups_outlined)),
+            ]),
+            const SizedBox(height: 24),
+            Row(children: [
+              const Expanded(
+                  child: Text('Accesos directos',
+                      style: TextStyle(
+                          color: _teacherNavy,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800))),
+              TextButton.icon(
+                  onPressed: () => onOpen(1),
+                  icon: const Icon(Icons.arrow_forward_rounded, size: 16),
+                  label: const Text('Ver tutorías')),
+            ]),
+            const SizedBox(height: 8),
+            for (final tile in shortcuts) tile,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TeacherMetricCard extends StatelessWidget {
+  const _TeacherMetricCard(
+      {required this.value, required this.label, required this.icon});
+  final String value;
+  final String label;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.all(15),
+        decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFFE3ECE5)),
+            boxShadow: const [
+              BoxShadow(
+                  color: Color(0x08000000),
+                  blurRadius: 12,
+                  offset: Offset(0, 4))
+            ]),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(value,
+              style: const TextStyle(
+                  color: _teacherNavy,
+                  fontSize: 24,
+                  height: 1,
+                  fontWeight: FontWeight.w800)),
+          const SizedBox(height: 10),
+          Row(children: [
+            Icon(icon, color: _teacherGreen, size: 17),
+            const SizedBox(width: 6),
+            Expanded(
+                child: Text(label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        color: Color(0xFF687A70),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600)))
+          ]),
+        ]),
+      );
+}
+
 const _teacherIcons = [
   Icons.home_outlined,
   Icons.event_note_outlined,
@@ -790,17 +986,32 @@ class _TeacherHomeTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Card(
+        color: Colors.white,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: const BorderSide(color: Color(0xFFE3ECE5)),
+        ),
         child: ListTile(
           onTap: onTap,
           contentPadding:
-              const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-          leading: CircleAvatar(
-              backgroundColor: const Color(0xFFE6F4EA),
-              child: Icon(icon, color: _teacherGreen)),
-          title:
-              Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
-          subtitle: Text(subtitle),
-          trailing: const Icon(Icons.chevron_right),
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+          leading: Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+                color: const Color(0xFFEAF5EE),
+                borderRadius: BorderRadius.circular(12)),
+            child: Icon(icon, color: _teacherGreen, size: 21),
+          ),
+          title: Text(title,
+              style: const TextStyle(
+                  color: _teacherNavy, fontWeight: FontWeight.w700)),
+          subtitle: Text(subtitle,
+              style: const TextStyle(
+                  color: Color(0xFF687A70), fontSize: 12, height: 1.3)),
+          trailing: const Icon(Icons.arrow_forward_rounded,
+              color: _teacherGreen, size: 18),
         ),
       );
 }

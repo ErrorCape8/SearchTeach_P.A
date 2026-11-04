@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'brand_logo.dart';
 
 const kBlue = Color(0xFF1E3FA8);
 const kNavy = Color(0xFF14146B);
@@ -102,7 +101,61 @@ const _gradient = RadialGradient(
 class _LogoPill extends StatelessWidget {
   const _LogoPill();
   @override
-  Widget build(BuildContext context) => const BrandLogo(width: 120, height: 76);
+  Widget build(BuildContext context) => const _AuthBrandLockup();
+}
+
+class _AuthBrandLockup extends StatelessWidget {
+  const _AuthBrandLockup();
+
+  @override
+  Widget build(BuildContext context) => Container(
+        constraints: const BoxConstraints(maxWidth: 330),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x160B1550),
+              blurRadius: 18,
+              offset: Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Image.asset(
+            'assets/brand/logo.png',
+            width: 62,
+            height: 62,
+            fit: BoxFit.contain,
+            filterQuality: FilterQuality.high,
+            semanticLabel: 'Logo de SearchTeach',
+          ),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('SearchTeach',
+                      style: TextStyle(
+                          color: kBlue,
+                          fontSize: 20,
+                          height: 1.05,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -.5)),
+                  SizedBox(height: 5),
+                  Text(
+                      'El conocimiento que buscas,\nel profesor que necesitas.',
+                      style: TextStyle(
+                          color: Color(0xFF414B63),
+                          fontSize: 10,
+                          height: 1.25,
+                          fontWeight: FontWeight.w600)),
+                ]),
+          ),
+        ]),
+      );
 }
 
 /// Panel izquierdo para pantallas grandes: así no queda vacío.
@@ -121,7 +174,10 @@ class _BrandPanel extends StatelessWidget {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const _LogoPill(),
+            const Align(
+              alignment: Alignment.topLeft,
+              child: _AuthBrandLockup(),
+            ),
             const Spacer(),
             const Text('Aprende y enseña,\ncuando y donde quieras.',
                 style: TextStyle(
