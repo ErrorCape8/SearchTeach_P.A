@@ -23,13 +23,23 @@ const _teacherSidebar = Color(0xFF0E8A62);
 
 final _teacherSessionsProvider =
     FutureProvider.autoDispose<List<_TeacherTutoringSession>>((ref) async {
-  final response = await ref
-      .read(dioProvider)
-      .get<List<dynamic>>('/api/tutorias/grupales/docente');
-  return (response.data ?? const [])
+  final dio = ref.read(dioProvider);
+  final responses = await Future.wait([
+    dio.get<List<dynamic>>('/api/tutorias/grupales/docente'),
+    dio.get<List<dynamic>>('/api/tutorias/docente'),
+  ]);
+  final groupSessions = (responses[0].data ?? const [])
       .whereType<Map<String, dynamic>>()
       .map(_TeacherTutoringSession.fromJson)
-      .toList(growable: false);
+      .toList();
+  final individualSessions = (responses[1].data ?? const [])
+      .whereType<Map<String, dynamic>>()
+      .where((session) =>
+          session['estado'] == 'PROGRAMADA' ||
+          session['estado'] == 'EN_CURSO' ||
+          session['estado'] == 'REALIZADA')
+      .map(_TeacherTutoringSession.fromIndividualJson);
+  return [...groupSessions, ...individualSessions];
 });
 
 final _teacherProjectCountProvider =
@@ -97,7 +107,6 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
     });
     final width = MediaQuery.sizeOf(context).width;
     final wide = width >= 850;
-    final showAside = width >= 1120 && _tab != 5 && _tab != 7;
     final profile = ref.watch(docenteProfileProvider);
     final teacherName = profile.value?['nombre'] is String
         ? profile.value!['nombre'] as String
@@ -153,29 +162,14 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
                                     setState(() => _tab = 4),
                               ),
                               const DocenteLiderProyectosPage(),
-                              const NotificationsInbox(),
+                              const NotificationsInbox(
+                                accentColor: _teacherGreen,
+                              ),
                               _history(),
                               const DocentePerfilPage(),
                             ],
                           ),
                         ),
-                        if (showAside)
-                          SizedBox(
-                            width: 286,
-                            child: _TeacherAside(
-                              calendarMonth: _calendarMonth,
-                              selectedDate: _selectedDate,
-                              onMonthChanged: (month) =>
-                                  setState(() => _calendarMonth = month),
-                              onDateSelected: (date) => setState(() {
-                                _selectedDate = date;
-                                _calendarMonth =
-                                    DateTime(date.year, date.month);
-                              }),
-                              onOpenSessions: () => setState(() => _tab = 1),
-                              onOpenHistory: () => setState(() => _tab = 6),
-                            ),
-                          ),
                       ],
                     ),
                   ),
@@ -189,18 +183,25 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
             : NavigationBar(
                 selectedIndex: switch (_tab) {
                   1 || 2 => 1,
-                  3 || 4 => 2,
+                  3 => 2,
                   7 => 3,
-                  _ => 0,
+                  0 => 0,
+                  _ => 4,
                 },
-                onDestinationSelected: (value) => setState(() {
-                  _tab = switch (value) {
-                    1 => 1,
-                    2 => 3,
-                    3 => 7,
-                    _ => 0,
-                  };
-                }),
+                onDestinationSelected: (value) {
+                  if (value == 4) {
+                    _openMoreNavigation(context);
+                  } else {
+                    setState(() {
+                      _tab = switch (value) {
+                        1 => 1,
+                        2 => 3,
+                        3 => 7,
+                        _ => 0,
+                      };
+                    });
+                  }
+                },
                 destinations: const [
                   NavigationDestination(
                       icon: Icon(Icons.home_outlined),
@@ -218,10 +219,50 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
                       icon: Icon(Icons.person_outline),
                       selectedIcon: Icon(Icons.person),
                       label: 'Perfil'),
+                  NavigationDestination(
+                      icon: Icon(Icons.more_horiz),
+                      selectedIcon: Icon(Icons.more_horiz),
+                      label: 'Más'),
                 ],
               ),
       ),
     );
+  }
+
+  Future<void> _openMoreNavigation(BuildContext context) async {
+    const destinations = <(int, String, IconData)>[
+      (2, 'Empezar tutoría', Icons.video_call_outlined),
+      (4, 'Líder PA', Icons.groups_outlined),
+      (5, 'Avisos', Icons.notifications_outlined),
+      (6, 'Historial', Icons.history_outlined),
+    ];
+    final tab = await showModalBottomSheet<int>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.only(bottom: 12),
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 4, 20, 12),
+              child: Text(
+                'Más secciones',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+              ),
+            ),
+            for (final (tab, label, icon) in destinations)
+              ListTile(
+                leading: Icon(icon, color: _teacherGreen),
+                title: Text(label),
+                selected: _tab == tab,
+                onTap: () => Navigator.pop(context, tab),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (tab != null && mounted) setState(() => _tab = tab);
   }
 
   Widget _home(String teacherName) => ref.watch(_teacherSessionsProvider).when(
@@ -328,34 +369,6 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
                   onStart: () => _openRoom(nextSession, ended: false),
                   onHistory: () => _openRoom(nextSession, ended: true),
                 ),
-              const SizedBox(height: 22),
-              const Text(
-                'Accesos rápidos',
-                style: TextStyle(
-                  color: _teacherNavy,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 8),
-              _TeacherHomeTile(
-                icon: Icons.video_call_outlined,
-                title: 'Empezar tutoría',
-                subtitle: 'Abre la sala y registra la asistencia.',
-                onTap: () => setState(() => _tab = 2),
-              ),
-              _TeacherHomeTile(
-                icon: Icons.school_outlined,
-                title: 'Proyectos de aula',
-                subtitle: 'Consulta los proyectos que tienes asignados.',
-                onTap: () => setState(() => _tab = 3),
-              ),
-              _TeacherHomeTile(
-                icon: Icons.history_outlined,
-                title: 'Historial',
-                subtitle: 'Consulta tutorías finalizadas y sus conversaciones.',
-                onTap: () => setState(() => _tab = 6),
-              ),
             ],
           );
         },
@@ -384,10 +397,12 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
             data: (allSessions) {
               final filteredSessions = allSessions
                   .where((session) => switch (view) {
-                        _SessionView.history => session.state == 'FINALIZADA',
+                        _SessionView.history => session.state == 'FINALIZADA' ||
+                            session.state == 'REALIZADA',
                         _SessionView.scheduled ||
                         _SessionView.start =>
-                          session.state != 'FINALIZADA',
+                          session.state != 'FINALIZADA' &&
+                              session.state != 'REALIZADA',
                       })
                   .toList()
                 ..sort((a, b) => (a.start ?? DateTime(9999))
@@ -547,6 +562,7 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
     _TeacherTutoringSession session, {
     bool readOnly = false,
   }) async {
+    if (session.isIndividual) return;
     await Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => TutoriaChatPage(
         sessionId: session.id,
@@ -560,6 +576,23 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
     _TeacherTutoringSession session, {
     required bool ended,
   }) async {
+    if (session.isIndividual && !ended && session.state == 'PROGRAMADA') {
+      try {
+        await ref.read(dioProvider).patch(
+              '/api/tutorias/${Uri.encodeComponent(session.id)}/iniciar',
+            );
+      } on DioException catch (error) {
+        if (!mounted) return;
+        final data = error.response?.data;
+        final message = data is Map && data['message'] is String
+            ? data['message'] as String
+            : error.message ?? 'No se pudo iniciar la tutoría.';
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(message)));
+        return;
+      }
+    }
+    if (!mounted) return;
     await Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => LiveKitRoomPage(
         sessionId: session.id,
@@ -569,6 +602,7 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
         students: session.students,
         ended: ended,
         endAt: session.end,
+        isIndividualTutoring: session.isIndividual,
         onNavigateToDashboard: (tab) {
           Navigator.of(context).pop();
           if (mounted) setState(() => _tab = tab);
@@ -674,10 +708,21 @@ class _TeacherSidebar extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 10),
-            _item(0, 'Inicio', Icons.home_outlined),
-            _item(1, 'Sesiones', Icons.calendar_month_outlined),
-            _item(3, 'Proyectos de aula', Icons.school_outlined),
-            const Spacer(),
+            Expanded(
+              child: ListView(
+                padding: EdgeInsets.zero,
+                children: [
+                  _item(0, 'Inicio', Icons.home_outlined),
+                  _item(1, 'Sesiones', Icons.calendar_month_outlined),
+                  _item(2, 'Empezar tutoría', Icons.video_call_outlined),
+                  _item(3, 'Proyectos de aula', Icons.school_outlined),
+                  _item(4, 'Líder PA', Icons.groups_outlined),
+                  _item(5, 'Avisos', Icons.notifications_outlined),
+                  _item(6, 'Historial', Icons.history_outlined),
+                  _item(7, 'Mi perfil', Icons.person_outline),
+                ],
+              ),
+            ),
             Padding(
               padding: const EdgeInsets.fromLTRB(18, 12, 18, 20),
               child: Row(
@@ -727,12 +772,12 @@ class _TeacherSidebar extends StatelessWidget {
       );
 
   Widget _item(int tab, String label, IconData icon) {
-    final selected = activeTab == tab ||
-        (tab == 1 && activeTab == 2) ||
-        (tab == 3 && activeTab == 4);
+    final selected = activeTab == tab;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
       child: ListTile(
+        dense: true,
+        visualDensity: VisualDensity.compact,
         selected: selected,
         selectedTileColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -794,7 +839,7 @@ class _TeacherHeader extends StatelessWidget {
                 ),
               ),
             ),
-            const NotificationBellButton(),
+            const NotificationBellButton(accentColor: _teacherGreen),
             const SizedBox(width: 8),
             Tooltip(
               message: 'Mi perfil',
@@ -848,125 +893,6 @@ class _TeacherHeader extends StatelessWidget {
       );
 }
 
-class _TeacherAside extends ConsumerWidget {
-  const _TeacherAside({
-    required this.calendarMonth,
-    required this.selectedDate,
-    required this.onMonthChanged,
-    required this.onDateSelected,
-    required this.onOpenSessions,
-    required this.onOpenHistory,
-  });
-
-  final DateTime calendarMonth;
-  final DateTime? selectedDate;
-  final ValueChanged<DateTime> onMonthChanged;
-  final ValueChanged<DateTime> onDateSelected;
-  final VoidCallback onOpenSessions;
-  final VoidCallback onOpenHistory;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          border: Border(left: BorderSide(color: Color(0xFFE7EEE9))),
-        ),
-        child: ref.watch(_teacherSessionsProvider).when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, _) => Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(18),
-                  child: Text(
-                    'No se pudo cargar la agenda: $error',
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ),
-              data: (allSessions) {
-                final sessions = allSessions
-                    .where((session) => session.state != 'FINALIZADA')
-                    .toList()
-                  ..sort((a, b) => (a.start ?? DateTime(9999))
-                      .compareTo(b.start ?? DateTime(9999)));
-                final daily = selectedDate == null
-                    ? sessions.take(4).toList()
-                    : sessions.where((session) {
-                        final start = session.start?.toLocal();
-                        return start != null &&
-                            start.year == selectedDate!.year &&
-                            start.month == selectedDate!.month &&
-                            start.day == selectedDate!.day;
-                      }).toList();
-                return ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
-                  children: [
-                    _TeacherCalendarCard(
-                      compact: true,
-                      month: calendarMonth,
-                      selectedDate: selectedDate,
-                      sessions: sessions,
-                      onMonthChanged: onMonthChanged,
-                      onDateSelected: onDateSelected,
-                    ),
-                    const SizedBox(height: 20),
-                    Row(
-                      children: [
-                        const Expanded(
-                          child: Text(
-                            'Próximas sesiones',
-                            style: TextStyle(
-                              color: _teacherNavy,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ),
-                        IconButton(
-                          tooltip: 'Abrir agenda',
-                          onPressed: onOpenSessions,
-                          visualDensity: VisualDensity.compact,
-                          icon: const Icon(Icons.arrow_forward, size: 18),
-                        ),
-                      ],
-                    ),
-                    if (daily.isEmpty)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 14),
-                        child: Text(
-                          'No hay sesiones en esta fecha.',
-                          style: TextStyle(
-                            color: Color(0xFF687A70),
-                            fontSize: 12,
-                          ),
-                        ),
-                      )
-                    else
-                      for (final session in daily.take(4))
-                        _TeacherUpcomingSession(
-                          session: session,
-                          onTap: session.start == null
-                              ? onOpenSessions
-                              : () {
-                                  onDateSelected(session.start!.toLocal());
-                                  onOpenSessions();
-                                },
-                        ),
-                    const Divider(height: 24),
-                    TextButton.icon(
-                      onPressed: onOpenHistory,
-                      icon: const Icon(Icons.history, size: 18),
-                      label: const Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text('Consultar historial'),
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ),
-      );
-}
-
 class _TeacherCalendarCard extends StatelessWidget {
   const _TeacherCalendarCard({
     required this.month,
@@ -974,7 +900,6 @@ class _TeacherCalendarCard extends StatelessWidget {
     required this.sessions,
     required this.onMonthChanged,
     required this.onDateSelected,
-    this.compact = false,
   });
 
   final DateTime month;
@@ -982,7 +907,6 @@ class _TeacherCalendarCard extends StatelessWidget {
   final List<_TeacherTutoringSession> sessions;
   final ValueChanged<DateTime> onMonthChanged;
   final ValueChanged<DateTime> onDateSelected;
-  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -1001,9 +925,7 @@ class _TeacherCalendarCard extends StatelessWidget {
         .whereType<DateTime>()
         .map((date) => DateTime(date.year, date.month, date.day).toString())
         .toSet();
-    final weekdays = compact
-        ? const ['L', 'M', 'X', 'J', 'V', 'S', 'D']
-        : const ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+    const weekdays = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
     return Card(
       elevation: 0,
       color: Colors.white,
@@ -1012,7 +934,7 @@ class _TeacherCalendarCard extends StatelessWidget {
         side: const BorderSide(color: Color(0xFFE7EEE9)),
       ),
       child: Padding(
-        padding: EdgeInsets.all(compact ? 12 : 18),
+        padding: const EdgeInsets.all(18),
         child: Column(
           children: [
             Row(
@@ -1022,7 +944,7 @@ class _TeacherCalendarCard extends StatelessWidget {
                     '${_monthName(month.month)} ${month.year}',
                     style: TextStyle(
                       color: _teacherNavy,
-                      fontSize: compact ? 14 : 16,
+                      fontSize: 16,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -1055,7 +977,7 @@ class _TeacherCalendarCard extends StatelessWidget {
                         weekday,
                         style: TextStyle(
                           color: const Color(0xFF79887F),
-                          fontSize: compact ? 10 : 11,
+                          fontSize: 11,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -1070,7 +992,7 @@ class _TeacherCalendarCard extends StatelessWidget {
               itemCount: cells.length,
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 7,
-                childAspectRatio: compact ? 1 : 1.22,
+                childAspectRatio: 1.22,
               ),
               itemBuilder: (context, index) {
                 final date = cells[index];
@@ -1090,8 +1012,8 @@ class _TeacherCalendarCard extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Container(
-                        width: compact ? 27 : 32,
-                        height: compact ? 27 : 32,
+                        width: 32,
+                        height: 32,
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
                           color: selected ? _teacherSidebar : null,
@@ -1104,7 +1026,7 @@ class _TeacherCalendarCard extends StatelessWidget {
                           '${date.day}',
                           style: TextStyle(
                             color: selected ? Colors.white : _teacherNavy,
-                            fontSize: compact ? 11 : 12,
+                            fontSize: 12,
                             fontWeight: selected || today
                                 ? FontWeight.w800
                                 : FontWeight.w500,
@@ -1126,94 +1048,25 @@ class _TeacherCalendarCard extends StatelessWidget {
                 );
               },
             ),
-            if (!compact) ...[
-              const SizedBox(height: 10),
-              const Row(
-                children: [
-                  Icon(Icons.circle, size: 8, color: _teacherGreen),
-                  SizedBox(width: 6),
-                  Text(
-                    'Día con tutorías',
-                    style: TextStyle(
-                      color: Color(0xFF687A70),
-                      fontSize: 11,
-                    ),
+            const SizedBox(height: 10),
+            const Row(
+              children: [
+                Icon(Icons.circle, size: 8, color: _teacherGreen),
+                SizedBox(width: 6),
+                Text(
+                  'Día con tutorías',
+                  style: TextStyle(
+                    color: Color(0xFF687A70),
+                    fontSize: 11,
                   ),
-                ],
-              ),
-            ],
+                ),
+              ],
+            ),
           ],
         ),
       ),
     );
   }
-}
-
-class _TeacherUpcomingSession extends StatelessWidget {
-  const _TeacherUpcomingSession({
-    required this.session,
-    required this.onTap,
-  });
-
-  final _TeacherTutoringSession session;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 9),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 4,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: _teacherGreen,
-                  borderRadius: BorderRadius.circular(3),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      session.subject,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: _teacherNavy,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      session.start == null
-                          ? 'Fecha pendiente'
-                          : _dateTimeLabel(session.start!.toLocal()),
-                      style: const TextStyle(
-                        color: Color(0xFF687A70),
-                        fontSize: 11,
-                      ),
-                    ),
-                    Text(
-                      '${session.students.length} estudiantes inscritos',
-                      style: const TextStyle(
-                        color: Color(0xFF687A70),
-                        fontSize: 10,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
 }
 
 class _TeacherSessionCard extends ConsumerWidget {
@@ -1237,7 +1090,9 @@ class _TeacherSessionCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isHistory = view == _SessionView.history;
     final isStart = view == _SessionView.start;
-    final studentNames = session.id.isNotEmpty && session.students.isNotEmpty
+    final studentNames = !session.isIndividual &&
+            session.id.isNotEmpty &&
+            session.students.isNotEmpty
         ? ref.watch(_teacherStudentNamesProvider(session.id))
         : null;
     return Card(
@@ -1293,6 +1148,7 @@ class _TeacherSessionCard extends ConsumerWidget {
                   ),
                 ),
                 if (!isHistory &&
+                    !session.isIndividual &&
                     session.id.isNotEmpty &&
                     session.start != null &&
                     session.end != null)
@@ -1308,7 +1164,8 @@ class _TeacherSessionCard extends ConsumerWidget {
               spacing: 7,
               runSpacing: 6,
               children: [
-                _TeacherTag(label: 'Semestre ${session.semester}'),
+                if (!session.isIndividual)
+                  _TeacherTag(label: 'Semestre ${session.semester}'),
                 _TeacherTag(label: '${session.students.length} estudiantes'),
                 _TeacherTag(label: session.state),
                 for (final tech in session.technologies.take(3))
@@ -1317,7 +1174,15 @@ class _TeacherSessionCard extends ConsumerWidget {
             ),
             if (session.students.isNotEmpty) ...[
               const SizedBox(height: 12),
-              if (studentNames == null)
+              if (session.isIndividual)
+                const Text(
+                  'Tutoría individual · 1 estudiante',
+                  style: TextStyle(
+                    color: Color(0xFF687A70),
+                    fontSize: 11,
+                  ),
+                )
+              else if (studentNames == null)
                 Text(
                   '${session.students.length} estudiantes inscritos',
                   style: const TextStyle(
@@ -1360,11 +1225,12 @@ class _TeacherSessionCard extends ConsumerWidget {
               spacing: 8,
               runSpacing: 6,
               children: [
-                OutlinedButton.icon(
-                  onPressed: session.id.isEmpty ? null : onOpenChat,
-                  icon: const Icon(Icons.chat_bubble_outline, size: 17),
-                  label: const Text('Chat'),
-                ),
+                if (!session.isIndividual)
+                  OutlinedButton.icon(
+                    onPressed: session.id.isEmpty ? null : onOpenChat,
+                    icon: const Icon(Icons.chat_bubble_outline, size: 17),
+                    label: const Text('Chat'),
+                  ),
                 if (isStart)
                   FilledButton.icon(
                     onPressed: session.id.isEmpty ? null : onStart,
@@ -1527,34 +1393,6 @@ class _TeacherLoadError extends StatelessWidget {
       );
 }
 
-class _TeacherHomeTile extends StatelessWidget {
-  const _TeacherHomeTile(
-      {required this.icon,
-      required this.title,
-      required this.subtitle,
-      required this.onTap});
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => Card(
-        child: ListTile(
-          onTap: onTap,
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-          leading: CircleAvatar(
-              backgroundColor: const Color(0xFFE6F4EA),
-              child: Icon(icon, color: _teacherGreen)),
-          title:
-              Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
-          subtitle: Text(subtitle),
-          trailing: const Icon(Icons.chevron_right),
-        ),
-      );
-}
-
 class _TeacherTutoringSession {
   const _TeacherTutoringSession(
       {required this.id,
@@ -1565,7 +1403,8 @@ class _TeacherTutoringSession {
       required this.end,
       required this.semester,
       required this.modality,
-      required this.state});
+      required this.state,
+      this.isIndividual = false});
   final String id;
   final String subject;
   final List<String> technologies;
@@ -1575,6 +1414,7 @@ class _TeacherTutoringSession {
   final int semester;
   final String modality;
   final String state;
+  final bool isIndividual;
 
   factory _TeacherTutoringSession.fromJson(Map<String, dynamic> json) =>
       _TeacherTutoringSession(
@@ -1598,6 +1438,28 @@ class _TeacherTutoringSession {
         state: json['estadoClase'] is String
             ? json['estadoClase'] as String
             : 'PROGRAMADA',
+      );
+
+  factory _TeacherTutoringSession.fromIndividualJson(
+          Map<String, dynamic> json) =>
+      _TeacherTutoringSession(
+        id: json['id'] is String ? json['id'] as String : '',
+        subject:
+            json['materia'] is String ? json['materia'] as String : 'Tutoría',
+        technologies: const [],
+        students: json['estudianteId'] is String
+            ? [json['estudianteId'] as String]
+            : const [],
+        start: DateTime.tryParse(json['fechaInicio']?.toString() ?? ''),
+        end: DateTime.tryParse(json['fechaFin']?.toString() ?? ''),
+        semester: 0,
+        modality: json['modalidad'] is String &&
+                (json['modalidad'] as String).isNotEmpty
+            ? json['modalidad'] as String
+            : 'PRESENCIAL',
+        state:
+            json['estado'] is String ? json['estado'] as String : 'PROGRAMADA',
+        isIndividual: true,
       );
 }
 

@@ -13,6 +13,8 @@ public interface ServicioTutorias {
 
 	List<Tutoria> listarDelUsuario(String usuarioId);
 
+	List<Tutoria> listarDelDocente(String docenteId);
+
 	Tutoria buscar(String id, String usuarioId);
 
 	Tutoria aceptar(String id, String usuarioId);
@@ -24,6 +26,8 @@ public interface ServicioTutorias {
 	Tutoria cancelar(String id, String usuarioId);
 
 	Tutoria iniciar(String id, String usuarioId);
+
+	Tutoria registrarAsistencia(String id, boolean asistio, String usuarioId);
 
 	Tutoria finalizar(String id, RegistroAsistencia asistencia, String usuarioId);
 }

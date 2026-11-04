@@ -56,7 +56,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
           ],
         ),
         actions: [
-          const NotificationBellButton(),
+          const NotificationBellButton(accentColor: _purple),
           IconButton(
             tooltip: 'Actualizar',
             onPressed: () {

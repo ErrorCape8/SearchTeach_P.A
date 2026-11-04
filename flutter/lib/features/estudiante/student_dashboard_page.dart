@@ -60,7 +60,9 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage>
     });
     final data = ref.watch(studentDashboardProvider);
     final groupSessions = ref.watch(studentGroupSessionsProvider);
-    final wide = MediaQuery.sizeOf(context).width >= 850;
+    final width = MediaQuery.sizeOf(context).width;
+    final wide = width >= 980;
+    final showAside = width >= 1400 && _tab == 0;
     return Scaffold(
       backgroundColor: _canvas,
       body: data.when(
@@ -140,11 +142,13 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage>
                                         : null,
                                     onLogout: _logout,
                                   ),
-                                  const NotificationsInbox(),
+                                  const NotificationsInbox(
+                                    accentColor: _blue,
+                                  ),
                                 ],
                               ),
                             ),
-                            if (wide && _tab != 5)
+                            if (showAside)
                               SizedBox(
                                 width: 250,
                                 child: _StudentSidePanel(data: dashboard),
@@ -160,7 +164,7 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage>
           },
         ),
       ),
-      bottomNavigationBar: wide || _tab > 4
+      bottomNavigationBar: wide
           ? null
           : data.whenOrNull(
               data: (_) => NavigationBar(

@@ -59,14 +59,16 @@ class NotificationUnreadIcon extends ConsumerWidget {
 }
 
 class NotificationBellButton extends ConsumerWidget {
-  const NotificationBellButton({super.key});
+  const NotificationBellButton({super.key, this.accentColor});
+
+  final Color? accentColor;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => IconButton(
         tooltip: 'Notificaciones',
         onPressed: () {
           ref.invalidate(notificationUnreadCountProvider);
-          context.push('/notificaciones');
+          context.push('/notificaciones', extra: accentColor);
         },
         icon: const NotificationUnreadIcon(
           icon: Icons.notifications_outlined,
@@ -101,16 +103,36 @@ class NotificationItem {
 }
 
 class NotificationsPage extends StatelessWidget {
-  const NotificationsPage({super.key});
+  const NotificationsPage({super.key, this.accentColor});
+
+  final Color? accentColor;
+
   @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('Notificaciones')),
-        body: const NotificationsInbox(),
-      );
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final roleTheme = accentColor == null
+        ? theme
+        : theme.copyWith(
+            colorScheme: theme.colorScheme.copyWith(primary: accentColor),
+          );
+    return Theme(
+      data: roleTheme,
+      child: Scaffold(
+        appBar: AppBar(
+          backgroundColor: accentColor,
+          foregroundColor: accentColor == null ? null : Colors.white,
+          title: const Text('Avisos'),
+        ),
+        body: NotificationsInbox(accentColor: accentColor),
+      ),
+    );
+  }
 }
 
 class NotificationsInbox extends ConsumerStatefulWidget {
-  const NotificationsInbox({super.key});
+  const NotificationsInbox({super.key, this.accentColor});
+
+  final Color? accentColor;
   @override
   ConsumerState<NotificationsInbox> createState() => _NotificationsInboxState();
 }
@@ -245,6 +267,20 @@ class _NotificationsInboxState extends ConsumerState<NotificationsInbox> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final roleTheme = widget.accentColor == null
+        ? theme
+        : theme.copyWith(
+            colorScheme:
+                theme.colorScheme.copyWith(primary: widget.accentColor),
+          );
+    return Theme(
+      data: roleTheme,
+      child: Builder(builder: _buildInbox),
+    );
+  }
+
+  Widget _buildInbox(BuildContext context) {
     final unreadCount = ref.watch(notificationUnreadCountProvider);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -260,9 +296,14 @@ class _NotificationsInboxState extends ConsumerState<NotificationsInbox> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Avisos de tu cuenta',
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                  Text(
+                    'Avisos de tu cuenta',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
                   const SizedBox(height: 3),
                   unreadCount.when(
                     data: (count) => Text(
@@ -343,84 +384,102 @@ class _NotificationsInboxState extends ConsumerState<NotificationsInbox> {
                             itemBuilder: (context, index) {
                               final item = _items[index];
                               return Card(
-                                  child: ExpansionTile(
-                                leading: CircleAvatar(
-                                  backgroundColor: item.read
-                                      ? Colors.blueGrey.withValues(alpha: .12)
-                                      : Theme.of(context)
-                                          .colorScheme
-                                          .primary
-                                          .withValues(alpha: .12),
-                                  child: Icon(
-                                      item.read
-                                          ? Icons.notifications_none
-                                          : Icons.notifications_active_outlined,
+                                  elevation: item.read ? 0 : 1,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    side: BorderSide(
                                       color: item.read
-                                          ? Colors.blueGrey
+                                          ? const Color(0xFFE7EAF0)
                                           : Theme.of(context)
                                               .colorScheme
-                                              .primary),
-                                ),
-                                title: Text(item.title,
-                                    style: TextStyle(
-                                        fontWeight: item.read
-                                            ? FontWeight.w500
-                                            : FontWeight.w800)),
-                                subtitle: Padding(
-                                    padding: const EdgeInsets.only(top: 5),
-                                    child: Text(
-                                      _notificationPreview(item.message),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    )),
-                                initiallyExpanded:
-                                    _expandedNotifications.contains(item.id),
-                                onExpansionChanged: (expanded) {
-                                  setState(() {
-                                    if (expanded) {
-                                      _expandedNotifications.add(item.id);
-                                    } else {
-                                      _expandedNotifications.remove(item.id);
-                                    }
-                                  });
-                                  if (expanded) _markRead(item);
-                                },
-                                children: [
-                                  Padding(
-                                    padding: const EdgeInsets.fromLTRB(
-                                        16, 0, 16, 12),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(item.message),
-                                        if (item.createdAt != null) ...[
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            _dateLabel(item.createdAt!),
-                                            style: TextStyle(
-                                              color: Colors.grey.shade600,
-                                              fontSize: 12,
-                                            ),
-                                          ),
-                                        ],
-                                        if (item.route != null &&
-                                            item.route != '/notificaciones')
-                                          Align(
-                                            alignment: Alignment.centerRight,
-                                            child: TextButton.icon(
-                                              onPressed: () =>
-                                                  _markReadAndNavigate(item),
-                                              icon:
-                                                  const Icon(Icons.open_in_new),
-                                              label: const Text('Ver detalle'),
-                                            ),
-                                          ),
-                                      ],
+                                              .primary
+                                              .withValues(alpha: .35),
                                     ),
                                   ),
-                                ],
-                              ));
+                                  child: ExpansionTile(
+                                    leading: CircleAvatar(
+                                      backgroundColor: item.read
+                                          ? Colors.blueGrey
+                                              .withValues(alpha: .12)
+                                          : Theme.of(context)
+                                              .colorScheme
+                                              .primary
+                                              .withValues(alpha: .12),
+                                      child: Icon(
+                                          item.read
+                                              ? Icons.notifications_none
+                                              : Icons
+                                                  .notifications_active_outlined,
+                                          color: item.read
+                                              ? Colors.blueGrey
+                                              : Theme.of(context)
+                                                  .colorScheme
+                                                  .primary),
+                                    ),
+                                    title: Text(item.title,
+                                        style: TextStyle(
+                                            fontWeight: item.read
+                                                ? FontWeight.w500
+                                                : FontWeight.w800)),
+                                    subtitle: Padding(
+                                        padding: const EdgeInsets.only(top: 5),
+                                        child: Text(
+                                          _notificationPreview(item.message),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        )),
+                                    initiallyExpanded: _expandedNotifications
+                                        .contains(item.id),
+                                    onExpansionChanged: (expanded) {
+                                      setState(() {
+                                        if (expanded) {
+                                          _expandedNotifications.add(item.id);
+                                        } else {
+                                          _expandedNotifications
+                                              .remove(item.id);
+                                        }
+                                      });
+                                      if (expanded) _markRead(item);
+                                    },
+                                    children: [
+                                      Padding(
+                                        padding: const EdgeInsets.fromLTRB(
+                                            16, 0, 16, 12),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(item.message),
+                                            if (item.createdAt != null) ...[
+                                              const SizedBox(height: 8),
+                                              Text(
+                                                _dateLabel(item.createdAt!),
+                                                style: TextStyle(
+                                                  color: Colors.grey.shade600,
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                            ],
+                                            if (item.route != null &&
+                                                item.route != '/notificaciones')
+                                              Align(
+                                                alignment:
+                                                    Alignment.centerRight,
+                                                child: TextButton.icon(
+                                                  onPressed: () =>
+                                                      _markReadAndNavigate(
+                                                          item),
+                                                  icon: const Icon(
+                                                      Icons.open_in_new),
+                                                  label:
+                                                      const Text('Ver detalle'),
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ));
                             },
                           )),
         ),

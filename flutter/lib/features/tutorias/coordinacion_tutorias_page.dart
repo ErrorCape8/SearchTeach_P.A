@@ -348,7 +348,9 @@ class _CoordinacionTutoriasPageState
         appBar: AppBar(
           title: const Text('Proyectos de aula'),
           actions: [
-            const NotificationBellButton(),
+            const NotificationBellButton(
+              accentColor: Color(0xFFA9154F),
+            ),
             IconButton(
               tooltip: 'Cerrar sesiÃ³n',
               onPressed: () async {

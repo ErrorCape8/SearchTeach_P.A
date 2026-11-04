@@ -10,4 +10,6 @@ public interface TutoriaRepositorio extends MongoRepository<Tutoria, String> {
 	List<Tutoria> findByEstudianteIdOrDocenteId(String estudianteId, String docenteId);
 
 	List<Tutoria> findByEstudianteId(String estudianteId);
+
+	List<Tutoria> findByDocenteId(String docenteId);
 }

@@ -66,6 +66,11 @@ public class ServicioTutoriasImpl implements ServicioTutorias {
 	}
 
 	@Override
+	public List<Tutoria> listarDelDocente(String docenteId) {
+		return tutoriaRepositorio.findByDocenteId(docenteId);
+	}
+
+	@Override
 	public Tutoria buscar(String id, String usuarioId) {
 		Tutoria tutoria = buscarExistente(id);
 		validarParticipante(tutoria, usuarioId);
@@ -157,6 +162,21 @@ public class ServicioTutoriasImpl implements ServicioTutorias {
 		publicarCambio(guardada);
 		notificationService.notifyUser(guardada.getEstudianteId(), "Tutoria iniciada",
 				"El docente inicio tu tutoria de " + guardada.getMateria() + ".", "/notificaciones");
+		return guardada;
+	}
+
+	@Override
+	public Tutoria registrarAsistencia(String id, boolean asistio, String usuarioId) {
+		Tutoria tutoria = buscarExistente(id);
+		if (!tutoria.getDocenteId().equals(usuarioId)
+				&& !(tutoria.getEstudianteId().equals(usuarioId) && asistio)) {
+			throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+					"Solo el docente puede modificar la asistencia o el estudiante registrar su propia asistencia.");
+		}
+		exigirEstado(tutoria, EstadoTutoria.EN_CURSO);
+		tutoria.setAsistio(asistio);
+		Tutoria guardada = tutoriaRepositorio.save(tutoria);
+		publicarCambio(guardada);
 		return guardada;
 	}
 

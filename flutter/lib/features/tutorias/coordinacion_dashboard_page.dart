@@ -224,7 +224,7 @@ class _Header extends StatelessWidget {
                     color: Colors.white.withValues(alpha: .82), fontSize: 13)),
           ]),
         ),
-        const NotificationBellButton(),
+        const NotificationBellButton(accentColor: _wine),
         IconButton(
           tooltip: 'Actualizar datos',
           onPressed: () => context

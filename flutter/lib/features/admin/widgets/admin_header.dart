@@ -12,12 +12,14 @@ class AdminHeader extends StatelessWidget {
     required this.subtitle,
     this.isEditing = false,
     this.onBack,
+    this.onProfileTap,
   });
 
   final String title;
   final String subtitle;
   final bool isEditing;
   final VoidCallback? onBack;
+  final VoidCallback? onProfileTap;
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +54,7 @@ class AdminHeader extends StatelessWidget {
             ),
           ),
           Padding(
-            padding: EdgeInsets.fromLTRB(20, topPadding + 14, 20, 20),
+            padding: EdgeInsets.fromLTRB(20, topPadding + 10, 20, 12),
             child: Row(
               children: [
                 if (isEditing) ...[
@@ -95,7 +97,7 @@ class AdminHeader extends StatelessWidget {
                         title,
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 20,
+                          fontSize: 17,
                           fontWeight: FontWeight.w800,
                           letterSpacing: -0.2,
                         ),
@@ -105,14 +107,33 @@ class AdminHeader extends StatelessWidget {
                         subtitle,
                         style: TextStyle(
                           color: Colors.white.withValues(alpha: 0.88),
-                          fontSize: 13,
+                          fontSize: 10,
                           fontWeight: FontWeight.w400,
                         ),
                       ),
                     ],
                   ),
                 ),
-                const NotificationBellButton(),
+                if (!isEditing && onProfileTap != null) ...[
+                  const SizedBox(width: 8),
+                  InkWell(
+                    onTap: onProfileTap,
+                    borderRadius: BorderRadius.circular(20),
+                    child: const CircleAvatar(
+                      radius: 16,
+                      backgroundColor: Color(0x66FFFFFF),
+                      child: Text(
+                        'AT',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+                const NotificationBellButton(accentColor: kAdminOrange),
               ],
             ),
           ),

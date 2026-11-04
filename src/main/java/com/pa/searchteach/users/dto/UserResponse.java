@@ -11,6 +11,7 @@ public class UserResponse {
 	private int semestre;
 	private java.util.List<String> titulosAcademicos = java.util.List.of();
 	private java.util.List<com.pa.searchteach.users.model.MateriaPrincipalDocente> materiasPrincipales = java.util.List.of();
+	private boolean tieneContrasena;
 
 	public UserResponse() {
 	}
@@ -42,8 +43,17 @@ public class UserResponse {
 	public UserResponse(String id, String nombre, String correo, String telefono, String rol, String estado,
 			String carrera, java.util.List<String> titulosAcademicos, int semestre,
 			java.util.List<com.pa.searchteach.users.model.MateriaPrincipalDocente> materiasPrincipales) {
+		this(id, nombre, correo, telefono, rol, estado, carrera, titulosAcademicos, semestre,
+				materiasPrincipales, false);
+	}
+
+	public UserResponse(String id, String nombre, String correo, String telefono, String rol, String estado,
+			String carrera, java.util.List<String> titulosAcademicos, int semestre,
+			java.util.List<com.pa.searchteach.users.model.MateriaPrincipalDocente> materiasPrincipales,
+			boolean tieneContrasena) {
 		this(id, nombre, correo, telefono, rol, estado, carrera, titulosAcademicos, semestre);
 		setMateriasPrincipales(materiasPrincipales);
+		this.tieneContrasena = tieneContrasena;
 	}
 
 	public String getId() {
@@ -126,5 +136,13 @@ public class UserResponse {
 			java.util.List<com.pa.searchteach.users.model.MateriaPrincipalDocente> materiasPrincipales) {
 		this.materiasPrincipales = materiasPrincipales == null ? java.util.List.of()
 				: java.util.List.copyOf(materiasPrincipales);
+	}
+
+	public boolean isTieneContrasena() {
+		return tieneContrasena;
+	}
+
+	public void setTieneContrasena(boolean tieneContrasena) {
+		this.tieneContrasena = tieneContrasena;
 	}
 }

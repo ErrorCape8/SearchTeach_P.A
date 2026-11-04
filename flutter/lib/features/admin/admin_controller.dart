@@ -4,6 +4,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/api_client.dart';
 import 'models/admin_user.dart';
 
+final adminPendingCertificationsProvider =
+    FutureProvider.autoDispose<int>((ref) async {
+  final response = await ref
+      .read(dioProvider)
+      .get<List<dynamic>>('/api/admin/certificaciones');
+  return (response.data ?? const [])
+      .whereType<Map<String, dynamic>>()
+      .where((item) => item['estado'] == 'PENDIENTE')
+      .length;
+});
+
 class AdminStats {
   const AdminStats({
     required this.cuentasTotal,
@@ -85,6 +96,7 @@ class AdminState {
   const AdminState({
     this.users = const [],
     this.selectedUser,
+    this.isEditingSelectedUser = false,
     this.activeTab = 0,
     this.usersPage = 0,
     this.searchQuery = '',
@@ -103,6 +115,7 @@ class AdminState {
 
   final List<AdminUser> users;
   final AdminUser? selectedUser;
+  final bool isEditingSelectedUser;
   final int activeTab;
   final int usersPage;
   final String searchQuery;
@@ -136,6 +149,9 @@ class AdminState {
       if (filter == 'Estudiante') return role.contains('estudiante');
       if (filter == 'Docente') return role.contains('docente');
       if (filter == 'Coordinador') return role.contains('coordinador');
+      if (filter == 'Líder de programas') {
+        return role.contains('líder') || role.contains('lider');
+      }
       return true;
     }).toList();
   }
@@ -143,6 +159,7 @@ class AdminState {
   AdminState copyWith({
     List<AdminUser>? users,
     AdminUser? Function()? selectedUser,
+    bool? isEditingSelectedUser,
     int? activeTab,
     int? usersPage,
     String? searchQuery,
@@ -161,6 +178,8 @@ class AdminState {
     return AdminState(
       users: users ?? this.users,
       selectedUser: selectedUser != null ? selectedUser() : this.selectedUser,
+      isEditingSelectedUser:
+          isEditingSelectedUser ?? this.isEditingSelectedUser,
       activeTab: activeTab ?? this.activeTab,
       usersPage: usersPage ?? this.usersPage,
       searchQuery: searchQuery ?? this.searchQuery,
@@ -275,6 +294,7 @@ class AdminController extends StateNotifier<AdminState> {
   }
 
   Future<void> refreshDashboard() async {
+    _ref.invalidate(adminPendingCertificationsProvider);
     await Future.wait([
       loadUsers(),
       loadStats(),
@@ -305,15 +325,31 @@ class AdminController extends StateNotifier<AdminState> {
   }
 
   void setTab(int index) {
-    state = state.copyWith(activeTab: index, selectedUser: () => null);
+    state = state.copyWith(
+      activeTab: index,
+      selectedUser: () => null,
+      isEditingSelectedUser: false,
+    );
   }
 
   void selectUser(AdminUser user) {
-    state = state.copyWith(selectedUser: () => user, activeTab: 1);
+    state = state.copyWith(
+      selectedUser: () => user,
+      isEditingSelectedUser: false,
+      activeTab: 1,
+    );
+  }
+
+  void editSelectedUser() {
+    if (state.selectedUser == null) return;
+    state = state.copyWith(isEditingSelectedUser: true);
   }
 
   void clearSelectedUser() {
-    state = state.copyWith(selectedUser: () => null);
+    state = state.copyWith(
+      selectedUser: () => null,
+      isEditingSelectedUser: false,
+    );
   }
 
   void setSearchQuery(String query) {

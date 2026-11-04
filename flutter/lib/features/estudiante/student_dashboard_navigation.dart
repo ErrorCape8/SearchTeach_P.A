@@ -39,7 +39,7 @@ class _StudentHeader extends StatelessWidget {
     };
     final initials = _studentInitials(profile.name);
     return Container(
-      height: 64,
+      height: 76,
       padding: const EdgeInsets.symmetric(horizontal: 24),
       clipBehavior: Clip.hardEdge,
       decoration: const BoxDecoration(color: Color(0xFF0B3F9D)),
@@ -90,7 +90,7 @@ class _StudentHeader extends StatelessWidget {
                     initials,
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 8,
+                      fontSize: 11,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -107,7 +107,7 @@ class _StudentHeader extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 14,
+                        fontSize: 18,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -117,7 +117,7 @@ class _StudentHeader extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: Colors.white.withValues(alpha: .72),
-                        fontSize: 8,
+                        fontSize: 11,
                       ),
                     ),
                   ],
@@ -184,7 +184,7 @@ class _StudentSidebar extends StatelessWidget {
   Widget build(BuildContext context) => Material(
         color: const Color(0xFF0A3D91),
         child: SizedBox(
-          width: 124,
+          width: 204,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -208,7 +208,7 @@ class _StudentSidebar extends StatelessWidget {
                   'ESTUDIANTE',
                   style: TextStyle(
                     color: Color(0xFFB8C9E6),
-                    fontSize: 7,
+                    fontSize: 10,
                     letterSpacing: .7,
                     fontWeight: FontWeight.w600,
                   ),
@@ -224,7 +224,7 @@ class _StudentSidebar extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   child: SizedBox(
-                    height: 27,
+                    height: 42,
                     child: Material(
                       color: tab == index
                           ? const Color(0xFF3B63AE)
@@ -238,7 +238,7 @@ class _StudentSidebar extends StatelessWidget {
                             const SizedBox(width: 7),
                             Icon(
                               _items[index].$1,
-                              size: 13,
+                              size: 18,
                               color: Colors.white.withValues(alpha: .94),
                             ),
                             const SizedBox(width: 7),
@@ -249,7 +249,7 @@ class _StudentSidebar extends StatelessWidget {
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
                                   color: Colors.white,
-                                  fontSize: 8,
+                                  fontSize: 12,
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
@@ -273,13 +273,13 @@ class _StudentSidebar extends StatelessWidget {
                       onTap: () => onSelect(5),
                       borderRadius: BorderRadius.circular(20),
                       child: CircleAvatar(
-                        radius: 10,
+                        radius: 16,
                         backgroundColor: const Color(0xFF3B63AE),
                         child: Text(
                           _studentInitials(profile.name),
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 6,
+                            fontSize: 10,
                           ),
                         ),
                       ),
@@ -297,7 +297,7 @@ class _StudentSidebar extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 6,
+                                fontSize: 10,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -305,7 +305,7 @@ class _StudentSidebar extends StatelessWidget {
                               'Estudiante',
                               style: TextStyle(
                                 color: Color(0xFFB8C9E6),
-                                fontSize: 6,
+                                fontSize: 12,
                               ),
                             ),
                           ],
@@ -317,13 +317,13 @@ class _StudentSidebar extends StatelessWidget {
                       onPressed: onLogout,
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints.tightFor(
-                        width: 18,
-                        height: 24,
+                        width: 32,
+                        height: 32,
                       ),
                       icon: const Icon(
                         Icons.logout,
                         color: Colors.white,
-                        size: 11,
+                        size: 18,
                       ),
                     ),
                   ],
@@ -474,7 +474,7 @@ class _StudentCalendarCard extends StatelessWidget {
                         day,
                         style: const TextStyle(
                           color: _studentMuted,
-                          fontSize: 7,
+                          fontSize: 10,
                         ),
                       ),
                     ),
@@ -544,7 +544,7 @@ class _StudentCalendarCard extends StatelessWidget {
                   : selected
                       ? const Color(0xFF0D4FC4)
                       : const Color(0xFF273444),
-              fontSize: 7,
+              fontSize: 10,
               fontWeight: isToday ? FontWeight.w700 : FontWeight.normal,
             ),
           ),
@@ -589,7 +589,7 @@ class _UpcomingSessionTile extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: Color(0xFF202B3A),
-                    fontSize: 8,
+                    fontSize: 11,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -615,7 +615,7 @@ class _UpcomingSessionTile extends StatelessWidget {
               item.status,
               style: const TextStyle(
                 color: Color(0xFF9A5A00),
-                fontSize: 6,
+                fontSize: 9,
                 fontWeight: FontWeight.w700,
               ),
             ),

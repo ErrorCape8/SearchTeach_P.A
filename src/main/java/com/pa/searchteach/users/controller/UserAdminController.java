@@ -38,10 +38,7 @@ public class UserAdminController {
 
 	@GetMapping("/users")
 	public List<UserResponse> listUsers() {
-		return userRepository.findAll().stream()
-				.map(u -> new UserResponse(u.getId(), u.getNombre(),
-					 u.getCorreo(), u.getTelefono(), u.getRol(), u.getEstado(), u.getCarrera(), u.getTitulosAcademicos(), u.getSemestre(), u.getMateriasPrincipales()))
-				.toList();
+		return userRepository.findAll().stream().map(this::response).toList();
 	}
 
 	@PostMapping("/users/import")
@@ -110,9 +107,7 @@ public class UserAdminController {
 	public ResponseEntity<UserResponse> getUser(@PathVariable String id) {
 		User user = userRepository.findById(id)
 				.orElseThrow(() -> new NotFoundException("Usuario no encontrado con ID: " + id));
-		return ResponseEntity.ok(new UserResponse(user.getId(), user.getNombre(), user.getCorreo(),
-				user.getTelefono(), user.getRol(), user.getEstado(), user.getCarrera(), user.getTitulosAcademicos(),
-				user.getSemestre(), user.getMateriasPrincipales()));
+		return ResponseEntity.ok(response(user));
 	}
 
 	@PutMapping("/users/{id}")
@@ -182,8 +177,7 @@ public class UserAdminController {
 		}
 
 		User saved = userRepository.save(user);
-		return ResponseEntity.ok(new UserResponse(saved.getId(), saved.getNombre(), saved.getCorreo(),
-				saved.getTelefono(), saved.getRol(), saved.getEstado(), saved.getCarrera(), saved.getTitulosAcademicos(), saved.getSemestre(), saved.getMateriasPrincipales()));
+		return ResponseEntity.ok(response(saved));
 	}
 
 	@PatchMapping("/users/{id}/estado")
@@ -198,9 +192,7 @@ public class UserAdminController {
 			user.setEstado("Activo".equalsIgnoreCase(current) ? "Revocado" : "Activo");
 		}
 		User saved = userRepository.save(user);
-		return ResponseEntity.ok(new UserResponse(saved.getId(), saved.getNombre(), saved.getCorreo(),
-				saved.getTelefono(), saved.getRol(), saved.getEstado(), saved.getCarrera(), saved.getTitulosAcademicos(),
-				saved.getSemestre(), saved.getMateriasPrincipales()));
+		return ResponseEntity.ok(response(saved));
 	}
 
 	@GetMapping("/stats")
@@ -244,5 +236,20 @@ public class UserAdminController {
 
 	private String valueOrEmpty(String value) {
 		return value == null ? "" : value;
+	}
+
+	private UserResponse response(User user) {
+		return new UserResponse(
+				user.getId(),
+				user.getNombre(),
+				user.getCorreo(),
+				user.getTelefono(),
+				user.getRol(),
+				user.getEstado(),
+				user.getCarrera(),
+				user.getTitulosAcademicos(),
+				user.getSemestre(),
+				user.getMateriasPrincipales(),
+				user.getPasswordHash() != null && !user.getPasswordHash().isBlank());
 	}
 }

@@ -20,6 +20,8 @@ class _AdminUsuariosViewState extends ConsumerState<AdminUsuariosView> {
   final _searchController = TextEditingController();
   static const _pageSize = 10;
   bool _importingUsers = false;
+  bool _showFilters = false;
+  bool _showUnactivatedUsers = true;
 
   static const _invalidCsvMessage =
       'no todos los usuairos cumplen con los parametros';
@@ -168,79 +170,6 @@ class _AdminUsuariosViewState extends ConsumerState<AdminUsuariosView> {
     super.dispose();
   }
 
-  void _showFilterModal(BuildContext context, String currentFilter) {
-    showModalBottomSheet<void>(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      backgroundColor: Colors.white,
-      builder: (ctx) {
-        final options = [
-          'Todos',
-          'Activo',
-          'Revocado',
-          'Estudiante',
-          'Docente',
-          'Coordinador'
-        ];
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Filtrar usuarios',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF1E293B),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: options.map((opt) {
-                    final isSelected = opt == currentFilter;
-                    return ChoiceChip(
-                      label: Text(opt),
-                      selected: isSelected,
-                      selectedColor: const Color(0xFFEA580C),
-                      backgroundColor: const Color(0xFFF1F4F9),
-                      labelStyle: TextStyle(
-                        color:
-                            isSelected ? Colors.white : const Color(0xFF475569),
-                        fontWeight:
-                            isSelected ? FontWeight.w700 : FontWeight.w500,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        side: BorderSide(
-                          color: isSelected
-                              ? const Color(0xFFEA580C)
-                              : Colors.transparent,
-                        ),
-                      ),
-                      onSelected: (_) {
-                        ref
-                            .read(adminControllerProvider.notifier)
-                            .setFilter(opt);
-                        Navigator.pop(ctx);
-                      },
-                    );
-                  }).toList(),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(adminControllerProvider);
@@ -310,7 +239,7 @@ class _AdminUsuariosViewState extends ConsumerState<AdminUsuariosView> {
               ),
               const SizedBox(width: 12),
               GestureDetector(
-                onTap: () => _showFilterModal(context, state.filter),
+                onTap: () => setState(() => _showFilters = !_showFilters),
                 child: Container(
                   width: 48,
                   height: 48,
@@ -394,6 +323,112 @@ class _AdminUsuariosViewState extends ConsumerState<AdminUsuariosView> {
             ],
           ),
         ),
+
+        if (_showFilters)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                children: [
+                  for (final option in const [
+                    'Todos',
+                    'Activo',
+                    'Revocado',
+                    'Estudiante',
+                    'Docente',
+                    'Coordinador',
+                    'Líder de programas',
+                  ])
+                    ChoiceChip(
+                      label: Text(option),
+                      selected: state.filter == option,
+                      selectedColor: const Color(0xFFFFE6D1),
+                      labelStyle: TextStyle(
+                        color: state.filter == option
+                            ? const Color(0xFFB45309)
+                            : const Color(0xFF475569),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      onSelected: (_) => ref
+                          .read(adminControllerProvider.notifier)
+                          .setFilter(option),
+                    ),
+                ],
+              ),
+            ),
+          ),
+
+        if (!state.isLoadingUsers &&
+            state.usersError == null &&
+            state.users.any((user) => !user.hasPassword))
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border.all(color: const Color(0xFFE7EAF0)),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                children: [
+                  ListTile(
+                    dense: true,
+                    leading: const Icon(
+                      Icons.person_add_alt_1_outlined,
+                      color: Color(0xFFEA7408),
+                      size: 19,
+                    ),
+                    title: Text(
+                      'Cuentas sin contraseña '
+                      '(${state.users.where((user) => !user.hasPassword).length})',
+                      style: const TextStyle(
+                        color: Color(0xFF1E293B),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    trailing: Icon(
+                      _showUnactivatedUsers
+                          ? Icons.expand_less
+                          : Icons.expand_more,
+                    ),
+                    onTap: () => setState(
+                      () => _showUnactivatedUsers = !_showUnactivatedUsers,
+                    ),
+                  ),
+                  if (_showUnactivatedUsers)
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 150),
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        itemCount: state.users
+                            .where((user) => !user.hasPassword)
+                            .length,
+                        separatorBuilder: (_, __) => const Divider(
+                          height: 1,
+                          color: Color(0xFFF1F5F9),
+                        ),
+                        itemBuilder: (context, index) {
+                          final user = state.users
+                              .where((user) => !user.hasPassword)
+                              .elementAt(index);
+                          return _UserListTile(
+                            user: user,
+                            onTap: () => ref
+                                .read(adminControllerProvider.notifier)
+                                .selectUser(user),
+                          );
+                        },
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
 
         // Lista de usuarios
         Expanded(
@@ -600,21 +635,38 @@ class _UserListTile extends StatelessWidget {
               ),
             ),
 
-            // Badge de estado recibido de la base de datos.
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: stateBackground,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Text(
-                stateLabel,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: stateColor,
+            // Badges de acceso y activación reportados por el servidor.
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: stateBackground,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Text(
+                    stateLabel,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: stateColor,
+                    ),
+                  ),
                 ),
-              ),
+                if (!user.hasPassword) ...[
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Sin contraseña',
+                    style: TextStyle(
+                      color: Color(0xFFB45309),
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ],
         ),

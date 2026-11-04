@@ -133,7 +133,9 @@ class _DocenteInformesPageState extends ConsumerState<DocenteInformesPage> {
         appBar: AppBar(
           title: const Text('Informe de tutoría'),
           actions: [
-            const NotificationBellButton(),
+            const NotificationBellButton(
+              accentColor: Color(0xFF16834A),
+            ),
             IconButton(
               tooltip: 'Cerrar sesión',
               onPressed: () async {

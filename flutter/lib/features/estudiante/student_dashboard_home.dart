@@ -104,7 +104,7 @@ class _ActivitySummaryCard extends StatelessWidget {
       'diciembre',
     ];
     return Container(
-      height: 72,
+      height: 104,
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
@@ -128,7 +128,7 @@ class _ActivitySummaryCard extends StatelessWidget {
               children: [
                 Text(
                   '${weekdays[date.weekday - 1]} ${date.day} de ${months[date.month - 1]} de ${date.year}',
-                  style: const TextStyle(color: _muted, fontSize: 7),
+                  style: const TextStyle(color: _muted, fontSize: 11),
                 ),
                 const SizedBox(height: 3),
                 const Text(
@@ -143,7 +143,7 @@ class _ActivitySummaryCard extends StatelessWidget {
                   pending == 0
                       ? 'No tienes tutorías pendientes.'
                       : 'Tienes $pending tutoría(s) pendiente(s).',
-                  style: const TextStyle(color: _muted, fontSize: 8),
+                  style: const TextStyle(color: _muted, fontSize: 11),
                 ),
               ],
             ),
@@ -520,7 +520,7 @@ class _ProfileSectionTitle extends StatelessWidget {
           title,
           style: const TextStyle(
             color: _navy,
-            fontSize: 9,
+            fontSize: 13,
             fontWeight: FontWeight.w800,
           ),
         ),
@@ -545,24 +545,24 @@ class _ProfileActionCard extends StatelessWidget {
         margin: EdgeInsets.zero,
         color: Colors.white,
         child: ListTile(
-          dense: true,
+          dense: false,
           onTap: onTap,
           leading: CircleAvatar(
-            radius: 12,
+            radius: 16,
             backgroundColor: const Color(0xFFE6EEFF),
-            child: Icon(icon, size: 12, color: _blue),
+            child: Icon(icon, size: 16, color: _blue),
           ),
           title: Text(
             title,
             style: const TextStyle(
               color: _navy,
-              fontSize: 9,
+              fontSize: 13,
               fontWeight: FontWeight.w700,
             ),
           ),
           subtitle: Text(
             subtitle,
-            style: const TextStyle(color: _muted, fontSize: 7),
+            style: const TextStyle(color: _muted, fontSize: 11),
           ),
           trailing: const Icon(Icons.chevron_right, size: 14, color: _muted),
         ),
@@ -588,15 +588,15 @@ class _InstitutionalDataRow extends StatelessWidget {
           ListTile(
             dense: true,
             leading: CircleAvatar(
-              radius: 10,
+              radius: 14,
               backgroundColor: const Color(0xFFE6EEFF),
-              child: Icon(icon, size: 10, color: _blue),
+              child: Icon(icon, size: 14, color: _blue),
             ),
             title: Text(
               title,
               style: const TextStyle(
                 color: _navy,
-                fontSize: 8,
+                fontSize: 12,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -604,7 +604,7 @@ class _InstitutionalDataRow extends StatelessWidget {
               value.isEmpty ? 'No registrado' : value,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: _muted, fontSize: 7),
+              style: const TextStyle(color: _muted, fontSize: 11),
             ),
           ),
           if (showDivider)

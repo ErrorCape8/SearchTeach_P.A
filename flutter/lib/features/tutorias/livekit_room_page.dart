@@ -23,6 +23,7 @@ class LiveKitRoomPage extends ConsumerStatefulWidget {
     this.projectReportSessionId,
     this.studentMode = false,
     this.studentName = 'Estudiante',
+    this.isIndividualTutoring = false,
     this.onNavigateToDashboard,
     super.key,
   });
@@ -39,6 +40,7 @@ class LiveKitRoomPage extends ConsumerStatefulWidget {
   final String? projectReportSessionId;
   final bool studentMode;
   final String studentName;
+  final bool isIndividualTutoring;
   final ValueChanged<int>? onNavigateToDashboard;
 
   bool get isProjectMeeting =>
@@ -74,10 +76,15 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
   void initState() {
     super.initState();
     _ended = widget.ended;
-    _showChat = widget.ended || widget.studentMode || widget.teacherMode;
-    _loadChatHistory();
-    _chatTimer =
-        Timer.periodic(const Duration(seconds: 5), (_) => _loadChatHistory());
+    _showPeople = widget.teacherMode;
+    _showChat = widget.isIndividualTutoring
+        ? widget.teacherMode
+        : widget.ended || widget.studentMode || widget.teacherMode;
+    if (!widget.isIndividualTutoring) {
+      _loadChatHistory();
+      _chatTimer =
+          Timer.periodic(const Duration(seconds: 5), (_) => _loadChatHistory());
+    }
     if (!widget.isProjectMeeting) {
       _loadAttendance();
       _loadStudentNames();
@@ -113,6 +120,7 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
   }
 
   Future<void> _loadStudentNames() async {
+    if (widget.isIndividualTutoring) return;
     try {
       final response = await ref.read(dioProvider).get<List<dynamic>>(
           '/api/tutorias/grupales/${widget.sessionId}/estudiantes');
@@ -125,13 +133,28 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
           if (id is String && name is String) _studentNames[id] = name;
         }
       });
-    } on DioException {}
+    } on DioException catch (error) {
+      if (mounted) {
+        setState(() => _mediaWarning =
+            error.message ?? 'No se pudieron cargar los nombres.');
+      }
+    }
   }
 
   Future<void> _loadAttendance() async {
     try {
       final response = await ref.read(dioProvider).get<Map<String, dynamic>>(
-          '/api/tutorias/grupales/${widget.sessionId}');
+            widget.isIndividualTutoring
+                ? '/api/tutorias/${Uri.encodeComponent(widget.sessionId)}'
+                : '/api/tutorias/grupales/${Uri.encodeComponent(widget.sessionId)}',
+          );
+      if (widget.isIndividualTutoring) {
+        final studentId = response.data?['estudianteId'];
+        final attended = response.data?['asistio'];
+        if (!mounted || studentId is! String || attended is! bool) return;
+        setState(() => _attendance[studentId] = attended);
+        return;
+      }
       final list = response.data?['asistencias'];
       if (!mounted || list is! List) return;
       setState(() {
@@ -140,16 +163,32 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
           if (id is String) _attendance[id] = item['asistio'] as bool?;
         }
       });
-    } on DioException {}
+    } on DioException catch (error) {
+      if (mounted) {
+        setState(() => _mediaWarning =
+            error.message ?? 'No se pudo cargar la asistencia.');
+      }
+    }
   }
 
   Future<void> _checkIfSessionEnded() async {
     if (_ended || widget.isProjectMeeting) return;
     try {
       final response = await ref.read(dioProvider).get<Map<String, dynamic>>(
-            '/api/tutorias/grupales/${Uri.encodeComponent(widget.sessionId)}',
+            widget.isIndividualTutoring
+                ? '/api/tutorias/${Uri.encodeComponent(widget.sessionId)}'
+                : '/api/tutorias/grupales/${Uri.encodeComponent(widget.sessionId)}',
           );
-      if (response.data?['estadoClase'] != 'FINALIZADA' || !mounted) return;
+      final Object? sessionState;
+      if (widget.isIndividualTutoring) {
+        sessionState = response.data?['estado'];
+      } else {
+        sessionState = response.data?['estadoClase'];
+      }
+      final isFinished = widget.isIndividualTutoring
+          ? sessionState == 'REALIZADA'
+          : sessionState == 'FINALIZADA';
+      if (!isFinished || !mounted) return;
       _roomStatusTimer?.cancel();
       setState(() {
         _ended = true;
@@ -165,6 +204,7 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
   }
 
   Future<void> _loadChatHistory() async {
+    if (widget.isIndividualTutoring) return;
     try {
       final path = widget.isProjectMeeting
           ? _projectChatPath
@@ -183,7 +223,12 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
                     text: message['texto']?.toString() ?? '',
                   )));
       });
-    } on DioException {}
+    } on DioException catch (error) {
+      if (mounted) {
+        setState(() =>
+            _mediaWarning = error.message ?? 'No se pudo cargar el chat.');
+      }
+    }
   }
 
   Future<void> _connect() async {
@@ -193,7 +238,9 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
                 ? '/api/tutorias-colectivas/${Uri.encodeComponent(widget.projectTutoringId!)}'
                     '/proyectos/${Uri.encodeComponent(widget.projectId!)}'
                     '/sesiones/${Uri.encodeComponent(widget.projectReportSessionId!)}/livekit-token'
-                : '/api/tutorias/grupales/${Uri.encodeComponent(widget.sessionId)}/livekit-token',
+                : widget.isIndividualTutoring
+                    ? '/api/tutorias/${Uri.encodeComponent(widget.sessionId)}/livekit-token'
+                    : '/api/tutorias/grupales/${Uri.encodeComponent(widget.sessionId)}/livekit-token',
           );
       final credentials = response.data;
       if (credentials == null ||
@@ -253,23 +300,26 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
           _connected = true;
           _connecting = false;
         });
+      final warnings = <String>[];
       if (!widget.teacherMode && !widget.isProjectMeeting) {
         final identity = _room.localParticipant?.identity;
         if (identity != null && identity.isNotEmpty) {
           try {
             await ref.read(dioProvider).patch(
-              '/api/tutorias/grupales/${widget.sessionId}/asistencia',
-              data: {'estudianteId': identity, 'asistio': true},
-            );
+                  widget.isIndividualTutoring
+                      ? '/api/tutorias/${Uri.encodeComponent(widget.sessionId)}/asistencia'
+                      : '/api/tutorias/grupales/${Uri.encodeComponent(widget.sessionId)}/asistencia',
+                  data: widget.isIndividualTutoring
+                      ? {'asistio': true}
+                      : {'estudianteId': identity, 'asistio': true},
+                );
             if (mounted) setState(() => _attendance[identity] = true);
           } on DioException {
-            if (mounted)
-              setState(() => _mediaWarning =
-                  'La llamada está activa, pero no se pudo guardar tu asistencia.');
+            warnings.add(
+                'La llamada está activa, pero no se pudo guardar tu asistencia.');
           }
         }
       }
-      final warnings = <String>[];
       try {
         await _room.localParticipant?.setMicrophoneEnabled(true);
       } catch (_) {
@@ -337,6 +387,7 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
   }
 
   Future<void> _sendMessage() async {
+    if (widget.isIndividualTutoring) return;
     final text = _message.text.trim();
     if (text.isEmpty || _ended) return;
     try {
@@ -383,11 +434,30 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
     return identity.isEmpty ? 'Participante' : identity;
   }
 
+  String _studentLabel(String studentId) {
+    if (widget.isIndividualTutoring) {
+      if (widget.studentMode) return widget.studentName;
+      for (final participant in _room.remoteParticipants.values) {
+        if (participant.identity == studentId) {
+          return _participantLabel(studentId, participant.name);
+        }
+      }
+      return 'Estudiante';
+    }
+    final index = widget.students.indexOf(studentId) + 1;
+    return 'Estudiante $index';
+  }
+
   Future<void> _setAttendance(String studentId, bool attended) async {
     try {
       await ref.read(dioProvider).patch(
-          '/api/tutorias/grupales/${widget.sessionId}/asistencia',
-          data: {'estudianteId': studentId, 'asistio': attended});
+            widget.isIndividualTutoring
+                ? '/api/tutorias/${Uri.encodeComponent(widget.sessionId)}/asistencia'
+                : '/api/tutorias/grupales/${Uri.encodeComponent(widget.sessionId)}/asistencia',
+            data: widget.isIndividualTutoring
+                ? {'asistio': attended}
+                : {'estudianteId': studentId, 'asistio': attended},
+          );
       if (mounted) setState(() => _attendance[studentId] = attended);
     } on DioException catch (error) {
       if (mounted)
@@ -399,6 +469,21 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
 
   Future<void> _finish(String reason) async {
     try {
+      if (widget.isIndividualTutoring) {
+        final studentId = widget.students.isEmpty ? '' : widget.students.first;
+        await ref.read(dioProvider).patch(
+          '/api/tutorias/${Uri.encodeComponent(widget.sessionId)}/finalizar',
+          data: {'asistio': _attendance[studentId] ?? false},
+        );
+        if (mounted) {
+          setState(() {
+            _ended = true;
+            _showChat = false;
+          });
+        }
+        await _room.disconnect();
+        return;
+      }
       await ref.read(dioProvider).patch(
           '/api/tutorias/grupales/${widget.sessionId}/finalizar',
           data: {'motivo': reason});
@@ -500,13 +585,17 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
                     ? Row(
                         children: [
                           Expanded(child: _endedGallery()),
-                          SizedBox(width: 290, child: _chatPanel()),
+                          if (!widget.isIndividualTutoring ||
+                              widget.teacherMode)
+                            SizedBox(width: 290, child: _chatPanel()),
                         ],
                       )
                     : Column(
                         children: [
                           Expanded(child: _endedGallery()),
-                          SizedBox(height: 230, child: _chatPanel()),
+                          if (!widget.isIndividualTutoring ||
+                              widget.teacherMode)
+                            SizedBox(height: 230, child: _chatPanel()),
                         ],
                       ),
               ),
@@ -580,11 +669,12 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
             ],
           ),
           actions: [
-            IconButton(
-              tooltip: _showChat ? 'Ocultar chat' : 'Mostrar chat',
-              onPressed: () => setState(() => _showChat = !_showChat),
-              icon: Icon(_showChat ? Icons.chat : Icons.chat_outlined),
-            ),
+            if (!widget.isIndividualTutoring)
+              IconButton(
+                tooltip: _showChat ? 'Ocultar chat' : 'Mostrar chat',
+                onPressed: () => setState(() => _showChat = !_showChat),
+                icon: Icon(_showChat ? Icons.chat : Icons.chat_outlined),
+              ),
           ],
         ),
         body: Column(
@@ -709,7 +799,7 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
               _VideoTile(label: 'Tutor', track: null),
               for (final student in widget.students)
                 _VideoTile(
-                  label: _studentNames[student] ?? student,
+                  label: _studentNames[student] ?? _studentLabel(student),
                   track: null,
                 ),
             ],
@@ -723,13 +813,16 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
           children: [
             Row(
               children: [
+                if (!widget.isIndividualTutoring)
+                  _chatTab(
+                    'Chat (${_messages.length})',
+                    !_showPeople,
+                    () => setState(() => _showPeople = false),
+                  ),
                 _chatTab(
-                  'Chat (${_messages.length})',
-                  !_showPeople,
-                  () => setState(() => _showPeople = false),
-                ),
-                _chatTab(
-                  'Personas (${widget.students.length + 1})',
+                  widget.isIndividualTutoring
+                      ? 'Asistencia'
+                      : 'Personas (${widget.students.length + 1})',
                   _showPeople,
                   () => setState(() => _showPeople = true),
                 ),
@@ -771,10 +864,7 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
                               ),
                             ),
                             title: Text(
-                              _studentNames[student] ??
-                                  (widget.teacherMode
-                                      ? 'Estudiante ${widget.students.indexOf(student) + 1}'
-                                      : student),
+                              _studentNames[student] ?? _studentLabel(student),
                               style: TextStyle(
                                 fontSize: widget.teacherMode ? 13 : 10,
                               ),
@@ -975,20 +1065,21 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
             alignment: WrapAlignment.center,
             spacing: 10,
             children: [
-              _CallControl(
-                icon: Icons.chat_outlined,
-                label: 'Chat',
-                onPressed: () {
-                  setState(() {
-                    _showChat = true;
-                    _showPeople = false;
-                  });
-                },
-                active: !_showPeople,
-              ),
+              if (!widget.isIndividualTutoring)
+                _CallControl(
+                  icon: Icons.chat_outlined,
+                  label: 'Chat',
+                  onPressed: () {
+                    setState(() {
+                      _showChat = true;
+                      _showPeople = false;
+                    });
+                  },
+                  active: !_showPeople,
+                ),
               _CallControl(
                 icon: Icons.people_outline,
-                label: 'Personas',
+                label: widget.isIndividualTutoring ? 'Asistencia' : 'Personas',
                 onPressed: () {
                   setState(() {
                     _showChat = true;
@@ -1033,19 +1124,22 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
                     label: _cameraEnabled ? 'Apagar cámara' : 'Activar cámara',
                     onPressed: _toggleCamera,
                     active: _cameraEnabled),
-              _CallControl(
-                  icon: Icons.chat_outlined,
-                  label: _showChat ? 'Cerrar chat' : 'Chat',
-                  onPressed: () => setState(() => _showChat = !_showChat),
-                  active: _showChat),
-              _CallControl(
-                  icon: Icons.people_outline,
-                  label: 'Personas',
-                  onPressed: () => setState(() {
-                        _showChat = true;
-                        _showPeople = true;
-                      }),
-                  active: _showPeople),
+              if (!widget.isIndividualTutoring)
+                _CallControl(
+                    icon: Icons.chat_outlined,
+                    label: _showChat ? 'Cerrar chat' : 'Chat',
+                    onPressed: () => setState(() => _showChat = !_showChat),
+                    active: _showChat),
+              if (widget.teacherMode || !widget.isIndividualTutoring)
+                _CallControl(
+                    icon: Icons.people_outline,
+                    label:
+                        widget.isIndividualTutoring ? 'Asistencia' : 'Personas',
+                    onPressed: () => setState(() {
+                          _showChat = true;
+                          _showPeople = true;
+                        }),
+                    active: _showPeople),
               if (widget.teacherMode && !widget.isProjectMeeting)
                 _CallControl(
                     icon: Icons.call_end,

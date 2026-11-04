@@ -31,7 +31,7 @@ class _TutorCard extends StatelessWidget {
                       Text(tutor.name,
                           style: const TextStyle(
                               color: _navy,
-                              fontSize: 9,
+                              fontSize: 12,
                               fontWeight: FontWeight.w800)),
                       Text(
                         '${tutor.career} · Semestre ${tutor.semester}',
@@ -51,7 +51,7 @@ class _TutorCard extends StatelessWidget {
                 'DÍA Y HORARIO',
                 style: TextStyle(
                   color: _muted,
-                  fontSize: 6,
+                  fontSize: 10,
                   letterSpacing: .4,
                   fontWeight: FontWeight.w700,
                 ),
@@ -61,7 +61,7 @@ class _TutorCard extends StatelessWidget {
                 '${tutor.day} · ${tutor.startTime}–${tutor.endTime}',
                 style: const TextStyle(
                   color: Color(0xFF202B3A),
-                  fontSize: 8,
+                  fontSize: 11,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -70,7 +70,7 @@ class _TutorCard extends StatelessWidget {
                 'MODALIDAD Y UBICACIÓN',
                 style: const TextStyle(
                   color: _muted,
-                  fontSize: 6,
+                  fontSize: 10,
                   letterSpacing: .4,
                   fontWeight: FontWeight.w700,
                 ),
@@ -82,7 +82,7 @@ class _TutorCard extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   color: Color(0xFF202B3A),
-                  fontSize: 8,
+                  fontSize: 11,
                 ),
               ),
               if (tutor.subjects.isNotEmpty) ...[
@@ -91,7 +91,7 @@ class _TutorCard extends StatelessWidget {
                   'MATERIAS DE TU CARRERA',
                   style: TextStyle(
                     color: _muted,
-                    fontSize: 6,
+                    fontSize: 10,
                     fontWeight: FontWeight.w700,
                     letterSpacing: .4,
                   ),
@@ -108,7 +108,7 @@ class _TutorCard extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               color: Color(0xFF202B3A),
-                              fontSize: 7,
+                              fontSize: 10,
                             ),
                           ),
                         ),
@@ -183,10 +183,12 @@ class _TutoringCard extends StatelessWidget {
     required this.tutoring,
     this.onConfirm,
     this.onCancel,
+    this.onJoinRoom,
   });
   final StudentTutoring tutoring;
   final VoidCallback? onConfirm;
   final VoidCallback? onCancel;
+  final VoidCallback? onJoinRoom;
 
   @override
   Widget build(BuildContext context) => Card(
@@ -216,11 +218,12 @@ class _TutoringCard extends StatelessWidget {
               const SizedBox(height: 5),
               Text('Modalidad: ${_modalityLabel(tutoring.modality)}',
                   style: const TextStyle(color: _muted)),
-              if (tutoring.status == 'EN_CURSO') ...[
+              if (onJoinRoom != null) ...[
                 const SizedBox(height: 12),
-                const Text(
-                  'El enlace de la clase no está configurado para esta tutoría.',
-                  style: TextStyle(color: _muted),
+                FilledButton.icon(
+                  onPressed: onJoinRoom,
+                  icon: const Icon(Icons.video_call_outlined),
+                  label: const Text('Entrar a la clase'),
                 ),
               ],
               if (onConfirm != null || onCancel != null) ...[
@@ -575,7 +578,7 @@ class _GroupHistoryCardState extends ConsumerState<_GroupHistoryCard> {
                           widget.session.subject,
                           style: const TextStyle(
                             color: _navy,
-                            fontSize: 9,
+                            fontSize: 12,
                             fontWeight: FontWeight.w800,
                           ),
                         ),

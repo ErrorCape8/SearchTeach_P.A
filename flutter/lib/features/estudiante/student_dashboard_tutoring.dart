@@ -681,7 +681,7 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
       ('pendientes', 'Pendientes', pending.length),
       (
         'encurso',
-        'En curso',
+        'Próximas y en curso',
         activeGroupSessions.length + activeIndividual.length
       ),
       ('canceladas', 'Canceladas', cancelled.length),
@@ -700,8 +700,9 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
         content = activeGroupSessions.isEmpty && activeIndividual.isEmpty
             ? const _EmptyCard(
                 icon: Icons.event_note_outlined,
-                title: 'No tienes sesiones en curso',
-                message: 'Tus tutorías confirmadas aparecerán aquí.',
+                title: 'No tienes sesiones próximas',
+                message:
+                    'Tus tutorías confirmadas aparecerán aquí. Podrás entrar cuando el docente inicie la clase.',
               )
             : ListView(
                 padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
@@ -713,6 +714,24 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
                       )),
                   ...activeIndividual.map((tutoring) => _TutoringCard(
                         tutoring: tutoring,
+                        onJoinRoom: tutoring.status == 'EN_CURSO' &&
+                                tutoring.modality.toUpperCase() != 'PRESENCIAL'
+                            ? () => Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => LiveKitRoomPage(
+                                      sessionId: tutoring.id,
+                                      subject: tutoring.subject,
+                                      modality: tutoring.modality,
+                                      teacherMode: false,
+                                      students: [tutoring.studentId],
+                                      endAt: tutoring.end?.toLocal(),
+                                      studentMode: true,
+                                      studentName: widget.data.profile.name,
+                                      isIndividualTutoring: true,
+                                    ),
+                                  ),
+                                )
+                            : null,
                         onCancel: tutoring.status == 'PROGRAMADA'
                             ? () => widget.onAction(tutoring, 'cancelar')
                             : null,
@@ -748,7 +767,7 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
                         setState(() => _sessionFilter = option.$1),
                     visualDensity: VisualDensity.compact,
                     labelStyle: TextStyle(
-                      fontSize: 8,
+                      fontSize: 11,
                       color: _sessionFilter == option.$1
                           ? Colors.white
                           : const Color(0xFF334155),

@@ -127,6 +127,11 @@ public class ControladorTutorias {
 		return servicioTutorias.listarDelUsuario(usuarioId);
 	}
 
+	@GetMapping("/docente")
+	public List<Tutoria> listarTutoriasDelDocente(@AuthenticationPrincipal String docenteId) {
+		return servicioTutorias.listarDelDocente(docenteId);
+	}
+
 	@GetMapping("/{id}")
 	public Tutoria buscarTutoria(
 			@PathVariable String id,
@@ -168,6 +173,14 @@ public class ControladorTutorias {
 			@PathVariable String id,
 			@AuthenticationPrincipal String usuarioId) {
 		return servicioTutorias.iniciar(id, usuarioId);
+	}
+
+	@PatchMapping("/{id}/asistencia")
+	public Tutoria registrarAsistenciaTutoria(
+			@PathVariable String id,
+			@Valid @RequestBody RegistroAsistencia asistencia,
+			@AuthenticationPrincipal String usuarioId) {
+		return servicioTutorias.registrarAsistencia(id, asistencia.asistio(), usuarioId);
 	}
 
 	@PatchMapping("/{id}/finalizar")

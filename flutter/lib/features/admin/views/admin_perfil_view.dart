@@ -124,8 +124,7 @@ class AdminPerfilView extends ConsumerWidget {
         InkWell(
           onTap: state.isLoadingProfile || profile == null
               ? null
-              : () => _showEditPhoneDialog(
-                  context, ref, profile.telefono),
+              : () => _showEditPhoneDialog(context, ref, profile.telefono),
           borderRadius: BorderRadius.circular(18),
           child: Container(
             padding: const EdgeInsets.all(16),
@@ -201,7 +200,9 @@ class AdminPerfilView extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 10),
-        Container(
+        InkWell(
+          onTap: () => context.push('/forgot-password'),
+          borderRadius: BorderRadius.circular(18),
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -237,7 +238,7 @@ class AdminPerfilView extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Restablecimiento de contraseña',
+                        'Cambiar contraseña',
                         style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
@@ -246,7 +247,7 @@ class AdminPerfilView extends ConsumerWidget {
                       ),
                       SizedBox(height: 2),
                       Text(
-                        'Solicita el restablecimiento al administrador.',
+                        'Solicita un enlace seguro de recuperación.',
                         style: TextStyle(
                           fontSize: 12,
                           color: Color(0xFF64748B),
@@ -254,6 +255,11 @@ class AdminPerfilView extends ConsumerWidget {
                       ),
                     ],
                   ),
+                ),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: const Color(0xFF94A3B8),
+                  size: 24,
                 ),
               ],
             ),

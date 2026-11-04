@@ -36,7 +36,11 @@ final _router = GoRouter(
         path: '/forgot-password',
         builder: (_, __) => const ForgotPasswordPage()),
     GoRoute(
-        path: '/notificaciones', builder: (_, __) => const NotificationsPage()),
+      path: '/notificaciones',
+      builder: (_, state) => NotificationsPage(
+        accentColor: state.extra is Color ? state.extra as Color : null,
+      ),
+    ),
     GoRoute(
       path: '/home',
       builder: (_, __) => const DashboardPage(),

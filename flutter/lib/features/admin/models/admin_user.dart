@@ -10,6 +10,7 @@ class AdminUser {
     this.semestre = 0,
     this.titulosAcademicos = const [],
     this.materiasPrincipales = const [],
+    this.hasPassword = false,
   });
 
   final String id;
@@ -22,6 +23,7 @@ class AdminUser {
   final int semestre;
   final List<String> titulosAcademicos;
   final List<Map<String, dynamic>> materiasPrincipales;
+  final bool hasPassword;
 
   bool get isActivo => estado.trim().toLowerCase() == 'activo';
   bool get isRevocado => estado.trim().toLowerCase() == 'revocado';
@@ -37,6 +39,7 @@ class AdminUser {
     int? semestre,
     List<String>? titulosAcademicos,
     List<Map<String, dynamic>>? materiasPrincipales,
+    bool? hasPassword,
   }) {
     return AdminUser(
       id: id ?? this.id,
@@ -49,6 +52,7 @@ class AdminUser {
       semestre: semestre ?? this.semestre,
       titulosAcademicos: titulosAcademicos ?? this.titulosAcademicos,
       materiasPrincipales: materiasPrincipales ?? this.materiasPrincipales,
+      hasPassword: hasPassword ?? this.hasPassword,
     );
   }
 
@@ -79,6 +83,7 @@ class AdminUser {
               .whereType<Map<String, dynamic>>()
               .toList()
           : const [],
+      hasPassword: json['tieneContrasena'] == true,
     );
   }
 
@@ -94,6 +99,7 @@ class AdminUser {
       'semestre': semestre,
       'titulosAcademicos': titulosAcademicos,
       'materiasPrincipales': materiasPrincipales,
+      'tieneContrasena': hasPassword,
     };
   }
 }
