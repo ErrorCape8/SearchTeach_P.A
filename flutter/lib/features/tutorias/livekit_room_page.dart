@@ -295,11 +295,12 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
           .connect(credentials['serverUrl'] as String,
               credentials['token'] as String)
           .timeout(const Duration(seconds: 30));
-      if (mounted)
+      if (mounted) {
         setState(() {
           _connected = true;
           _connecting = false;
         });
+      }
       final warnings = <String>[];
       if (!widget.teacherMode && !widget.isProjectMeeting) {
         final identity = _room.localParticipant?.identity;
@@ -334,25 +335,28 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
         warnings.add(
             'No se pudo activar la cámara. Revisa los permisos del navegador o dispositivo.');
       }
-      if (mounted)
+      if (mounted) {
         setState(
             () => _mediaWarning = warnings.isEmpty ? null : warnings.join(' '));
+      }
     } on DioException catch (error) {
       final data = error.response?.data;
       final message = data is Map && data['message'] is String
           ? data['message'] as String
           : 'No se pudo conectar con la sala.';
-      if (mounted)
+      if (mounted) {
         setState(() {
           _error = message;
           _connecting = false;
         });
+      }
     } catch (error) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _error = 'No se pudo iniciar la videollamada: $error';
           _connecting = false;
         });
+      }
     }
   }
 
@@ -371,11 +375,12 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
     final next = !_cameraEnabled;
     try {
       await _room.localParticipant?.setCameraEnabled(next);
-      if (mounted)
+      if (mounted) {
         setState(() {
           _cameraEnabled = next;
           _mediaWarning = null;
         });
+      }
     } catch (_) {
       _showMediaError(
           'No se pudo activar la cámara. Revisa los permisos del navegador o dispositivo.');
@@ -410,9 +415,10 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
             .publishData(payload, reliable: true, topic: 'searchteach.chat');
       }
     } on DioException catch (error) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text(error.message ?? 'No se pudo guardar el mensaje.')));
+      }
       return;
     }
     if (mounted) {
@@ -460,10 +466,11 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
           );
       if (mounted) setState(() => _attendance[studentId] = attended);
     } on DioException catch (error) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content:
                 Text(error.message ?? 'No se pudo guardar la asistencia.')));
+      }
     }
   }
 
@@ -497,10 +504,11 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
       }
       await _room.disconnect();
     } on DioException catch (error) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content:
                 Text(error.message ?? 'No se pudo finalizar la tutoría.')));
+      }
     }
   }
 
@@ -528,10 +536,11 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
               track: track);
         }
       }
-      if (!participantHasVideo)
+      if (!participantHasVideo) {
         yield _VideoTile(
             label: _participantLabel(participant.identity, participant.name),
             track: null);
+      }
     }
     if (_room.remoteParticipants.isEmpty) yield const _WaitingParticipantTile();
   }
