@@ -190,7 +190,7 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage>
                     SlidingPillDestination(
                         icon: Icons.desktop_windows_outlined,
                         selectedIcon: Icons.desktop_windows,
-                        label: 'Tutores'),
+                        label: 'Tutorías retroalimentativas'),
                     SlidingPillDestination(
                         icon: Icons.check_box_outline_blank,
                         selectedIcon: Icons.check_box,
@@ -228,8 +228,8 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage>
       });
 
   String _sectionForTab(int tab) => switch (tab) {
-        1 => 'tutores',
-        2 => 'sesiones',
+        1 => 'sesiones',
+        2 => 'menu',
         3 => 'historial',
         _ => 'proyectos',
       };

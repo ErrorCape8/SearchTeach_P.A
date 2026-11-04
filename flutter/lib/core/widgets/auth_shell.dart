@@ -140,18 +140,26 @@ class _BrandPanel extends StatelessWidget {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Align(
-              alignment: Alignment.topLeft,
-              child: _AuthSlogan(),
-            ),
+            Row(children: [
+              Container(
+                width: 82,
+                height: 82,
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Image.asset(
+                  'assets/brand/logo.png',
+                  fit: BoxFit.contain,
+                  filterQuality: FilterQuality.high,
+                  semanticLabel: 'Logo de SearchTeach',
+                ),
+              ),
+              const SizedBox(width: 18),
+              const Expanded(child: _AuthSlogan()),
+            ]),
             const Spacer(),
-            const Text('Conecta con docentes\ny estudiantes.',
-                style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 40,
-                    height: 1.15,
-                    fontWeight: FontWeight.w800)),
-            const SizedBox(height: 16),
             Text(
               'Agenda tutorías, accede a clases virtuales y acompaña cada proyecto.',
               style: TextStyle(

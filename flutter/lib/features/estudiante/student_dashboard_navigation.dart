@@ -23,7 +23,7 @@ class _StudentHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final title = switch (tab) {
       0 => 'Hola, ${profile.name.trim().split(' ').first}',
-      1 => 'Tutores disponibles',
+      1 => 'Tutorías retroalimentativas',
       2 => 'Mis tutorías',
       3 => 'Historial',
       4 => 'Proyectos de aula',
@@ -32,7 +32,7 @@ class _StudentHeader extends StatelessWidget {
     };
     final subtitle = switch (tab) {
       0 => 'Estudiante · ${profile.career} · Semestre ${profile.semester}',
-      1 => 'Solo tutores de tu carrera: ${profile.career}',
+      1 => 'Únete a tutorías y consulta su estado',
       2 => 'Únete a tutorías y revisa las que tienes registradas',
       3 => 'Todas las tutorías que has realizado',
       4 => 'Proyectos de aula de tu tecnología',
@@ -178,7 +178,7 @@ class _StudentSidebar extends StatelessWidget {
 
   static const _items = [
     (Icons.home_outlined, 'Inicio'),
-    (Icons.desktop_windows_outlined, 'Tutores'),
+    (Icons.desktop_windows_outlined, 'Tutorías retroalimentativas'),
     (Icons.check_box_outline_blank, 'Mis tutorías'),
     (Icons.history, 'Historial'),
     (Icons.groups_outlined, 'Proyectos de aula'),

@@ -75,10 +75,10 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
           const SizedBox(height: 20),
           _MenuTile(
             icon: Icons.event_available_outlined,
-            title: 'Tutor\u00EDas grupales disponibles',
+            title: 'Tutores con horario disponible',
             subtitle:
-                'Inscr\u00EDbete en una sesi\u00F3n publicada para tu carrera y semestre.',
-            onTap: () => setState(() => _section = 'publicadas'),
+                'Consulta los horarios disponibles para tu carrera.',
+            onTap: () => setState(() => _section = 'tutores'),
           ),
           _MenuTile(
             icon: Icons.groups_outlined,
@@ -129,6 +129,8 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
 
   Widget _sectionContent() {
     switch (_section) {
+      case 'menu':
+        return _menu();
       case 'publicadas':
         return _publishedGroupSessions();
       case 'tutores':
