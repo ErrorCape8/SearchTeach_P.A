@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api_client.dart';
 import '../../core/tutoring_updates.dart';
+import '../../core/widgets/brand_logo.dart';
 import '../../core/widgets/sliding_pill_navigation_bar.dart';
 import '../auth/auth_repository.dart';
 import '../notifications/notifications_page.dart';
@@ -16,7 +17,7 @@ import 'coordinacion_solicitudes_page.dart';
 
 const _wine = Color(0xFFA9154F);
 const _wineDark = Color(0xFF86123F);
-const _pink = Color(0xFFFCE7EF);
+const _pink = Colors.white;
 const _canvas = Color(0xFFF3F5FA);
 const _muted = Color(0xFF758093);
 
@@ -116,7 +117,11 @@ class _CoordinacionDashboardPageState
     final content = Column(
       children: [
         if (_tab != 1)
-          _Header(title: _title(), name: _profile['nombre'] as String?),
+          _Header(
+            title: _title(),
+            name: _profile['nombre'] as String?,
+            onProfile: () => setState(() => _tab = 4),
+          ),
         Expanded(
           child: _loading
               ? const Center(child: CircularProgressIndicator(color: _wine))
@@ -141,6 +146,7 @@ class _CoordinacionDashboardPageState
                   _Navigation(
                     index: _tab,
                     wide: true,
+                    name: _profile['nombre'] as String? ?? 'Coordinador',
                     onSelect: (index) {
                       setState(() => _tab = index);
                       if (index == 0) _load();
@@ -155,6 +161,7 @@ class _CoordinacionDashboardPageState
             : _Navigation(
                 index: _tab,
                 wide: false,
+                name: _profile['nombre'] as String? ?? 'Coordinador',
                 onSelect: (index) {
                   setState(() => _tab = index);
                   if (index == 0) _load();
@@ -181,9 +188,10 @@ class _CoordinacionDashboardPageState
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.title, this.name});
+  const _Header({required this.title, this.name, required this.onProfile});
   final String title;
   final String? name;
+  final VoidCallback onProfile;
 
   @override
   Widget build(BuildContext context) {
@@ -233,6 +241,19 @@ class _Header extends StatelessWidget {
                     color: Colors.white.withValues(alpha: .82), fontSize: 13)),
           ]),
         ),
+        IconButton(
+          tooltip: 'Mi perfil',
+          onPressed: onProfile,
+          icon: CircleAvatar(
+            radius: 14,
+            backgroundColor: Colors.white,
+            child: Text(_initials(display),
+                style: const TextStyle(
+                    color: _wineDark,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800)),
+          ),
+        ),
         const NotificationBellButton(accentColor: _wine),
         IconButton(
           tooltip: 'Actualizar datos',
@@ -258,54 +279,116 @@ String _initials(String value) {
 
 class _Navigation extends StatelessWidget {
   const _Navigation(
-      {required this.index, required this.wide, required this.onSelect});
+      {required this.index,
+      required this.wide,
+      required this.name,
+      required this.onSelect});
   final int index;
   final bool wide;
+  final String name;
   final ValueChanged<int> onSelect;
   static const _items = [
     (Icons.home_outlined, Icons.home_rounded, 'Inicio'),
     (Icons.calendar_month_outlined, Icons.calendar_month_rounded, 'Horarios'),
     (Icons.groups_outlined, Icons.groups_rounded, 'Líderes'),
     (Icons.event_available_outlined, Icons.event_available_rounded, 'Cambios'),
-    (Icons.person_outline_rounded, Icons.person_rounded, 'Perfil'),
     (Icons.assessment_outlined, Icons.assessment_rounded, 'Reportes'),
   ];
+  static const _tabIndexes = [0, 1, 2, 3, 5];
 
   @override
   Widget build(BuildContext context) {
     if (wide) {
+      final selectedPosition = _tabIndexes.contains(index)
+          ? _tabIndexes.indexOf(index)
+          : null;
       return Container(
+        width: 190,
         color: _wineDark,
-        child: NavigationRail(
-          backgroundColor: _wineDark,
-          selectedIndex: index,
-          onDestinationSelected: onSelect,
-          labelType: NavigationRailLabelType.all,
-          indicatorColor: const Color(0xFF650B2E),
-          selectedIconTheme: const IconThemeData(color: Colors.white),
-          unselectedIconTheme:
-              IconThemeData(color: Colors.white.withValues(alpha: .78)),
-          selectedLabelTextStyle:
-              const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
-          unselectedLabelTextStyle: TextStyle(
-            color: Colors.white.withValues(alpha: .78),
+        child: Column(children: [
+          const SizedBox(height: 14),
+          const SizedBox(
+            height: 64,
+            width: 150,
+            child: BrandLogo(width: 150, height: 64),
           ),
-          destinations: [
-            for (var i = 0; i < _items.length; i++)
-              NavigationRailDestination(
-                icon: Icon(_items[i].$1),
-                selectedIcon: Icon(_items[i].$2),
-                label: Text(_items[i].$3),
-              ),
-          ],
-        ),
+          const SizedBox(height: 8),
+          const Text('COORDINACIÓN',
+              style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 10,
+                  letterSpacing: .7,
+                  fontWeight: FontWeight.w600)),
+          const Divider(color: Colors.white24, indent: 12, endIndent: 12),
+          Expanded(
+              child: NavigationRail(
+            backgroundColor: _wineDark,
+            selectedIndex: selectedPosition,
+            onDestinationSelected: (position) =>
+                onSelect(_tabIndexes[position]),
+            labelType: NavigationRailLabelType.all,
+            indicatorColor: const Color(0xFF650B2E),
+            selectedIconTheme: const IconThemeData(color: Colors.white),
+            unselectedIconTheme:
+                IconThemeData(color: Colors.white.withValues(alpha: .78)),
+            selectedLabelTextStyle: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.w700),
+            unselectedLabelTextStyle: TextStyle(
+              color: Colors.white.withValues(alpha: .78),
+            ),
+            destinations: [
+              for (var i = 0; i < _items.length; i++)
+                NavigationRailDestination(
+                  icon: Icon(_items[i].$1),
+                  selectedIcon: Icon(_items[i].$2),
+                  label: Text(_items[i].$3),
+                ),
+            ],
+          )),
+          const Divider(color: Colors.white24, indent: 10, endIndent: 10),
+          InkWell(
+            onTap: () => onSelect(4),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(10, 8, 8, 14),
+              child: Row(children: [
+                CircleAvatar(
+                  radius: 14,
+                  backgroundColor: Colors.white,
+                  child: Text(_initials(name),
+                      style: const TextStyle(
+                          color: _wineDark,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800)),
+                ),
+                const SizedBox(width: 7),
+                Expanded(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                      Text(name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700)),
+                      const Text('Coordinador',
+                          style: TextStyle(color: Colors.white70, fontSize: 9)),
+                    ])),
+                const Icon(Icons.chevron_right,
+                    color: Colors.white70, size: 16),
+              ]),
+            ),
+          ),
+        ]),
       );
     }
+    final selectedPosition = _tabIndexes.indexOf(index);
     return SlidingPillNavigationBar(
-      selectedIndex: index,
+      selectedIndex: selectedPosition < 0 ? 0 : selectedPosition,
       selectedColor: _wine,
       indicatorColor: _pink,
-      onDestinationSelected: onSelect,
+      onDestinationSelected: (position) => onSelect(_tabIndexes[position]),
       destinations: [
         for (final item in _items)
           SlidingPillDestination(

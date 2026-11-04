@@ -15,43 +15,35 @@ class BrandLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final borderRadius = BorderRadius.circular(10);
-    return Container(
+    return SizedBox(
       width: width,
       height: height,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: borderRadius,
-      ),
-      child: ClipRRect(
-        borderRadius: borderRadius,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-          child: Column(
-            children: [
-              Expanded(
-                child: Image.asset(
-                  'assets/brand/logo.png',
-                  fit: fit,
-                  filterQuality: FilterQuality.high,
-                  semanticLabel: 'Símbolo de SearchTeach',
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+        child: Column(
+          children: [
+            Expanded(
+              child: Image.asset(
+                'assets/brand/logo_black.png',
+                fit: fit,
+                filterQuality: FilterQuality.high,
+                semanticLabel: 'Símbolo de SearchTeach',
+              ),
+            ),
+            const SizedBox(height: 2),
+            const FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                'SearchTeach',
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -.3,
                 ),
               ),
-              const SizedBox(height: 2),
-              const FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  'SearchTeach',
-                  style: TextStyle(
-                    color: Color(0xFF0A3D91),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -.3,
-                  ),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

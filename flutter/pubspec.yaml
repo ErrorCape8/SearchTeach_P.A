@@ -36,3 +36,4 @@ flutter:
   uses-material-design: true
   assets:
     - assets/brand/logo.png
+    - assets/brand/logo_black.png
