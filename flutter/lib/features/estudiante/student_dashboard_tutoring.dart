@@ -35,10 +35,13 @@ class StudentTutoringView extends ConsumerStatefulWidget {
 class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
   String? _section;
   String _query = '';
+  int _semesterFilter = 0;
+  String _sessionFilter = 'disponibles';
 
   @override
   void initState() {
     super.initState();
+    _section = widget.focusSection;
   }
 
   @override
@@ -52,26 +55,7 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
   @override
   Widget build(BuildContext context) {
     if (_section == null) return _menu();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(24, 22, 24, 0),
-          child: Row(
-            children: [
-              IconButton(
-                tooltip: 'Volver a tutorías',
-                onPressed: () => setState(() => _section = null),
-                icon: const Icon(Icons.arrow_back),
-              ),
-              const SizedBox(width: 4),
-              Expanded(child: _sectionHeader()),
-            ],
-          ),
-        ),
-        Expanded(child: _sectionContent()),
-      ],
-    );
+    return _sectionContent();
   }
 
   Widget _menu() => ListView(
@@ -136,44 +120,12 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
         ],
       );
 
-  Widget _sectionHeader() {
-    final content = switch (_section) {
-      'publicadas' => (
-          'Tutor\u00EDas grupales disponibles',
-          'Inscr\u00EDbete en una sesi\u00F3n publicada para tu carrera y semestre.'
-        ),
-      'proyectos' => (
-          'Tutorías de proyectos de aula',
-          'Inscríbete en el espacio de tu tecnología y semestre.'
-        ),
-      'sesiones' => ('Mis sesiones', 'Tutorías confirmadas y en curso.'),
-      'proyectos-historial' => (
-          'Proyectos de aula',
-          'Consulta tus proyectos activos y finalizados.'
-        ),
-      'calificar' => (
-          'Calificar tutorías',
-          'Valora tus tutorías después de que hayan finalizado.'
-        ),
-      'chats-videoconferencias' => (
-          'Unirse a videoconferencias',
-          'Accede a la conversación o entra a la sala de tus sesiones.'
-        ),
-      _ => ('Historial', 'Tutorías realizadas o canceladas.'),
-    };
-    if (_section == 'seguimiento-proyecto') {
-      return const _PageHeading(
-        title: 'Seguimiento de mi proyecto',
-        subtitle: 'Reportes del tutor, horario y conversación de cada sesión.',
-      );
-    }
-    return _PageHeading(title: content.$1, subtitle: content.$2);
-  }
-
   Widget _sectionContent() {
     switch (_section) {
       case 'publicadas':
         return _publishedGroupSessions();
+      case 'tutores':
+        return _availableTutors();
       case 'proyectos':
         return _projectSpaces();
       case 'seguimiento-proyecto':
@@ -415,8 +367,45 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
       children: [
+        Row(
+          children: [
+            Expanded(
+              child: _HistoryMetricCard(
+                value:
+                    '${completedGroups.length + individualHistory.where((item) => item.status == 'REALIZADA').length}',
+                label: 'Realizadas',
+              ),
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: _HistoryMetricCard(
+                value:
+                    '${individualHistory.where((item) => item.status == 'CANCELADA').length}',
+                label: 'Canceladas',
+              ),
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: _HistoryMetricCard(
+                value: '${completedProjects.length}',
+                label: 'Proyectos',
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        const Text(
+          'Sesiones realizadas',
+          style: TextStyle(
+            color: _navy,
+            fontSize: 10,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 6),
         ...completedGroups.map((session) => _GroupHistoryCard(
               session: session,
+              studentName: widget.data.profile.name,
               onRated: () => ref.invalidate(studentGroupSessionsProvider),
               showRating: false,
             )),
@@ -453,122 +442,129 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
       children: [
         ...completed.map((session) => _GroupHistoryCard(
               session: session,
+              studentName: widget.data.profile.name,
               onRated: () => ref.invalidate(studentGroupSessionsProvider),
             )),
       ],
     );
   }
 
-  // ignore: unused_element
   Widget _availableTutors() {
     final career = widget.data.profile.career.trim().toLowerCase();
     final semester = widget.data.profile.semester;
     final filtered = widget.data.tutors.where((tutor) {
-      final matchesQuery = '${tutor.name} ${tutor.teacherId}'
-          .toLowerCase()
-          .contains(_query.trim().toLowerCase());
+      final matchesQuery =
+          '${tutor.name} ${tutor.teacherId} ${tutor.subjects.map((subject) => subject.name).join(' ')}'
+              .toLowerCase()
+              .contains(_query.trim().toLowerCase());
       final matchesCareer = career.isEmpty ||
           tutor.career.trim().toLowerCase() == career ||
           tutor.careers.any((item) => item.trim().toLowerCase() == career);
-      final matchesSemester = semester <= 0 || tutor.semester == semester;
+      final matchesSemester =
+          _semesterFilter == 0 || tutor.semester == _semesterFilter;
       return matchesQuery && matchesCareer && matchesSemester;
     }).toList();
-    final published = widget.data.availableGroupSessions;
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
+    final semesters = widget.data.tutors
+        .map((item) => item.semester)
+        .toSet()
+        .toList()
+      ..sort();
+    return Column(
       children: [
-        TextField(
-          onChanged: (value) => setState(() => _query = value),
-          decoration: InputDecoration(
-            hintText: 'Buscar tutor por nombre o identificacion',
-            prefixIcon: const Icon(Icons.search),
-            filled: true,
-            fillColor: Colors.white,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: _line),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: _line),
-            ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 14, 24, 0),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final search = TextField(
+                onChanged: (value) => setState(() => _query = value),
+                decoration: InputDecoration(
+                  hintText: 'Buscar tutor por nombre',
+                  prefixIcon: const Icon(Icons.search, size: 18),
+                  filled: true,
+                  fillColor: const Color(0xFFEDF1F6),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(9),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+                style: const TextStyle(fontSize: 11),
+              );
+              final semesterPicker = DropdownButtonFormField<int>(
+                initialValue: _semesterFilter,
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: const Color(0xFFEDF1F6),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(9),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+                style: const TextStyle(color: _navy, fontSize: 10),
+                items: [
+                  const DropdownMenuItem(
+                      value: 0, child: Text('Semestre: todos')),
+                  for (final item in semesters)
+                    if (item > 0)
+                      DropdownMenuItem(
+                        value: item,
+                        child: Text('Semestre: $item'),
+                      ),
+                ],
+                onChanged: (value) {
+                  if (value != null) setState(() => _semesterFilter = value);
+                },
+              );
+              return constraints.maxWidth < 430
+                  ? Column(
+                      children: [
+                        search,
+                        const SizedBox(height: 8),
+                        semesterPicker,
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        Expanded(flex: 3, child: search),
+                        const SizedBox(width: 8),
+                        Expanded(flex: 2, child: semesterPicker),
+                      ],
+                    );
+            },
           ),
         ),
-        const SizedBox(height: 12),
-        Wrap(spacing: 8, children: [
-          Chip(
-              label: Text(widget.data.profile.career.isEmpty
-                  ? 'Carrera sin registrar'
-                  : widget.data.profile.career)),
-          Chip(
-              label: Text(semester > 0
-                  ? 'Semestre $semester'
-                  : 'Semestre sin registrar')),
-        ]),
-        const SizedBox(height: 8),
-        const Text('Tutorias publicadas',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-        const SizedBox(height: 8),
-        if (published.isEmpty)
-          const _EmptyCard(
-            icon: Icons.event_busy_outlined,
-            title: 'No hay sesiones disponibles',
-            message:
-                'Las tutorias que publique coordinacion para tu carrera y semestre apareceran aqui.',
-          )
-        else
-          for (final session in published)
-            Card(
-              margin: const EdgeInsets.only(bottom: 10),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(session.subject,
-                          style: const TextStyle(
-                              fontWeight: FontWeight.w800, fontSize: 16)),
-                      const SizedBox(height: 5),
-                      Text(
-                          'Docente ${session.teacherId} | ${session.technology} | Semestre ${session.semester}'),
-                      if (session.start != null && session.end != null)
-                        Text(
-                            '${_longDate(session.start!.toLocal())} | ${TimeOfDay.fromDateTime(session.start!.toLocal()).format(context)}-${TimeOfDay.fromDateTime(session.end!.toLocal()).format(context)}'),
-                      if (session.modality.isNotEmpty)
-                        Text(
-                            'Modalidad: ${_groupSessionModality(session.modality)}'),
-                      Text('${5 - session.studentCount} cupos disponibles'),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: FilledButton(
-                          onPressed: session.start == null ||
-                                  session.end == null
-                              ? null
-                              : () => widget.onJoinPublishedSession(session),
-                          child: const Text('Inscribirme'),
-                        ),
-                      ),
-                    ]),
-              ),
-            ),
-        const SizedBox(height: 16),
-        const Text('Disponibilidad de tutores',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-        if (filtered.isEmpty)
-          _EmptyCard(
-            icon: Icons.search_off,
-            title: semester <= 0
-                ? 'Registra tu semestre para ver tutorias'
-                : 'No encontramos horarios de tutor disponible',
-            message: semester <= 0
-                ? 'Ve a Mi perfil y registra tu semestre.'
-                : 'No hay docentes con horarios recurrentes para ${widget.data.profile.career}, semestre $semester.',
-          )
-        else
-          ...filtered.map((tutor) => _TutorCard(
-                tutor: tutor,
-                onEnroll: () => widget.onEnroll(tutor),
-              )),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+            children: [
+              if (filtered.isEmpty)
+                _EmptyCard(
+                  icon: Icons.search_off,
+                  title: semester <= 0 && _semesterFilter == 0
+                      ? 'Registra tu semestre para ver tutores'
+                      : 'No encontramos tutores disponibles',
+                  message: semester <= 0 && _semesterFilter == 0
+                      ? 'Ve a tu perfil para registrar el semestre actual.'
+                      : 'No hay tutores con horarios para los filtros seleccionados.',
+                )
+              else
+                ...filtered.map((tutor) => _TutorCard(
+                      tutor: tutor,
+                      onEnroll: () => widget.onEnroll(tutor),
+                    )),
+              if (filtered.isNotEmpty)
+                const Padding(
+                  padding: EdgeInsets.only(top: 2),
+                  child: Text(
+                    'Dato: Cada sesión grupal dura 1 hora y tiene un cupo máximo de 5 estudiantes.',
+                    style: TextStyle(color: _blue, fontSize: 9),
+                  ),
+                ),
+            ],
+          ),
+        ),
       ],
     );
   }
@@ -666,36 +662,117 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
 
   Widget _sessionsList() {
     final activeGroupSessions = widget.data.groupSessions
-        .where((session) => session.state != 'FINALIZADA')
+        .where((session) =>
+            session.state == 'PROGRAMADA' || session.state == 'EN_CURSO')
         .toList();
-    final legacy = widget.data.tutorings
-        .where((t) => t.status == 'PROGRAMADA' || t.status == 'EN_CURSO');
-    if (activeGroupSessions.isEmpty && legacy.isEmpty) {
-      return const _EmptyCard(
-        icon: Icons.event_note_outlined,
-        title: 'No tienes sesiones programadas',
-        message:
-            'Las tutorías grupales en las que te inscribas aparecerán aquí.',
-      );
+    final pending = widget.data.tutorings.where((tutoring) =>
+        tutoring.status == 'SOLICITADA' ||
+        tutoring.status == 'ALTERNATIVA_PROPUESTA');
+    final activeIndividual = widget.data.tutorings.where((tutoring) =>
+        tutoring.status == 'PROGRAMADA' || tutoring.status == 'EN_CURSO');
+    final cancelled = widget.data.tutorings
+        .where((tutoring) => tutoring.status == 'CANCELADA');
+    final options = [
+      (
+        'disponibles',
+        'Disponibles para unirme',
+        widget.data.availableGroupSessions.length
+      ),
+      ('pendientes', 'Pendientes', pending.length),
+      (
+        'encurso',
+        'En curso',
+        activeGroupSessions.length + activeIndividual.length
+      ),
+      ('canceladas', 'Canceladas', cancelled.length),
+    ];
+
+    Widget content;
+    switch (_sessionFilter) {
+      case 'pendientes':
+        content = _tutoringList(
+          pending,
+          emptyTitle: 'No tienes solicitudes pendientes',
+          emptyMessage: 'Tus solicitudes aparecerán aquí.',
+        );
+        break;
+      case 'encurso':
+        content = activeGroupSessions.isEmpty && activeIndividual.isEmpty
+            ? const _EmptyCard(
+                icon: Icons.event_note_outlined,
+                title: 'No tienes sesiones en curso',
+                message: 'Tus tutorías confirmadas aparecerán aquí.',
+              )
+            : ListView(
+                padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
+                children: [
+                  ...activeGroupSessions.map((session) => _GroupSessionCard(
+                        session: session,
+                        studentName: widget.data.profile.name,
+                        onLeave: () => widget.onLeaveGroupSession(session),
+                      )),
+                  ...activeIndividual.map((tutoring) => _TutoringCard(
+                        tutoring: tutoring,
+                        onCancel: tutoring.status == 'PROGRAMADA'
+                            ? () => widget.onAction(tutoring, 'cancelar')
+                            : null,
+                      )),
+                ],
+              );
+        break;
+      case 'canceladas':
+        content = _tutoringList(
+          cancelled,
+          emptyTitle: 'No tienes tutorías canceladas',
+          emptyMessage: 'Las tutorías canceladas aparecerán aquí.',
+        );
+        break;
+      default:
+        content = _publishedGroupSessions();
     }
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
+
+    return Column(
       children: [
-        if (activeGroupSessions.isNotEmpty) ...[
-          const Padding(
-            padding: EdgeInsets.only(bottom: 10),
-            child: Text('Tutorías grupales',
-                style: TextStyle(fontWeight: FontWeight.w700, color: _navy)),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.fromLTRB(18, 12, 12, 4),
+          child: Row(
+            children: [
+              for (final option in options)
+                Padding(
+                  padding: const EdgeInsets.only(right: 5),
+                  child: ChoiceChip(
+                    label: Text('${option.$2} (${option.$3})'),
+                    selected: _sessionFilter == option.$1,
+                    onSelected: (_) =>
+                        setState(() => _sessionFilter = option.$1),
+                    visualDensity: VisualDensity.compact,
+                    labelStyle: TextStyle(
+                      fontSize: 8,
+                      color: _sessionFilter == option.$1
+                          ? Colors.white
+                          : const Color(0xFF334155),
+                    ),
+                    backgroundColor: Colors.white,
+                    selectedColor: const Color(0xFF0D4FC4),
+                    side: BorderSide.none,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    showCheckmark: false,
+                  ),
+                ),
+            ],
           ),
-          ...activeGroupSessions.map((session) => _GroupSessionCard(
-                session: session,
-                onLeave: () => widget.onLeaveGroupSession(session),
-              )),
-        ],
-        ...legacy.map((tutoring) => _TutoringCard(
-              tutoring: tutoring,
-              onCancel: () => widget.onAction(tutoring, 'cancelar'),
-            )),
+        ),
+        Expanded(child: content),
+        const Padding(
+          padding: EdgeInsets.fromLTRB(24, 0, 24, 10),
+          child: Text(
+            'Dato: Cada sesión grupal dura 1 hora y tiene un cupo máximo de 5 estudiantes.',
+            style: TextStyle(color: _blue, fontSize: 9),
+          ),
+        ),
       ],
     );
   }
@@ -717,7 +794,11 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
       children: [
-        for (final session in sessions) _GroupChatAndCallCard(session: session),
+        for (final session in sessions)
+          _GroupChatAndCallCard(
+            session: session,
+            studentName: widget.data.profile.name,
+          ),
       ],
     );
   }
@@ -870,10 +951,51 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
   }
 }
 
+class _HistoryMetricCard extends StatelessWidget {
+  const _HistoryMetricCard({required this.value, required this.label});
+
+  final String value;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        height: 45,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(9),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x10000000),
+              blurRadius: 7,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              value,
+              style: const TextStyle(
+                color: Color(0xFF0D4FC4),
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            Text(label, style: const TextStyle(color: _muted, fontSize: 7)),
+          ],
+        ),
+      );
+}
+
 class _GroupChatAndCallCard extends StatelessWidget {
-  const _GroupChatAndCallCard({required this.session});
+  const _GroupChatAndCallCard({
+    required this.session,
+    required this.studentName,
+  });
 
   final StudentGroupSession session;
+  final String studentName;
 
   @override
   Widget build(BuildContext context) {
@@ -895,6 +1017,24 @@ class _GroupChatAndCallCard extends StatelessWidget {
           Text('Modalidad: ${session.modality}'),
           const SizedBox(height: 12),
           Wrap(spacing: 8, runSpacing: 8, children: [
+            if (session.state == 'EN_CURSO' &&
+                session.modality.toUpperCase() != 'PRESENCIAL')
+              FilledButton.icon(
+                onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => LiveKitRoomPage(
+                    sessionId: session.id,
+                    subject: session.subject,
+                    modality: session.modality,
+                    teacherMode: false,
+                    students: session.studentIds,
+                    endAt: session.end?.toLocal(),
+                    studentMode: true,
+                    studentName: studentName,
+                  ),
+                )),
+                icon: const Icon(Icons.video_call_outlined),
+                label: const Text('Entrar a la sala'),
+              ),
             OutlinedButton.icon(
               onPressed: () => Navigator.of(context).push(MaterialPageRoute(
                 builder: (_) => TutoriaChatPage(

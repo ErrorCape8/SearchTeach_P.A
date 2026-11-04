@@ -7,18 +7,23 @@ class _TutorCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Card(
-        margin: const EdgeInsets.only(bottom: 12),
+        margin: const EdgeInsets.only(bottom: 8),
+        color: Colors.white,
+        elevation: 2,
+        shadowColor: const Color(0x14000000),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11)),
         child: Padding(
-          padding: const EdgeInsets.all(18),
+          padding: const EdgeInsets.fromLTRB(9, 8, 9, 7),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(children: [
                 const CircleAvatar(
+                  radius: 11,
                   backgroundColor: Color(0xFFE7F1FC),
-                  child: Icon(Icons.person_outline, color: _blue),
+                  child: Icon(Icons.person_outline, color: _blue, size: 12),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 7),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -26,107 +31,121 @@ class _TutorCard extends StatelessWidget {
                       Text(tutor.name,
                           style: const TextStyle(
                               color: _navy,
-                              fontSize: 16,
+                              fontSize: 9,
                               fontWeight: FontWeight.w800)),
-                      Text('ID ${tutor.teacherId}',
-                          style: const TextStyle(color: _muted, fontSize: 12)),
+                      Text(
+                        '${tutor.career} · Semestre ${tutor.semester}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: _muted, fontSize: 7),
+                      ),
                     ],
                   ),
                 ),
-                _StatusPill(text: tutor.modality),
+                _StatusPill(
+                  text: _modalityLabel(tutor.modality),
+                ),
               ]),
-              const SizedBox(height: 15),
-              Wrap(
-                spacing: 16,
-                runSpacing: 8,
-                children: [
-                  _detail(Icons.school_outlined, tutor.career),
-                  _detail(Icons.layers_outlined, 'Semestre ${tutor.semester}'),
-                  _detail(Icons.calendar_today_outlined, tutor.day),
-                  _detail(
-                      Icons.schedule, '${tutor.startTime}–${tutor.endTime}'),
-                  if (tutor.location.isNotEmpty)
-                    _detail(Icons.place_outlined, tutor.location),
-                ],
+              const Divider(height: 12),
+              const Text(
+                'DÍA Y HORARIO',
+                style: TextStyle(
+                  color: _muted,
+                  fontSize: 6,
+                  letterSpacing: .4,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                '${tutor.day} · ${tutor.startTime}–${tutor.endTime}',
+                style: const TextStyle(
+                  color: Color(0xFF202B3A),
+                  fontSize: 8,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const Divider(height: 12),
+              Text(
+                'MODALIDAD Y UBICACIÓN',
+                style: const TextStyle(
+                  color: _muted,
+                  fontSize: 6,
+                  letterSpacing: .4,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                '${_modalityLabel(tutor.modality)}${tutor.location.isEmpty ? '' : ' · ${tutor.location}'}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Color(0xFF202B3A),
+                  fontSize: 8,
+                ),
               ),
               if (tutor.subjects.isNotEmpty) ...[
-                const SizedBox(height: 14),
+                const Divider(height: 12),
                 const Text(
-                  'MATERIAS QUE DICTA',
+                  'MATERIAS DE TU CARRERA',
                   style: TextStyle(
                     color: _muted,
-                    fontSize: 10,
+                    fontSize: 6,
                     fontWeight: FontWeight.w700,
-                    letterSpacing: .5,
+                    letterSpacing: .4,
                   ),
                 ),
-                const SizedBox(height: 5),
                 for (final subject in tutor.subjects)
                   Padding(
-                    padding: const EdgeInsets.only(bottom: 5),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    padding: const EdgeInsets.only(top: 3),
+                    child: Row(
                       children: [
-                        Text(subject.name),
-                        const SizedBox(height: 4),
-                        Wrap(
-                          spacing: 5,
-                          runSpacing: 4,
-                          children: subject.careers.length > 1
-                              ? [
-                                  const _SubjectScopeLabel(
-                                    text: 'Compartida con',
-                                    color: Color(0xFFE8F1FF),
-                                    foreground: Color(0xFF2459A6),
-                                  ),
-                                  for (final career in subject.careers)
-                                    _SubjectScopeLabel(
-                                      text: career,
-                                      color: const Color(0xFFE8F1FF),
-                                      foreground: const Color(0xFF2459A6),
-                                    ),
-                                ]
-                              : [
-                                  const _SubjectScopeLabel(
-                                    text: 'Exclusiva para',
-                                    color: Color(0xFFFFF1DF),
-                                    foreground: Color(0xFF9A5A00),
-                                  ),
-                                  _SubjectScopeLabel(
-                                    text: subject.careers.isEmpty
-                                        ? tutor.career
-                                        : subject.careers.first,
-                                    color: const Color(0xFFFFF1DF),
-                                    foreground: const Color(0xFF9A5A00),
-                                  ),
-                                ],
+                        Expanded(
+                          child: Text(
+                            subject.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Color(0xFF202B3A),
+                              fontSize: 7,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        _SubjectScopeLabel(
+                          text: subject.careers.length > 1
+                              ? 'Compartida'
+                              : 'Exclusiva',
+                          color: subject.careers.length > 1
+                              ? const Color(0xFFE8F1FF)
+                              : const Color(0xFFFFF1DF),
+                          foreground: subject.careers.length > 1
+                              ? const Color(0xFF2459A6)
+                              : const Color(0xFF9A5A00),
                         ),
                       ],
                     ),
                   ),
               ],
-              const SizedBox(height: 15),
+              const SizedBox(height: 6),
               Align(
                 alignment: Alignment.centerRight,
-                child: FilledButton.icon(
+                child: FilledButton(
                   onPressed: onEnroll,
-                  icon: const Icon(Icons.person_add_alt_1, size: 18),
-                  label: const Text('Inscribirse'),
-                  style: FilledButton.styleFrom(backgroundColor: _blue),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: _blue,
+                    minimumSize: const Size(0, 25),
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  child:
+                      const Text('Inscribirme', style: TextStyle(fontSize: 8)),
                 ),
               ),
             ],
           ),
         ),
-      );
-
-  Widget _detail(IconData icon, String text) => Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 15, color: _muted),
-          const SizedBox(width: 5),
-          Text(text, style: const TextStyle(color: _muted, fontSize: 12)),
-        ],
       );
 }
 
@@ -226,9 +245,14 @@ class _TutoringCard extends StatelessWidget {
 }
 
 class _GroupSessionCard extends StatelessWidget {
-  const _GroupSessionCard({required this.session, required this.onLeave});
+  const _GroupSessionCard({
+    required this.session,
+    required this.studentName,
+    required this.onLeave,
+  });
 
   final StudentGroupSession session;
+  final String studentName;
   final VoidCallback onLeave;
 
   @override
@@ -252,6 +276,37 @@ class _GroupSessionCard extends StatelessWidget {
                   style: const TextStyle(color: _muted)),
               Text('${session.studentCount}/5 estudiantes inscritos',
                   style: const TextStyle(color: _muted)),
+              if (session.state == 'EN_CURSO' &&
+                  session.modality.toUpperCase() != 'PRESENCIAL') ...[
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => LiveKitRoomPage(
+                          sessionId: session.id,
+                          subject: session.subject,
+                          modality: session.modality,
+                          teacherMode: false,
+                          students: session.studentIds,
+                          endAt: session.end?.toLocal(),
+                          studentMode: true,
+                          studentName: studentName,
+                        ),
+                      ),
+                    ),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF0D4FC4),
+                      minimumSize: const Size(0, 30),
+                    ),
+                    child: const Text(
+                      'Entrar a la sala',
+                      style: TextStyle(fontSize: 9),
+                    ),
+                  ),
+                ),
+              ],
               if (session.start != null && session.end != null) ...[
                 const SizedBox(height: 10),
                 Align(
@@ -317,10 +372,12 @@ class _GroupSessionCard extends StatelessWidget {
 class _GroupHistoryCard extends ConsumerStatefulWidget {
   const _GroupHistoryCard({
     required this.session,
+    required this.studentName,
     required this.onRated,
     this.showRating = true,
   });
   final StudentGroupSession session;
+  final String studentName;
   final VoidCallback onRated;
   final bool showRating;
 
@@ -472,32 +529,97 @@ class _GroupHistoryCardState extends ConsumerState<_GroupHistoryCard> {
         _ => const [],
       };
 
+  Future<void> _openHistory() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => LiveKitRoomPage(
+          sessionId: widget.session.id,
+          subject: widget.session.subject,
+          modality: widget.session.modality,
+          teacherMode: false,
+          students: widget.session.studentIds,
+          ended: true,
+          endAt: widget.session.end?.toLocal(),
+          studentMode: true,
+          studentName: widget.studentName,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) => Card(
-        margin: const EdgeInsets.only(bottom: 12),
+        margin: const EdgeInsets.only(bottom: 8),
+        color: Colors.white,
+        elevation: 2,
+        shadowColor: const Color(0x14000000),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11)),
         child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(children: [
-            const CircleAvatar(child: Icon(Icons.history)),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(widget.session.subject,
-                        style: const TextStyle(fontWeight: FontWeight.w700)),
-                    Text(
-                        '${widget.session.start == null ? 'Fecha no disponible' : _longDate(widget.session.start!)} · Tutoría grupal finalizada'),
-                  ]),
-            ),
-            if (widget.showRating)
-              IconButton(
-                tooltip: _rated ? 'Reporte enviado' : 'Calificar clase',
-                onPressed: _sending || _rated ? null : _rate,
-                icon: Icon(_rated ? Icons.check_circle : Icons.star_border,
-                    color: _rated ? Colors.green : Colors.amber),
+          padding: const EdgeInsets.fromLTRB(10, 9, 10, 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const CircleAvatar(
+                    radius: 11,
+                    backgroundColor: Color(0xFFE6EEFF),
+                    child: Icon(Icons.groups_outlined, color: _blue, size: 12),
+                  ),
+                  const SizedBox(width: 7),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.session.subject,
+                          style: const TextStyle(
+                            color: _navy,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        Text(
+                          '${widget.session.start == null ? 'Fecha no disponible' : _longDate(widget.session.start!.toLocal())} · Tutoría grupal',
+                          style: const TextStyle(color: _muted, fontSize: 7),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const _StatusPill(text: 'Realizada'),
+                ],
               ),
-          ]),
+              const SizedBox(height: 7),
+              Row(
+                children: [
+                  OutlinedButton(
+                    onPressed: _openHistory,
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(0, 25),
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    child: const Text(
+                      'Ver sala y chat',
+                      style: TextStyle(fontSize: 8),
+                    ),
+                  ),
+                  const Spacer(),
+                  if (widget.showRating)
+                    IconButton(
+                      tooltip: _rated ? 'Reporte enviado' : 'Calificar clase',
+                      onPressed: _sending || _rated ? null : _rate,
+                      visualDensity: VisualDensity.compact,
+                      icon: Icon(
+                        _rated ? Icons.check_circle : Icons.star_border,
+                        color: _rated ? Colors.green : Colors.amber,
+                        size: 18,
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
         ),
       );
 }

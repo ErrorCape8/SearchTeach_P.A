@@ -78,50 +78,77 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage>
           ),
           data: (groups) {
             final dashboard = value.withGroupSessions(groups);
-            return Column(
+            return Row(
               children: [
-                _TopBar(profile: value.profile, wide: wide, onLogout: _logout),
+                if (wide)
+                  _StudentSidebar(
+                    tab: _tab,
+                    profile: value.profile,
+                    onSelect: _selectTab,
+                    onLogout: _logout,
+                  ),
                 Expanded(
-                  child: Row(
+                  child: Column(
                     children: [
-                      if (wide)
-                        _DesktopNavigation(
-                          tab: _tab,
-                          profile: value.profile,
-                          onSelect: _selectTab,
-                          onLogout: _logout,
-                        ),
+                      _StudentHeader(
+                        profile: value.profile,
+                        tab: _tab,
+                        onProfile: () => _selectTab(5),
+                        onNotifications: () => _selectTab(6),
+                        onBack: () => _selectTab(0),
+                      ),
                       Expanded(
-                        child: IndexedStack(
-                          index: _tab,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            StudentHomeView(
-                              data: dashboard,
-                              onBrowse: () => _openTutorSection('publicadas'),
-                              onHistory: () => _openTutorSection('historial'),
+                            Expanded(
+                              flex: wide ? 3 : 1,
+                              child: IndexedStack(
+                                index: _tab,
+                                children: [
+                                  StudentHomeView(
+                                    data: dashboard,
+                                  ),
+                                  for (var sectionIndex = 1;
+                                      sectionIndex <= 4;
+                                      sectionIndex++)
+                                    StudentTutoringView(
+                                      key: ValueKey(sectionIndex),
+                                      data: dashboard,
+                                      focusSection:
+                                          _tab == sectionIndex &&
+                                                  _focusTutoring != null
+                                              ? _focusTutoring
+                                              : _sectionForTab(sectionIndex),
+                                      focusRequest: _focusRequest,
+                                      onEnroll: (tutor) => _enroll(value, tutor),
+                                      onProjectEnrollment:
+                                          _toggleProjectEnrollment,
+                                      onJoinProjectCode: _joinProjectByCode,
+                                      onLeaveGroupSession: _leaveGroupSession,
+                                      onJoinPublishedSession: (session) =>
+                                          _joinPublishedSession(session),
+                                      onAction: _tutoringAction,
+                                      onShowMessage: _showMessage,
+                                    ),
+                                  StudentProfileView(
+                                    profile: value.profile,
+                                    onTeacherMode: value.profile.role
+                                            .toLowerCase()
+                                            .contains('docente')
+                                        ? () => context.go('/docente')
+                                        : null,
+                                    onLogout: _logout,
+                                  ),
+                                  const NotificationsInbox(),
+                                ],
+                              ),
                             ),
-                            StudentTutoringView(
-                              data: dashboard,
-                              focusSection: _focusTutoring,
-                              focusRequest: _focusRequest,
-                              onEnroll: (tutor) => _enroll(value, tutor),
-                              onProjectEnrollment: _toggleProjectEnrollment,
-                              onJoinProjectCode: _joinProjectByCode,
-                              onLeaveGroupSession: _leaveGroupSession,
-                              onJoinPublishedSession: (session) =>
-                                  _joinPublishedSession(session),
-                              onAction: _tutoringAction,
-                              onShowMessage: _showMessage,
-                            ),
-                            StudentProfileView(
-                              profile: value.profile,
-                              onTeacherMode: value.profile.role
-                                      .toLowerCase()
-                                      .contains('docente')
-                                  ? () => context.go('/docente')
-                                  : null,
-                            ),
-                            const NotificationsInbox(),
+                            if (wide && _tab != 5)
+                              SizedBox(
+                                width: 250,
+                                child: _StudentSidePanel(data: dashboard),
+                              ),
                           ],
                         ),
                       ),
@@ -133,33 +160,38 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage>
           },
         ),
       ),
-      bottomNavigationBar: wide
+      bottomNavigationBar: wide || _tab > 4
           ? null
           : data.whenOrNull(
               data: (_) => NavigationBar(
-                selectedIndex: _tab,
-                onDestinationSelected: _selectTab,
+                selectedIndex: _tab > 4 ? 0 : _tab,
+                onDestinationSelected: (index) => _selectTab(index),
                 destinations: [
-                  NavigationDestination(
-                      icon: Icon(Icons.home_outlined),
-                      selectedIcon: Icon(Icons.home),
-                      label: 'Inicio'),
-                  NavigationDestination(
-                      icon: Icon(Icons.menu_book_outlined),
-                      selectedIcon: Icon(Icons.menu_book),
-                      label: 'Tutorías'),
-                  NavigationDestination(
-                      icon: Icon(Icons.person_outline),
-                      selectedIcon: Icon(Icons.person),
-                      label: 'Perfil'),
-                  NavigationDestination(
-                      icon: const NotificationUnreadIcon(
-                        icon: Icons.notifications_none_outlined,
-                      ),
-                      selectedIcon: const NotificationUnreadIcon(
-                        icon: Icons.notifications,
-                      ),
-                      label: 'Avisos'),
+                  const NavigationDestination(
+                    icon: Icon(Icons.home_outlined),
+                    selectedIcon: Icon(Icons.home),
+                    label: 'Inicio',
+                  ),
+                  const NavigationDestination(
+                    icon: Icon(Icons.desktop_windows_outlined),
+                    selectedIcon: Icon(Icons.desktop_windows),
+                    label: 'Tutores',
+                  ),
+                  const NavigationDestination(
+                    icon: Icon(Icons.check_box_outline_blank),
+                    selectedIcon: Icon(Icons.check_box),
+                    label: 'Mis tutorías',
+                  ),
+                  const NavigationDestination(
+                    icon: Icon(Icons.history),
+                    selectedIcon: Icon(Icons.history),
+                    label: 'Historial',
+                  ),
+                  const NavigationDestination(
+                    icon: Icon(Icons.groups_outlined),
+                    selectedIcon: Icon(Icons.groups),
+                    label: 'Proyectos',
+                  ),
                 ],
               ),
             ),
@@ -167,18 +199,30 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage>
   }
 
   void _selectTab(int tab) => setState(() {
-        if (tab != _tab && tab != 1) {
-          _focusTutoring = null;
-          _focusRequest++;
-        }
         _tab = tab;
+        if (tab >= 1 && tab <= 4) {
+          _focusTutoring = _sectionForTab(tab);
+        }
+        _focusRequest++;
       });
 
   void _openTutorSection(String section) => setState(() {
         _focusTutoring = section;
         _focusRequest++;
-        _tab = 1;
+        _tab = switch (section) {
+          'tutores' || 'publicadas' => 1,
+          'historial' => 3,
+          'proyectos' || 'proyectos-historial' || 'seguimiento-proyecto' => 4,
+          _ => 2,
+        };
       });
+
+  String _sectionForTab(int tab) => switch (tab) {
+        1 => 'tutores',
+        2 => 'sesiones',
+        3 => 'historial',
+        _ => 'proyectos',
+      };
 
   Future<void> _enroll(
     StudentDashboardData data,

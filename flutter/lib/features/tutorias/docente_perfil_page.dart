@@ -27,23 +27,33 @@ class DocentePerfilPage extends ConsumerWidget {
     return profile.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, _) => Center(
-        child: FilledButton.icon(
-          onPressed: () => ref.invalidate(docenteProfileProvider),
-          icon: const Icon(Icons.refresh),
-          label: const Text('Reintentar'),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'No se pudo cargar tu perfil: $error',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              FilledButton.icon(
+                onPressed: () => ref.invalidate(docenteProfileProvider),
+                icon: const Icon(Icons.refresh),
+                label: const Text('Reintentar'),
+              ),
+            ],
+          ),
         ),
       ),
       data: (data) => ListView(
         padding: const EdgeInsets.all(24),
         children: [
-          const Text('Mi perfil',
-              style: TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w800,
-                  color: _profileNavy)),
-          const SizedBox(height: 6),
-          const Text(
-              'Consulta y actualiza la información de tu cuenta docente.'),
+          _ProfileHero(
+            name: _value(data['nombre']),
+            career: _value(data['carrera']),
+            role: _value(data['rol']),
+          ),
           const SizedBox(height: 20),
           _ProfileCard(
             title: 'Información personal',
@@ -236,6 +246,103 @@ class _ProfileCard extends StatelessWidget {
       );
 }
 
+class _ProfileHero extends StatelessWidget {
+  const _ProfileHero({
+    required this.name,
+    required this.career,
+    required this.role,
+  });
+
+  final String name;
+  final String career;
+  final String role;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.all(22),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0E8A62),
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final compact = constraints.maxWidth < 480;
+            final identity = Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'PERFIL DOCENTE',
+                  style: TextStyle(
+                    color: Color(0xFFD8F0E3),
+                    fontSize: 10,
+                    letterSpacing: 1.1,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  name,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: compact ? 19 : 23,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  career,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Color(0xFFE5F4EB),
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: .16),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Text(
+                    role,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            );
+            final avatar = CircleAvatar(
+              radius: compact ? 32 : 39,
+              backgroundColor: Colors.white,
+              child: Icon(
+                Icons.person_outline,
+                size: compact ? 34 : 43,
+                color: const Color(0xFF16834A),
+              ),
+            );
+            return compact
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [avatar, const SizedBox(height: 15), identity],
+                  )
+                : Row(
+                    children: [
+                      avatar,
+                      const SizedBox(width: 18),
+                      Expanded(child: identity),
+                    ],
+                  );
+          },
+        ),
+      );
+}
+
 class _ProfileRow extends StatelessWidget {
   const _ProfileRow(
       {required this.icon,
@@ -274,6 +381,7 @@ class _CertificationsCardState extends ConsumerState<_CertificationsCard> {
   List<dynamic> _items = const [];
   PlatformFile? _file;
   bool _loading = true;
+  String? _loadError;
 
   @override
   void initState() {
@@ -290,6 +398,10 @@ class _CertificationsCardState extends ConsumerState<_CertificationsCard> {
   }
 
   Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _loadError = null;
+    });
     try {
       final response = await widget.ref
           .read(dioProvider)
@@ -300,8 +412,13 @@ class _CertificationsCardState extends ConsumerState<_CertificationsCard> {
           _loading = false;
         });
       }
-    } catch (_) {
-      if (mounted) setState(() => _loading = false);
+    } on DioException catch (error) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _loadError = _message(error);
+        });
+      }
     }
   }
 
@@ -381,6 +498,19 @@ class _CertificationsCardState extends ConsumerState<_CertificationsCard> {
               icon: const Icon(Icons.send),
               label: const Text('Enviar a TI')),
           if (_loading) const LinearProgressIndicator(),
+          if (_loadError != null)
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(
+                'No se pudieron cargar las certificaciones: $_loadError',
+                style: const TextStyle(color: Colors.red),
+              ),
+              trailing: IconButton(
+                tooltip: 'Reintentar',
+                onPressed: _load,
+                icon: const Icon(Icons.refresh),
+              ),
+            ),
           for (final item in _items)
             ListTile(
               contentPadding: EdgeInsets.zero,
