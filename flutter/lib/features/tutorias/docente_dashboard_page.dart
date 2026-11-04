@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/api_client.dart';
 import '../../core/tutoring_updates.dart';
+import '../../core/widgets/brand_logo.dart';
 import '../auth/auth_repository.dart';
 import '../notifications/notifications_page.dart';
 import 'docente_proyectos_aula_page.dart';
@@ -68,6 +69,7 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
       if (next.hasValue && mounted) ref.invalidate(_teacherSessionsProvider);
     });
     final wide = MediaQuery.sizeOf(context).width >= 850;
+
     return Theme(
       data: Theme.of(context).copyWith(
         colorScheme:
@@ -76,38 +78,219 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
       ),
       child: Scaffold(
         backgroundColor: _teacherCanvas,
-        appBar: AppBar(
-          backgroundColor: Colors.white,
-          foregroundColor: _teacherNavy,
-          title: const Text('Panel docente',
-              style: TextStyle(fontWeight: FontWeight.w800)),
-          actions: [
-            const NotificationBellButton(),
-            IconButton(
-              tooltip: 'Cerrar sesión',
-              onPressed: _logout,
-              icon: const Icon(Icons.logout),
+        body: Row(
+          children: [
+            if (wide)
+              Container(
+                width: 236,
+                color: const Color(0xFF0E8A62),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 18),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(
+                        children: [
+                          const BrandLogo(width: 42, height: 36),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'SearchTeach',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 22,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.5,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.symmetric(horizontal: 12),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Text(
+                        'DOCENTE',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white,
+                          letterSpacing: 0.8,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    ...List.generate(8, (index) {
+                      final active = _tab == index;
+                      final label = index == 0
+                          ? 'Inicio'
+                          : index == 1
+                              ? 'Sesiones'
+                              : index == 2
+                                  ? 'Empezar'
+                                  : index == 3
+                                      ? 'Proyectos de aula'
+                                      : index == 4
+                                          ? 'Líder PA'
+                                          : index == 5
+                                              ? 'Avisos'
+                                              : index == 6
+                                                  ? 'Historial'
+                                                  : 'Perfil';
+                      final icon = index == 0
+                          ? Icons.home_outlined
+                          : index == 1
+                              ? Icons.calendar_month_outlined
+                              : index == 2
+                                  ? Icons.videocam_outlined
+                                  : index == 3
+                                      ? Icons.school_outlined
+                                      : index == 4
+                                          ? Icons.fact_check_outlined
+                                          : index == 5
+                                              ? Icons.notifications_none_outlined
+                                              : index == 6
+                                                  ? Icons.history_outlined
+                                                  : Icons.person_outline;
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 4,
+                        ),
+                        child: ListTile(
+                          selected: active,
+                          selectedColor: const Color(0xFF0E8A62),
+                          selectedTileColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          leading: Icon(
+                            icon,
+                            color: active ? const Color(0xFF0E8A62) : Colors.white,
+                          ),
+                          title: Text(
+                            label,
+                            style: TextStyle(
+                              color: active ? const Color(0xFF0E8A62) : Colors.white,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          onTap: () => setState(() => _tab = index),
+                        ),
+                      );
+                    }),
+                    const Spacer(),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 18),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 28,
+                            height: 28,
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                            ),
+                            alignment: Alignment.center,
+                            child: const Text(
+                              'LM',
+                              style: TextStyle(
+                                color: Color(0xFF0E8A62),
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          const Expanded(
+                            child: Text(
+                              'Laura Martínez',
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          const Icon(Icons.chevron_right, color: Colors.white),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            Expanded(
+              child: Column(
+                children: [
+                  if (wide)
+                    Container(
+                      height: 116,
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF0E8A62),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Color(0x0F000000),
+                            blurRadius: 12,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          const SizedBox(width: 8),
+                          IconButton(
+                            onPressed: () => setState(() => _tab = 0),
+                            icon: const Icon(Icons.home, color: Colors.white),
+                          ),
+                          const SizedBox(width: 12),
+                          const Text(
+                            'Sesiones',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 24,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const Spacer(),
+                          const NotificationBellButton(),
+                          const SizedBox(width: 12),
+                          IconButton(
+                            tooltip: 'Cerrar sesión',
+                            onPressed: _logout,
+                            icon: const Icon(Icons.logout, color: Colors.white),
+                          ),
+                        ],
+                      ),
+                    ),
+                  Expanded(
+                    child: IndexedStack(
+                      index: _tab,
+                      children: [
+                        _home(),
+                        _sessions(),
+                        _startTutoring(),
+                        const DocenteProyectosAulaPage(),
+                        const DocenteLiderProyectosPage(),
+                        const NotificationsInbox(),
+                        _history(),
+                        const DocentePerfilPage(),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
-        body: Row(children: [
-          if (wide) _desktopMenu(),
-          Expanded(
-            child: IndexedStack(
-              index: _tab,
-              children: [
-                _home(),
-                _sessions(),
-                _startTutoring(),
-                const DocenteProyectosAulaPage(),
-                const DocenteLiderProyectosPage(),
-                const NotificationsInbox(),
-                _history(),
-                const DocentePerfilPage(),
-              ],
-            ),
-          ),
-        ]),
         bottomNavigationBar: wide
             ? null
             : NavigationBar(
@@ -151,84 +334,6 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
       ),
     );
   }
-
-  Widget _desktopMenu() => Material(
-        color: Colors.white,
-        child: SizedBox(
-          width: 230,
-          child: Column(children: [
-            const Padding(
-              padding: EdgeInsets.all(18),
-              child: Text('Menú docente',
-                  style: TextStyle(
-                      color: _teacherNavy, fontWeight: FontWeight.w800)),
-            ),
-            const Divider(height: 1),
-            const SizedBox(height: 10),
-            for (var i = 0; i < 3; i++)
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                child: ListTile(
-                  selected: _tab == i,
-                  selectedColor: _teacherGreen,
-                  selectedTileColor: const Color(0xFFE6F4EA),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  leading: Icon(_teacherIcons[i]),
-                  title: Text(_teacherLabels[i]),
-                  onTap: () => setState(() => _tab = i),
-                ),
-              ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-              child: ListTile(
-                selected: _tab == 7,
-                leading: const Icon(Icons.person_outline),
-                title: const Text('Perfil'),
-                onTap: () => setState(() => _tab = 7),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-              child: ListTile(
-                selected: _tab == 3,
-                leading: const Icon(Icons.school_outlined),
-                title: const Text('Proyectos de aula'),
-                onTap: () => setState(() => _tab = 3),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-              child: ListTile(
-                selected: _tab == 4,
-                leading: const Icon(Icons.fact_check_outlined),
-                title: const Text('Líder PA'),
-                onTap: () => setState(() => _tab = 4),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-              child: ListTile(
-                selected: _tab == 5,
-                leading: const Icon(Icons.notifications_none_outlined),
-                title: const Text('Avisos'),
-                onTap: () => setState(() => _tab = 5),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-              child: ListTile(
-                selected: _tab == 6,
-                leading: const Icon(Icons.history_outlined),
-                title: const Text('Historial'),
-                onTap: () => setState(() => _tab = 6),
-              ),
-            ),
-            const Spacer(),
-          ]),
-        ),
-      );
 
   Widget _home() => ListView(
         padding: const EdgeInsets.all(24),
@@ -452,13 +557,6 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
 }
 
 enum _SessionView { scheduled, start, history }
-
-const _teacherLabels = ['Inicio', 'Tutorías', 'Empezar tutorías'];
-const _teacherIcons = [
-  Icons.home_outlined,
-  Icons.event_note_outlined,
-  Icons.play_circle_outline
-];
 
 class _TeacherHomeTile extends StatelessWidget {
   const _TeacherHomeTile(

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/widgets/brand_logo.dart';
+
 class AdminBottomBar extends StatelessWidget {
   const AdminBottomBar({
     super.key,
@@ -140,47 +142,108 @@ class AdminSideNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        color: Colors.white,
-        alignment: Alignment.topCenter,
-        child: NavigationRail(
-          selectedIndex: currentIndex,
-          onDestinationSelected: onTap,
-          labelType: NavigationRailLabelType.all,
-          groupAlignment: -0.8,
-          backgroundColor: Colors.white,
-          indicatorColor: const Color(0xFFFFF1E6),
-          selectedIconTheme: const IconThemeData(color: Color(0xFFEA580C)),
-          unselectedIconTheme: const IconThemeData(color: Color(0xFF8C95A6)),
-          selectedLabelTextStyle: const TextStyle(
-            color: Color(0xFFEA580C),
-            fontWeight: FontWeight.w700,
+        width: 240,
+        color: const Color(0xFFEA580C),
+        child: Padding(
+          padding: const EdgeInsets.only(top: 18),
+          child: Column(
+            children: [
+              const Padding(
+                padding: EdgeInsets.all(18),
+                child: BrandLogo(width: 52, height: 46),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'SearchTeach',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 26,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.5,
+                ),
+              ),
+              const Text(
+                'CONNECT · LEARN · GROW',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 10,
+                  letterSpacing: 1.2,
+                ),
+              ),
+              const SizedBox(height: 18),
+              const Divider(
+                color: Colors.white24,
+                thickness: 1,
+                indent: 12,
+                endIndent: 12,
+              ),
+              const SizedBox(height: 18),
+              ...List.generate(4, (index) {
+                final labels = ['Inicio', 'Usuarios', 'Perfil', 'Certificaciones'];
+                final icons = [
+                  Icons.home_outlined,
+                  Icons.people_alt_outlined,
+                  Icons.person_outline_rounded,
+                  Icons.verified_outlined,
+                ];
+                final active = currentIndex == index;
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  child: ListTile(
+                    selected: active,
+                    selectedColor: const Color(0xFFEA580C),
+                    selectedTileColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    leading: Icon(
+                      icons[index],
+                      color: active ? const Color(0xFFEA580C) : Colors.white,
+                    ),
+                    title: Text(
+                      labels[index],
+                      style: TextStyle(
+                        color: active ? const Color(0xFFEA580C) : Colors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    onTap: () => onTap(index),
+                  ),
+                );
+              }),
+              const Spacer(),
+              const Padding(
+                padding: EdgeInsets.fromLTRB(18, 0, 18, 20),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 14,
+                      backgroundColor: Colors.white,
+                      child: Text(
+                        'AT',
+                        style: TextStyle(
+                          color: Color(0xFFEA580C),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Admin TI',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    Icon(Icons.chevron_right, color: Colors.white),
+                  ],
+                ),
+              ),
+            ],
           ),
-          unselectedLabelTextStyle: const TextStyle(
-            color: Color(0xFF64748B),
-            fontWeight: FontWeight.w500,
-          ),
-          destinations: const [
-            NavigationRailDestination(
-              icon: Icon(Icons.home_outlined),
-              selectedIcon: Icon(Icons.home_rounded),
-              label: Text('Inicio'),
-            ),
-            NavigationRailDestination(
-              icon: Icon(Icons.people_alt_outlined),
-              selectedIcon: Icon(Icons.people_alt_rounded),
-              label: Text('Usuarios'),
-            ),
-            NavigationRailDestination(
-              icon: Icon(Icons.person_outline_rounded),
-              selectedIcon: Icon(Icons.person_rounded),
-              label: Text('Perfil'),
-            ),
-            NavigationRailDestination(
-              icon: Icon(Icons.verified_outlined),
-              selectedIcon: Icon(Icons.verified),
-              label: Text('Certificaciones'),
-            ),
-          ],
         ),
       );
 }

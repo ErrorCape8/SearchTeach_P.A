@@ -31,15 +31,14 @@ class AdminHeader extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Color(0xFFF97316),
+            Color(0xFFF57A1B),
             Color(0xFFEA580C),
-            Color(0xFFC2410C),
+            Color(0xFFC75C14),
           ],
         ),
       ),
       child: Stack(
         children: [
-          // Detalle curvo suave en la esquina superior derecha tal como el mockup
           Positioned(
             top: -30,
             right: -30,
@@ -48,7 +47,7 @@ class AdminHeader extends StatelessWidget {
               height: 130,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.black.withValues(alpha: 0.06),
+                color: Colors.white.withValues(alpha: 0.06),
               ),
             ),
           ),
