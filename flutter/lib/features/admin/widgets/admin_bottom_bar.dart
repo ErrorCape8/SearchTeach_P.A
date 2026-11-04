@@ -14,10 +14,6 @@ class AdminBottomBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const activeOrange = Color(0xFFEA580C);
-    const inactiveColor = Color(0xFF8C95A6);
-    const activePillBg = Color(0xFFFFF1E6);
-
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -32,98 +28,42 @@ class AdminBottomBar extends StatelessWidget {
           top: BorderSide(color: Color(0xFFF1F4F9), width: 1),
         ),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: SafeArea(
         top: false,
-        child: Row(
-          children: [
-            _buildItem(
-              index: 0,
-              label: 'Inicio',
-              icon: Icons.home_outlined,
-              activeIcon: Icons.home_rounded,
-              isActive: currentIndex == 0,
-              activeOrange: activeOrange,
-              inactiveColor: inactiveColor,
-              activePillBg: activePillBg,
-            ),
-            _buildItem(
-              index: 1,
-              label: 'Usuarios',
-              icon: Icons.people_alt_outlined,
-              activeIcon: Icons.people_alt_rounded,
-              isActive: currentIndex == 1,
-              activeOrange: activeOrange,
-              inactiveColor: inactiveColor,
-              activePillBg: activePillBg,
-            ),
-            _buildItem(
-              index: 2,
-              label: 'Perfil',
-              icon: Icons.person_outline_rounded,
-              activeIcon: Icons.person_rounded,
-              isActive: currentIndex == 2,
-              activeOrange: activeOrange,
-              inactiveColor: inactiveColor,
-              activePillBg: activePillBg,
-            ),
-            _buildItem(
-              index: 3,
-              label: 'Certificaciones',
-              icon: Icons.verified_outlined,
-              activeIcon: Icons.verified,
-              isActive: currentIndex == 3,
-              activeOrange: activeOrange,
-              inactiveColor: inactiveColor,
-              activePillBg: activePillBg,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildItem({
-    required int index,
-    required String label,
-    required IconData icon,
-    required IconData activeIcon,
-    required bool isActive,
-    required Color activeOrange,
-    required Color inactiveColor,
-    required Color activePillBg,
-  }) {
-    return Expanded(
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () => onTap(index),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-          decoration: BoxDecoration(
-            color: isActive ? activePillBg : Colors.transparent,
-            borderRadius: BorderRadius.circular(24),
+        child: Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: Theme.of(context)
+                .colorScheme
+                .copyWith(primary: const Color(0xFFEA580C)),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                isActive ? activeIcon : icon,
-                color: isActive ? activeOrange : inactiveColor,
-                size: 24,
+          child: NavigationBar(
+            height: 68,
+            elevation: 0,
+            backgroundColor: Colors.white,
+            indicatorColor: const Color(0xFFFFF1E6),
+            selectedIndex: currentIndex,
+            labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+            onDestinationSelected: onTap,
+            destinations: const [
+              NavigationDestination(
+                icon: Icon(Icons.home_outlined),
+                selectedIcon: Icon(Icons.home_rounded),
+                label: 'Inicio',
               ),
-              const SizedBox(height: 2),
-              Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 11.5,
-                  fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
-                  color: isActive ? activeOrange : inactiveColor,
-                ),
+              NavigationDestination(
+                icon: Icon(Icons.people_alt_outlined),
+                selectedIcon: Icon(Icons.people_alt_rounded),
+                label: 'Usuarios',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.person_outline_rounded),
+                selectedIcon: Icon(Icons.person_rounded),
+                label: 'Perfil',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.verified_outlined),
+                selectedIcon: Icon(Icons.verified),
+                label: 'Certificaciones',
               ),
             ],
           ),

@@ -32,13 +32,13 @@ class StudentHomeView extends StatelessWidget {
             .where((session) => session.state == 'EN_CURSO')
             .length;
     return ListView(
-      padding: const EdgeInsets.fromLTRB(22, 16, 16, 24),
+      padding: const EdgeInsets.fromLTRB(28, 22, 24, 32),
       children: [
         _ActivitySummaryCard(
           pending: pending,
           activityCount: activityCount,
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 16),
         Row(
           children: [
             Expanded(
@@ -47,14 +47,14 @@ class StudentHomeView extends StatelessWidget {
                 value: '$pending',
               ),
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: 10),
             Expanded(
               child: _MetricCard(
                 label: 'Realizadas',
                 value: '$completed',
               ),
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: 10),
             Expanded(
               child: _MetricCard(
                 label: 'Proyecto de aula',
@@ -104,8 +104,8 @@ class _ActivitySummaryCard extends StatelessWidget {
       'diciembre',
     ];
     return Container(
-      height: 104,
-      padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+      height: 148,
+      padding: const EdgeInsets.fromLTRB(22, 18, 22, 18),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
         gradient: const LinearGradient(
@@ -128,14 +128,14 @@ class _ActivitySummaryCard extends StatelessWidget {
               children: [
                 Text(
                   '${weekdays[date.weekday - 1]} ${date.day} de ${months[date.month - 1]} de ${date.year}',
-                  style: const TextStyle(color: _muted, fontSize: 11),
+                  style: const TextStyle(color: _muted, fontSize: 14),
                 ),
-                const SizedBox(height: 3),
+                const SizedBox(height: 6),
                 const Text(
                   'Tu actividad',
                   style: TextStyle(
                     color: _navy,
-                    fontSize: 12,
+                    fontSize: 17,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -143,7 +143,7 @@ class _ActivitySummaryCard extends StatelessWidget {
                   pending == 0
                       ? 'No tienes tutorías pendientes.'
                       : 'Tienes $pending tutoría(s) pendiente(s).',
-                  style: const TextStyle(color: _muted, fontSize: 11),
+                  style: const TextStyle(color: _muted, fontSize: 14),
                 ),
               ],
             ),
@@ -152,7 +152,7 @@ class _ActivitySummaryCard extends StatelessWidget {
             '$activityCount',
             style: const TextStyle(
               color: Color(0xFFC9D8FA),
-              fontSize: 40,
+              fontSize: 52,
               height: 1,
               fontWeight: FontWeight.w800,
             ),
@@ -184,7 +184,8 @@ class StudentProfileView extends ConsumerWidget {
               const _ProfileSectionTitle('Datos que puedes editar'),
               _ProfileActionCard(
                 icon: Icons.phone_outlined,
-                title: profile.phone.isEmpty ? 'Agregar teléfono' : profile.phone,
+                title:
+                    profile.phone.isEmpty ? 'Agregar teléfono' : profile.phone,
                 subtitle: 'Teléfono',
                 onTap: () => _editPhone(context, ref),
               ),
@@ -270,7 +271,8 @@ class StudentProfileView extends ConsumerWidget {
                   foregroundColor: const Color(0xFF9D2525),
                   elevation: 0,
                 ),
-                child: const Text('Cerrar sesión', style: TextStyle(fontSize: 9)),
+                child:
+                    const Text('Cerrar sesión', style: TextStyle(fontSize: 9)),
               ),
             ],
           );
@@ -320,7 +322,8 @@ class StudentProfileView extends ConsumerWidget {
               child: const Text('Cancelar'),
             ),
             FilledButton(
-              onPressed: () => Navigator.pop(dialogContext, controller.text.trim()),
+              onPressed: () =>
+                  Navigator.pop(dialogContext, controller.text.trim()),
               child: const Text('Guardar'),
             ),
           ],
@@ -369,8 +372,9 @@ class StudentProfileView extends ConsumerWidget {
                     labelText: 'Contraseña actual',
                     border: OutlineInputBorder(),
                   ),
-                  validator: (value) =>
-                      value == null || value.isEmpty ? 'Campo obligatorio' : null,
+                  validator: (value) => value == null || value.isEmpty
+                      ? 'Campo obligatorio'
+                      : null,
                 ),
                 const SizedBox(height: 10),
                 TextFormField(

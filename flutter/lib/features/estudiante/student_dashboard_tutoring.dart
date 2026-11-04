@@ -37,6 +37,7 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
   String _query = '';
   int _semesterFilter = 0;
   String _sessionFilter = 'disponibles';
+  final ScrollController _sessionsScrollController = ScrollController();
 
   @override
   void initState() {
@@ -50,6 +51,12 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
     if (widget.focusRequest != oldWidget.focusRequest) {
       _section = widget.focusSection;
     }
+  }
+
+  @override
+  void dispose() {
+    _sessionsScrollController.dispose();
+    super.dispose();
   }
 
   @override
@@ -702,20 +709,27 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
       case 'pendientes':
         content = _tutoringList(
           pending,
+          scrollController: _sessionsScrollController,
           emptyTitle: 'No tienes solicitudes pendientes',
           emptyMessage: 'Tus solicitudes aparecerán aquí.',
         );
         break;
       case 'encurso':
         content = activeGroupSessions.isEmpty && activeIndividual.isEmpty
-            ? const _EmptyCard(
-                icon: Icons.event_note_outlined,
-                title: 'No tienes sesiones próximas',
-                message:
-                    'Tus tutorías confirmadas aparecerán aquí. Podrás entrar cuando el docente inicie la clase.',
+            ? ListView(
+                controller: _sessionsScrollController,
+                padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
+                children: const [
+                  _EmptyCard(
+                    icon: Icons.event_note_outlined,
+                    title: 'No tienes sesiones próximas',
+                    message:
+                        'Tus tutorías confirmadas aparecerán aquí. Podrás entrar cuando el docente inicie la clase.',
+                  ),
+                ],
               )
             : ListView(
-                key: const PageStorageKey('student-active-sessions'),
+                controller: _sessionsScrollController,
                 padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
                 children: [
                   ...activeGroupSessions.map((session) => _GroupSessionCard(
@@ -753,12 +767,15 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
       case 'canceladas':
         content = _tutoringList(
           cancelled,
+          scrollController: _sessionsScrollController,
           emptyTitle: 'No tienes tutorías canceladas',
           emptyMessage: 'Las tutorías canceladas aparecerán aquí.',
         );
         break;
       default:
-        content = _publishedGroupSessions();
+        content = _publishedGroupSessions(
+          scrollController: _sessionsScrollController,
+        );
     }
 
     return Column(
@@ -833,18 +850,24 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
     );
   }
 
-  Widget _publishedGroupSessions() {
+  Widget _publishedGroupSessions({ScrollController? scrollController}) {
     final sessions = widget.data.availableGroupSessions;
     if (sessions.isEmpty) {
-      return const _EmptyCard(
-        icon: Icons.event_busy_outlined,
-        title: 'No hay sesiones disponibles',
-        message:
-            'Cuando coordinación publique tutorías para tu tecnología, aparecerán aquí.',
+      return ListView(
+        controller: scrollController,
+        padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
+        children: const [
+          _EmptyCard(
+            icon: Icons.event_busy_outlined,
+            title: 'No hay sesiones disponibles',
+            message:
+                'Cuando coordinación publique tutorías para tu tecnología, aparecerán aquí.',
+          ),
+        ],
       );
     }
     return ListView.separated(
-      key: const PageStorageKey('student-published-group-sessions'),
+      controller: scrollController,
       padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
       itemCount: sessions.length,
       separatorBuilder: (_, __) => const SizedBox(height: 10),
@@ -950,6 +973,7 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
 
   Widget _tutoringList(
     Iterable<StudentTutoring> values, {
+    ScrollController? scrollController,
     required String emptyTitle,
     required String emptyMessage,
   }) {
@@ -957,9 +981,7 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
       ..sort((a, b) =>
           (a.start ?? DateTime(9999)).compareTo(b.start ?? DateTime(9999)));
     return ListView(
-      key: PageStorageKey(
-        'student-tutoring-list-$emptyTitle',
-      ),
+      controller: scrollController,
       padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
       children: [
         if (items.isEmpty)

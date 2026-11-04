@@ -105,7 +105,7 @@ class _LogoPill extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
         child: const Row(mainAxisSize: MainAxisSize.min, children: [
-          BrandLogo(width: 48, height: 38),
+          BrandLogo(width: 64, height: 50),
           SizedBox(width: 10),
           Text('SEARCHTEACH',
               style: TextStyle(

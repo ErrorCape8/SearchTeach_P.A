@@ -1188,7 +1188,7 @@ class _TeacherSessionCard extends ConsumerWidget {
               spacing: 8,
               runSpacing: 6,
               children: [
-                if (!session.isIndividual)
+                if (!isHistory && !session.isIndividual)
                   OutlinedButton.icon(
                     onPressed: session.id.isEmpty ? null : onOpenChat,
                     icon: const Icon(Icons.chat_bubble_outline, size: 17),
