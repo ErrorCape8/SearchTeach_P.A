@@ -5,7 +5,7 @@ const kNavy = Color(0xFF14146B);
 const kInk = Color(0xFF1C1F24);
 const kField = Color(0xFFEDF0F5);
 
-/// Marco común de las pantallas de autenticación.
+/// Marco comÃºn de las pantallas de autenticaciÃ³n.
 /// - Ancho >= 900 (PC/tablet horizontal): panel de marca a la izquierda + formulario a la derecha.
 /// - Ancho < 900 (celular): igual al mockup, cabecera azul + hoja blanca.
 class AuthShell extends StatelessWidget {
@@ -61,7 +61,7 @@ class AuthShell extends StatelessWidget {
         bottom: false,
         child: Column(children: [
           SizedBox(
-            height: 150,
+            height: 205,
             child: Stack(alignment: Alignment.center, children: [
               const _LogoPill(),
               if (onBack != null)
@@ -101,30 +101,66 @@ const _gradient = RadialGradient(
 class _LogoPill extends StatelessWidget {
   const _LogoPill();
   @override
-  Widget build(BuildContext context) => const _AuthSlogan();
+  Widget build(BuildContext context) => const _AuthBrand(compact: true);
 }
 
-class _AuthSlogan extends StatelessWidget {
-  const _AuthSlogan();
+class _AuthBrand extends StatelessWidget {
+  const _AuthBrand({this.compact = false});
+
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
-    final desktop = MediaQuery.sizeOf(context).width >= AuthShell.breakpoint;
-    return Text(
-      'Aprende y enseña,\ncuando y donde quieras.',
-      textAlign: desktop ? TextAlign.left : TextAlign.center,
-      style: TextStyle(
-        color: Colors.white,
-        fontSize: desktop ? 34 : 23,
-        height: 1.12,
-        fontWeight: FontWeight.w800,
-        letterSpacing: -.4,
-      ),
+    final logoSize = compact ? 70.0 : 148.0;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment:
+          compact ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: logoSize,
+          height: logoSize,
+          padding: EdgeInsets.all(compact ? 5 : 10),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(compact ? 14 : 22),
+          ),
+          child: Image.asset(
+            'assets/brand/logo.png',
+            fit: BoxFit.contain,
+            filterQuality: FilterQuality.high,
+            semanticLabel: 'Logo de SearchTeach',
+          ),
+        ),
+        SizedBox(height: compact ? 3 : 10),
+        Text(
+          'SearchTeach',
+          textAlign: compact ? TextAlign.center : TextAlign.left,
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: compact ? 15 : 25,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -.3,
+          ),
+        ),
+        SizedBox(height: compact ? 5 : 14),
+        Text(
+          'Aprende y enseÃƒÂ±a,\ncuando y donde quieras.',
+          textAlign: compact ? TextAlign.center : TextAlign.left,
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: compact ? 20 : 34,
+            height: 1.12,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -.4,
+          ),
+        ),
+      ],
     );
   }
 }
 
-/// Panel izquierdo para pantallas grandes: así no queda vacío.
+/// Panel izquierdo para pantallas grandes: asÃ­ no queda vacÃ­o.
 class _BrandPanel extends StatelessWidget {
   const _BrandPanel();
 
@@ -134,50 +170,32 @@ class _BrandPanel extends StatelessWidget {
       decoration: const BoxDecoration(gradient: _gradient),
       padding: const EdgeInsets.all(56),
       child: Stack(children: [
-        // círculos decorativos
+        // cÃ­rculos decorativos
         Positioned(right: -80, top: -80, child: _circle(300, .06)),
         Positioned(left: -100, bottom: -120, child: _circle(380, .05)),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(children: [
-              Container(
-                width: 82,
-                height: 82,
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: Image.asset(
-                  'assets/brand/logo.png',
-                  fit: BoxFit.contain,
-                  filterQuality: FilterQuality.high,
-                  semanticLabel: 'Logo de SearchTeach',
-                ),
-              ),
-              const SizedBox(width: 18),
-              const Expanded(child: _AuthSlogan()),
-            ]),
+            const _AuthBrand(),
             const Spacer(),
             Text(
-              'Agenda tutorías, accede a clases virtuales y acompaña cada proyecto.',
+              'Agenda tutorÃ­as, accede a clases virtuales y acompaÃ±a cada proyecto.',
               style: TextStyle(
                   color: Colors.white.withValues(alpha: .8),
                   fontSize: 18,
                   height: 1.4),
             ),
             const SizedBox(height: 40),
-            const _Feature(Icons.event_available, 'Agenda tutorías',
+            const _Feature(Icons.event_available, 'Agenda tutorÃ­as',
                 'Solicita, acepta o propone un nuevo horario.'),
             const _Feature(
                 Icons.videocam_outlined,
                 'Clases virtuales o presenciales',
                 'Elige la modalidad que mejor te funcione.'),
             const _Feature(Icons.insights, 'Sigue tu progreso',
-                'Asistencia y estadísticas en un solo lugar.'),
+                'Asistencia y estadÃ­sticas en un solo lugar.'),
             const Spacer(),
-            Text('© ${DateTime.now().year} SearchTeach',
+            Text('Â© ${DateTime.now().year} SearchTeach',
                 style: TextStyle(color: Colors.white.withValues(alpha: .6))),
           ],
         ),
