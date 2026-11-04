@@ -102,18 +102,7 @@ const _gradient = RadialGradient(
 class _LogoPill extends StatelessWidget {
   const _LogoPill();
   @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
-        child: const Row(mainAxisSize: MainAxisSize.min, children: [
-          BrandLogo(width: 64, height: 50),
-          SizedBox(width: 10),
-          Text('SEARCHTEACH',
-              style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1)),
-        ]),
-      );
+  Widget build(BuildContext context) => const BrandLogo(width: 120, height: 76);
 }
 
 /// Panel izquierdo para pantallas grandes: así no queda vacío.

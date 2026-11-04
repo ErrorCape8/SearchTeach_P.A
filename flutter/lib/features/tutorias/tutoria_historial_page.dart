@@ -45,8 +45,7 @@ class _TutoriaHistorialPageState extends ConsumerState<TutoriaHistorialPage> {
     });
     try {
       final dio = ref.read(dioProvider);
-      final sessionResponse =
-          await dio.get<Map<String, dynamic>>(_sessionPath);
+      final sessionResponse = await dio.get<Map<String, dynamic>>(_sessionPath);
       final session = sessionResponse.data;
       if (session == null) {
         throw const FormatException('El servidor devolvió una tutoría vacía.');
@@ -56,8 +55,7 @@ class _TutoriaHistorialPageState extends ConsumerState<TutoriaHistorialPage> {
       List<Map<String, dynamic>> messages = [];
       if (!widget.isIndividual) {
         final results = await Future.wait([
-          dio.get<List<dynamic>>(
-              '$_sessionPath/estudiantes'),
+          dio.get<List<dynamic>>('$_sessionPath/estudiantes'),
           dio.get<List<dynamic>>('$_sessionPath/chat'),
         ]);
         students = (results[0].data ?? const [])
@@ -143,9 +141,17 @@ class _TutoriaHistorialPageState extends ConsumerState<TutoriaHistorialPage> {
                           leading: const CircleAvatar(
                             child: Icon(Icons.menu_book_outlined),
                           ),
-                          title: Text(
-                            widget.subject,
-                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          title: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  widget.subject,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w700),
+                                ),
+                              ),
+                              _statusBadge(_session?['estadoClase']),
+                            ],
                           ),
                           subtitle: Text(
                             '${_dateLabel(_session?['fechaInicio'])}\n'
@@ -198,6 +204,31 @@ class _TutoriaHistorialPageState extends ConsumerState<TutoriaHistorialPage> {
                   ),
       );
 
+  Widget _statusBadge(Object? value) {
+    final status = switch (value?.toString().toUpperCase()) {
+      'FINALIZADA' => 'Finalizada',
+      'EN_CURSO' => 'En curso',
+      'PROGRAMADA' => 'Programada',
+      final status when status != null && status.isNotEmpty => status,
+      _ => 'Estado no disponible',
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE6F4EA),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Text(
+        status,
+        style: const TextStyle(
+          color: Color(0xFF0A6843),
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+
   Widget _attendanceCard() {
     if (widget.isIndividual) {
       final attended = _session?['asistio'];
@@ -224,8 +255,8 @@ class _TutoriaHistorialPageState extends ConsumerState<TutoriaHistorialPage> {
     final names = {
       for (final student in _students)
         if (student['id'] is String)
-          student['id'] as String: student['nombre']?.toString() ??
-              student['id'] as String,
+          student['id'] as String:
+              student['nombre']?.toString() ?? student['id'] as String,
     };
     final marked = {
       for (final item in attendance)

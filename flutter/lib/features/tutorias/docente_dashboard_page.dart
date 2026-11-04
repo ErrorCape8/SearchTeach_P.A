@@ -14,6 +14,7 @@ import 'docente_proyectos_aula_page.dart';
 import 'docente_lider_proyectos_page.dart';
 import 'livekit_room_page.dart';
 import 'tutoria_chat_page.dart';
+import 'tutoria_historial_page.dart';
 
 const _teacherGreen = Color(0xFF0C8A53);
 const _teacherCanvas = Color(0xFFF3F8F4);
@@ -162,7 +163,6 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
                   child: const BrandLogo(
                     width: 190,
                     height: 112,
-                    color: Colors.white,
                   ),
                 ),
               ),
@@ -674,36 +674,16 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
                     spacing: 8,
                     runSpacing: 8,
                     children: [
-                      OutlinedButton.icon(
+                      FilledButton.tonalIcon(
                         onPressed: () => Navigator.of(context).push(
                           MaterialPageRoute(
-                            builder: (_) => TutoriaChatPage(
+                            builder: (_) => TutoriaHistorialPage(
                               sessionId: session.id,
                               subject: session.subject,
-                              readOnly: true,
+                              isIndividual: false,
                             ),
                           ),
                         ),
-                        icon: const Icon(Icons.forum_outlined),
-                        label: const Text('Abrir chat'),
-                      ),
-                      FilledButton.tonalIcon(
-                        onPressed: () async {
-                          await Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => LiveKitRoomPage(
-                                sessionId: session.id,
-                                subject: session.subject,
-                                modality: session.modality,
-                                teacherMode: true,
-                                students: session.students,
-                                ended: true,
-                                endAt: session.end,
-                              ),
-                            ),
-                          );
-                          if (mounted) ref.invalidate(_teacherSessionsProvider);
-                        },
                         icon: const Icon(Icons.history),
                         label: const Text('Ver historial'),
                       ),

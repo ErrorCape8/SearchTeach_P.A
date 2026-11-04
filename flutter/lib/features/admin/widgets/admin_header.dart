@@ -77,14 +77,10 @@ class AdminHeader extends StatelessWidget {
                   const SizedBox(width: 14),
                 ] else if (showLogo) ...[
                   Container(
-                    width: 62,
-                    height: 50,
+                    width: 92,
+                    height: 58,
                     alignment: Alignment.center,
-                    child: Transform.scale(
-                      scale: 1.08,
-                      child: const BrandLogo(
-                          width: 58, height: 48, color: Colors.black),
-                    ),
+                    child: const BrandLogo(width: 92, height: 58),
                   ),
                   const SizedBox(width: 14),
                 ],

@@ -1394,33 +1394,7 @@ class _TeacherRoomSidebar extends StatelessWidget {
               const SizedBox(height: 18),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 14),
-                child: Row(
-                  children: [
-                    SizedBox(
-                      width: 38,
-                      height: 36,
-                      child: Transform.scale(
-                        scale: 1.08,
-                        child: const BrandLogo(
-                          width: 34,
-                          height: 32,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    const Expanded(
-                      child: Text(
-                        'SearchTeach',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 17,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                child: const BrandLogo(width: 168, height: 72),
               ),
               const SizedBox(height: 24),
               const Padding(
@@ -1542,7 +1516,6 @@ class _StudentRoomSidebar extends StatelessWidget {
                     child: const BrandLogo(
                       width: 104,
                       height: 64,
-                      color: Colors.white,
                     ),
                   ),
                 ),

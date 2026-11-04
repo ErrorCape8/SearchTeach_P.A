@@ -97,7 +97,6 @@ class AdminSideNav extends StatelessWidget {
                       child: const BrandLogo(
                         width: 142,
                         height: 72,
-                        color: Colors.black,
                       ),
                     ),
                   ),

@@ -202,7 +202,6 @@ class _StudentSidebar extends StatelessWidget {
                     child: const BrandLogo(
                       width: 104,
                       height: 64,
-                      color: Colors.white,
                     ),
                   ),
                 ),
