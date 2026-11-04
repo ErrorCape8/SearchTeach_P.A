@@ -129,6 +129,12 @@ class AuthRepository {
         await markTransientSessionActive();
       }
     } on DioException catch (e) {
+      final status = e.response?.statusCode;
+      if (status == null || status >= 500) {
+        throw AuthFailure(
+          'No se pudo conectar con el servidor (${e.requestOptions.uri.host}:${e.requestOptions.uri.port}).',
+        );
+      }
       final data = e.response?.data;
       if (data is Map && data['message'] != null) {
         throw AuthFailure(
@@ -177,6 +183,7 @@ class AuthRepository {
         try {
           final response = await _dio.get<Map<String, dynamic>>(
             '/api/usuarios/perfil',
+            options: Options(extra: const {'skipGlobalError': true}),
           );
           final profileRole = response.data?['rol'];
           if (profileRole is! String || profileRole.trim().isEmpty) {
@@ -203,6 +210,10 @@ class AuthRepository {
     } catch (_) {
       // A push token must not prevent the user from ending the session.
     }
+    await clearLocalSession();
+  }
+
+  Future<void> clearLocalSession() async {
     await _ref.read(secureStorageProvider).delete(key: 'token');
     await _ref.read(secureStorageProvider).delete(key: sessionPersistenceKey);
     await _ref

@@ -31,8 +31,8 @@ final dioProvider = Provider<Dio>((ref) {
   final storage = ref.read(secureStorageProvider);
   final dio = Dio(BaseOptions(
     baseUrl: baseUrl,
-    connectTimeout: const Duration(seconds: 10),
-    receiveTimeout: const Duration(seconds: 10),
+    connectTimeout: const Duration(seconds: 20),
+    receiveTimeout: const Duration(seconds: 90),
     headers: {'Content-Type': 'application/json'},
   ));
 
@@ -67,6 +67,8 @@ final dioProvider = Provider<Dio>((ref) {
         _authExpiredController.add(null);
       }
       final status = error.response?.statusCode;
+      final skipGlobalError =
+          error.requestOptions.extra['skipGlobalError'] == true;
       final kind = switch (status) {
         403 => AppErrorKind.forbidden,
         404 => AppErrorKind.notFound,
@@ -83,6 +85,7 @@ final dioProvider = Provider<Dio>((ref) {
       // authenticated application with the global error route.
       if (kind != null &&
           kind != AppErrorKind.connection &&
+          !skipGlobalError &&
           !showingGlobalError &&
           !isAuthRequest) {
         showingGlobalError = true;

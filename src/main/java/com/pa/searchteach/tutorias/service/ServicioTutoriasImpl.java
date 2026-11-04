@@ -2,6 +2,7 @@ package com.pa.searchteach.tutorias.service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 
 import com.pa.searchteach.tutorias.dto.PropuestaHorario;
 import com.pa.searchteach.tutorias.dto.RegistroAsistencia;
@@ -16,6 +17,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class ServicioTutoriasImpl implements ServicioTutorias {
+	private static final Set<String> MOTIVOS_CIERRE = Set.of(
+			"FINALIZADA", "FALTA_ESTUDIANTES", "PROBLEMAS_EXTERNOS", "PROBLEMAS_INTERNET");
 
 	private final TutoriaRepositorio tutoriaRepositorio;
 	private final InscripcionesTutoriasEstudianteService inscripcionesEstudiante;
@@ -185,7 +188,12 @@ public class ServicioTutoriasImpl implements ServicioTutorias {
 		Tutoria tutoria = buscarExistente(id);
 		validarDocente(tutoria, usuarioId);
 		exigirEstado(tutoria, EstadoTutoria.EN_CURSO);
+		String motivo = asistencia.motivo();
+		if (motivo != null && !MOTIVOS_CIERRE.contains(motivo)) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Selecciona un motivo de cierre válido.");
+		}
 		tutoria.setAsistio(asistencia.asistio());
+		tutoria.setMotivoCierre(motivo);
 		tutoria.setEstado(EstadoTutoria.REALIZADA);
 		Tutoria guardada = tutoriaRepositorio.save(tutoria);
 		publicarCambio(guardada);

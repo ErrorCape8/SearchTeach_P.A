@@ -1,38 +1,42 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../core/widgets/brand_logo.dart';
 
 class StartupLoadingPage extends StatefulWidget {
-  const StartupLoadingPage({super.key});
+  const StartupLoadingPage({
+    required this.onRetry,
+    required this.onBack,
+    this.error,
+    super.key,
+  });
+
+  final String? error;
+  final VoidCallback onRetry;
+  final VoidCallback onBack;
 
   @override
   State<StartupLoadingPage> createState() => _StartupLoadingPageState();
 }
 
 class _StartupLoadingPageState extends State<StartupLoadingPage> {
+  static const _brandBlue = Color(0xFF1E3FA8);
   static const _steps = [
-    'Cargando docentes',
-    'Cargando usuarios',
-    'Cargando tutorías',
-    'Preparando notificaciones',
+    'Conectando con SearchTeach',
+    'Verificando tus credenciales',
+    'Despertando el servidor si estaba inactivo',
+    'Preparando tus clases y tutor\u{00ED}as',
   ];
+
   int _step = 0;
   Timer? _timer;
 
   @override
   void initState() {
     super.initState();
-    _timer = Timer.periodic(const Duration(milliseconds: 450), (timer) {
-      if (!mounted) return;
-      if (_step == _steps.length - 1) {
-        timer.cancel();
-        context.go('/session');
-      } else {
-        setState(() => _step++);
-      }
+    _timer = Timer.periodic(const Duration(seconds: 4), (_) {
+      if (mounted) setState(() => _step = (_step + 1) % _steps.length);
     });
   }
 
@@ -44,42 +48,91 @@ class _StartupLoadingPageState extends State<StartupLoadingPage> {
 
   @override
   Widget build(BuildContext context) {
-    final progress = (_step + 1) / _steps.length;
+    final error = widget.error;
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F8FC),
+      backgroundColor: const Color(0xFFF3F6FB),
       body: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 360),
+          constraints: const BoxConstraints(maxWidth: 460),
           child: Padding(
-            padding: const EdgeInsets.all(28),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Transform.scale(
-                  scale: 1.06,
-                  child: const BrandLogo(
-                    width: 104,
-                    height: 82,
-                    color: Colors.black,
-                  ),
+            padding: const EdgeInsets.all(24),
+            child: Card(
+              elevation: 2,
+              shadowColor: const Color(0x1F172B4D),
+              color: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 28,
+                  vertical: 36,
                 ),
-                const SizedBox(height: 28),
-                const Text(
-                  'Preparando SearchTeach',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const BrandLogo(width: 148, height: 94),
+                    const SizedBox(height: 20),
+                    const Text(
+                      'Preparando SearchTeach',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Color(0xFF172B4D),
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    if (error == null) ...[
+                      const SizedBox.square(
+                        dimension: 32,
+                        child: CircularProgressIndicator(
+                          color: _brandBlue,
+                          strokeWidth: 3,
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 250),
+                        child: Text(
+                          _steps[_step],
+                          key: ValueKey(_step),
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Color(0xFF5B6270),
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ] else ...[
+                      const Icon(
+                        Icons.cloud_off_outlined,
+                        color: _brandBlue,
+                        size: 36,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        error,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Color(0xFF5B6270)),
+                      ),
+                      const SizedBox(height: 18),
+                      FilledButton.icon(
+                        onPressed: widget.onRetry,
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Reintentar carga'),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: _brandBlue,
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: widget.onBack,
+                        child: const Text('Volver al inicio de sesi\u{00F3}n'),
+                      ),
+                    ],
+                  ],
                 ),
-                const SizedBox(height: 24),
-                LinearProgressIndicator(value: progress),
-                const SizedBox(height: 14),
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 180),
-                  child: Text(
-                    _steps[_step],
-                    key: ValueKey(_step),
-                    style: const TextStyle(color: Color(0xFF687083)),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ),

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/widgets/auth_shell.dart';
 import 'auth_repository.dart';
 import 'auth_controller.dart';
+import 'startup_loading_page.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -18,6 +19,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final _pass = TextEditingController();
   bool _hide = true;
   bool _rememberMe = false;
+  bool _startupLoading = false;
+  bool _retryLoginOnSplash = false;
+  String? _startupError;
 
   @override
   void initState() {
@@ -28,20 +32,54 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    setState(() {
+      _startupLoading = true;
+      _startupError = null;
+    });
     final ok = await ref
         .read(authControllerProvider.notifier)
         .login(_id.text.trim(), _pass.text, rememberMe: _rememberMe);
-    if (ok && mounted) {
-      try {
-        final route = await ref.read(authRepositoryProvider).landingRoute();
-        if (mounted) context.go(route);
-      } on AuthFailure catch (error) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(error.message)),
-          );
-        }
+    if (!mounted) return;
+    if (!ok) {
+      final loginError = ref.read(authControllerProvider.notifier).errorMessage;
+      if (loginError?.startsWith('No se pudo conectar con el servidor') ??
+          false) {
+        setState(() {
+          _retryLoginOnSplash = true;
+          _startupError = loginError;
+        });
+        return;
       }
+      setState(() => _startupLoading = false);
+      return;
+    }
+    _retryLoginOnSplash = false;
+    await _loadLandingPage();
+  }
+
+  Future<void> _loadLandingPage() async {
+    setState(() => _startupError = null);
+    try {
+      final route = await ref.read(authRepositoryProvider).landingRoute();
+      if (mounted) context.go(route);
+    } on AuthFailure catch (error) {
+      if (mounted) setState(() => _startupError = error.message);
+    } catch (_) {
+      if (mounted) {
+        setState(() => _startupError =
+            'No pudimos cargar tu perfil. Revisa tu conexi\u{00F3}n e intenta de nuevo.');
+      }
+    }
+  }
+
+  Future<void> _returnToLogin() async {
+    await ref.read(authRepositoryProvider).clearLocalSession();
+    if (mounted) {
+      setState(() {
+        _startupLoading = false;
+        _retryLoginOnSplash = false;
+        _startupError = null;
+      });
     }
   }
 
@@ -49,6 +87,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   Widget build(BuildContext context) {
     final state = ref.watch(authControllerProvider);
     final error = ref.read(authControllerProvider.notifier).errorMessage;
+
+    if (_startupLoading) {
+      return StartupLoadingPage(
+        error: _startupError,
+        onRetry: _retryLoginOnSplash ? _submit : _loadLandingPage,
+        onBack: _returnToLogin,
+      );
+    }
 
     return AuthShell(
       child: Form(

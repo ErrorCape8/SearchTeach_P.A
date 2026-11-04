@@ -20,6 +20,7 @@ public class Tutoria {
 	private LocalDateTime fechaAlternativaFin;
 	private EstadoTutoria estado;
 	private Boolean asistio;
+	private String motivoCierre;
 
 	public String getId() {
 		return id;
@@ -107,5 +108,13 @@ public class Tutoria {
 
 	public void setAsistio(Boolean asistio) {
 		this.asistio = asistio;
+	}
+
+	public String getMotivoCierre() {
+		return motivoCierre;
+	}
+
+	public void setMotivoCierre(String motivoCierre) {
+		this.motivoCierre = motivoCierre;
 	}
 }

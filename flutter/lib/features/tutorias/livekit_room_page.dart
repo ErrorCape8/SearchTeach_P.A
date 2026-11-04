@@ -53,6 +53,10 @@ class LiveKitRoomPage extends ConsumerStatefulWidget {
 }
 
 class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
+  static const _sharedRoomBackground = Color(0xFF111318);
+  static const _teacherRoomAccent = Color(0xFF0C8A53);
+  static const _studentRoomAccent = Color(0xFF1769AA);
+
   final Room _room = Room();
   final TextEditingController _message = TextEditingController();
   final List<_RoomMessage> _messages = [];
@@ -66,11 +70,18 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
   bool _showChat = false;
   bool _showPeople = false;
   bool _ended = false;
+  bool _attendanceLoading = true;
+  bool _attendanceSlow = false;
+  String? _attendanceError;
+  Timer? _attendanceSlowTimer;
   Timer? _endTimer;
   Timer? _chatTimer;
   Timer? _roomStatusTimer;
   String? _error;
   String? _mediaWarning;
+
+  Color get _roomAccent =>
+      widget.teacherMode ? _teacherRoomAccent : _studentRoomAccent;
 
   @override
   void initState() {
@@ -142,6 +153,19 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
   }
 
   Future<void> _loadAttendance() async {
+    _attendanceSlowTimer?.cancel();
+    if (mounted) {
+      setState(() {
+        _attendanceLoading = true;
+        _attendanceSlow = false;
+        _attendanceError = null;
+      });
+      _attendanceSlowTimer = Timer(const Duration(seconds: 8), () {
+        if (mounted && _attendanceLoading) {
+          setState(() => _attendanceSlow = true);
+        }
+      });
+    }
     try {
       final response = await ref.read(dioProvider).get<Map<String, dynamic>>(
             widget.isIndividualTutoring
@@ -151,23 +175,51 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
       if (widget.isIndividualTutoring) {
         final studentId = response.data?['estudianteId'];
         final attended = response.data?['asistio'];
-        if (!mounted || studentId is! String || attended is! bool) return;
-        setState(() => _attendance[studentId] = attended);
+        if (!mounted) return;
+        if (studentId is! String || studentId.isEmpty) {
+          setState(() => _attendanceError =
+              'No se encontró el estudiante de esta tutoría.');
+          return;
+        }
+        setState(() {
+          if (attended is bool) _attendance[studentId] = attended;
+        });
         return;
       }
       final list = response.data?['asistencias'];
-      if (!mounted || list is! List) return;
+      if (!mounted) return;
+      if (list is! List) {
+        setState(() => _attendanceError =
+            'El servidor no devolvió la lista de asistencia.');
+        return;
+      }
       setState(() {
         for (final item in list.whereType<Map<String, dynamic>>()) {
           final id = item['estudianteId'];
-          if (id is String) _attendance[id] = item['asistio'] as bool?;
+          final attended = item['asistio'];
+          if (id is String && attended is bool) {
+            _attendance[id] = attended;
+          }
         }
       });
     } on DioException catch (error) {
       if (mounted) {
-        setState(() => _mediaWarning =
-            error.message ?? 'No se pudo cargar la asistencia.');
+        setState(() {
+          _attendanceError = error.response?.data is Map<String, dynamic>
+              ? ((error.response!.data as Map<String, dynamic>)['message']
+                      ?.toString() ??
+                  'No se pudo cargar la asistencia.')
+              : error.message ?? 'No se pudo cargar la asistencia.';
+        });
       }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _attendanceError =
+            'No se pudo interpretar la información de asistencia.');
+      }
+    } finally {
+      _attendanceSlowTimer?.cancel();
+      if (mounted) setState(() => _attendanceLoading = false);
     }
   }
 
@@ -480,7 +532,10 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
         final studentId = widget.students.isEmpty ? '' : widget.students.first;
         await ref.read(dioProvider).patch(
           '/api/tutorias/${Uri.encodeComponent(widget.sessionId)}/finalizar',
-          data: {'asistio': _attendance[studentId] ?? false},
+          data: {
+            'asistio': _attendance[studentId] ?? false,
+            'motivo': reason,
+          },
         );
         if (mounted) {
           setState(() {
@@ -547,6 +602,7 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
 
   @override
   void dispose() {
+    _attendanceSlowTimer?.cancel();
     _endTimer?.cancel();
     _chatTimer?.cancel();
     _roomStatusTimer?.cancel();
@@ -567,9 +623,9 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
     if (_ended) {
       return _withRoleNavigation(
         Scaffold(
-          backgroundColor: const Color(0xFF1E2024),
+          backgroundColor: _sharedRoomBackground,
           appBar: AppBar(
-            backgroundColor: const Color(0xFF1E2024),
+            backgroundColor: _roomAccent,
             foregroundColor: Colors.white,
             title: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -596,7 +652,7 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
                           Expanded(child: _endedGallery()),
                           if (!widget.isIndividualTutoring ||
                               widget.teacherMode)
-                            SizedBox(width: 290, child: _chatPanel()),
+                            SizedBox(width: 320, child: _chatPanel()),
                         ],
                       )
                     : Column(
@@ -618,9 +674,9 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
     if (_connecting) {
       return _withRoleNavigation(
         Scaffold(
-          backgroundColor: const Color(0xFF111318),
+          backgroundColor: _sharedRoomBackground,
           appBar: AppBar(
-            backgroundColor: const Color(0xFF1C1F26),
+            backgroundColor: _roomAccent,
             foregroundColor: Colors.white,
             title: Text(widget.subject),
           ),
@@ -632,9 +688,9 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
     if (_error != null) {
       return _withRoleNavigation(
         Scaffold(
-          backgroundColor: const Color(0xFF111318),
+          backgroundColor: _sharedRoomBackground,
           appBar: AppBar(
-            backgroundColor: const Color(0xFF1C1F26),
+            backgroundColor: _roomAccent,
             foregroundColor: Colors.white,
             title: Text(widget.subject),
           ),
@@ -654,9 +710,9 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
     }
     return _withRoleNavigation(
       Scaffold(
-        backgroundColor: const Color(0xFF111318),
+        backgroundColor: _sharedRoomBackground,
         appBar: AppBar(
-          backgroundColor: const Color(0xFF1C1F26),
+          backgroundColor: _roomAccent,
           foregroundColor: Colors.white,
           title: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -712,7 +768,7 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
                       children: [
                         Expanded(flex: 4, child: _videoGallery()),
                         if (_showChat)
-                          SizedBox(width: 290, child: _chatPanel()),
+                          SizedBox(width: 320, child: _chatPanel()),
                       ],
                     )
                   : Column(
@@ -831,18 +887,106 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
                 _chatTab(
                   widget.isIndividualTutoring
                       ? 'Asistencia'
-                      : 'Personas (${widget.students.length + 1})',
+                      : widget.teacherMode
+                          ? 'Asistencia (${widget.students.length})'
+                          : 'Participantes (${widget.students.length + 1})',
                   _showPeople,
                   () => setState(() => _showPeople = true),
                 ),
+                if (_showPeople)
+                  IconButton(
+                    tooltip: 'Actualizar asistencia',
+                    visualDensity: VisualDensity.compact,
+                    onPressed: _attendanceLoading ? null : _loadAttendance,
+                    icon: _attendanceLoading
+                        ? const SizedBox.square(
+                            dimension: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.refresh, size: 18),
+                  ),
               ],
             ),
+            if (_showPeople && _attendanceLoading) ...[
+              const LinearProgressIndicator(minHeight: 2),
+              if (_attendanceSlow)
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(12, 8, 12, 4),
+                  child: Row(
+                    children: [
+                      SizedBox.square(
+                        dimension: 15,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Conectando con el servidor; la primera carga puede tardar hasta un minuto.',
+                          style: TextStyle(fontSize: 11),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+            if (_showPeople && _attendanceError != null)
+              Material(
+                color: const Color(0xFFFFF4E5),
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.warning_amber_rounded,
+                          color: Color(0xFF9A5A00), size: 17),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          _attendanceError!,
+                          style: const TextStyle(fontSize: 11),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: _attendanceLoading ? null : _loadAttendance,
+                        child: const Text('Reintentar'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            if (_showPeople && widget.teacherMode)
+              Container(
+                width: double.infinity,
+                color: const Color(0xFFE6F4EA),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                child: Text(
+                  'Presentes: ${_attendance.values.where((value) => value == true).length} | '
+                  'Ausentes: ${_attendance.values.where((value) => value == false).length} | '
+                  'Sin registro: ${widget.students.length - _attendance.length}',
+                  style: TextStyle(
+                    color: _roomAccent,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
             const Divider(height: 1),
             Expanded(
               child: _showPeople
                   ? ListView(
                       padding: const EdgeInsets.symmetric(vertical: 6),
                       children: [
+                        if (widget.students.isEmpty &&
+                            !widget.isIndividualTutoring)
+                          const ListTile(
+                            dense: true,
+                            leading: Icon(Icons.info_outline),
+                            title: Text(
+                              'Aún no hay estudiantes inscritos.',
+                              style: TextStyle(fontSize: 12),
+                            ),
+                          ),
                         ListTile(
                           dense: true,
                           leading: CircleAvatar(
@@ -904,6 +1048,9 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
                                       IconButton(
                                         tooltip: 'Marcar presente',
                                         visualDensity: VisualDensity.compact,
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(
+                                            minWidth: 34, minHeight: 34),
                                         onPressed: () =>
                                             _setAttendance(student, true),
                                         icon: const Icon(
@@ -914,6 +1061,9 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
                                       IconButton(
                                         tooltip: 'Marcar ausente',
                                         visualDensity: VisualDensity.compact,
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(
+                                            minWidth: 34, minHeight: 34),
                                         onPressed: () =>
                                             _setAttendance(student, false),
                                         icon: const Icon(
@@ -1042,8 +1192,7 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
             decoration: BoxDecoration(
               border: Border(
                 bottom: BorderSide(
-                  color:
-                      selected ? const Color(0xFF0D4FC4) : Colors.transparent,
+                  color: selected ? _roomAccent : Colors.transparent,
                   width: 2,
                 ),
               ),
@@ -1051,11 +1200,7 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
             child: Text(
               label,
               style: TextStyle(
-                color: selected
-                    ? (widget.teacherMode
-                        ? const Color(0xFF16834A)
-                        : const Color(0xFF0D4FC4))
-                    : Colors.blueGrey,
+                color: selected ? _roomAccent : Colors.blueGrey,
                 fontSize: widget.teacherMode ? 12 : 8,
                 fontWeight: selected ? FontWeight.w700 : FontWeight.normal,
               ),
@@ -1068,7 +1213,7 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
         top: false,
         child: Container(
           width: double.infinity,
-          color: const Color(0xFF1C1F26),
+          color: _roomAccent,
           padding: const EdgeInsets.symmetric(vertical: 5),
           child: Wrap(
             alignment: WrapAlignment.center,
@@ -1113,7 +1258,7 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
         top: false,
         child: Container(
           width: double.infinity,
-          color: const Color(0xFF1C1F26),
+          color: _roomAccent,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           child: Wrap(
             alignment: WrapAlignment.center,
@@ -1142,8 +1287,9 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
               if (widget.teacherMode || !widget.isIndividualTutoring)
                 _CallControl(
                     icon: Icons.people_outline,
-                    label:
-                        widget.isIndividualTutoring ? 'Asistencia' : 'Personas',
+                    label: widget.teacherMode || widget.isIndividualTutoring
+                        ? 'Asistencia'
+                        : 'Participantes',
                     onPressed: () => setState(() {
                           _showChat = true;
                           _showPeople = true;
@@ -1171,33 +1317,51 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
     final reasons = <(String, String)>[
       ('FINALIZADA', 'Tutoría completada'),
       ('FALTA_ESTUDIANTES', 'Falta de estudiantes'),
-      ('PROBLEMAS_EXTERNOS', 'Problema externo'),
-      ('PROBLEMAS_INTERNET', 'Problema de internet'),
+      ('PROBLEMAS_EXTERNOS', 'Problema técnico u otro'),
+      ('PROBLEMAS_INTERNET', 'Error de conexión a internet'),
     ];
+    String? selectedReason;
     final reason = await showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Finalizar tutoría'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('Selecciona el motivo de cierre:'),
-            const SizedBox(height: 8),
-            for (final option in reasons)
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.check_circle_outline),
-                title: Text(option.$2),
-                onTap: () => Navigator.pop(context, option.$1),
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, refreshDialog) => AlertDialog(
+          icon: Icon(Icons.call_end_rounded, color: _roomAccent),
+          title: const Text('Finalizar tutoría'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Text('Selecciona por qué finalizas la tutoría:'),
               ),
+              const SizedBox(height: 8),
+              for (final option in reasons)
+                RadioListTile<String>(
+                  value: option.$1,
+                  groupValue: selectedReason,
+                  activeColor: _roomAccent,
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                  title: Text(option.$2),
+                  onChanged: (value) =>
+                      refreshDialog(() => selectedReason = value),
+                ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton.icon(
+              onPressed: selectedReason == null
+                  ? null
+                  : () => Navigator.pop(dialogContext, selectedReason),
+              icon: const Icon(Icons.check),
+              label: const Text('Confirmar y finalizar'),
+            ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-        ],
       ),
     );
     if (reason != null && mounted) await _finish(reason);
@@ -1585,7 +1749,7 @@ class _CallControl extends StatelessWidget {
               backgroundColor: danger
                   ? const Color(0xFFB3261E)
                   : active
-                      ? const Color(0xFF3C414B)
+                      ? Theme.of(context).colorScheme.primary
                       : const Color(0xFF292D35),
               foregroundColor: Colors.white,
               minimumSize: const Size(52, 52),

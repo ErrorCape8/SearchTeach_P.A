@@ -64,6 +64,23 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
           actions: [
             const NotificationBellButton(accentColor: _purple),
             IconButton(
+              tooltip: _selectedTab == 3 ? 'Volver al inicio' : 'Mi perfil',
+              onPressed: () => setState(
+                () => _selectedTab = _selectedTab == 3 ? 0 : 3,
+              ),
+              icon: CircleAvatar(
+                radius: 15,
+                backgroundColor: Colors.white.withValues(alpha: .18),
+                child: Icon(
+                  _selectedTab == 3
+                      ? Icons.person
+                      : Icons.person_outline_rounded,
+                  color: Colors.white,
+                  size: 19,
+                ),
+              ),
+            ),
+            IconButton(
               tooltip: 'Actualizar',
               onPressed: () {
                 ref.invalidate(directorDashboardProvider);
@@ -95,7 +112,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                 children: [
                   NavigationRail(
                     backgroundColor: _purple,
-                    selectedIndex: _selectedTab,
+                    selectedIndex: _selectedTab.clamp(0, 2).toInt(),
                     onDestinationSelected: (index) =>
                         setState(() => _selectedTab = index),
                     labelType: NavigationRailLabelType.all,
@@ -125,10 +142,6 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                         icon: Icon(Icons.bar_chart),
                         label: Text('Pronóstico'),
                       ),
-                      NavigationRailDestination(
-                        icon: Icon(Icons.person_outline),
-                        label: Text('Perfil'),
-                      ),
                     ],
                   ),
                   const VerticalDivider(width: 1, thickness: 1),
@@ -152,7 +165,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
             ? SlidingPillNavigationBar(
                 selectedColor: _purple,
                 indicatorColor: const Color(0xFFEAE2FA),
-                selectedIndex: _selectedTab,
+                selectedIndex: _selectedTab.clamp(0, 2).toInt(),
                 onDestinationSelected: (index) =>
                     setState(() => _selectedTab = index),
                 destinations: const [
@@ -162,8 +175,6 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                       icon: Icons.star_outline, label: 'Calidad'),
                   SlidingPillDestination(
                       icon: Icons.bar_chart, label: 'Pronóstico'),
-                  SlidingPillDestination(
-                      icon: Icons.person_outline, label: 'Perfil'),
                 ],
               )
             : null,
@@ -462,11 +473,13 @@ class _WeeklyChart extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     Text(
-                      '${weeks[index].total}',
+                      '${weeks[index].total} solicitudes',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                        color: _muted,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w700,
+                        color: _purple,
                       ),
                     ),
                     const SizedBox(height: 7),
@@ -497,8 +510,11 @@ class _WeeklyChart extends StatelessWidget {
                     const SizedBox(height: 5),
                     Text(
                         showDates
-                            ? '${weeks[index].semanaInicio.day}/${weeks[index].semanaInicio.month}'
+                            ? 'Semana del ${weeks[index].semanaInicio.day} '
+                                '${_monthShortName(weeks[index].semanaInicio.month)}'
                             : 'S${index + 1}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: 10,
                           color: _muted,
@@ -513,6 +529,21 @@ class _WeeklyChart extends StatelessWidget {
     );
   }
 }
+
+String _monthShortName(int month) => const [
+      'ene',
+      'feb',
+      'mar',
+      'abr',
+      'may',
+      'jun',
+      'jul',
+      'ago',
+      'sep',
+      'oct',
+      'nov',
+      'dic',
+    ][month - 1];
 
 class _SubjectSummaryList extends StatelessWidget {
   const _SubjectSummaryList(this.subjects);
@@ -675,6 +706,12 @@ class _DemandForecastCard extends StatelessWidget {
                 style: const TextStyle(color: _muted, fontSize: 12),
               ),
               const SizedBox(height: 14),
+              const Text(
+                'Cada barra muestra cuántas solicitudes se esperan esa semana. '
+                'La fecha indica cuándo empieza la semana.',
+                style: TextStyle(color: _muted, fontSize: 12),
+              ),
+              const SizedBox(height: 8),
               _WeeklyChart(
                 forecast!.prediccionesSemanales,
                 showDates: true,
