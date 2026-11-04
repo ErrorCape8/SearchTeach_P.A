@@ -1351,15 +1351,7 @@ class _StudentRoomSidebar extends StatelessWidget {
               const SizedBox(height: 12),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Container(
-                  height: 74,
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(9),
-                  ),
-                  child: const BrandLogo(width: 104, height: 64),
-                ),
+                child: const BrandLogo(width: 104, height: 64),
               ),
               const SizedBox(height: 12),
               const Padding(

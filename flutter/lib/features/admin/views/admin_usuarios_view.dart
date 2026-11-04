@@ -21,7 +21,6 @@ class _AdminUsuariosViewState extends ConsumerState<AdminUsuariosView> {
   static const _pageSize = 10;
   bool _importingUsers = false;
   bool _showFilters = false;
-  bool _showUnactivatedUsers = true;
 
   static const _invalidCsvMessage =
       'no todos los usuairos cumplen con los parametros';
@@ -164,6 +163,130 @@ class _AdminUsuariosViewState extends ConsumerState<AdminUsuariosView> {
     );
   }
 
+  Widget _searchField() => Container(
+        height: 48,
+        decoration: BoxDecoration(
+          color: const Color(0xFFF1F4F9),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: TextField(
+          controller: _searchController,
+          textInputAction: TextInputAction.search,
+          onChanged: (value) => ref
+              .read(adminControllerProvider.notifier)
+              .setSearchQuery(value),
+          decoration: InputDecoration(
+            hintText: 'Buscar por nombre, correo o ID',
+            hintStyle: const TextStyle(
+              color: Color(0xFF8C95A6),
+              fontSize: 14,
+              fontWeight: FontWeight.w400,
+            ),
+            prefixIcon: const Icon(
+              Icons.search_rounded,
+              color: Color(0xFF8C95A6),
+            ),
+            suffixIcon: _searchController.text.isEmpty
+                ? null
+                : IconButton(
+                    tooltip: 'Limpiar búsqueda',
+                    onPressed: () {
+                      _searchController.clear();
+                      ref
+                          .read(adminControllerProvider.notifier)
+                          .setSearchQuery('');
+                      setState(() {});
+                    },
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+            border: InputBorder.none,
+            isDense: true,
+          ),
+          style: const TextStyle(fontSize: 14, color: Color(0xFF1E293B)),
+        ),
+      );
+
+  Widget _searchActions(AdminState state) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          GestureDetector(
+            onTap: () => setState(() => _showFilters = !_showFilters),
+            child: Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: state.filter != 'Todos'
+                      ? const Color(0xFFEA580C)
+                      : const Color(0xFFE5E7EB),
+                  width: 1.2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.filter_alt_outlined,
+                color: Color(0xFFEA580C),
+                size: 24,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Tooltip(
+            message: 'Actualizar lista de usuarios',
+            child: IconButton(
+              onPressed: state.isLoadingUsers
+                  ? null
+                  : () =>
+                      ref.read(adminControllerProvider.notifier).loadUsers(),
+              icon: state.isLoadingUsers
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.refresh_rounded),
+              style: _toolbarButtonStyle(),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Tooltip(
+            message:
+                'CSV: id,nombre,correo,telefono,rol,estado,carrera,semestre; semestre requerido para estudiantes',
+            child: IconButton(
+              onPressed: _importingUsers ? null : _importCsv,
+              icon: _importingUsers
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.upload_file_outlined),
+              style: _toolbarButtonStyle(),
+            ),
+          ),
+        ],
+      );
+
+  ButtonStyle _toolbarButtonStyle() => IconButton.styleFrom(
+        foregroundColor: const Color(0xFFEA580C),
+        backgroundColor: Colors.white,
+        minimumSize: const Size(48, 48),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: Color(0xFFE5E7EB), width: 1.2),
+        ),
+      );
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -181,146 +304,32 @@ class _AdminUsuariosViewState extends ConsumerState<AdminUsuariosView> {
 
     return Column(
       children: [
-        // Barra de búsqueda y filtro
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 18, 16, 12),
-          child: Row(
-            children: [
-              Expanded(
-                child: Container(
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF1F4F9),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  alignment: Alignment.center,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: TextField(
-                    controller: _searchController,
-                    textInputAction: TextInputAction.search,
-                    onChanged: (val) {
-                      ref
-                          .read(adminControllerProvider.notifier)
-                          .setSearchQuery(val);
-                    },
-                    decoration: InputDecoration(
-                      hintText: 'Buscar por nombre, correo o ID',
-                      hintStyle: TextStyle(
-                        color: Color(0xFF8C95A6),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w400,
-                      ),
-                      prefixIcon: Icon(
-                        Icons.search_rounded,
-                        color: Color(0xFF8C95A6),
-                      ),
-                      suffixIcon: _searchController.text.isEmpty
-                          ? null
-                          : IconButton(
-                              tooltip: 'Limpiar búsqueda',
-                              onPressed: () {
-                                _searchController.clear();
-                                ref
-                                    .read(adminControllerProvider.notifier)
-                                    .setSearchQuery('');
-                                setState(() {});
-                              },
-                              icon: const Icon(Icons.close_rounded),
-                            ),
-                      border: InputBorder.none,
-                      isDense: true,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final search = _searchField();
+              final actions = _searchActions(state);
+              if (constraints.maxWidth < 560) {
+                return Column(
+                  children: [
+                    search,
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: actions,
                     ),
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Color(0xFF1E293B),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              GestureDetector(
-                onTap: () => setState(() => _showFilters = !_showFilters),
-                child: Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: state.filter != 'Todos'
-                          ? const Color(0xFFEA580C)
-                          : const Color(0xFFE5E7EB),
-                      width: 1.2,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.03),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Icon(
-                    Icons.filter_alt_outlined,
-                    color: const Color(0xFFEA580C),
-                    size: 24,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Tooltip(
-                message: 'Actualizar lista de usuarios',
-                child: IconButton(
-                  onPressed: state.isLoadingUsers
-                      ? null
-                      : () => ref
-                          .read(adminControllerProvider.notifier)
-                          .loadUsers(),
-                  icon: state.isLoadingUsers
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.refresh_rounded),
-                  style: IconButton.styleFrom(
-                    foregroundColor: const Color(0xFFEA580C),
-                    backgroundColor: Colors.white,
-                    minimumSize: const Size(48, 48),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      side: const BorderSide(
-                          color: Color(0xFFE5E7EB), width: 1.2),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Tooltip(
-                message:
-                    'CSV: id,nombre,correo,telefono,rol,estado,carrera,semestre; semestre requerido para estudiantes',
-                child: IconButton(
-                  onPressed: _importingUsers ? null : _importCsv,
-                  icon: _importingUsers
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.upload_file_outlined),
-                  style: IconButton.styleFrom(
-                    foregroundColor: const Color(0xFFEA580C),
-                    backgroundColor: Colors.white,
-                    minimumSize: const Size(48, 48),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      side: const BorderSide(
-                          color: Color(0xFFE5E7EB), width: 1.2),
-                    ),
-                  ),
-                ),
-              ),
-            ],
+                  ],
+                );
+              }
+              return Row(
+                children: [
+                  Expanded(child: search),
+                  const SizedBox(width: 12),
+                  actions,
+                ],
+              );
+            },
           ),
         ),
 
@@ -362,75 +371,6 @@ class _AdminUsuariosViewState extends ConsumerState<AdminUsuariosView> {
             ),
           ),
 
-        if (!state.isLoadingUsers &&
-            state.usersError == null &&
-            state.users.any((user) => !user.hasPassword))
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(color: const Color(0xFFE7EAF0)),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                children: [
-                  ListTile(
-                    dense: true,
-                    leading: const Icon(
-                      Icons.person_add_alt_1_outlined,
-                      color: Color(0xFFEA7408),
-                      size: 19,
-                    ),
-                    title: Text(
-                      'Cuentas sin contraseña '
-                      '(${state.users.where((user) => !user.hasPassword).length})',
-                      style: const TextStyle(
-                        color: Color(0xFF1E293B),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    trailing: Icon(
-                      _showUnactivatedUsers
-                          ? Icons.expand_less
-                          : Icons.expand_more,
-                    ),
-                    onTap: () => setState(
-                      () => _showUnactivatedUsers = !_showUnactivatedUsers,
-                    ),
-                  ),
-                  if (_showUnactivatedUsers)
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(maxHeight: 150),
-                      child: ListView.separated(
-                        shrinkWrap: true,
-                        itemCount: state.users
-                            .where((user) => !user.hasPassword)
-                            .length,
-                        separatorBuilder: (_, __) => const Divider(
-                          height: 1,
-                          color: Color(0xFFF1F5F9),
-                        ),
-                        itemBuilder: (context, index) {
-                          final user = state.users
-                              .where((user) => !user.hasPassword)
-                              .elementAt(index);
-                          return _UserListTile(
-                            user: user,
-                            onTap: () => ref
-                                .read(adminControllerProvider.notifier)
-                                .selectUser(user),
-                          );
-                        },
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
-
-        // Lista de usuarios
         Expanded(
           child: state.isLoadingUsers
               ? const Center(child: CircularProgressIndicator())

@@ -56,16 +56,8 @@ class DocentePerfilPage extends ConsumerWidget {
           ),
           const SizedBox(height: 20),
           _ProfileCard(
-            title: 'Información personal',
+            title: 'Información de contacto',
             children: [
-              _ProfileRow(
-                  icon: Icons.person_outline,
-                  label: 'Nombre',
-                  value: _value(data['nombre'])),
-              _ProfileRow(
-                  icon: Icons.badge_outlined,
-                  label: 'Rol',
-                  value: _value(data['rol'])),
               _ProfileRow(
                   icon: Icons.email_outlined,
                   label: 'Correo',
@@ -84,10 +76,6 @@ class DocentePerfilPage extends ConsumerWidget {
           _ProfileCard(
             title: 'Perfil académico',
             children: [
-              _ProfileRow(
-                  icon: Icons.school_outlined,
-                  label: 'Tecnología',
-                  value: _value(data['carrera'])),
               _ProfileRow(
                 icon: Icons.menu_book_outlined,
                 label: 'Materias principales',

@@ -12,14 +12,12 @@ class AdminHeader extends StatelessWidget {
     required this.subtitle,
     this.isEditing = false,
     this.onBack,
-    this.onProfileTap,
   });
 
   final String title;
   final String subtitle;
   final bool isEditing;
   final VoidCallback? onBack;
-  final VoidCallback? onProfileTap;
 
   @override
   Widget build(BuildContext context) {
@@ -76,16 +74,7 @@ class AdminHeader extends StatelessWidget {
                   ),
                   const SizedBox(width: 14),
                 ] else ...[
-                  Container(
-                    width: 58,
-                    height: 48,
-                    padding: const EdgeInsets.all(3),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const BrandLogo(),
-                  ),
+                  const BrandLogo(width: 58, height: 48),
                   const SizedBox(width: 14),
                 ],
                 Expanded(
@@ -114,25 +103,6 @@ class AdminHeader extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (!isEditing && onProfileTap != null) ...[
-                  const SizedBox(width: 8),
-                  InkWell(
-                    onTap: onProfileTap,
-                    borderRadius: BorderRadius.circular(20),
-                    child: const CircleAvatar(
-                      radius: 16,
-                      backgroundColor: Color(0x66FFFFFF),
-                      child: Text(
-                        'AT',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
                 const NotificationBellButton(accentColor: kAdminOrange),
               ],
             ),

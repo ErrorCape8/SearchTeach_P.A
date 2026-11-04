@@ -104,16 +104,14 @@ class _LogoPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-        ),
         child: const Row(mainAxisSize: MainAxisSize.min, children: [
           BrandLogo(width: 48, height: 38),
           SizedBox(width: 10),
           Text('SEARCHTEACH',
               style: TextStyle(
-                  color: kBlue, fontWeight: FontWeight.w900, letterSpacing: 1)),
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1)),
         ]),
       );
 }

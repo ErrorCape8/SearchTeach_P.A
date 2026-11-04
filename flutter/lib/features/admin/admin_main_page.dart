@@ -124,7 +124,6 @@ class AdminMainPage extends ConsumerWidget {
             subtitle: headerSubtitle,
             isEditing: hasSelectedUser,
             onBack: notifier.clearSelectedUser,
-            onProfileTap: () => notifier.setTab(2),
           );
 
           return Center(

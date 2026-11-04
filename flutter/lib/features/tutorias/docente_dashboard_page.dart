@@ -13,6 +13,7 @@ import '../notifications/notifications_page.dart';
 import 'docente_proyectos_aula_page.dart';
 import 'docente_lider_proyectos_page.dart';
 import 'livekit_room_page.dart';
+import 'tutoria_historial_page.dart';
 import 'tutoria_chat_page.dart';
 import 'docente_perfil_page.dart';
 
@@ -143,8 +144,6 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
                 children: [
                   _TeacherHeader(
                     title: titles[_tab] ?? 'SearchTeach',
-                    teacherName: teacherName,
-                    onProfile: () => setState(() => _tab = 7),
                     onLogout: _logout,
                   ),
                   Expanded(
@@ -181,6 +180,7 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
         bottomNavigationBar: wide
             ? null
             : NavigationBar(
+                labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
                 selectedIndex: switch (_tab) {
                   1 || 2 => 1,
                   3 => 2,
@@ -576,6 +576,16 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
     _TeacherTutoringSession session, {
     required bool ended,
   }) async {
+    if (ended) {
+      await Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => TutoriaHistorialPage(
+          sessionId: session.id,
+          subject: session.subject,
+          isIndividual: session.isIndividual,
+        ),
+      ));
+      return;
+    }
     if (session.isIndividual && !ended && session.state == 'PROGRAMADA') {
       try {
         await ref.read(dioProvider).patch(
@@ -803,14 +813,10 @@ class _TeacherSidebar extends StatelessWidget {
 class _TeacherHeader extends StatelessWidget {
   const _TeacherHeader({
     required this.title,
-    required this.teacherName,
-    required this.onProfile,
     required this.onLogout,
   });
 
   final String title;
-  final String teacherName;
-  final VoidCallback onProfile;
   final VoidCallback onLogout;
 
   @override
@@ -840,49 +846,6 @@ class _TeacherHeader extends StatelessWidget {
               ),
             ),
             const NotificationBellButton(accentColor: _teacherGreen),
-            const SizedBox(width: 8),
-            Tooltip(
-              message: 'Mi perfil',
-              child: InkWell(
-                onTap: onProfile,
-                borderRadius: BorderRadius.circular(24),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 6),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 17,
-                        backgroundColor: Colors.white,
-                        child: Text(
-                          _initials(teacherName),
-                          style: const TextStyle(
-                            color: _teacherSidebar,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 11,
-                          ),
-                        ),
-                      ),
-                      if (MediaQuery.sizeOf(context).width >= 850) ...[
-                        const SizedBox(width: 8),
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 150),
-                          child: Text(
-                            teacherName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-            ),
             IconButton(
               tooltip: 'Cerrar sesión',
               onPressed: onLogout,

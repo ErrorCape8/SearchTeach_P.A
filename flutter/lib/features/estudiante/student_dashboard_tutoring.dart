@@ -405,12 +405,23 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
         const SizedBox(height: 6),
         ...completedGroups.map((session) => _GroupHistoryCard(
               session: session,
-              studentName: widget.data.profile.name,
               onRated: () => ref.invalidate(studentGroupSessionsProvider),
               showRating: false,
             )),
-        ...individualHistory
-            .map((tutoring) => _TutoringCard(tutoring: tutoring)),
+        ...individualHistory.map(
+          (tutoring) => _TutoringCard(
+            tutoring: tutoring,
+            onOpenHistory: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => TutoriaHistorialPage(
+                  sessionId: tutoring.id,
+                  subject: tutoring.subject,
+                  isIndividual: true,
+                ),
+              ),
+            ),
+          ),
+        ),
         ...completedProjects.map((item) => Card(
               margin: const EdgeInsets.only(bottom: 12),
               child: ListTile(
@@ -442,7 +453,6 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
       children: [
         ...completed.map((session) => _GroupHistoryCard(
               session: session,
-              studentName: widget.data.profile.name,
               onRated: () => ref.invalidate(studentGroupSessionsProvider),
             )),
       ],
@@ -705,6 +715,7 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
                     'Tus tutorías confirmadas aparecerán aquí. Podrás entrar cuando el docente inicie la clase.',
               )
             : ListView(
+                key: const PageStorageKey('student-active-sessions'),
                 padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
                 children: [
                   ...activeGroupSessions.map((session) => _GroupSessionCard(
@@ -833,6 +844,7 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
       );
     }
     return ListView.separated(
+      key: const PageStorageKey('student-published-group-sessions'),
       padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
       itemCount: sessions.length,
       separatorBuilder: (_, __) => const SizedBox(height: 10),
@@ -945,6 +957,9 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
       ..sort((a, b) =>
           (a.start ?? DateTime(9999)).compareTo(b.start ?? DateTime(9999)));
     return ListView(
+      key: PageStorageKey(
+        'student-tutoring-list-$emptyTitle',
+      ),
       padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
       children: [
         if (items.isEmpty)

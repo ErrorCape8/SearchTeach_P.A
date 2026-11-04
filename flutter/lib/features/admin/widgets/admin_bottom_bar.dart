@@ -36,7 +36,6 @@ class AdminBottomBar extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
             _buildItem(
               index: 0,
@@ -94,36 +93,40 @@ class AdminBottomBar extends StatelessWidget {
     required Color inactiveColor,
     required Color activePillBg,
   }) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () => onTap(index),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: isActive
-            ? const EdgeInsets.symmetric(horizontal: 22, vertical: 6)
-            : const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        decoration: BoxDecoration(
-          color: isActive ? activePillBg : Colors.transparent,
-          borderRadius: BorderRadius.circular(24),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              isActive ? activeIcon : icon,
-              color: isActive ? activeOrange : inactiveColor,
-              size: 24,
-            ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 11.5,
-                fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+    return Expanded(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => onTap(index),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+          decoration: BoxDecoration(
+            color: isActive ? activePillBg : Colors.transparent,
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                isActive ? activeIcon : icon,
                 color: isActive ? activeOrange : inactiveColor,
+                size: 24,
               ),
-            ),
-          ],
+              const SizedBox(height: 2),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                  color: isActive ? activeOrange : inactiveColor,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -152,15 +155,7 @@ class AdminSideNav extends StatelessWidget {
             children: [
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Container(
-                  height: 82,
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(9),
-                  ),
-                  child: const BrandLogo(width: 142, height: 72),
-                ),
+                child: const BrandLogo(width: 142, height: 72),
               ),
               const SizedBox(height: 12),
               const Padding(
@@ -197,7 +192,8 @@ class AdminSideNav extends StatelessWidget {
                 ];
                 final active = currentIndex == tabs[index];
                 return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   child: ListTile(
                     dense: true,
                     visualDensity: VisualDensity.compact,
@@ -231,18 +227,18 @@ class AdminSideNav extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(10, 10, 8, 14),
                   child: Row(
                     children: [
-                    CircleAvatar(
-                      radius: 14,
-                      backgroundColor: Colors.white,
-                      child: Text(
-                        _adminInitials(adminName),
-                        style: TextStyle(
-                          color: Color(0xFFEA580C),
-                          fontSize: 9,
-                          fontWeight: FontWeight.w800,
+                      CircleAvatar(
+                        radius: 14,
+                        backgroundColor: Colors.white,
+                        child: Text(
+                          _adminInitials(adminName),
+                          style: TextStyle(
+                            color: Color(0xFFEA580C),
+                            fontSize: 9,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                       ),
-                    ),
                       const SizedBox(width: 5),
                       Expanded(
                         child: Column(
@@ -270,8 +266,8 @@ class AdminSideNav extends StatelessWidget {
                           ],
                         ),
                       ),
-                    const Icon(Icons.chevron_right,
-                        color: Colors.white, size: 14),
+                      const Icon(Icons.chevron_right,
+                          color: Colors.white, size: 14),
                     ],
                   ),
                 ),

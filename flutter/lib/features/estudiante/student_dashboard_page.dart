@@ -95,6 +95,7 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage>
                       _StudentHeader(
                         profile: value.profile,
                         tab: _tab,
+                        showProfileShortcut: !wide,
                         onProfile: () => _selectTab(5),
                         onNotifications: () => _selectTab(6),
                         onBack: () => _selectTab(0),
@@ -117,13 +118,13 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage>
                                     StudentTutoringView(
                                       key: ValueKey(sectionIndex),
                                       data: dashboard,
-                                      focusSection:
-                                          _tab == sectionIndex &&
-                                                  _focusTutoring != null
-                                              ? _focusTutoring
-                                              : _sectionForTab(sectionIndex),
+                                      focusSection: _tab == sectionIndex &&
+                                              _focusTutoring != null
+                                          ? _focusTutoring
+                                          : _sectionForTab(sectionIndex),
                                       focusRequest: _focusRequest,
-                                      onEnroll: (tutor) => _enroll(value, tutor),
+                                      onEnroll: (tutor) =>
+                                          _enroll(value, tutor),
                                       onProjectEnrollment:
                                           _toggleProjectEnrollment,
                                       onJoinProjectCode: _joinProjectByCode,
@@ -169,6 +170,7 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage>
           : data.whenOrNull(
               data: (_) => NavigationBar(
                 selectedIndex: _tab > 4 ? 0 : _tab,
+                labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
                 onDestinationSelected: (index) => _selectTab(index),
                 destinations: [
                   const NavigationDestination(

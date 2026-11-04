@@ -267,9 +267,9 @@ class AdminPerfilView extends ConsumerWidget {
         ),
         const SizedBox(height: 22),
 
-        // Datos institucionales
+        // Datos de la cuenta
         const Text(
-          'Datos institucionales',
+          'Datos de la cuenta',
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w800,
@@ -294,28 +294,19 @@ class AdminPerfilView extends ConsumerWidget {
           child: Column(
             children: [
               _buildInstitutionalRow(
+                icon: Icons.email_outlined,
                 title: 'Correo',
                 value: showValue(profile?.correo),
               ),
               const Divider(height: 18, color: Color(0xFFF1F5F9)),
               _buildInstitutionalRow(
-                title: 'Documento',
-                value: showValue(profile?.documento),
-              ),
-              const Divider(height: 18, color: Color(0xFFF1F5F9)),
-              _buildInstitutionalRow(
-                title: 'Programa',
-                value: showValue(profile?.programa),
-              ),
-              const Divider(height: 18, color: Color(0xFFF1F5F9)),
-              _buildInstitutionalRow(
+                icon: Icons.admin_panel_settings_outlined,
                 title: 'Rol',
                 value: showValue(profile?.rol),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 6),
         const SizedBox(height: 26),
 
         // Botón Cerrar sesión
@@ -351,6 +342,7 @@ class AdminPerfilView extends ConsumerWidget {
   }
 
   Widget _buildInstitutionalRow({
+    required IconData icon,
     required String title,
     required String value,
     VoidCallback? onTap,
@@ -369,8 +361,8 @@ class AdminPerfilView extends ConsumerWidget {
                 color: const Color(0xFFFFF1E6),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(
-                Icons.lock_outline_rounded,
+              child: Icon(
+                icon,
                 color: Color(0xFFEA580C),
                 size: 20,
               ),

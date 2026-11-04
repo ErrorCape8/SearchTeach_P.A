@@ -6,6 +6,7 @@ class _StudentHeader extends StatelessWidget {
   const _StudentHeader({
     required this.profile,
     required this.tab,
+    required this.showProfileShortcut,
     required this.onProfile,
     required this.onNotifications,
     required this.onBack,
@@ -13,6 +14,7 @@ class _StudentHeader extends StatelessWidget {
 
   final StudentProfile profile;
   final int tab;
+  final bool showProfileShortcut;
   final VoidCallback onProfile;
   final VoidCallback onNotifications;
   final VoidCallback onBack;
@@ -123,7 +125,7 @@ class _StudentHeader extends StatelessWidget {
                   ],
                 ),
               ),
-              if (tab <= 4)
+              if (tab <= 4 && showProfileShortcut)
                 IconButton(
                   tooltip: 'Mi perfil',
                   onPressed: onProfile,
@@ -191,15 +193,7 @@ class _StudentSidebar extends StatelessWidget {
               const SizedBox(height: 12),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Container(
-                  height: 74,
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(9),
-                  ),
-                  child: const BrandLogo(width: 104, height: 64),
-                ),
+                child: const BrandLogo(width: 104, height: 64),
               ),
               const SizedBox(height: 12),
               const Padding(

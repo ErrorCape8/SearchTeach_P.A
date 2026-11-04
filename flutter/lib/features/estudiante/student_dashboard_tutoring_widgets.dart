@@ -184,11 +184,13 @@ class _TutoringCard extends StatelessWidget {
     this.onConfirm,
     this.onCancel,
     this.onJoinRoom,
+    this.onOpenHistory,
   });
   final StudentTutoring tutoring;
   final VoidCallback? onConfirm;
   final VoidCallback? onCancel;
   final VoidCallback? onJoinRoom;
+  final VoidCallback? onOpenHistory;
 
   @override
   Widget build(BuildContext context) => Card(
@@ -224,6 +226,14 @@ class _TutoringCard extends StatelessWidget {
                   onPressed: onJoinRoom,
                   icon: const Icon(Icons.video_call_outlined),
                   label: const Text('Entrar a la clase'),
+                ),
+              ],
+              if (onOpenHistory != null) ...[
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: onOpenHistory,
+                  icon: const Icon(Icons.history),
+                  label: const Text('Ver historial'),
                 ),
               ],
               if (onConfirm != null || onCancel != null) ...[
@@ -375,12 +385,10 @@ class _GroupSessionCard extends StatelessWidget {
 class _GroupHistoryCard extends ConsumerStatefulWidget {
   const _GroupHistoryCard({
     required this.session,
-    required this.studentName,
     required this.onRated,
     this.showRating = true,
   });
   final StudentGroupSession session;
-  final String studentName;
   final VoidCallback onRated;
   final bool showRating;
 
@@ -535,16 +543,10 @@ class _GroupHistoryCardState extends ConsumerState<_GroupHistoryCard> {
   Future<void> _openHistory() async {
     await Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => LiveKitRoomPage(
+        builder: (_) => TutoriaHistorialPage(
           sessionId: widget.session.id,
           subject: widget.session.subject,
-          modality: widget.session.modality,
-          teacherMode: false,
-          students: widget.session.studentIds,
-          ended: true,
-          endAt: widget.session.end?.toLocal(),
-          studentMode: true,
-          studentName: widget.studentName,
+          isIndividual: false,
         ),
       ),
     );
@@ -603,7 +605,7 @@ class _GroupHistoryCardState extends ConsumerState<_GroupHistoryCard> {
                       visualDensity: VisualDensity.compact,
                     ),
                     child: const Text(
-                      'Ver sala y chat',
+                      'Ver registro de clase',
                       style: TextStyle(fontSize: 8),
                     ),
                   ),
