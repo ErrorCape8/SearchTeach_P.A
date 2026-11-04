@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api_client.dart';
+import '../../core/widgets/role_toast.dart';
 import '../../core/tutoring_updates.dart';
 import '../../core/widgets/brand_logo.dart';
 import '../../core/widgets/sliding_pill_navigation_bar.dart';
@@ -659,7 +660,6 @@ class _ProfileView extends ConsumerWidget {
 
   // ignore: unused_element
   Future<void> _editPhone(BuildContext context, WidgetRef ref) async {
-    final scaffoldMessenger = ScaffoldMessenger.maybeOf(context);
     final controller =
         TextEditingController(text: profile['telefono'] as String? ?? '');
     final phone = await showDialog<String>(
@@ -684,7 +684,7 @@ class _ProfileView extends ConsumerWidget {
       ),
     );
     controller.dispose();
-    if (phone == null || phone.isEmpty) return;
+    if (!context.mounted || phone == null || phone.isEmpty) return;
     try {
       await ref.read(dioProvider).put<Map<String, dynamic>>(
         '/api/usuarios/perfil/telefono',
@@ -692,17 +692,18 @@ class _ProfileView extends ConsumerWidget {
       );
       onRefresh();
     } on DioException catch (error) {
+      if (!context.mounted) return;
       final data = error.response?.data;
       final message = data is Map && data['message'] is String
           ? data['message'] as String
           : 'No se pudo actualizar el teléfono.';
-      scaffoldMessenger?.showSnackBar(SnackBar(content: Text(message)));
+      RoleToast.show(context,
+          message: message, roleColor: const Color(0xFFA9154F));
     }
   }
 
   // ignore: unused_element
   Future<void> _editPassword(BuildContext context, WidgetRef ref) async {
-    final scaffoldMessenger = ScaffoldMessenger.maybeOf(context);
     final current = TextEditingController();
     final next = TextEditingController();
     final passwords = await showDialog<(String, String)>(
@@ -737,11 +738,12 @@ class _ProfileView extends ConsumerWidget {
     );
     current.dispose();
     next.dispose();
-    if (passwords == null) return;
+    if (!context.mounted || passwords == null) return;
     if (passwords.$1.isEmpty || passwords.$2.length < 8) {
-      scaffoldMessenger?.showSnackBar(const SnackBar(
-          content: Text(
-              'Ingresa la contraseña actual y una nueva de al menos 8 caracteres.')));
+      RoleToast.show(context,
+          message:
+              'Ingresa la contraseña actual y una nueva de al menos 8 caracteres.',
+          roleColor: const Color(0xFFA9154F));
       return;
     }
     try {
@@ -752,14 +754,18 @@ class _ProfileView extends ConsumerWidget {
           'nuevaContrasena': passwords.$2
         },
       );
-      scaffoldMessenger?.showSnackBar(
-          const SnackBar(content: Text('Contraseña actualizada.')));
+      if (!context.mounted) return;
+      RoleToast.show(context,
+          message: 'Contraseña actualizada.',
+          roleColor: const Color(0xFFA9154F));
     } on DioException catch (error) {
+      if (!context.mounted) return;
       final data = error.response?.data;
       final message = data is Map && data['message'] is String
           ? data['message'] as String
           : 'No se pudo actualizar la contraseña.';
-      scaffoldMessenger?.showSnackBar(SnackBar(content: Text(message)));
+      RoleToast.show(context,
+          message: message, roleColor: const Color(0xFFA9154F));
     }
   }
 }
@@ -796,20 +802,21 @@ class _FeedbackReportsViewState extends ConsumerState<_FeedbackReportsView> {
         mode: LaunchMode.externalApplication,
       );
       if (!opened && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('No se pudo abrir la descarga del informe.')));
+        RoleToast.show(context,
+            message: 'No se pudo abrir la descarga del informe.',
+            roleColor: const Color(0xFFA9154F));
       }
     } on DioException catch (error) {
       if (!mounted) return;
       final message = error.response?.data is String
           ? error.response!.data as String
           : 'No se pudo generar el informe mensual.';
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(message)));
+      RoleToast.show(context,
+          message: message, roleColor: const Color(0xFFA9154F));
     } on FormatException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(error.message)));
+        RoleToast.show(context,
+            message: error.message, roleColor: const Color(0xFFA9154F));
       }
     } finally {
       if (mounted) setState(() => _loading = false);

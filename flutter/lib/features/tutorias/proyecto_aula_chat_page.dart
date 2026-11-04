@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import '../../core/widgets/role_toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api_client.dart';
@@ -367,13 +368,12 @@ class _ProyectoAulaChatPageState extends ConsumerState<ProyectoAulaChatPage> {
       );
     } on DioException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(_apiMessage(error))));
+        RoleToast.showSnackBar(
+            context, SnackBar(content: Text(_apiMessage(error))));
       }
     } on FormatException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(error.message)));
+        RoleToast.showSnackBar(context, SnackBar(content: Text(error.message)));
       }
     }
   }

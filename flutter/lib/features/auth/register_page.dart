@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/widgets/role_toast.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -91,7 +92,8 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
         if (mounted) context.go(route);
       } on AuthFailure catch (error) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
+          RoleToast.showSnackBar(
+            context,
             SnackBar(content: Text(error.message)),
           );
         }

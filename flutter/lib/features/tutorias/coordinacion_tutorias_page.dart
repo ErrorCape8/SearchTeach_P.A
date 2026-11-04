@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api_client.dart';
+import '../../core/widgets/role_toast.dart';
 import '../auth/auth_repository.dart';
 import '../notifications/notifications_page.dart';
 import '../../core/career_catalog.dart';
@@ -230,7 +231,8 @@ class _CoordinacionTutoriasPageState
       await _loadCreatedTutorias();
     } on DioException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        RoleToast.showSnackBar(
+          context,
           SnackBar(
             content: Text(
               _apiError(error,
@@ -255,7 +257,8 @@ class _CoordinacionTutoriasPageState
       await _loadCreatedTutorias();
     } on DioException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        RoleToast.showSnackBar(
+          context,
           SnackBar(
               content: Text(_apiError(error,
                   fallback: 'No se pudo disolver la tutoría colectiva.'))),

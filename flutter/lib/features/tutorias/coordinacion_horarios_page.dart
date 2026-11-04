@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api_client.dart';
+import '../../core/widgets/role_toast.dart';
 import 'coordinacion_horarios_models.dart';
 import 'coordinacion_horarios_form.dart';
 import 'coordinacion_horarios_widgets.dart';
@@ -169,13 +170,14 @@ class _CoordinacionHorariosPageState
           .read(dioProvider)
           .delete<void>('/api/coordinacion/sesiones-grupales/${session.id}');
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Tutoría eliminada.')));
+      RoleToast.show(context,
+          message: 'Tutoría eliminada.', roleColor: const Color(0xFFA9154F));
       await _load();
     } on DioException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(apiError(error, 'No se pudo eliminar la tutoría.'))));
+        RoleToast.show(context,
+            message: apiError(error, 'No se pudo eliminar la tutoría.'),
+            roleColor: const Color(0xFFA9154F));
       }
     }
   }
@@ -299,14 +301,16 @@ class _CoordinacionHorariosPageState
             ],
           });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Tutoría actualizada.')));
+        RoleToast.show(context,
+            message: 'Tutoría actualizada.',
+            roleColor: const Color(0xFFA9154F));
         await _load();
       }
     } on DioException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(apiError(error, 'No se pudo editar la tutoría.'))));
+        RoleToast.show(context,
+            message: apiError(error, 'No se pudo editar la tutoría.'),
+            roleColor: const Color(0xFFA9154F));
       }
     } finally {
       subjectController.dispose();

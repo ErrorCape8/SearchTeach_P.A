@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/widgets/role_toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../auth/auth_repository.dart';
@@ -50,7 +51,8 @@ class AdminPerfilView extends ConsumerWidget {
             onPressed: () async {
               final newPhone = controller.text.trim();
               if (newPhone.isEmpty) {
-                ScaffoldMessenger.of(ctx).showSnackBar(
+                RoleToast.showSnackBar(
+                  ctx,
                   const SnackBar(content: Text('El teléfono es obligatorio.')),
                 );
                 return;
@@ -60,7 +62,8 @@ class AdminPerfilView extends ConsumerWidget {
                   .updateAdminPhone(newPhone);
               if (!ctx.mounted) return;
               Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
+              RoleToast.showSnackBar(
+                context,
                 SnackBar(
                   content: Text(saved
                       ? 'Teléfono actualizado.'

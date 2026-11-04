@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import '../../../core/widgets/role_toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api_client.dart';
 import '../../../core/career_catalog.dart';
@@ -44,15 +45,18 @@ class _AdminUsuariosViewState extends ConsumerState<AdminUsuariosView> {
       await ref.read(dioProvider).post<void>(
         '/api/admin/users/import',
         data: {
-          'usuarios': users.map((user) => <String, dynamic>{
-            ...user,
-            'semestre': int.tryParse(user['semestre'] ?? ''),
-          }).toList(),
+          'usuarios': users
+              .map((user) => <String, dynamic>{
+                    ...user,
+                    'semestre': int.tryParse(user['semestre'] ?? ''),
+                  })
+              .toList(),
         },
       );
       await ref.read(adminControllerProvider.notifier).loadUsers();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        RoleToast.showSnackBar(
+          context,
           SnackBar(content: Text('${users.length} usuarios importados.')),
         );
       }
@@ -131,8 +135,10 @@ class _AdminUsuariosViewState extends ConsumerState<AdminUsuariosView> {
           required.any((key) => record[key]!.isEmpty) ||
           (career.isNotEmpty && !careerCatalog.contains(career)) ||
           (role.contains('estudiante') && career.isEmpty) ||
-          (role.contains('estudiante') && (semester == null || semester < 1 || semester > 6)) ||
-          (record['semestre']!.trim().isNotEmpty && (semester == null || semester < 1 || semester > 6)) ||
+          (role.contains('estudiante') &&
+              (semester == null || semester < 1 || semester > 6)) ||
+          (record['semestre']!.trim().isNotEmpty &&
+              (semester == null || semester < 1 || semester > 6)) ||
           !const {'activo', 'revocado'}.contains(status) ||
           !ids.add(id) ||
           !emails.add(email)) {
@@ -174,9 +180,8 @@ class _AdminUsuariosViewState extends ConsumerState<AdminUsuariosView> {
         child: TextField(
           controller: _searchController,
           textInputAction: TextInputAction.search,
-          onChanged: (value) => ref
-              .read(adminControllerProvider.notifier)
-              .setSearchQuery(value),
+          onChanged: (value) =>
+              ref.read(adminControllerProvider.notifier).setSearchQuery(value),
           decoration: InputDecoration(
             hintText: 'Buscar por nombre, correo o ID',
             hintStyle: const TextStyle(
@@ -332,7 +337,6 @@ class _AdminUsuariosViewState extends ConsumerState<AdminUsuariosView> {
             },
           ),
         ),
-
         if (_showFilters)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
@@ -370,7 +374,6 @@ class _AdminUsuariosViewState extends ConsumerState<AdminUsuariosView> {
               ),
             ),
           ),
-
         Expanded(
           child: state.isLoadingUsers
               ? const Center(child: CircularProgressIndicator())
@@ -447,7 +450,8 @@ class _AdminUsuariosViewState extends ConsumerState<AdminUsuariosView> {
                                         tooltip: 'Página anterior',
                                         onPressed: page > 0
                                             ? () => ref
-                                                .read(adminControllerProvider.notifier)
+                                                .read(adminControllerProvider
+                                                    .notifier)
                                                 .setUsersPage(page - 1)
                                             : null,
                                         icon: const Icon(Icons.chevron_left),
@@ -457,7 +461,8 @@ class _AdminUsuariosViewState extends ConsumerState<AdminUsuariosView> {
                                         tooltip: 'Página siguiente',
                                         onPressed: page + 1 < pageCount
                                             ? () => ref
-                                                .read(adminControllerProvider.notifier)
+                                                .read(adminControllerProvider
+                                                    .notifier)
                                                 .setUsersPage(page + 1)
                                             : null,
                                         icon: const Icon(Icons.chevron_right),
@@ -561,7 +566,8 @@ class _UserListTile extends StatelessWidget {
                       ),
                     ),
                   ],
-                  if (user.rol.toLowerCase().contains('estudiante') && user.semestre > 0) ...[
+                  if (user.rol.toLowerCase().contains('estudiante') &&
+                      user.semestre > 0) ...[
                     const SizedBox(height: 2),
                     Text(
                       'Semestre ${user.semestre}',

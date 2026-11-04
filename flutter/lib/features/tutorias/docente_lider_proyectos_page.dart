@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import '../../core/widgets/role_toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api_client.dart';
@@ -142,19 +143,24 @@ class _LeaderProjectCard extends ConsumerWidget {
       );
       onChanged();
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(
-              confirm ? 'Cierre confirmado.' : 'Solicitud devuelta al tutor.'),
-        ));
+        RoleToast.showSnackBar(
+            context,
+            SnackBar(
+              content: Text(confirm
+                  ? 'Cierre confirmado.'
+                  : 'Solicitud devuelta al tutor.'),
+            ));
       }
     } on DioException catch (error) {
       final data = error.response?.data;
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(data is Map && data['message'] is String
-              ? data['message'] as String
-              : 'No se pudo guardar la respuesta.'),
-        ));
+        RoleToast.showSnackBar(
+            context,
+            SnackBar(
+              content: Text(data is Map && data['message'] is String
+                  ? data['message'] as String
+                  : 'No se pudo guardar la respuesta.'),
+            ));
       }
     }
   }
@@ -224,13 +230,14 @@ class _LeaderReportsList extends ConsumerWidget {
                                     } on DioException catch (error) {
                                       final data = error.response?.data;
                                       if (context.mounted) {
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(SnackBar(
-                                          content: Text(data is Map &&
-                                                  data['message'] is String
-                                              ? data['message'] as String
-                                              : 'No se pudo confirmar el reporte.'),
-                                        ));
+                                        RoleToast.showSnackBar(
+                                            context,
+                                            SnackBar(
+                                              content: Text(data is Map &&
+                                                      data['message'] is String
+                                                  ? data['message'] as String
+                                                  : 'No se pudo confirmar el reporte.'),
+                                            ));
                                       }
                                     }
                                   },

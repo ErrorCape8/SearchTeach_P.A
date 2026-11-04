@@ -498,9 +498,7 @@ class StudentProfileView extends ConsumerWidget {
 
   void _showProfileMessage(BuildContext context, String message) {
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+    RoleToast.show(context, message: message, roleColor: _blue);
   }
 
   String _profileApiMessage(DioException error) {

@@ -81,7 +81,7 @@ class AdminSideNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Material(
-        color: const Color(0xFFEA580C),
+        color: Colors.white,
         child: SizedBox(
           width: 168,
           child: Padding(
@@ -111,7 +111,7 @@ class AdminSideNav extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: Colors.white70,
+                        color: Color(0xFF64748B),
                         fontSize: 10,
                         letterSpacing: .5,
                       ),
@@ -120,7 +120,7 @@ class AdminSideNav extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 const Divider(
-                  color: Colors.white24,
+                  color: Color(0xFFE5E7EB),
                   thickness: 1,
                   indent: 8,
                   endIndent: 8,
@@ -142,20 +142,24 @@ class AdminSideNav extends StatelessWidget {
                       dense: true,
                       visualDensity: VisualDensity.compact,
                       selected: active,
-                      selectedColor: Colors.white,
-                      selectedTileColor: const Color(0xFFC2410C),
+                      selectedColor: const Color(0xFF9A3412),
+                      selectedTileColor: const Color(0xFFFFF1E6),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(9),
                       ),
                       leading: Icon(
                         icons[index],
-                        color: Colors.white,
+                        color: active
+                            ? const Color(0xFFEA580C)
+                            : const Color(0xFF64748B),
                         size: 17,
                       ),
                       title: Text(
                         labels[index],
                         style: TextStyle(
-                          color: Colors.white,
+                          color: active
+                              ? const Color(0xFF9A3412)
+                              : const Color(0xFF1E293B),
                           fontWeight: FontWeight.w700,
                           fontSize: 11,
                         ),
@@ -170,7 +174,7 @@ class AdminSideNav extends StatelessWidget {
                   child: Container(
                     decoration: BoxDecoration(
                       color: currentIndex == 2
-                          ? const Color(0xFFC2410C)
+                          ? const Color(0xFFFFF1E6)
                           : Colors.transparent,
                       borderRadius: BorderRadius.circular(9),
                     ),
@@ -179,7 +183,7 @@ class AdminSideNav extends StatelessWidget {
                       children: [
                         CircleAvatar(
                           radius: 14,
-                          backgroundColor: Colors.white,
+                          backgroundColor: const Color(0xFFFFF1E6),
                           child: Text(
                             _adminInitials(adminName),
                             style: TextStyle(
@@ -198,8 +202,8 @@ class AdminSideNav extends StatelessWidget {
                                 adminName,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: Colors.white,
+                                style: TextStyle(
+                                  color: Color(0xFF1E293B),
                                   fontWeight: FontWeight.w600,
                                   fontSize: 10,
                                 ),
@@ -209,7 +213,7 @@ class AdminSideNav extends StatelessWidget {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
-                                  color: Colors.white70,
+                                  color: Color(0xFF64748B),
                                   fontSize: 9,
                                 ),
                               ),
@@ -217,7 +221,7 @@ class AdminSideNav extends StatelessWidget {
                           ),
                         ),
                         const Icon(Icons.chevron_right,
-                            color: Colors.white, size: 14),
+                            color: Color(0xFF64748B), size: 14),
                       ],
                     ),
                   ),

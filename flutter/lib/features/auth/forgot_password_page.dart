@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/widgets/role_toast.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -85,7 +86,8 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
         .resetPassword(_identifier.text.trim(), _password.text);
     if (reset && mounted) {
       context.go('/login');
-      ScaffoldMessenger.of(context).showSnackBar(
+      RoleToast.showSnackBar(
+        context,
         const SnackBar(content: Text('Contraseña actualizada. Inicia sesión.')),
       );
     } else if (mounted) {

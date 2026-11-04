@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import '../../core/widgets/role_toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api_client.dart';
@@ -76,8 +77,8 @@ class _TutoriaChatPageState extends ConsumerState<TutoriaChatPage> {
       await _loadMessages();
     } on DioException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(_apiMessage(error))));
+        RoleToast.showSnackBar(
+            context, SnackBar(content: Text(_apiMessage(error))));
       }
     } finally {
       if (mounted) setState(() => _sending = false);
@@ -131,19 +132,23 @@ class _TutoriaChatPageState extends ConsumerState<TutoriaChatPage> {
                         itemCount: _messages.length,
                         itemBuilder: (context, index) {
                           final message = _messages[index];
-                          final name = message['nombre']?.toString() ?? 'Participante';
+                          final name =
+                              message['nombre']?.toString() ?? 'Participante';
                           final text = message['texto']?.toString() ?? '';
                           final sent = message['enviadoEn']?.toString();
                           return Card(
                             margin: const EdgeInsets.only(bottom: 8),
                             child: ListTile(
                               title: Text(name,
-                                  style: const TextStyle(fontWeight: FontWeight.w700)),
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w700)),
                               subtitle: Text(text),
                               trailing: sent == null
                                   ? null
                                   : Text(sent.replaceFirst('T', ' '),
-                                      style: Theme.of(context).textTheme.bodySmall),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall),
                             ),
                           );
                         },
@@ -152,7 +157,8 @@ class _TutoriaChatPageState extends ConsumerState<TutoriaChatPage> {
           if (widget.readOnly)
             const Padding(
               padding: EdgeInsets.all(14),
-              child: Text('Esta tutoría finalizó. El chat está disponible para consulta.'),
+              child: Text(
+                  'Esta tutoría finalizó. El chat está disponible para consulta.'),
             )
           else
             SafeArea(

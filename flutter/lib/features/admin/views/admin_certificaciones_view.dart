@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import '../../../core/widgets/role_toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -81,7 +82,8 @@ class _AdminCertificacionesViewState
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(approved ? 'Aceptar certificación' : 'Rechazar certificación'),
+        title:
+            Text(approved ? 'Aceptar certificación' : 'Rechazar certificación'),
         content: Text(
           approved
               ? '¿Confirmas que deseas aceptar esta certificación?'
@@ -126,9 +128,9 @@ class _AdminCertificacionesViewState
     setState(() => _openingPdfIds.add(certification.id));
     try {
       final response = await ref.read(dioProvider).get<List<int>>(
-        '/api/admin/certificaciones/${Uri.encodeComponent(certification.id)}/pdf',
-        options: Options(responseType: ResponseType.bytes),
-      );
+            '/api/admin/certificaciones/${Uri.encodeComponent(certification.id)}/pdf',
+            options: Options(responseType: ResponseType.bytes),
+          );
       final bytes = response.data;
       if (bytes == null || bytes.isEmpty) {
         throw const FormatException(
@@ -162,15 +164,14 @@ class _AdminCertificacionesViewState
   }
 
   void _showMessage(String message, {bool isError = false}) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor:
-              isError ? const Color(0xFFB91C1C) : const Color(0xFF15803D),
-        ),
-      );
+    RoleToast.showSnackBar(
+      context,
+      SnackBar(
+        content: Text(message),
+        backgroundColor:
+            isError ? const Color(0xFFB91C1C) : const Color(0xFF15803D),
+      ),
+    );
   }
 
   String _apiError(DioException error) {
@@ -285,8 +286,7 @@ class _AdminCertificacionesViewState
                     : ListView.separated(
                         padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
                         itemCount: filtered.length,
-                        separatorBuilder: (_, __) =>
-                            const SizedBox(height: 8),
+                        separatorBuilder: (_, __) => const SizedBox(height: 8),
                         itemBuilder: (context, index) {
                           final item = filtered[index];
                           final teacherName = users
@@ -342,7 +342,8 @@ class _Certification {
     String readString(String key) {
       final value = json[key];
       if (value is! String) {
-        throw FormatException('El campo "$key" de la certificación es inválido.');
+        throw FormatException(
+            'El campo "$key" de la certificación es inválido.');
       }
       return value;
     }

@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import '../../core/widgets/role_toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/api_client.dart';
@@ -253,8 +254,7 @@ class _NotificationsInboxState extends ConsumerState<NotificationsInbox> {
   }
 
   void _show(String message) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+    RoleToast.showSnackBar(context, SnackBar(content: Text(message)));
   }
 
   String _messageFrom(DioException error) {

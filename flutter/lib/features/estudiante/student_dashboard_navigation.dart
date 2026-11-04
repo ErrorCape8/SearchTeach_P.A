@@ -44,7 +44,7 @@ class _StudentHeader extends StatelessWidget {
       height: 76,
       padding: const EdgeInsets.symmetric(horizontal: 24),
       clipBehavior: Clip.hardEdge,
-      decoration: const BoxDecoration(color: Color(0xFF0B3F9D)),
+      decoration: const BoxDecoration(color: Colors.white),
       child: Stack(
         children: [
           Positioned(
@@ -82,7 +82,7 @@ class _StudentHeader extends StatelessWidget {
                   visualDensity: VisualDensity.compact,
                   icon: const Icon(
                     Icons.arrow_back_ios_new,
-                    color: Colors.white,
+                    color: _blue,
                     size: 12,
                   ),
                 )
@@ -110,7 +110,7 @@ class _StudentHeader extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: _navy,
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
                       ),
@@ -120,7 +120,7 @@ class _StudentHeader extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: .72),
+                        color: _studentMuted,
                         fontSize: 11,
                       ),
                     ),
@@ -134,16 +134,16 @@ class _StudentHeader extends StatelessWidget {
                   visualDensity: VisualDensity.compact,
                   icon: CircleAvatar(
                     radius: 14,
-                    backgroundColor: const Color(0xFF315EA7),
+                    backgroundColor: const Color(0xFFDCEEFF),
                     child: Text(
                       initials,
-                      style: const TextStyle(color: Colors.white, fontSize: 9),
+                      style: const TextStyle(color: _blue, fontSize: 9),
                     ),
                   ),
                 ),
               const SizedBox(width: 8),
               Material(
-                color: const Color(0xFF315EA7),
+                color: const Color(0xFFDCEEFF),
                 shape: const CircleBorder(),
                 child: IconButton(
                   tooltip: 'Avisos',
@@ -152,7 +152,7 @@ class _StudentHeader extends StatelessWidget {
                   icon: const NotificationUnreadIcon(
                     icon: Icons.notifications_none_outlined,
                   ),
-                  color: Colors.white,
+                  color: _blue,
                 ),
               ),
             ],
@@ -186,7 +186,7 @@ class _StudentSidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Material(
-        color: const Color(0xFF0A3D91),
+        color: Colors.white,
         child: SizedBox(
           width: 204,
           child: Column(
@@ -212,7 +212,7 @@ class _StudentSidebar extends StatelessWidget {
                 child: Text(
                   'ESTUDIANTE',
                   style: TextStyle(
-                    color: Color(0xFFB8C9E6),
+                    color: _studentMuted,
                     fontSize: 10,
                     letterSpacing: .7,
                     fontWeight: FontWeight.w600,
@@ -222,7 +222,7 @@ class _StudentSidebar extends StatelessWidget {
               const SizedBox(height: 10),
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 8),
-                child: Divider(height: 1, color: Color(0x334A77C0)),
+                child: Divider(height: 1, color: Color(0xFFE4EAF1)),
               ),
               const SizedBox(height: 5),
               for (var index = 0; index < _items.length; index++)
@@ -233,7 +233,7 @@ class _StudentSidebar extends StatelessWidget {
                     height: 42,
                     child: Material(
                       color: tab == index
-                          ? const Color(0xFF062B6B)
+                          ? const Color(0xFFDCEEFF)
                           : Colors.transparent,
                       borderRadius: BorderRadius.circular(7),
                       child: InkWell(
@@ -245,7 +245,7 @@ class _StudentSidebar extends StatelessWidget {
                             Icon(
                               _items[index].$1,
                               size: 18,
-                              color: Colors.white.withValues(alpha: .94),
+                              color: tab == index ? _blue : _studentMuted,
                             ),
                             const SizedBox(width: 7),
                             Expanded(
@@ -253,8 +253,8 @@ class _StudentSidebar extends StatelessWidget {
                                 _items[index].$2,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: Colors.white,
+                                style: TextStyle(
+                                  color: tab == index ? _blue : _navy,
                                   fontSize: 12,
                                   fontWeight: FontWeight.w500,
                                 ),
@@ -269,14 +269,14 @@ class _StudentSidebar extends StatelessWidget {
               const Spacer(),
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 8),
-                child: Divider(height: 1, color: Color(0x334A77C0)),
+                child: Divider(height: 1, color: Color(0xFFE4EAF1)),
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(8, 8, 5, 10),
                 child: Container(
                   decoration: BoxDecoration(
                     color:
-                        tab == 5 ? const Color(0xFF062B6B) : Colors.transparent,
+                        tab == 5 ? const Color(0xFFDCEEFF) : Colors.transparent,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
@@ -286,11 +286,11 @@ class _StudentSidebar extends StatelessWidget {
                         borderRadius: BorderRadius.circular(20),
                         child: CircleAvatar(
                           radius: 16,
-                          backgroundColor: const Color(0xFF3B63AE),
+                          backgroundColor: const Color(0xFFDCEEFF),
                           child: Text(
                             _studentInitials(profile.name),
                             style: const TextStyle(
-                              color: Colors.white,
+                              color: _blue,
                               fontSize: 10,
                             ),
                           ),
@@ -308,7 +308,7 @@ class _StudentSidebar extends StatelessWidget {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
-                                  color: Colors.white,
+                                  color: _navy,
                                   fontSize: 10,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -316,7 +316,7 @@ class _StudentSidebar extends StatelessWidget {
                               const Text(
                                 'Estudiante',
                                 style: TextStyle(
-                                  color: Color(0xFFB8C9E6),
+                                  color: _studentMuted,
                                   fontSize: 12,
                                 ),
                               ),
@@ -334,7 +334,7 @@ class _StudentSidebar extends StatelessWidget {
                         ),
                         icon: const Icon(
                           Icons.logout,
-                          color: Colors.white,
+                          color: _blue,
                           size: 18,
                         ),
                       ),

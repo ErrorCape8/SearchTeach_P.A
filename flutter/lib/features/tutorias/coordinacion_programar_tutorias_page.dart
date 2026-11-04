@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api_client.dart';
+import '../../core/widgets/role_toast.dart';
 import '../../core/career_catalog.dart';
 import 'coordinacion_horarios_models.dart';
 
@@ -226,7 +227,8 @@ class _CoordinacionProgramarTutoriasPageState
       );
       if (!mounted) return;
       setState(() => _slots.clear());
-      ScaffoldMessenger.of(context).showSnackBar(
+      RoleToast.showSnackBar(
+        context,
         const SnackBar(content: Text('Tutorías programadas y publicadas.')),
       );
     } on DioException catch (error) {

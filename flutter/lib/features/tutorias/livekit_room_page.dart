@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import '../../core/widgets/role_toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart';
 
@@ -468,8 +469,11 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
       }
     } on DioException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(error.message ?? 'No se pudo guardar el mensaje.')));
+        RoleToast.showSnackBar(
+            context,
+            SnackBar(
+                content:
+                    Text(error.message ?? 'No se pudo guardar el mensaje.')));
       }
       return;
     }
@@ -519,9 +523,11 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
       if (mounted) setState(() => _attendance[studentId] = attended);
     } on DioException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content:
-                Text(error.message ?? 'No se pudo guardar la asistencia.')));
+        RoleToast.showSnackBar(
+            context,
+            SnackBar(
+                content: Text(
+                    error.message ?? 'No se pudo guardar la asistencia.')));
       }
     }
   }
@@ -560,9 +566,11 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
       await _room.disconnect();
     } on DioException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content:
-                Text(error.message ?? 'No se pudo finalizar la tutoría.')));
+        RoleToast.showSnackBar(
+            context,
+            SnackBar(
+                content:
+                    Text(error.message ?? 'No se pudo finalizar la tutoría.')));
       }
     }
   }

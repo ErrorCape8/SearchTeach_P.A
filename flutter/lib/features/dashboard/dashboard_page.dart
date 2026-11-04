@@ -48,8 +48,9 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
       child: Scaffold(
         backgroundColor: _canvas,
         appBar: AppBar(
-          backgroundColor: _purple,
-          foregroundColor: Colors.white,
+          backgroundColor: Colors.white,
+          foregroundColor: _ink,
+          surfaceTintColor: Colors.white,
           title: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -57,7 +58,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                   style: TextStyle(fontSize: 18)),
               Text(
                 _titles[_selectedTab],
-                style: const TextStyle(fontSize: 12, color: Color(0xFFDCD0F6)),
+                style: const TextStyle(fontSize: 12, color: _muted),
               ),
             ],
           ),
@@ -70,12 +71,12 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
               ),
               icon: CircleAvatar(
                 radius: 15,
-                backgroundColor: Colors.white.withValues(alpha: .18),
+                backgroundColor: const Color(0xFFEAE2FA),
                 child: Icon(
                   _selectedTab == 3
                       ? Icons.person
                       : Icons.person_outline_rounded,
-                  color: Colors.white,
+                  color: _purple,
                   size: 19,
                 ),
               ),
@@ -111,23 +112,20 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
               return Row(
                 children: [
                   NavigationRail(
-                    backgroundColor: _purple,
+                    backgroundColor: Colors.white,
                     selectedIndex: _selectedTab.clamp(0, 2).toInt(),
                     onDestinationSelected: (index) =>
                         setState(() => _selectedTab = index),
                     labelType: NavigationRailLabelType.all,
                     groupAlignment: -0.8,
-                    indicatorColor: const Color(0xFF45258A),
-                    selectedIconTheme: const IconThemeData(color: Colors.white),
-                    unselectedIconTheme: IconThemeData(
-                        color: Colors.white.withValues(alpha: .78)),
+                    indicatorColor: const Color(0xFFEAE2FA),
+                    selectedIconTheme: const IconThemeData(color: _purple),
+                    unselectedIconTheme: const IconThemeData(color: _muted),
                     selectedLabelTextStyle: const TextStyle(
-                      color: Colors.white,
+                      color: _purple,
                       fontWeight: FontWeight.w700,
                     ),
-                    unselectedLabelTextStyle: TextStyle(
-                      color: Colors.white.withValues(alpha: .78),
-                    ),
+                    unselectedLabelTextStyle: const TextStyle(color: _muted),
                     destinations: const [
                       NavigationRailDestination(
                         icon: Icon(Icons.home_outlined),

@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import '../../core/widgets/role_toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -111,7 +112,8 @@ class _DocenteInformesPageState extends ConsumerState<DocenteInformesPage> {
       if (!mounted) return;
       _score.clear();
       _observations.clear();
-      ScaffoldMessenger.of(context).showSnackBar(
+      RoleToast.showSnackBar(
+        context,
         const SnackBar(
             content: Text('Informe de avance enviado al líder del programa.')),
       );
@@ -320,9 +322,7 @@ class _GroupSessionTeacherCard extends StatelessWidget {
           leading: const Icon(Icons.groups_outlined),
           title: Text(session.materia),
           subtitle: Text(
-            'Semestre ${session.semestre} · ${session.tecnologias.join(', ')}\n${session.estudiantes.isEmpty
-                ? 'Publicada · sin inscritos\n'
-                : 'Estudiantes: ${session.estudiantes.join(', ')}\n'}${session.fechaInicio?.toLocal() ?? 'Fecha no disponible'}',
+            'Semestre ${session.semestre} · ${session.tecnologias.join(', ')}\n${session.estudiantes.isEmpty ? 'Publicada · sin inscritos\n' : 'Estudiantes: ${session.estudiantes.join(', ')}\n'}${session.fechaInicio?.toLocal() ?? 'Fecha no disponible'}',
           ),
           isThreeLine: true,
         ),

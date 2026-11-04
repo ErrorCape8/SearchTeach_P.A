@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api_client.dart';
+import '../../core/widgets/role_toast.dart';
 
 const _wine = Color(0xFFA9154F);
 const _muted = Color(0xFF758093);
@@ -286,8 +287,8 @@ class _CoordinacionSolicitudesPageState
             data: body,
           );
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Solicitud atendida.')));
+      RoleToast.show(context,
+          message: 'Solicitud atendida.', roleColor: const Color(0xFFA9154F));
       await _load();
     } on DioException catch (error) {
       if (!mounted) return;
@@ -295,8 +296,8 @@ class _CoordinacionSolicitudesPageState
       final message = data is Map && data['message'] is String
           ? data['message'] as String
           : 'No se pudo resolver la solicitud.';
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(message)));
+      RoleToast.show(context,
+          message: message, roleColor: const Color(0xFFA9154F));
     }
   }
 

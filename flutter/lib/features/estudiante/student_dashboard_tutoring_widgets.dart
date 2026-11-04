@@ -375,9 +375,8 @@ class _GroupSessionCard extends StatelessWidget {
 
     final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!opened && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se pudo abrir Google Calendar.')),
-      );
+      RoleToast.show(context,
+          message: 'No se pudo abrir Google Calendar.', roleColor: _blue);
     }
   }
 }
@@ -496,16 +495,15 @@ class _GroupHistoryCardState extends ConsumerState<_GroupHistoryCard> {
       if (!mounted) return;
       setState(() => _rated = true);
       widget.onRated();
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Reporte enviado a coordinación.')));
+      RoleToast.show(context,
+          message: 'Reporte enviado a coordinación.', roleColor: _blue);
     } on DioException catch (error) {
       if (!mounted) return;
       final message = error.response?.data is Map &&
               (error.response!.data as Map)['message'] is String
           ? (error.response!.data as Map)['message'] as String
           : 'No se pudo enviar el reporte.';
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(message)));
+      RoleToast.show(context, message: message, roleColor: _blue);
     } finally {
       if (mounted) setState(() => _sending = false);
     }

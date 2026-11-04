@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/api_client.dart';
 import '../../core/tutoring_updates.dart';
 import '../../core/widgets/brand_logo.dart';
+import '../../core/widgets/role_toast.dart';
 import '../../core/widgets/sliding_pill_navigation_bar.dart';
 import '../auth/auth_repository.dart';
 import '../notifications/notifications_page.dart';
@@ -566,9 +567,7 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage>
 
   void _showMessage(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+    RoleToast.show(context, message: message, roleColor: _blue);
   }
 
   DateTime _nextDate(String day) {

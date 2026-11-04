@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/api_client.dart';
 import '../../core/tutoring_updates.dart';
 import '../../core/widgets/brand_logo.dart';
+import '../../core/widgets/role_toast.dart';
 import '../auth/auth_repository.dart';
 import '../notifications/notifications_page.dart';
 import 'docente_proyectos_aula_page.dart';
@@ -78,13 +79,15 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
       child: Scaffold(
         backgroundColor: _teacherCanvas,
         appBar: AppBar(
-          backgroundColor: _teacherGreen,
-          foregroundColor: Colors.white,
+          backgroundColor: Colors.white,
+          foregroundColor: _teacherNavy,
           elevation: 0,
+          scrolledUnderElevation: 0,
+          surfaceTintColor: Colors.white,
           title: const Text('Panel docente',
               style: TextStyle(fontWeight: FontWeight.w800)),
           actions: [
-            const NotificationBellButton(),
+            const NotificationBellButton(accentColor: _teacherGreen),
             IconButton(
               tooltip: 'Cerrar sesión',
               onPressed: _logout,
@@ -150,7 +153,7 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
   }
 
   Widget _desktopMenu() => Material(
-        color: _teacherNavy,
+        color: Colors.white,
         child: SizedBox(
           width: 250,
           child: Column(children: [
@@ -173,14 +176,14 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
                   alignment: Alignment.centerLeft,
                   child: Text('DOCENTE',
                       style: TextStyle(
-                          color: Colors.white70,
+                          color: Color(0xFF687A70),
                           fontSize: 11,
                           letterSpacing: 1.5,
                           fontWeight: FontWeight.w700))),
             ),
             const Padding(
               padding: EdgeInsets.fromLTRB(16, 16, 16, 4),
-              child: Divider(height: 1, color: Color(0x44FFFFFF)),
+              child: Divider(height: 1, color: Color(0xFFE3ECE5)),
             ),
             const SizedBox(height: 10),
             for (var i = 0; i < 3; i++)
@@ -189,10 +192,10 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                 child: ListTile(
                   selected: _tab == i,
-                  selectedColor: Colors.white,
-                  selectedTileColor: const Color(0xFF064D33),
-                  textColor: Colors.white,
-                  iconColor: Colors.white70,
+                  selectedColor: _teacherNavy,
+                  selectedTileColor: const Color(0xFFEAF5EE),
+                  textColor: _teacherNavy,
+                  iconColor: _teacherGreen,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
                   leading: Icon(_teacherIcons[i]),
@@ -204,10 +207,10 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
               child: ListTile(
                 selected: _tab == 3,
-                selectedColor: Colors.white,
-                selectedTileColor: const Color(0xFF064D33),
-                textColor: Colors.white,
-                iconColor: Colors.white70,
+                selectedColor: _teacherNavy,
+                selectedTileColor: const Color(0xFFEAF5EE),
+                textColor: _teacherNavy,
+                iconColor: _teacherGreen,
                 leading: const Icon(Icons.school_outlined),
                 title: const Text('Proyectos de aula'),
                 onTap: () => setState(() => _tab = 3),
@@ -217,10 +220,10 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
               child: ListTile(
                 selected: _tab == 4,
-                selectedColor: Colors.white,
-                selectedTileColor: const Color(0xFF064D33),
-                textColor: Colors.white,
-                iconColor: Colors.white70,
+                selectedColor: _teacherNavy,
+                selectedTileColor: const Color(0xFFEAF5EE),
+                textColor: _teacherNavy,
+                iconColor: _teacherGreen,
                 leading: const Icon(Icons.fact_check_outlined),
                 title: const Text('Líder PA'),
                 onTap: () => setState(() => _tab = 4),
@@ -230,10 +233,10 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
               child: ListTile(
                 selected: _tab == 5,
-                selectedColor: Colors.white,
-                selectedTileColor: const Color(0xFF064D33),
-                textColor: Colors.white,
-                iconColor: Colors.white70,
+                selectedColor: _teacherNavy,
+                selectedTileColor: const Color(0xFFEAF5EE),
+                textColor: _teacherNavy,
+                iconColor: _teacherGreen,
                 leading: const Icon(Icons.notifications_none_outlined),
                 title: const Text('Avisos'),
                 onTap: () => setState(() => _tab = 5),
@@ -243,10 +246,10 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
               child: ListTile(
                 selected: _tab == 6,
-                selectedColor: Colors.white,
-                selectedTileColor: const Color(0xFF064D33),
-                textColor: Colors.white,
-                iconColor: Colors.white70,
+                selectedColor: _teacherNavy,
+                selectedTileColor: const Color(0xFFEAF5EE),
+                textColor: _teacherNavy,
+                iconColor: _teacherGreen,
                 leading: const Icon(Icons.history_outlined),
                 title: const Text('Historial'),
                 onTap: () => setState(() => _tab = 6),
@@ -255,14 +258,14 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
             const Spacer(),
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 16),
-              child: Divider(height: 1, color: Color(0x44FFFFFF)),
+              child: Divider(height: 1, color: Color(0xFFE3ECE5)),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(18, 14, 18, 18),
               child: Row(children: [
                 CircleAvatar(
-                  backgroundColor: Colors.white.withValues(alpha: .18),
-                  foregroundColor: Colors.white,
+                  backgroundColor: const Color(0xFFEAF5EE),
+                  foregroundColor: _teacherNavy,
                   child: const Text('D'),
                 ),
                 const SizedBox(width: 10),
@@ -271,11 +274,11 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
                     children: [
                       Text('Docente',
                           style: TextStyle(
-                              color: Colors.white,
+                              color: _teacherNavy,
                               fontWeight: FontWeight.w700)),
                       Text('SearchTeach',
-                          style:
-                              TextStyle(color: Colors.white70, fontSize: 11)),
+                          style: TextStyle(
+                              color: Color(0xFF687A70), fontSize: 11)),
                     ]),
               ]),
             ),
@@ -670,17 +673,16 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
         },
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Solicitud enviada a coordinación.')),
-      );
+      RoleToast.show(context,
+          message: 'Solicitud enviada a coordinación.',
+          roleColor: _teacherGreen);
     } on DioException catch (error) {
       if (!mounted) return;
       final data = error.response?.data;
       final message = data is Map && data['message'] is String
           ? data['message'] as String
           : 'No se pudo enviar la solicitud. Inténtalo de nuevo.';
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(message)));
+      RoleToast.show(context, message: message, roleColor: _teacherGreen);
     }
   }
 

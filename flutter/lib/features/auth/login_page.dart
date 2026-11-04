@@ -102,6 +102,22 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            Center(
+              child: Image.asset(
+                'assets/brand/logo.png',
+                width: 76,
+                height: 76,
+                fit: BoxFit.contain,
+                filterQuality: FilterQuality.high,
+                semanticLabel: 'Logo de SearchTeach',
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text('SearchTeach',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    color: kBlue, fontSize: 20, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 24),
             const Text('Inicio de sesión',
                 textAlign: TextAlign.center,
                 style: TextStyle(

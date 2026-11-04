@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/widgets/role_toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import '../../../core/api_client.dart';
@@ -90,7 +91,8 @@ class _AdminEditarUsuarioViewState
     if ((isStudent && !careerCatalog.contains(selectedCareer)) ||
         (selectedCareer.isNotEmpty &&
             !careerCatalog.contains(selectedCareer))) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      RoleToast.showSnackBar(
+        context,
         const SnackBar(
             content: Text('Selecciona una tecnología del catálogo.')),
       );
@@ -110,7 +112,8 @@ class _AdminEditarUsuarioViewState
 
     final pass = _passCtrl.text.trim();
     if (pass.isNotEmpty && pass.length < 8) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      RoleToast.showSnackBar(
+        context,
         const SnackBar(
           content:
               Text('La nueva contraseña debe tener al menos 8 caracteres.'),
@@ -127,7 +130,8 @@ class _AdminEditarUsuarioViewState
 
     if (!mounted) return;
     if (!saved) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      RoleToast.showSnackBar(
+        context,
         SnackBar(
           content: Text(ref.read(adminControllerProvider).errorMessage ??
               'No se pudo guardar el usuario.'),
@@ -138,7 +142,8 @@ class _AdminEditarUsuarioViewState
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
+    RoleToast.showSnackBar(
+      context,
       const SnackBar(
         content: Text('Usuario actualizado con éxito.'),
         backgroundColor: Color(0xFF16A34A),
@@ -630,7 +635,8 @@ class _AdminEditarUsuarioViewState
     } on DioException catch (error) {
       if (mounted) {
         setState(() => _loadingSubjectCatalog = false);
-        ScaffoldMessenger.of(context).showSnackBar(
+        RoleToast.showSnackBar(
+          context,
           SnackBar(
               content: Text(
                   'No se cargó el plan de estudios: ${error.message ?? 'error de conexión'}')),

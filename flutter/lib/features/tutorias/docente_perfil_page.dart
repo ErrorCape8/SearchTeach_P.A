@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import '../../core/widgets/role_toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 
@@ -142,8 +143,8 @@ class DocentePerfilPage extends ConsumerWidget {
       ref.invalidate(docenteProfileProvider);
     } on DioException catch (error) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(_message(error))));
+        RoleToast.showSnackBar(
+            context, SnackBar(content: Text(_message(error))));
       }
     }
   }
@@ -183,8 +184,8 @@ class DocentePerfilPage extends ConsumerWidget {
                 if (context.mounted) Navigator.pop(context, true);
               } on DioException catch (error) {
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context)
-                      .showSnackBar(SnackBar(content: Text(_message(error))));
+                  RoleToast.showSnackBar(
+                      context, SnackBar(content: Text(_message(error))));
                 }
               }
             },
@@ -196,8 +197,8 @@ class DocentePerfilPage extends ConsumerWidget {
     current.dispose();
     next.dispose();
     if (confirmed == true && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Contraseña actualizada.')));
+      RoleToast.showSnackBar(
+          context, const SnackBar(content: Text('Contraseña actualizada.')));
     }
   }
 
@@ -424,7 +425,8 @@ class _CertificationsCardState extends ConsumerState<_CertificationsCard> {
         _duration.text.trim().isEmpty ||
         _place.text.trim().isEmpty ||
         _file?.bytes == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      RoleToast.showSnackBar(
+        context,
         const SnackBar(content: Text('Completa los datos y adjunta el PDF.')),
       );
       return;
@@ -445,14 +447,15 @@ class _CertificationsCardState extends ConsumerState<_CertificationsCard> {
       setState(() => _file = null);
       await _load();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        RoleToast.showSnackBar(
+          context,
           const SnackBar(content: Text('Certificación enviada a TI.')),
         );
       }
     } on DioException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(_message(error))));
+        RoleToast.showSnackBar(
+            context, SnackBar(content: Text(_message(error))));
       }
     }
   }
