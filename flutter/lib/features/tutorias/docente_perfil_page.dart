@@ -108,10 +108,8 @@ class DocentePerfilPage extends ConsumerWidget {
     if (value is! List || value.isEmpty) return 'Sin materias configuradas';
     return value.whereType<Map>().map((item) {
       final materia = item['materia'] ?? 'Materia';
-      final semestres = item['semestres'] is List
-          ? (item['semestres'] as List).join(', ')
-          : '—';
-      return '$materia (semestres: $semestres)';
+      final carrera = item['tecnologia'] ?? '';
+      return '$materia - $carrera';
     }).join('\n');
   }
 

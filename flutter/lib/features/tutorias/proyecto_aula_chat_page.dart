@@ -165,7 +165,7 @@ class _ProyectoAulaChatPageState extends ConsumerState<ProyectoAulaChatPage> {
   Future<void> _respondMeeting(bool accepts) async {
     try {
       await ref.read(dioProvider).post(
-        _meetingPath + '/respuesta',
+        '$_meetingPath/respuesta',
         queryParameters: {'acepta': accepts},
       );
       await _load();
@@ -191,9 +191,10 @@ class _ProyectoAulaChatPageState extends ConsumerState<ProyectoAulaChatPage> {
                           initialDate: date,
                           firstDate: now,
                           lastDate: DateTime(now.year + 2));
-                      if (picked != null)
+                      if (picked != null) {
                         setDialogState(() => date =
                             DateTime(picked.year, picked.month, picked.day));
+                      }
                     },
                     icon: const Icon(Icons.calendar_month_outlined),
                     label: Text(
@@ -365,13 +366,15 @@ class _ProyectoAulaChatPageState extends ConsumerState<ProyectoAulaChatPage> {
         bytes: Uint8List.fromList(bytes),
       );
     } on DioException catch (error) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text(_apiMessage(error))));
+      }
     } on FormatException catch (error) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text(error.message)));
+      }
     }
   }
 

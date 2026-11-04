@@ -145,8 +145,7 @@ public class UserAdminController {
 			Set<String> unique = new HashSet<>();
 			for (MateriaPrincipalDocente capability : request.getMateriasPrincipales()) {
 				if (!CatalogoTecnologias.contiene(capability.tecnologia())
-						|| capability.semestres().stream().anyMatch(semestre -> !CatalogoMateriasTecnologia
-								.contiene(capability.tecnologia(), semestre, capability.materia()))) {
+						|| !CatalogoMateriasTecnologia.pertenece(capability.tecnologia(), capability.materia())) {
 					throw new IllegalArgumentException(
 							"La materia principal no pertenece al plan de estudios seleccionado.");
 				}

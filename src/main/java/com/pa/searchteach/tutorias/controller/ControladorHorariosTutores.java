@@ -45,6 +45,11 @@ public class ControladorHorariosTutores {
 		return servicio.listarMaterias(carrera, semestre);
 	}
 
+	@GetMapping("/api/admin/catalogo/materias")
+	public java.util.Map<String, List<MateriaHorario>> listarMateriasParaDocente(@RequestParam String carrera) {
+		return com.pa.searchteach.tutorias.model.CatalogoMateriasTecnologia.listarPorSemestre(carrera);
+	}
+
 	@PostMapping("/api/coordinacion/horarios/{docenteId}")
 	@ResponseStatus(HttpStatus.CREATED)
 	public HorarioTutor crearHorarioTutor(

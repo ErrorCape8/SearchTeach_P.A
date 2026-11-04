@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/api_client.dart';
 import '../../core/tutoring_updates.dart';
 import '../../core/widgets/brand_logo.dart';
+import '../../core/widgets/sliding_pill_navigation_bar.dart';
 import '../auth/auth_repository.dart';
 import '../notifications/notifications_page.dart';
 import 'student_dashboard_models.dart';
@@ -63,144 +64,146 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage>
     final width = MediaQuery.sizeOf(context).width;
     final wide = width >= 980;
     final showAside = width >= 1400 && _tab == 0;
-    return Scaffold(
-      backgroundColor: _canvas,
-      body: data.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => _LoadFailure(
-          error: error,
-          onRetry: () => ref.invalidate(studentDashboardProvider),
-        ),
-        data: (value) => groupSessions.when(
-          skipLoadingOnRefresh: true,
+    return Theme(
+      data: Theme.of(context).copyWith(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: _blue,
+          brightness: Theme.of(context).brightness,
+        ).copyWith(primary: _blue),
+      ),
+      child: Scaffold(
+        backgroundColor: _canvas,
+        body: data.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (error, _) => _LoadFailure(
             error: error,
-            onRetry: () => ref.invalidate(studentGroupSessionsProvider),
+            onRetry: () => ref.invalidate(studentDashboardProvider),
           ),
-          data: (groups) {
-            final dashboard = value.withGroupSessions(groups);
-            return Row(
-              children: [
-                if (wide)
-                  _StudentSidebar(
-                    tab: _tab,
-                    profile: value.profile,
-                    onSelect: _selectTab,
-                    onLogout: _logout,
-                  ),
-                Expanded(
-                  child: Column(
-                    children: [
-                      _StudentHeader(
-                        profile: value.profile,
-                        tab: _tab,
-                        showProfileShortcut: !wide,
-                        onProfile: () => _selectTab(5),
-                        onNotifications: () => _selectTab(6),
-                        onBack: () => _selectTab(0),
-                      ),
-                      Expanded(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Expanded(
-                              flex: wide ? 3 : 1,
-                              child: IndexedStack(
-                                index: _tab,
-                                children: [
-                                  StudentHomeView(
-                                    data: dashboard,
-                                  ),
-                                  for (var sectionIndex = 1;
-                                      sectionIndex <= 4;
-                                      sectionIndex++)
-                                    StudentTutoringView(
-                                      key: ValueKey(sectionIndex),
-                                      data: dashboard,
-                                      focusSection: _tab == sectionIndex &&
-                                              _focusTutoring != null
-                                          ? _focusTutoring
-                                          : _sectionForTab(sectionIndex),
-                                      focusRequest: _focusRequest,
-                                      onEnroll: (tutor) =>
-                                          _enroll(value, tutor),
-                                      onProjectEnrollment:
-                                          _toggleProjectEnrollment,
-                                      onJoinProjectCode: _joinProjectByCode,
-                                      onLeaveGroupSession: _leaveGroupSession,
-                                      onJoinPublishedSession: (session) =>
-                                          _joinPublishedSession(session),
-                                      onAction: _tutoringAction,
-                                      onShowMessage: _showMessage,
-                                    ),
-                                  StudentProfileView(
-                                    profile: value.profile,
-                                    onTeacherMode: value.profile.role
-                                            .toLowerCase()
-                                            .contains('docente')
-                                        ? () => context.go('/docente')
-                                        : null,
-                                    onLogout: _logout,
-                                  ),
-                                  const NotificationsInbox(
-                                    accentColor: _blue,
-                                  ),
-                                ],
-                              ),
-                            ),
-                            if (showAside)
-                              SizedBox(
-                                width: 250,
-                                child: _StudentSidePanel(data: dashboard),
-                              ),
-                          ],
+          data: (value) => groupSessions.when(
+            skipLoadingOnRefresh: true,
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, _) => _LoadFailure(
+              error: error,
+              onRetry: () => ref.invalidate(studentGroupSessionsProvider),
+            ),
+            data: (groups) {
+              final dashboard = value.withGroupSessions(groups);
+              return Row(
+                children: [
+                  if (wide)
+                    _StudentSidebar(
+                      tab: _tab,
+                      profile: value.profile,
+                      onSelect: _selectTab,
+                      onLogout: _logout,
+                    ),
+                  Expanded(
+                    child: Column(
+                      children: [
+                        _StudentHeader(
+                          profile: value.profile,
+                          tab: _tab,
+                          showProfileShortcut: !wide,
+                          onProfile: () => _selectTab(5),
+                          onNotifications: () => _selectTab(6),
+                          onBack: () => _selectTab(0),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            );
-          },
-        ),
-      ),
-      bottomNavigationBar: wide
-          ? null
-          : data.whenOrNull(
-              data: (_) => NavigationBar(
-                selectedIndex: _tab > 4 ? 0 : _tab,
-                labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-                onDestinationSelected: (index) => _selectTab(index),
-                destinations: [
-                  const NavigationDestination(
-                    icon: Icon(Icons.home_outlined),
-                    selectedIcon: Icon(Icons.home),
-                    label: 'Inicio',
-                  ),
-                  const NavigationDestination(
-                    icon: Icon(Icons.desktop_windows_outlined),
-                    selectedIcon: Icon(Icons.desktop_windows),
-                    label: 'Tutores',
-                  ),
-                  const NavigationDestination(
-                    icon: Icon(Icons.check_box_outline_blank),
-                    selectedIcon: Icon(Icons.check_box),
-                    label: 'Mis tutorías',
-                  ),
-                  const NavigationDestination(
-                    icon: Icon(Icons.history),
-                    selectedIcon: Icon(Icons.history),
-                    label: 'Historial',
-                  ),
-                  const NavigationDestination(
-                    icon: Icon(Icons.groups_outlined),
-                    selectedIcon: Icon(Icons.groups),
-                    label: 'Proyectos',
+                        Expanded(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Expanded(
+                                flex: wide ? 3 : 1,
+                                child: IndexedStack(
+                                  index: _tab,
+                                  children: [
+                                    StudentHomeView(
+                                      data: dashboard,
+                                    ),
+                                    for (var sectionIndex = 1;
+                                        sectionIndex <= 4;
+                                        sectionIndex++)
+                                      StudentTutoringView(
+                                        key: ValueKey(sectionIndex),
+                                        data: dashboard,
+                                        focusSection: _tab == sectionIndex &&
+                                                _focusTutoring != null
+                                            ? _focusTutoring
+                                            : _sectionForTab(sectionIndex),
+                                        focusRequest: _focusRequest,
+                                        onEnroll: (tutor) =>
+                                            _enroll(value, tutor),
+                                        onProjectEnrollment:
+                                            _toggleProjectEnrollment,
+                                        onJoinProjectCode: _joinProjectByCode,
+                                        onLeaveGroupSession: _leaveGroupSession,
+                                        onJoinPublishedSession: (session) =>
+                                            _joinPublishedSession(session),
+                                        onAction: _tutoringAction,
+                                        onShowMessage: _showMessage,
+                                      ),
+                                    StudentProfileView(
+                                      profile: value.profile,
+                                      onTeacherMode: value.profile.role
+                                              .toLowerCase()
+                                              .contains('docente')
+                                          ? () => context.go('/docente')
+                                          : null,
+                                      onLogout: _logout,
+                                    ),
+                                    const NotificationsInbox(
+                                      accentColor: _blue,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (showAside)
+                                SizedBox(
+                                  width: 250,
+                                  child: _StudentSidePanel(data: dashboard),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
+              );
+            },
+          ),
+        ),
+        bottomNavigationBar: wide
+            ? null
+            : data.whenOrNull(
+                data: (_) => SlidingPillNavigationBar(
+                  selectedColor: _blue,
+                  indicatorColor: const Color(0xFFDCEEFF),
+                  selectedIndex: _tab > 4 ? 0 : _tab,
+                  onDestinationSelected: _selectTab,
+                  destinations: const [
+                    SlidingPillDestination(
+                        icon: Icons.home_outlined,
+                        selectedIcon: Icons.home,
+                        label: 'Inicio'),
+                    SlidingPillDestination(
+                        icon: Icons.desktop_windows_outlined,
+                        selectedIcon: Icons.desktop_windows,
+                        label: 'Tutores'),
+                    SlidingPillDestination(
+                        icon: Icons.check_box_outline_blank,
+                        selectedIcon: Icons.check_box,
+                        label: 'Mis tutorías'),
+                    SlidingPillDestination(
+                        icon: Icons.history, label: 'Historial'),
+                    SlidingPillDestination(
+                        icon: Icons.groups_outlined,
+                        selectedIcon: Icons.groups,
+                        label: 'Proyectos'),
+                  ],
+                ),
               ),
-            ),
+      ),
     );
   }
 

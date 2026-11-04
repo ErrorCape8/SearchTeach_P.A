@@ -91,113 +91,124 @@ class AdminMainPage extends ConsumerWidget {
       };
     }
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF3F6FB),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final isWide = constraints.maxWidth >= 980;
-          final showRoleSummary = constraints.maxWidth >= 1360;
-          final contentSurface = Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF3F6FB),
-              borderRadius: BorderRadius.vertical(
-                top: Radius.circular(isWide ? 18 : 24),
-              ),
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 200),
-              child: KeyedSubtree(
-                key: ValueKey(
-                  hasSelectedUser
-                      ? '${isEditing ? 'edit' : 'detail'}_${state.selectedUser?.id}'
-                      : 'tab_${state.activeTab}',
+    return Theme(
+      data: Theme.of(context).copyWith(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFFEA580C),
+          brightness: Theme.of(context).brightness,
+        ).copyWith(primary: const Color(0xFFEA580C)),
+      ),
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF3F6FB),
+        body: LayoutBuilder(
+          builder: (context, constraints) {
+            final isWide = constraints.maxWidth >= 980;
+            final showRoleSummary = constraints.maxWidth >= 1360;
+            final contentSurface = Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF3F6FB),
+                borderRadius: BorderRadius.vertical(
+                  top: Radius.circular(isWide ? 18 : 24),
                 ),
-                child: bodyContent,
               ),
-            ),
-          );
-
-          final header = AdminHeader(
-            title: headerTitle,
-            subtitle: headerSubtitle,
-            isEditing: hasSelectedUser,
-            onBack: notifier.clearSelectedUser,
-          );
-
-          return Center(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: isWide ? 1440 : double.infinity,
+              clipBehavior: Clip.antiAlias,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                child: KeyedSubtree(
+                  key: ValueKey(
+                    hasSelectedUser
+                        ? '${isEditing ? 'edit' : 'detail'}_${state.selectedUser?.id}'
+                        : 'tab_${state.activeTab}',
+                  ),
+                  child: bodyContent,
+                ),
               ),
-              child: Column(
-                children: [
-                  header,
-                  Expanded(
-                    child: isWide
-                        ? Row(
-                            children: [
-                              AdminSideNav(
-                                currentIndex: hasSelectedUser ? 1 : state.activeTab,
-                                adminName: state.adminProfile?.nombre ?? 'Admin TI',
-                                onTap: notifier.setTab,
-                              ),
-                              Expanded(
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      flex: showRoleSummary ? 3 : 1,
-                                      child: Padding(
-                                        padding: EdgeInsets.fromLTRB(
-                                          showRoleSummary ? 14 : 20,
-                                          14,
-                                          showRoleSummary ? 8 : 20,
-                                          14,
-                                        ),
-                                        child: ClipRRect(
-                                          borderRadius: BorderRadius.circular(16),
-                                          child: contentSurface,
-                                        ),
-                                      ),
-                                    ),
-                                    if (showRoleSummary)
-                                      SizedBox(
-                                        width: 238,
+            );
+
+            final header = AdminHeader(
+              title: headerTitle,
+              subtitle: headerSubtitle,
+              isEditing: hasSelectedUser,
+              onBack: notifier.clearSelectedUser,
+            );
+
+            return Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: isWide ? 1440 : double.infinity,
+                ),
+                child: Column(
+                  children: [
+                    header,
+                    Expanded(
+                      child: isWide
+                          ? Row(
+                              children: [
+                                AdminSideNav(
+                                  currentIndex:
+                                      hasSelectedUser ? 1 : state.activeTab,
+                                  adminName:
+                                      state.adminProfile?.nombre ?? 'Admin TI',
+                                  onTap: notifier.setTab,
+                                ),
+                                Expanded(
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        flex: showRoleSummary ? 3 : 1,
                                         child: Padding(
-                                          padding: const EdgeInsets.fromLTRB(
-                                            5,
+                                          padding: EdgeInsets.fromLTRB(
+                                            showRoleSummary ? 14 : 20,
                                             14,
-                                            14,
+                                            showRoleSummary ? 8 : 20,
                                             14,
                                           ),
-                                          child: Align(
-                                            alignment: Alignment.topCenter,
-                                            child: AdminRoleSummary(
-                                              key: ValueKey(
-                                                'roles_${state.users.length}_${state.isLoadingUsers}',
+                                          child: ClipRRect(
+                                            borderRadius:
+                                                BorderRadius.circular(16),
+                                            child: contentSurface,
+                                          ),
+                                        ),
+                                      ),
+                                      if (showRoleSummary)
+                                        SizedBox(
+                                          width: 238,
+                                          child: Padding(
+                                            padding: const EdgeInsets.fromLTRB(
+                                              5,
+                                              14,
+                                              14,
+                                              14,
+                                            ),
+                                            child: Align(
+                                              alignment: Alignment.topCenter,
+                                              child: AdminRoleSummary(
+                                                key: ValueKey(
+                                                  'roles_${state.users.length}_${state.isLoadingUsers}',
+                                                ),
                                               ),
                                             ),
                                           ),
                                         ),
-                                      ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
-                              ),
-                            ],
-                          )
-                        : contentSurface,
-                  ),
-                  if (!isWide)
-                    AdminBottomBar(
-                      currentIndex: hasSelectedUser ? 1 : state.activeTab,
-                      onTap: notifier.setTab,
+                              ],
+                            )
+                          : contentSurface,
                     ),
-                ],
+                    if (!isWide)
+                      AdminBottomBar(
+                        currentIndex: hasSelectedUser ? 1 : state.activeTab,
+                        onTap: notifier.setTab,
+                      ),
+                  ],
+                ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }

@@ -30,6 +30,26 @@ public final class CatalogoMateriasTecnologia {
 				.toList();
 	}
 
+	public static Map<String, List<MateriaHorario>> listarPorSemestre(String tecnologia) {
+		String tecnologiaCanonica = buscarTecnologia(tecnologia);
+		Map<String, List<MateriaHorario>> resultado = new java.util.LinkedHashMap<>();
+		for (int semestre = 1; semestre <= 6; semestre++) {
+			resultado.put(Integer.toString(semestre), listar(tecnologiaCanonica, semestre));
+		}
+		return java.util.Collections.unmodifiableMap(resultado);
+	}
+
+	public static boolean pertenece(String tecnologia, String materia) {
+		if (materia == null) return false;
+		try {
+			String tecnologiaCanonica = buscarTecnologia(tecnologia);
+			return MATERIAS.get(tecnologiaCanonica).values().stream().flatMap(List::stream)
+					.anyMatch(nombre -> normalizar(nombre).equals(normalizar(materia)));
+		} catch (IllegalArgumentException exception) {
+			return false;
+		}
+	}
+
 	public static boolean contiene(String tecnologia, int semestre, String materia) {
 		if (materia == null || semestre < 1 || semestre > 6) {
 			return false;

@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api_client.dart';
 import '../../core/tutoring_updates.dart';
+import '../../core/widgets/sliding_pill_navigation_bar.dart';
 import '../auth/auth_repository.dart';
 import '../notifications/notifications_page.dart';
 import 'coordinacion_horarios_page.dart';
@@ -125,33 +126,41 @@ class _CoordinacionDashboardPageState
         ),
       ],
     );
-    return Scaffold(
-      backgroundColor: _canvas,
-      body: wide
-          ? Row(
-              children: [
-                _Navigation(
-                  index: _tab,
-                  wide: true,
-                  onSelect: (index) {
-                    setState(() => _tab = index);
-                    if (index == 0) _load();
-                  },
-                ),
-                Expanded(child: content),
-              ],
-            )
-          : content,
-      bottomNavigationBar: wide
-          ? null
-          : _Navigation(
-              index: _tab,
-              wide: false,
-              onSelect: (index) {
-                setState(() => _tab = index);
-                if (index == 0) _load();
-              },
-            ),
+    return Theme(
+      data: Theme.of(context).copyWith(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: _wine,
+          brightness: Theme.of(context).brightness,
+        ).copyWith(primary: _wine),
+      ),
+      child: Scaffold(
+        backgroundColor: _canvas,
+        body: wide
+            ? Row(
+                children: [
+                  _Navigation(
+                    index: _tab,
+                    wide: true,
+                    onSelect: (index) {
+                      setState(() => _tab = index);
+                      if (index == 0) _load();
+                    },
+                  ),
+                  Expanded(child: content),
+                ],
+              )
+            : content,
+        bottomNavigationBar: wide
+            ? null
+            : _Navigation(
+                index: _tab,
+                wide: false,
+                onSelect: (index) {
+                  setState(() => _tab = index);
+                  if (index == 0) _load();
+                },
+              ),
+      ),
     );
   }
 
@@ -266,15 +275,21 @@ class _Navigation extends StatelessWidget {
   Widget build(BuildContext context) {
     if (wide) {
       return Container(
-        color: Colors.white,
+        color: _wineDark,
         child: NavigationRail(
+          backgroundColor: _wineDark,
           selectedIndex: index,
           onDestinationSelected: onSelect,
           labelType: NavigationRailLabelType.all,
-          indicatorColor: _pink,
-          selectedIconTheme: const IconThemeData(color: _wine),
+          indicatorColor: const Color(0xFF650B2E),
+          selectedIconTheme: const IconThemeData(color: Colors.white),
+          unselectedIconTheme:
+              IconThemeData(color: Colors.white.withValues(alpha: .78)),
           selectedLabelTextStyle:
-              const TextStyle(color: _wine, fontWeight: FontWeight.w700),
+              const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+          unselectedLabelTextStyle: TextStyle(
+            color: Colors.white.withValues(alpha: .78),
+          ),
           destinations: [
             for (var i = 0; i < _items.length; i++)
               NavigationRailDestination(
@@ -286,50 +301,19 @@ class _Navigation extends StatelessWidget {
         ),
       );
     }
-    return SafeArea(
-      top: false,
-      child: Container(
-        margin: const EdgeInsets.fromLTRB(10, 0, 10, 8),
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(28),
-          boxShadow: [
-            BoxShadow(
-                color: Colors.black.withValues(alpha: .1),
-                blurRadius: 18,
-                offset: const Offset(0, 3))
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            for (var i = 0; i < _items.length; i++)
-              Expanded(
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(22),
-                  onTap: () => onSelect(i),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 5),
-                    child: Column(mainAxisSize: MainAxisSize.min, children: [
-                      Icon(i == index ? _items[i].$2 : _items[i].$1,
-                          color: i == index ? _wine : const Color(0xFFA4ADBB),
-                          size: 22),
-                      const SizedBox(height: 2),
-                      Text(_items[i].$3,
-                          style: TextStyle(
-                              color: i == index ? _wine : _muted,
-                              fontSize: 10.5,
-                              fontWeight: i == index
-                                  ? FontWeight.w700
-                                  : FontWeight.w500)),
-                    ]),
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
+    return SlidingPillNavigationBar(
+      selectedIndex: index,
+      selectedColor: _wine,
+      indicatorColor: _pink,
+      onDestinationSelected: onSelect,
+      destinations: [
+        for (final item in _items)
+          SlidingPillDestination(
+            icon: item.$1,
+            selectedIcon: item.$2,
+            label: item.$3,
+          ),
+      ],
     );
   }
 }

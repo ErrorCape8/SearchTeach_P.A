@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:dio/dio.dart';
+import '../../../core/api_client.dart';
 import '../../../core/career_catalog.dart';
 import '../admin_controller.dart';
 import '../models/admin_user.dart';
@@ -28,9 +30,11 @@ class _AdminEditarUsuarioViewState
   late final TextEditingController _studyCtrl;
   late List<String> _studies;
   late List<Map<String, dynamic>> _primarySubjects;
-  final TextEditingController _primarySubjectCtrl = TextEditingController();
+  Map<int, List<String>> _subjectCatalog = const {};
+  final Set<String> _selectedSubjects = {};
+  final Map<String, int> _subjectSemesters = {};
+  bool _loadingSubjectCatalog = false;
   String _primaryTechnology = '';
-  final Set<int> _primarySemesters = {};
   late String _career;
 
   late String _selectedRol;
@@ -50,10 +54,15 @@ class _AdminEditarUsuarioViewState
         .map((item) => Map<String, dynamic>.from(item))
         .toList();
     _career = widget.user.carrera;
+    _primaryTechnology = widget.user.carrera;
+    _selectedSubjects.addAll(_primarySubjects.map(
+      (item) => '${item['tecnologia']}|${item['materia']}',
+    ));
 
     _selectedRol = widget.user.rol;
     _selectedEstado = widget.user.estado;
     _semester = widget.user.semestre;
+    if (_primaryTechnology.isNotEmpty) _loadSubjectCatalog(_primaryTechnology);
   }
 
   @override
@@ -63,7 +72,6 @@ class _AdminEditarUsuarioViewState
     _telefonoCtrl.dispose();
     _passCtrl.dispose();
     _studyCtrl.dispose();
-    _primarySubjectCtrl.dispose();
     super.dispose();
   }
 
@@ -277,84 +285,79 @@ class _AdminEditarUsuarioViewState
         ],
 
         if (isTeacher) ...[
-          const _FieldLabel('MATERIAS PRINCIPALES DEL DOCENTE'),
+          const _FieldLabel('MATERIAS QUE PUEDE DAR'),
           const SizedBox(height: 4),
           const Text(
-            'Configura la tecnología y los semestres en los que puede impartir cada materia.',
+            'Elige las materias autorizadas. Los estudios y la carrera son informativos.',
             style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _primarySubjectCtrl,
-                  decoration: const InputDecoration(
-                    hintText: 'Ej. Programación',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              IconButton.filledTonal(
-                tooltip: 'Agregar materia principal',
-                onPressed: _addPrimarySubject,
-                icon: const Icon(Icons.add),
-              ),
-            ],
           ),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
             initialValue:
                 _primaryTechnology.isEmpty ? null : _primaryTechnology,
             decoration: const InputDecoration(
-              labelText: 'Tecnología',
-              border: OutlineInputBorder(),
-            ),
-            items: [
-              for (final technology in careerCatalog)
-                DropdownMenuItem(value: technology, child: Text(technology)),
-            ],
-            onChanged: (value) =>
-                setState(() => _primaryTechnology = value ?? ''),
+                labelText: 'Carrera', border: OutlineInputBorder()),
+            items: careerCatalog
+                .map((career) =>
+                    DropdownMenuItem(value: career, child: Text(career)))
+                .toList(),
+            onChanged: (value) {
+              if (value == null) return;
+              setState(() {
+                _primaryTechnology = value;
+              });
+              _loadSubjectCatalog(value);
+            },
           ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 6,
-            children: [
-              for (var semester = 1; semester <= 6; semester++)
-                FilterChip(
-                  label: Text('$semester'),
-                  selected: _primarySemesters.contains(semester),
-                  onSelected: (selected) => setState(() {
-                    if (selected) {
-                      _primarySemesters.add(semester);
-                    } else {
-                      _primarySemesters.remove(semester);
-                    }
-                  }),
-                ),
-            ],
-          ),
+          if (_loadingSubjectCatalog) const LinearProgressIndicator(),
+          if (_subjectCatalog.isNotEmpty)
+            for (final semester in _subjectCatalog.keys.toList()..sort())
+              ExpansionTile(
+                initiallyExpanded: true,
+                title: Text('Semestre $semester'),
+                children: [
+                  for (final subject in _subjectCatalog[semester]!)
+                    CheckboxListTile(
+                      dense: true,
+                      value: _selectedSubjects
+                          .contains('$_primaryTechnology|$subject'),
+                      title: Text(subject),
+                      onChanged: (selected) => setState(() {
+                        final key = '$_primaryTechnology|$subject';
+                        if (selected == true) {
+                          _selectedSubjects.add(key);
+                        } else {
+                          _selectedSubjects.remove(key);
+                        }
+                        _primarySubjects = _selectedSubjects.map((entry) {
+                          final parts = entry.split('|');
+                          return <String, dynamic>{
+                            'tecnologia': parts.first,
+                            'materia': parts.skip(1).join('|')
+                          };
+                        }).toList();
+                      }),
+                    ),
+                ],
+              ),
           if (_primarySubjects.isNotEmpty) ...[
             const SizedBox(height: 8),
-            for (var index = 0; index < _primarySubjects.length; index++)
-              Card(
-                child: ListTile(
-                  dense: true,
-                  title: Text('${_primarySubjects[index]['materia']}'),
-                  subtitle: Text(
-                    '${_primarySubjects[index]['tecnologia']} · Semestres '
-                    '${(_primarySubjects[index]['semestres'] as List).join(', ')}',
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              children: [
+                for (final item in _primarySubjects)
+                  InputChip(
+                    label: Text('${item['materia']} - S${_semesterFor(item)}'),
+                    onDeleted: () => setState(() {
+                      final key = '${item['tecnologia']}|${item['materia']}';
+                      _selectedSubjects.remove(key);
+                      _primarySubjects.removeWhere((entry) =>
+                          '${entry['tecnologia']}|${entry['materia']}' == key);
+                    }),
                   ),
-                  trailing: IconButton(
-                    tooltip: 'Eliminar materia principal',
-                    icon: const Icon(Icons.delete_outline),
-                    onPressed: () =>
-                        setState(() => _primarySubjects.removeAt(index)),
-                  ),
-                ),
-              ),
+              ],
+            ),
           ],
           const SizedBox(height: 18),
         ],
@@ -565,32 +568,54 @@ class _AdminEditarUsuarioViewState
     });
   }
 
-  void _addPrimarySubject() {
-    final subject = _primarySubjectCtrl.text.trim();
-    if (subject.isEmpty ||
-        _primaryTechnology.isEmpty ||
-        _primarySemesters.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Indica materia, tecnología y al menos un semestre.'),
-        ),
-      );
-      return;
-    }
-    final duplicate = _primarySubjects.any((item) =>
-        '${item['materia']}'.toLowerCase() == subject.toLowerCase() &&
-        '${item['tecnologia']}'.toLowerCase() ==
-            _primaryTechnology.toLowerCase());
-    if (duplicate) return;
+  Future<void> _loadSubjectCatalog(String career) async {
     setState(() {
-      _primarySubjects.add({
-        'materia': subject,
-        'tecnologia': _primaryTechnology,
-        'semestres': _primarySemesters.toList()..sort(),
-      });
-      _primarySubjectCtrl.clear();
-      _primarySemesters.clear();
+      _loadingSubjectCatalog = true;
+      _subjectCatalog = const {};
     });
+    try {
+      final response = await ref.read(dioProvider).get<Map<String, dynamic>>(
+        '/api/admin/catalogo/materias',
+        queryParameters: {'carrera': career},
+      );
+      if (!mounted) return;
+      final catalog = <int, List<String>>{};
+      for (final entry in (response.data ?? const {}).entries) {
+        final semester = int.tryParse(entry.key);
+        if (semester == null || entry.value is! List) continue;
+        catalog[semester] = (entry.value as List)
+            .whereType<Map<String, dynamic>>()
+            .map((item) => item['nombre'])
+            .whereType<String>()
+            .toList();
+        for (final subject in catalog[semester]!) {
+          _subjectSemesters['$career|$subject'] = semester;
+        }
+      }
+      setState(() {
+        _subjectCatalog = catalog;
+        _loadingSubjectCatalog = false;
+        _primarySubjects = _selectedSubjects.map((entry) {
+          final separator = entry.indexOf('|');
+          return <String, dynamic>{
+            'tecnologia': entry.substring(0, separator),
+            'materia': entry.substring(separator + 1),
+          };
+        }).toList();
+      });
+    } on DioException catch (error) {
+      if (mounted) {
+        setState(() => _loadingSubjectCatalog = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No se cargó el plan de estudios: ${error.message ?? 'error de conexión'}')),
+        );
+      }
+    }
+  }
+
+  int _semesterFor(Map<String, dynamic> capability) {
+    final key = '${capability['tecnologia']}|${capability['materia']}';
+    return _subjectSemesters[key] ?? 0;
   }
 
   Widget _buildRoleChip(String role) {

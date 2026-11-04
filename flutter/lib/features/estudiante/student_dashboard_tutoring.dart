@@ -590,7 +590,8 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
     final career = widget.data.profile.career.trim();
     final spaces = widget.data.projectSpaces
         .where((space) => career.isEmpty || space.career == career)
-        .where((space) => space.createOrJoin || space.enrolled)
+        .where((space) =>
+            space.createOrJoin || space.enrolled || space.enrolledCount < 4)
         .where((space) =>
             !space.createOrJoin ||
             !widget.data.projectSpaces.any(
@@ -602,14 +603,24 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
         .toList()
       ..sort((a, b) => a.semester.compareTo(b.semester));
     if (spaces.isEmpty) {
+      final onlyFullGroups = widget.data.projectSpaces.any((space) =>
+          (career.isEmpty || space.career == career) &&
+          !space.createOrJoin &&
+          !space.enrolled &&
+          space.enrolledCount >= 4);
       return ListView(
         padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
         children: [
-          const _EmptyCard(
+          _projectCodeButton(),
+          const SizedBox(height: 12),
+          _EmptyCard(
             icon: Icons.groups_outlined,
-            title: 'No hay proyectos de aula disponibles',
-            message:
-                'Cuando coordinación cree un espacio para tu tecnología aparecerá aquí.',
+            title: onlyFullGroups
+                ? 'No hay grupos con cupo disponible'
+                : 'No hay proyectos de aula disponibles',
+            message: onlyFullGroups
+                ? 'Puedes ingresar un codigo para unirte a otro proyecto.'
+                : 'Cuando coordinacion cree un espacio para tu tecnologia aparecera aqui. Tambien puedes ingresar un codigo.',
           ),
         ],
       );
@@ -619,18 +630,7 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
       itemCount: spaces.length + 1,
       separatorBuilder: (_, __) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
-        if (index == 0) {
-          return OutlinedButton.icon(
-            onPressed: widget.onJoinProjectCode,
-            icon: const Icon(Icons.vpn_key_outlined),
-            label: const Text('Inscribir en PA con código'),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              foregroundColor: _blue,
-              side: const BorderSide(color: _blue),
-            ),
-          );
-        }
+        if (index == 0) return _projectCodeButton();
         final space = spaces[index - 1];
         final full = space.enrolledCount >= 4;
         return Card(
@@ -676,6 +676,17 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
       },
     );
   }
+
+  Widget _projectCodeButton() => OutlinedButton.icon(
+        onPressed: widget.onJoinProjectCode,
+        icon: const Icon(Icons.vpn_key_outlined),
+        label: const Text('Inscribir en PA con código'),
+        style: OutlinedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          foregroundColor: _blue,
+          side: const BorderSide(color: _blue),
+        ),
+      );
 
   Widget _sessionsList() {
     final activeGroupSessions = widget.data.groupSessions

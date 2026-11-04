@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/widgets/brand_logo.dart';
+import '../../../core/widgets/sliding_pill_navigation_bar.dart';
 
 class AdminBottomBar extends StatelessWidget {
   const AdminBottomBar({
@@ -36,35 +37,28 @@ class AdminBottomBar extends StatelessWidget {
                 .colorScheme
                 .copyWith(primary: const Color(0xFFEA580C)),
           ),
-          child: NavigationBar(
-            height: 68,
-            elevation: 0,
-            backgroundColor: Colors.white,
+          child: SlidingPillNavigationBar(
+            selectedColor: const Color(0xFFEA580C),
             indicatorColor: const Color(0xFFFFF1E6),
             selectedIndex: currentIndex,
-            labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
             onDestinationSelected: onTap,
             destinations: const [
-              NavigationDestination(
-                icon: Icon(Icons.home_outlined),
-                selectedIcon: Icon(Icons.home_rounded),
-                label: 'Inicio',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.people_alt_outlined),
-                selectedIcon: Icon(Icons.people_alt_rounded),
-                label: 'Usuarios',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.person_outline_rounded),
-                selectedIcon: Icon(Icons.person_rounded),
-                label: 'Perfil',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.verified_outlined),
-                selectedIcon: Icon(Icons.verified),
-                label: 'Certificaciones',
-              ),
+              SlidingPillDestination(
+                  icon: Icons.home_outlined,
+                  selectedIcon: Icons.home_rounded,
+                  label: 'Inicio'),
+              SlidingPillDestination(
+                  icon: Icons.people_alt_outlined,
+                  selectedIcon: Icons.people_alt_rounded,
+                  label: 'Usuarios'),
+              SlidingPillDestination(
+                  icon: Icons.person_outline_rounded,
+                  selectedIcon: Icons.person_rounded,
+                  label: 'Perfil'),
+              SlidingPillDestination(
+                  icon: Icons.verified_outlined,
+                  selectedIcon: Icons.verified,
+                  label: 'Certificaciones'),
             ],
           ),
         ),
@@ -95,7 +89,21 @@ class AdminSideNav extends StatelessWidget {
             children: [
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: const BrandLogo(width: 142, height: 72),
+                child: Container(
+                  height: 72,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Transform.scale(
+                    scale: 1.06,
+                    child: const BrandLogo(
+                      width: 142,
+                      height: 72,
+                      color: Colors.black,
+                    ),
+                  ),
+                ),
               ),
               const SizedBox(height: 12),
               const Padding(
@@ -138,20 +146,20 @@ class AdminSideNav extends StatelessWidget {
                     dense: true,
                     visualDensity: VisualDensity.compact,
                     selected: active,
-                    selectedColor: const Color(0xFFEA580C),
-                    selectedTileColor: Colors.white,
+                    selectedColor: Colors.white,
+                    selectedTileColor: const Color(0xFFC2410C),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(9),
                     ),
                     leading: Icon(
                       icons[index],
-                      color: active ? const Color(0xFFEA580C) : Colors.white,
+                      color: Colors.white,
                       size: 17,
                     ),
                     title: Text(
                       labels[index],
                       style: TextStyle(
-                        color: active ? const Color(0xFFEA580C) : Colors.white,
+                        color: Colors.white,
                         fontWeight: FontWeight.w700,
                         fontSize: 11,
                       ),
@@ -163,7 +171,13 @@ class AdminSideNav extends StatelessWidget {
               const Spacer(),
               InkWell(
                 onTap: () => onTap(2),
-                child: Padding(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: currentIndex == 2
+                        ? const Color(0xFFC2410C)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(9),
+                  ),
                   padding: const EdgeInsets.fromLTRB(10, 10, 8, 14),
                   child: Row(
                     children: [

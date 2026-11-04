@@ -111,7 +111,11 @@ class _CoordinacionProgramarTutoriasPageState
   List<Teacher> get _compatibleTeachers {
     if (_subject == null) return const [];
     return _teachers.where((teacher) {
-      if (normalizeSearch(teacher.tecnologia) != normalizeSearch(_technology)) {
+      if (!teacher.materiasPrincipales.any((capability) =>
+          normalizeSearch('${capability['tecnologia']}') ==
+              normalizeSearch(_technology) &&
+          normalizeSearch('${capability['materia']}') ==
+              normalizeSearch(_subject!))) {
         return false;
       }
       if (_slots.where((slot) => slot.teacher.id == teacher.id).length >= 3) {
@@ -448,7 +452,7 @@ class _CoordinacionProgramarTutoriasPageState
                             const Padding(
                               padding: EdgeInsets.only(top: 8),
                               child: Text(
-                                  'No hay docentes asignados a esta tecnología.'),
+                                  'No hay docentes habilitados para esta materia.'),
                             ),
                           Align(
                             alignment: Alignment.centerRight,

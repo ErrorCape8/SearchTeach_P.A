@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/api_client.dart';
 import '../../core/tutoring_updates.dart';
 import '../../core/widgets/brand_logo.dart';
+import '../../core/widgets/sliding_pill_navigation_bar.dart';
 import '../auth/auth_repository.dart';
 import '../notifications/notifications_page.dart';
 import 'docente_proyectos_aula_page.dart';
@@ -125,8 +126,10 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
 
     return Theme(
       data: Theme.of(context).copyWith(
-        colorScheme:
-            Theme.of(context).colorScheme.copyWith(primary: _teacherGreen),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: _teacherGreen,
+          brightness: Theme.of(context).brightness,
+        ).copyWith(primary: _teacherGreen),
         scaffoldBackgroundColor: _teacherCanvas,
       ),
       child: Scaffold(
@@ -179,8 +182,9 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
         ),
         bottomNavigationBar: wide
             ? null
-            : NavigationBar(
-                labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+            : SlidingPillNavigationBar(
+                selectedColor: _teacherGreen,
+                indicatorColor: const Color(0xFFDDF2E5),
                 selectedIndex: switch (_tab) {
                   1 || 2 => 1,
                   3 => 2,
@@ -203,26 +207,23 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
                   }
                 },
                 destinations: const [
-                  NavigationDestination(
-                      icon: Icon(Icons.home_outlined),
-                      selectedIcon: Icon(Icons.home),
+                  SlidingPillDestination(
+                      icon: Icons.home_outlined,
+                      selectedIcon: Icons.home,
                       label: 'Inicio'),
-                  NavigationDestination(
-                      icon: Icon(Icons.event_note_outlined),
-                      selectedIcon: Icon(Icons.event_note),
+                  SlidingPillDestination(
+                      icon: Icons.event_note_outlined,
+                      selectedIcon: Icons.event_note,
                       label: 'Sesiones'),
-                  NavigationDestination(
-                      icon: Icon(Icons.school_outlined),
-                      selectedIcon: Icon(Icons.school),
+                  SlidingPillDestination(
+                      icon: Icons.school_outlined,
+                      selectedIcon: Icons.school,
                       label: 'Proyectos'),
-                  NavigationDestination(
-                      icon: Icon(Icons.person_outline),
-                      selectedIcon: Icon(Icons.person),
+                  SlidingPillDestination(
+                      icon: Icons.person_outline,
+                      selectedIcon: Icons.person,
                       label: 'Perfil'),
-                  NavigationDestination(
-                      icon: Icon(Icons.more_horiz),
-                      selectedIcon: Icon(Icons.more_horiz),
-                      label: 'Más'),
+                  SlidingPillDestination(icon: Icons.more_horiz, label: 'Más'),
                 ],
               ),
       ),
@@ -688,7 +689,22 @@ class _TeacherSidebar extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Row(
                 children: [
-                  const BrandLogo(width: 38, height: 34),
+                  Container(
+                    width: 42,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Transform.scale(
+                      scale: 1.08,
+                      child: const BrandLogo(
+                        width: 38,
+                        height: 34,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ),
                   const SizedBox(width: 10),
                   const Expanded(
                     child: Text(
@@ -789,17 +805,18 @@ class _TeacherSidebar extends StatelessWidget {
         dense: true,
         visualDensity: VisualDensity.compact,
         selected: selected,
-        selectedTileColor: Colors.white,
+        selectedColor: Colors.white,
+        selectedTileColor: _teacherNavy,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         leading: Icon(
           icon,
-          color: selected ? _teacherSidebar : Colors.white,
+          color: Colors.white,
           size: 21,
         ),
         title: Text(
           label,
           style: TextStyle(
-            color: selected ? _teacherSidebar : Colors.white,
+            color: Colors.white,
             fontSize: 13,
             fontWeight: FontWeight.w700,
           ),

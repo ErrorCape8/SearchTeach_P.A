@@ -55,7 +55,8 @@ class _StudentHeader extends StatelessWidget {
               height: 164,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.white.withValues(alpha: .07), width: 12),
+                border: Border.all(
+                    color: Colors.white.withValues(alpha: .07), width: 12),
               ),
             ),
           ),
@@ -67,7 +68,8 @@ class _StudentHeader extends StatelessWidget {
               height: 128,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.white.withValues(alpha: .07), width: 12),
+                border: Border.all(
+                    color: Colors.white.withValues(alpha: .07), width: 12),
               ),
             ),
           ),
@@ -193,7 +195,21 @@ class _StudentSidebar extends StatelessWidget {
               const SizedBox(height: 12),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: const BrandLogo(width: 104, height: 64),
+                child: Container(
+                  height: 68,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Transform.scale(
+                    scale: 1.06,
+                    child: const BrandLogo(
+                      width: 104,
+                      height: 64,
+                      color: Colors.black,
+                    ),
+                  ),
+                ),
               ),
               const SizedBox(height: 12),
               const Padding(
@@ -216,12 +232,13 @@ class _StudentSidebar extends StatelessWidget {
               const SizedBox(height: 5),
               for (var index = 0; index < _items.length; index++)
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   child: SizedBox(
                     height: 42,
                     child: Material(
                       color: tab == index
-                          ? const Color(0xFF3B63AE)
+                          ? const Color(0xFF062B6B)
                           : Colors.transparent,
                       borderRadius: BorderRadius.circular(7),
                       child: InkWell(
@@ -261,66 +278,73 @@ class _StudentSidebar extends StatelessWidget {
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(8, 8, 5, 10),
-                child: Row(
-                  children: [
-                    InkWell(
-                      onTap: () => onSelect(5),
-                      borderRadius: BorderRadius.circular(20),
-                      child: CircleAvatar(
-                        radius: 16,
-                        backgroundColor: const Color(0xFF3B63AE),
-                        child: Text(
-                          _studentInitials(profile.name),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color:
+                        tab == 5 ? const Color(0xFF062B6B) : Colors.transparent,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      InkWell(
+                        onTap: () => onSelect(5),
+                        borderRadius: BorderRadius.circular(20),
+                        child: CircleAvatar(
+                          radius: 16,
+                          backgroundColor: const Color(0xFF3B63AE),
+                          child: Text(
+                            _studentInitials(profile.name),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 5),
-                    Expanded(
-                      child: InkWell(
-                        onTap: () => onSelect(5),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              profile.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
+                      const SizedBox(width: 5),
+                      Expanded(
+                        child: InkWell(
+                          onTap: () => onSelect(5),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                profile.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
-                            ),
-                            const Text(
-                              'Estudiante',
-                              style: TextStyle(
-                                color: Color(0xFFB8C9E6),
-                                fontSize: 12,
+                              const Text(
+                                'Estudiante',
+                                style: TextStyle(
+                                  color: Color(0xFFB8C9E6),
+                                  fontSize: 12,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                    IconButton(
-                      tooltip: 'Cerrar sesión',
-                      onPressed: onLogout,
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints.tightFor(
-                        width: 32,
-                        height: 32,
+                      IconButton(
+                        tooltip: 'Cerrar sesión',
+                        onPressed: onLogout,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints.tightFor(
+                          width: 32,
+                          height: 32,
+                        ),
+                        icon: const Icon(
+                          Icons.logout,
+                          color: Colors.white,
+                          size: 18,
+                        ),
                       ),
-                      icon: const Icon(
-                        Icons.logout,
-                        color: Colors.white,
-                        size: 18,
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -337,7 +361,13 @@ class _StudentSidePanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
-    final sessions = <({String subject, DateTime start, String modality, String location, String status})>[];
+    final sessions = <({
+      String subject,
+      DateTime start,
+      String modality,
+      String location,
+      String status
+    })>[];
     for (final session in data.groupSessions) {
       final start = session.start?.toLocal();
       if (start != null &&
@@ -391,7 +421,8 @@ class _StudentSidePanel extends StatelessWidget {
           color: Colors.white,
           elevation: 2,
           shadowColor: const Color(0x14000000),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: sessions.isEmpty
               ? const Padding(
                   padding: EdgeInsets.all(12),
@@ -482,11 +513,11 @@ class _StudentCalendarCard extends StatelessWidget {
                   for (var weekday = 0; weekday < 7; weekday++)
                     Expanded(
                       child: _calendarDay(
-                          week * 7 + weekday + 1,
+                        week * 7 + weekday + 1,
                         daysInMonth,
                         now,
-                          firstWeekday,
-                        ),
+                        firstWeekday,
+                      ),
                     ),
                 ],
               ),
@@ -510,10 +541,13 @@ class _StudentCalendarCard extends StatelessWidget {
     final day = offsetDay - firstWeekday;
     if (day < 1 || day > daysInMonth) return const SizedBox(height: 19);
     final date = DateTime(today.year, today.month, day);
-    final isToday =
-        date.year == today.year && date.month == today.month && date.day == today.day;
+    final isToday = date.year == today.year &&
+        date.month == today.month &&
+        date.day == today.day;
     final hasSession = bookedDates.any((item) =>
-        item.year == date.year && item.month == date.month && item.day == date.day);
+        item.year == date.year &&
+        item.month == date.month &&
+        item.day == date.day);
     final selected = isToday || hasSession;
     return SizedBox(
       height: 19,
@@ -636,7 +670,8 @@ String _shortMonth(int month) => switch (month) {
     };
 
 String _studentInitials(String name) {
-  final parts = name.trim().split(RegExp(r'\s+')).where((part) => part.isNotEmpty);
+  final parts =
+      name.trim().split(RegExp(r'\s+')).where((part) => part.isNotEmpty);
   return parts.take(2).map((part) => part[0].toUpperCase()).join();
 }
 

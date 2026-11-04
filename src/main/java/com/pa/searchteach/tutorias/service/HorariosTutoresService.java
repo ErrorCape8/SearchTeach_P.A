@@ -44,7 +44,7 @@ public class HorariosTutoresService {
 				.filter(user -> user.getEstado() == null || user.getEstado().isBlank()
 						|| "Activo".equalsIgnoreCase(user.getEstado()))
 				.map(user -> new DocenteCoordinacion(
-						user.getId(), valor(user.getNombre()), valor(user.getCarrera())))
+						user.getId(), valor(user.getNombre()), valor(user.getCarrera()), user.getMateriasPrincipales()))
 				.toList();
 	}
 
@@ -178,15 +178,8 @@ public class HorariosTutoresService {
 			throw new ResponseStatusException(HttpStatus.CONFLICT,
 					"La materia no pertenece al plan de estudios seleccionado.");
 		}
-		if (!CatalogoTecnologias.contiene(docente.getCarrera())
-				|| !CatalogoMateriasTecnologia.normalizar(docente.getCarrera())
-						.equals(CatalogoMateriasTecnologia.normalizar(tecnologia))) {
-			throw new ResponseStatusException(HttpStatus.CONFLICT,
-					"El docente no está asignado a la tecnología seleccionada.");
-		}
-		if (!docente.getMateriasPrincipales().isEmpty()
-				&& docente.getMateriasPrincipales().stream()
-						.noneMatch(item -> item.aplica(tecnologia, semestre, materia))) {
+		if (docente.getMateriasPrincipales().stream()
+				.noneMatch(item -> item.aplica(tecnologia, semestre, materia))) {
 			throw new ResponseStatusException(HttpStatus.CONFLICT,
 					"El docente no tiene autorizada esa materia principal para el semestre seleccionado.");
 		}
@@ -212,9 +205,6 @@ public class HorariosTutoresService {
 	}
 
 	private void validarCapacidades(User docente, HorarioTutor horario) {
-		if (docente.getMateriasPrincipales().isEmpty()) {
-			return;
-		}
 		for (MateriaHorario materia : horario.materias()) {
 			if (docente.getMateriasPrincipales().stream()
 					.noneMatch(item -> item.aplica(horario.carrera(), horario.semestre(), materia.nombre()))) {

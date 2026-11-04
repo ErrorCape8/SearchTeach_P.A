@@ -1,11 +1,17 @@
 import 'package:dio/dio.dart';
 
 class Teacher {
-  const Teacher({required this.id, required this.nombre, this.tecnologia = ''});
+  const Teacher({
+    required this.id,
+    required this.nombre,
+    this.tecnologia = '',
+    this.materiasPrincipales = const [],
+  });
 
   final String id;
   final String nombre;
   final String tecnologia;
+  final List<Map<String, dynamic>> materiasPrincipales;
 
   factory Teacher.fromJson(Map<String, dynamic> json) {
     if (json['id'] is! String || json['nombre'] is! String) {
@@ -17,6 +23,11 @@ class Teacher {
       nombre: json['nombre'] as String,
       tecnologia:
           json['tecnologia'] is String ? json['tecnologia'] as String : '',
+      materiasPrincipales: json['materiasPrincipales'] is List
+          ? (json['materiasPrincipales'] as List)
+              .whereType<Map<String, dynamic>>()
+              .toList()
+          : const [],
     );
   }
 }
@@ -100,14 +111,19 @@ class PublishedTutoringSession {
   factory PublishedTutoringSession.fromJson(Map<String, dynamic> json) =>
       PublishedTutoringSession(
         id: json['id'] is String ? json['id'] as String : '',
-        teacherId: json['docenteId'] is String ? json['docenteId'] as String : '',
-        subject: json['materia'] is String ? json['materia'] as String : 'Tutoría',
-        technology: json['tecnologia'] is String ? json['tecnologia'] as String : '',
-        semester: json['semestre'] is num ? (json['semestre'] as num).toInt() : 0,
+        teacherId:
+            json['docenteId'] is String ? json['docenteId'] as String : '',
+        subject:
+            json['materia'] is String ? json['materia'] as String : 'Tutoría',
+        technology:
+            json['tecnologia'] is String ? json['tecnologia'] as String : '',
+        semester:
+            json['semestre'] is num ? (json['semestre'] as num).toInt() : 0,
         start: DateTime.tryParse(json['fechaInicio']?.toString() ?? ''),
         end: DateTime.tryParse(json['fechaFin']?.toString() ?? ''),
         modality: json['modalidad']?.toString() ?? '',
-        location: json['ubicacion'] is String ? json['ubicacion'] as String : '',
+        location:
+            json['ubicacion'] is String ? json['ubicacion'] as String : '',
       );
 }
 

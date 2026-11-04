@@ -4,11 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../auth/auth_repository.dart';
 import '../notifications/notifications_page.dart';
+import '../../core/widgets/sliding_pill_navigation_bar.dart';
 import '../../core/tutoring_updates.dart';
 import 'director_dashboard_provider.dart';
 
 const _purple = Color(0xFF6337BF);
-const _brandOrange = Color(0xFFEA580C);
 const _ink = Color(0xFF28243A);
 const _muted = Color(0xFF777487);
 const _canvas = Color(0xFFF4F5FA);
@@ -39,131 +39,142 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
       _ => _profile(),
     };
 
-    return Scaffold(
-      backgroundColor: _canvas,
-      appBar: AppBar(
-        backgroundColor: _purple,
-        foregroundColor: Colors.white,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Hola, líder del programa',
-                style: TextStyle(fontSize: 18)),
-            Text(
-              _titles[_selectedTab],
-              style: const TextStyle(fontSize: 12, color: Color(0xFFDCD0F6)),
+    return Theme(
+      data: Theme.of(context).copyWith(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: _purple,
+          brightness: Theme.of(context).brightness,
+        ).copyWith(primary: _purple),
+      ),
+      child: Scaffold(
+        backgroundColor: _canvas,
+        appBar: AppBar(
+          backgroundColor: _purple,
+          foregroundColor: Colors.white,
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Hola, líder del programa',
+                  style: TextStyle(fontSize: 18)),
+              Text(
+                _titles[_selectedTab],
+                style: const TextStyle(fontSize: 12, color: Color(0xFFDCD0F6)),
+              ),
+            ],
+          ),
+          actions: [
+            const NotificationBellButton(accentColor: _purple),
+            IconButton(
+              tooltip: 'Actualizar',
+              onPressed: () {
+                ref.invalidate(directorDashboardProvider);
+              },
+              icon: const Icon(Icons.refresh),
             ),
           ],
         ),
-        actions: [
-          const NotificationBellButton(accentColor: _purple),
-          IconButton(
-            tooltip: 'Actualizar',
-            onPressed: () {
-              ref.invalidate(directorDashboardProvider);
-            },
-            icon: const Icon(Icons.refresh),
-          ),
-        ],
-      ),
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final isWide = constraints.maxWidth >= 900;
-            final content = AnimatedSwitcher(
-              duration: const Duration(milliseconds: 180),
-              child: KeyedSubtree(
-                key: ValueKey(_selectedTab),
-                child: screen,
-              ),
-            );
-            if (!isWide) {
-              return Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 720),
-                  child: content,
+        body: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isWide = constraints.maxWidth >= 900;
+              final content = AnimatedSwitcher(
+                duration: const Duration(milliseconds: 180),
+                child: KeyedSubtree(
+                  key: ValueKey(_selectedTab),
+                  child: screen,
                 ),
               );
-            }
-            return Row(
-              children: [
-                NavigationRail(
-                  backgroundColor: Colors.white,
-                  selectedIndex: _selectedTab,
-                  onDestinationSelected: (index) =>
-                      setState(() => _selectedTab = index),
-                  labelType: NavigationRailLabelType.all,
-                  groupAlignment: -0.8,
-                  indicatorColor: const Color(0xFFFFF1E6),
-                  selectedIconTheme: const IconThemeData(color: _brandOrange),
-                  unselectedIconTheme:
-                      const IconThemeData(color: Color(0xFF8C95A6)),
-                  selectedLabelTextStyle: const TextStyle(
-                    color: _brandOrange,
-                    fontWeight: FontWeight.w700,
+              if (!isWide) {
+                return Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 720),
+                    child: content,
                   ),
-                  unselectedLabelTextStyle:
-                      const TextStyle(color: Color(0xFF64748B)),
-                  destinations: const [
-                    NavigationRailDestination(
-                      icon: Icon(Icons.home_outlined),
-                      selectedIcon: Icon(Icons.home_rounded),
-                      label: Text('Inicio'),
+                );
+              }
+              return Row(
+                children: [
+                  NavigationRail(
+                    backgroundColor: _purple,
+                    selectedIndex: _selectedTab,
+                    onDestinationSelected: (index) =>
+                        setState(() => _selectedTab = index),
+                    labelType: NavigationRailLabelType.all,
+                    groupAlignment: -0.8,
+                    indicatorColor: const Color(0xFF45258A),
+                    selectedIconTheme: const IconThemeData(color: Colors.white),
+                    unselectedIconTheme: IconThemeData(
+                        color: Colors.white.withValues(alpha: .78)),
+                    selectedLabelTextStyle: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
                     ),
-                    NavigationRailDestination(
-                      icon: Icon(Icons.star_outline),
-                      label: Text('Calidad'),
+                    unselectedLabelTextStyle: TextStyle(
+                      color: Colors.white.withValues(alpha: .78),
                     ),
-                    NavigationRailDestination(
-                      icon: Icon(Icons.bar_chart),
-                      label: Text('Pronóstico'),
-                    ),
-                    NavigationRailDestination(
-                      icon: Icon(Icons.science_outlined),
-                      label: Text('Proyectos'),
-                    ),
-                    NavigationRailDestination(
-                      icon: Icon(Icons.person_outline),
-                      label: Text('Perfil'),
-                    ),
-                  ],
-                ),
-                const VerticalDivider(width: 1, thickness: 1),
-                Expanded(
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 1440),
-                      child: Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: content,
+                    destinations: const [
+                      NavigationRailDestination(
+                        icon: Icon(Icons.home_outlined),
+                        selectedIcon: Icon(Icons.home_rounded),
+                        label: Text('Inicio'),
+                      ),
+                      NavigationRailDestination(
+                        icon: Icon(Icons.star_outline),
+                        label: Text('Calidad'),
+                      ),
+                      NavigationRailDestination(
+                        icon: Icon(Icons.bar_chart),
+                        label: Text('Pronóstico'),
+                      ),
+                      NavigationRailDestination(
+                        icon: Icon(Icons.science_outlined),
+                        label: Text('Proyectos'),
+                      ),
+                      NavigationRailDestination(
+                        icon: Icon(Icons.person_outline),
+                        label: Text('Perfil'),
+                      ),
+                    ],
+                  ),
+                  const VerticalDivider(width: 1, thickness: 1),
+                  Expanded(
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 1440),
+                        child: Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: content,
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
-            );
-          },
+                ],
+              );
+            },
+          ),
         ),
+        bottomNavigationBar: MediaQuery.sizeOf(context).width < 900
+            ? SlidingPillNavigationBar(
+                selectedColor: _purple,
+                indicatorColor: const Color(0xFFEAE2FA),
+                selectedIndex: _selectedTab,
+                onDestinationSelected: (index) =>
+                    setState(() => _selectedTab = index),
+                destinations: const [
+                  SlidingPillDestination(
+                      icon: Icons.home_outlined, label: 'Inicio'),
+                  SlidingPillDestination(
+                      icon: Icons.star_outline, label: 'Calidad'),
+                  SlidingPillDestination(
+                      icon: Icons.bar_chart, label: 'Pronóstico'),
+                  SlidingPillDestination(
+                      icon: Icons.science_outlined, label: 'Proyectos'),
+                  SlidingPillDestination(
+                      icon: Icons.person_outline, label: 'Perfil'),
+                ],
+              )
+            : null,
       ),
-      bottomNavigationBar: MediaQuery.sizeOf(context).width < 900
-          ? NavigationBar(
-              selectedIndex: _selectedTab,
-              onDestinationSelected: (index) =>
-                  setState(() => _selectedTab = index),
-              destinations: const [
-                NavigationDestination(
-                    icon: Icon(Icons.home_outlined), label: 'Inicio'),
-                NavigationDestination(
-                    icon: Icon(Icons.star_outline), label: 'Calidad'),
-                NavigationDestination(
-                    icon: Icon(Icons.bar_chart), label: 'Pronóstico'),
-                NavigationDestination(
-                    icon: Icon(Icons.science_outlined), label: 'Proyectos'),
-                NavigationDestination(
-                    icon: Icon(Icons.person_outline), label: 'Perfil'),
-              ],
-            )
-          : null,
     );
   }
 

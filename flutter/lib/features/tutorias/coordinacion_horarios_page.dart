@@ -173,9 +173,10 @@ class _CoordinacionHorariosPageState
           .showSnackBar(const SnackBar(content: Text('Tutoría eliminada.')));
       await _load();
     } on DioException catch (error) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text(apiError(error, 'No se pudo eliminar la tutoría.'))));
+      }
     }
   }
 
@@ -188,8 +189,9 @@ class _CoordinacionHorariosPageState
         ? session.end!.difference(session.start!)
         : const Duration(hours: 1);
     String modality = session.modality.toUpperCase();
-    if (!const ['PRESENCIAL', 'VIRTUAL', 'HIBRIDA'].contains(modality))
+    if (!const ['PRESENCIAL', 'VIRTUAL', 'HIBRIDA'].contains(modality)) {
       modality = 'PRESENCIAL';
+    }
     final result = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
@@ -209,13 +211,14 @@ class _CoordinacionHorariosPageState
                           firstDate: DateTime.now(),
                           lastDate:
                               DateTime.now().add(const Duration(days: 365)));
-                      if (picked != null)
+                      if (picked != null) {
                         setDialogState(() => start = DateTime(
                             picked.year,
                             picked.month,
                             picked.day,
                             start.hour,
                             start.minute));
+                      }
                     },
                     icon: const Icon(Icons.calendar_month),
                     label: Text(
@@ -226,13 +229,14 @@ class _CoordinacionHorariosPageState
                       final picked = await showTimePicker(
                           context: context,
                           initialTime: TimeOfDay.fromDateTime(start));
-                      if (picked != null)
+                      if (picked != null) {
                         setDialogState(() => start = DateTime(
                             start.year,
                             start.month,
                             start.day,
                             picked.hour,
                             picked.minute));
+                      }
                     },
                     icon: const Icon(Icons.schedule),
                     label: Text(TimeOfDay.fromDateTime(start).format(context)),
@@ -250,8 +254,9 @@ class _CoordinacionHorariosPageState
                             value: 'HIBRIDA', child: Text('Híbrida')),
                       ],
                       onChanged: (value) {
-                        if (value != null)
+                        if (value != null) {
                           setDialogState(() => modality = value);
+                        }
                       }),
                   if (modality != 'VIRTUAL')
                     TextField(
@@ -299,9 +304,10 @@ class _CoordinacionHorariosPageState
         await _load();
       }
     } on DioException catch (error) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text(apiError(error, 'No se pudo editar la tutoría.'))));
+      }
     } finally {
       subjectController.dispose();
       locationController.dispose();
