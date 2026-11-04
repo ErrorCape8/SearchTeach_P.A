@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../admin_controller.dart';
 
 class AdminInicioView extends ConsumerWidget {
-  const AdminInicioView({super.key});
+  const AdminInicioView({super.key, this.onOpenCertifications});
+
+  final VoidCallback? onOpenCertifications;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -16,7 +18,8 @@ class AdminInicioView extends ConsumerWidget {
         if (state.statsError != null)
           _LoadError(
             message: state.statsError!,
-            onRetry: () => ref.read(adminControllerProvider.notifier).loadStats(),
+            onRetry: () =>
+                ref.read(adminControllerProvider.notifier).loadStats(),
           )
         else if (state.isLoadingStats || stats == null)
           const Center(
@@ -69,6 +72,22 @@ class AdminInicioView extends ConsumerWidget {
             },
           ),
           const SizedBox(height: 28),
+          if (onOpenCertifications != null) ...[
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: onOpenCertifications,
+                icon: const Icon(Icons.verified_outlined),
+                label: const Text('Revisar certificaciones docentes'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFFEA580C),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+          ],
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(18),

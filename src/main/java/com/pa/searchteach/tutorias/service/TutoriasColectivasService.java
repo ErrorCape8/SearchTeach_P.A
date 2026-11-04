@@ -176,6 +176,15 @@ public class TutoriasColectivasService {
 		TutoriaColectiva disuelta = tutoria.disolver();
 		tutoriaColectivaRepositorio.save(disuelta);
 		actualizacionesTutoriasService.publicar("TUTORIA_COLECTIVA_CAMBIO", tutoriaId);
+		tutoria.proyectos().stream()
+				.flatMap(proyecto -> proyecto.estudianteIds().stream())
+				.distinct()
+				.forEach(estudianteId -> notificationService.notifyUser(
+						estudianteId,
+						"Proyecto de aula disuelto",
+						"El grupo de proyecto de aula fue disuelto por coordinación. "
+								+ "Ya no está disponible para continuar.",
+						"/notificaciones"));
 		notificationService.notifyUser(tutoria.docenteLiderId(), "Grupo de proyecto disuelto",
 				"El grupo fue archivado por coordinación. El historial se conserva para consulta.", "/notificaciones");
 		tutoria.docentesApoyoIds().forEach(docenteId -> notificationService.notifyUser(
@@ -189,7 +198,7 @@ public class TutoriasColectivasService {
 				.flatMap(tutoria -> tutoria.proyectos().stream()
 						.filter(proyecto -> proyecto.estudianteIds().contains(estudianteId))
 						.map(proyecto -> new ProyectoAulaSeguimientoEstudiante(
-								tutoria.id(), proyecto, proyecto.codigoInscripcion(),
+								tutoria.id(), tutoria.estado(), proyecto, proyecto.codigoInscripcion(),
 								userRepository.findById(proyecto.docenteResponsableId()).map(User::getNombre)
 										.orElse(proyecto.docenteResponsableId()),
 								sesionProyectoRepositorio.findByTutoriaColectivaIdAndProyectoIdOrderByFechaInicioDesc(
@@ -849,11 +858,13 @@ public class TutoriasColectivasService {
 					tutoria.semestre(),
 					true,
 					tutoria.proyectos().stream()
+							.filter(proyecto -> "EN_CURSO".equals(proyecto.estadoCierre()))
 							.map(proyecto -> disponible(tutoria.id(), proyecto, estudiante.getId()))
 							.toList()));
 		}
 		return tutoria.proyectos().stream()
-				.filter(proyecto -> proyecto.tecnologia().equalsIgnoreCase(carrera))
+				.filter(proyecto -> "EN_CURSO".equals(proyecto.estadoCierre())
+						&& proyecto.tecnologia().equalsIgnoreCase(carrera))
 				.collect(java.util.stream.Collectors.groupingBy(
 						ProyectoAula::semestre,
 						java.util.LinkedHashMap::new,

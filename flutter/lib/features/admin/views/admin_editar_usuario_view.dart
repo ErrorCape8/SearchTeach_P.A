@@ -27,10 +27,15 @@ class _AdminEditarUsuarioViewState
   late final TextEditingController _passCtrl;
   late final TextEditingController _studyCtrl;
   late List<String> _studies;
+  late List<Map<String, dynamic>> _primarySubjects;
+  final TextEditingController _primarySubjectCtrl = TextEditingController();
+  String _primaryTechnology = '';
+  final Set<int> _primarySemesters = {};
   late String _career;
 
   late String _selectedRol;
   late String _selectedEstado;
+  late int _semester;
 
   @override
   void initState() {
@@ -41,10 +46,14 @@ class _AdminEditarUsuarioViewState
     _passCtrl = TextEditingController();
     _studyCtrl = TextEditingController();
     _studies = [...widget.user.titulosAcademicos];
+    _primarySubjects = widget.user.materiasPrincipales
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList();
     _career = widget.user.carrera;
 
     _selectedRol = widget.user.rol;
     _selectedEstado = widget.user.estado;
+    _semester = widget.user.semestre;
   }
 
   @override
@@ -54,6 +63,7 @@ class _AdminEditarUsuarioViewState
     _telefonoCtrl.dispose();
     _passCtrl.dispose();
     _studyCtrl.dispose();
+    _primarySubjectCtrl.dispose();
     super.dispose();
   }
 
@@ -85,6 +95,8 @@ class _AdminEditarUsuarioViewState
       estado: _selectedEstado,
       carrera: selectedCareer,
       titulosAcademicos: _studies,
+      materiasPrincipales: _primarySubjects,
+      semestre: _semester,
     );
 
     final pass = _passCtrl.text.trim();
@@ -166,7 +178,9 @@ class _AdminEditarUsuarioViewState
         ),
         const SizedBox(height: 18),
 
-        _FieldLabel(isTeacher ? 'TECNOLOGIA ENFOCADA EN DAR CLASES' : 'TECNOLOGIA / CARRERA'),
+        _FieldLabel(isTeacher
+            ? 'TECNOLOGIA ENFOCADA EN DAR CLASES'
+            : 'TECNOLOGIA / CARRERA'),
         const SizedBox(height: 6),
         Autocomplete<String>(
           initialValue: TextEditingValue(text: _career),
@@ -199,9 +213,23 @@ class _AdminEditarUsuarioViewState
               border: OutlineInputBorder(),
               prefixIcon: Icon(Icons.layers_outlined),
             ),
-            child: Text(widget.user.semestre > 0
-                ? 'Semestre ${widget.user.semestre}'
-                : 'Sin registrar'),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<int>(
+                value: _semester >= 1 && _semester <= 6 ? _semester : null,
+                hint: const Text('Selecciona el semestre'),
+                isExpanded: true,
+                items: [
+                  for (var semester = 1; semester <= 6; semester++)
+                    DropdownMenuItem(
+                      value: semester,
+                      child: Text('Semestre $semester'),
+                    ),
+                ],
+                onChanged: (value) {
+                  if (value != null) setState(() => _semester = value);
+                },
+              ),
+            ),
           ),
           const SizedBox(height: 18),
         ],
@@ -244,6 +272,89 @@ class _AdminEditarUsuarioViewState
                   ),
               ],
             ),
+          ],
+          const SizedBox(height: 18),
+        ],
+
+        if (isTeacher) ...[
+          const _FieldLabel('MATERIAS PRINCIPALES DEL DOCENTE'),
+          const SizedBox(height: 4),
+          const Text(
+            'Configura la tecnología y los semestres en los que puede impartir cada materia.',
+            style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _primarySubjectCtrl,
+                  decoration: const InputDecoration(
+                    hintText: 'Ej. Programación',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton.filledTonal(
+                tooltip: 'Agregar materia principal',
+                onPressed: _addPrimarySubject,
+                icon: const Icon(Icons.add),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(
+            initialValue:
+                _primaryTechnology.isEmpty ? null : _primaryTechnology,
+            decoration: const InputDecoration(
+              labelText: 'Tecnología',
+              border: OutlineInputBorder(),
+            ),
+            items: [
+              for (final technology in careerCatalog)
+                DropdownMenuItem(value: technology, child: Text(technology)),
+            ],
+            onChanged: (value) =>
+                setState(() => _primaryTechnology = value ?? ''),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 6,
+            children: [
+              for (var semester = 1; semester <= 6; semester++)
+                FilterChip(
+                  label: Text('$semester'),
+                  selected: _primarySemesters.contains(semester),
+                  onSelected: (selected) => setState(() {
+                    if (selected) {
+                      _primarySemesters.add(semester);
+                    } else {
+                      _primarySemesters.remove(semester);
+                    }
+                  }),
+                ),
+            ],
+          ),
+          if (_primarySubjects.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            for (var index = 0; index < _primarySubjects.length; index++)
+              Card(
+                child: ListTile(
+                  dense: true,
+                  title: Text('${_primarySubjects[index]['materia']}'),
+                  subtitle: Text(
+                    '${_primarySubjects[index]['tecnologia']} · Semestres '
+                    '${(_primarySubjects[index]['semestres'] as List).join(', ')}',
+                  ),
+                  trailing: IconButton(
+                    tooltip: 'Eliminar materia principal',
+                    icon: const Icon(Icons.delete_outline),
+                    onPressed: () =>
+                        setState(() => _primarySubjects.removeAt(index)),
+                  ),
+                ),
+              ),
           ],
           const SizedBox(height: 18),
         ],
@@ -447,9 +558,38 @@ class _AdminEditarUsuarioViewState
         _studies.any((item) => item.toLowerCase() == study.toLowerCase())) {
       return;
     }
+
     setState(() {
       _studies.add(study);
       _studyCtrl.clear();
+    });
+  }
+
+  void _addPrimarySubject() {
+    final subject = _primarySubjectCtrl.text.trim();
+    if (subject.isEmpty ||
+        _primaryTechnology.isEmpty ||
+        _primarySemesters.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Indica materia, tecnología y al menos un semestre.'),
+        ),
+      );
+      return;
+    }
+    final duplicate = _primarySubjects.any((item) =>
+        '${item['materia']}'.toLowerCase() == subject.toLowerCase() &&
+        '${item['tecnologia']}'.toLowerCase() ==
+            _primaryTechnology.toLowerCase());
+    if (duplicate) return;
+    setState(() {
+      _primarySubjects.add({
+        'materia': subject,
+        'tecnologia': _primaryTechnology,
+        'semestres': _primarySemesters.toList()..sort(),
+      });
+      _primarySubjectCtrl.clear();
+      _primarySemesters.clear();
     });
   }
 
@@ -463,7 +603,8 @@ class _AdminEditarUsuarioViewState
       onTap: () => setState(() {
         final isTeacher = _selectedRol.toLowerCase().contains('docente');
         final isStudent = _selectedRol.toLowerCase().contains('estudiante');
-        final isCoordinator = _selectedRol.toLowerCase().contains('coordinador');
+        final isCoordinator =
+            _selectedRol.toLowerCase().contains('coordinador');
         final wasSelected = role == 'Docente' ? isTeacher : isStudent;
         final nextTeacher = role == 'Docente' ? !wasSelected : isTeacher;
         final nextStudent = role == 'Estudiante' ? !wasSelected : isStudent;

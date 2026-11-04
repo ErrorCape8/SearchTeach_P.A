@@ -6,6 +6,7 @@ import 'views/admin_editar_usuario_view.dart';
 import 'views/admin_inicio_view.dart';
 import 'views/admin_perfil_view.dart';
 import 'views/admin_usuarios_view.dart';
+import 'views/admin_certificaciones_view.dart';
 import 'widgets/admin_bottom_bar.dart';
 import 'widgets/admin_header.dart';
 
@@ -44,12 +45,19 @@ class AdminMainPage extends ConsumerWidget {
           headerSubtitle = 'Cuentas y roles';
           break;
         case 2:
-        default:
           headerTitle = state.adminProfile?.nombre ?? 'Perfil de TI';
           headerSubtitle = state.adminProfile?.rol ??
               (state.isLoadingProfile
                   ? 'Cargando perfil…'
                   : 'Perfil no disponible');
+          break;
+        case 3:
+          headerTitle = 'Certificaciones';
+          headerSubtitle = 'Revisión de soportes docentes';
+          break;
+        default:
+          headerTitle = 'Panel de TI';
+          headerSubtitle = 'Administración';
           break;
       }
     }
@@ -62,9 +70,12 @@ class AdminMainPage extends ConsumerWidget {
       );
     } else {
       bodyContent = switch (state.activeTab) {
-        0 => const AdminInicioView(),
+        0 => AdminInicioView(
+            onOpenCertifications: () => notifier.setTab(3),
+          ),
         1 => const AdminUsuariosView(),
         2 => const AdminPerfilView(),
+        3 => const AdminCertificacionesView(),
         _ => const AdminInicioView(),
       };
     }

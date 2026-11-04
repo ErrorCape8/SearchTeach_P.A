@@ -7,5 +7,6 @@ public record PerfilUsuarioResponse(
 		String telefono,
 		String rol,
 		String carrera,
-		int semestre) {
+		int semestre,
+		java.util.List<com.pa.searchteach.users.model.MateriaPrincipalDocente> materiasPrincipales) {
 }

@@ -82,4 +82,12 @@ public class NotificationService {
             }
         }
     }
+
+    public void notifyUserOnce(String userId, String title, String message, String route) {
+        if (userId == null || userId.isBlank()
+                || notifications.existsByUserIdAndTitleAndMessage(userId, title, message)) {
+            return;
+        }
+        notifyUser(userId, title, message, route);
+    }
 }

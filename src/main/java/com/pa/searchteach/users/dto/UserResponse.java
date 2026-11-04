@@ -10,6 +10,7 @@ public class UserResponse {
 	private String carrera;
 	private int semestre;
 	private java.util.List<String> titulosAcademicos = java.util.List.of();
+	private java.util.List<com.pa.searchteach.users.model.MateriaPrincipalDocente> materiasPrincipales = java.util.List.of();
 
 	public UserResponse() {
 	}
@@ -36,6 +37,13 @@ public class UserResponse {
 		this.carrera = carrera;
 		this.titulosAcademicos = titulosAcademicos == null ? java.util.List.of() : java.util.List.copyOf(titulosAcademicos);
 		this.semestre = semestre;
+	}
+
+	public UserResponse(String id, String nombre, String correo, String telefono, String rol, String estado,
+			String carrera, java.util.List<String> titulosAcademicos, int semestre,
+			java.util.List<com.pa.searchteach.users.model.MateriaPrincipalDocente> materiasPrincipales) {
+		this(id, nombre, correo, telefono, rol, estado, carrera, titulosAcademicos, semestre);
+		setMateriasPrincipales(materiasPrincipales);
 	}
 
 	public String getId() {
@@ -108,5 +116,15 @@ public class UserResponse {
 
 	public void setTitulosAcademicos(java.util.List<String> titulosAcademicos) {
 		this.titulosAcademicos = titulosAcademicos == null ? java.util.List.of() : java.util.List.copyOf(titulosAcademicos);
+	}
+
+	public java.util.List<com.pa.searchteach.users.model.MateriaPrincipalDocente> getMateriasPrincipales() {
+		return materiasPrincipales;
+	}
+
+	public void setMateriasPrincipales(
+			java.util.List<com.pa.searchteach.users.model.MateriaPrincipalDocente> materiasPrincipales) {
+		this.materiasPrincipales = materiasPrincipales == null ? java.util.List.of()
+				: java.util.List.copyOf(materiasPrincipales);
 	}
 }

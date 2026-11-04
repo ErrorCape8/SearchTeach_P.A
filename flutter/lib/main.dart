@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'features/admin/admin_main_page.dart';
 import 'features/auth/login_page.dart';
 import 'features/auth/session_restore_page.dart';
+import 'features/auth/startup_loading_page.dart';
 import 'features/auth/register_page.dart';
 import 'features/auth/forgot_password_page.dart';
 import 'features/dashboard/dashboard_page.dart';
@@ -27,6 +28,7 @@ final _router = GoRouter(
     info: const AppErrorInfo(AppErrorKind.notFound),
   ),
   routes: [
+    GoRoute(path: '/startup', builder: (_, __) => const StartupLoadingPage()),
     GoRoute(path: '/session', builder: (_, __) => const SessionRestorePage()),
     GoRoute(path: '/login', builder: (_, __) => const LoginPage()),
     GoRoute(path: '/register', builder: (_, __) => const RegisterPage()),

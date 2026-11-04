@@ -18,6 +18,7 @@ public class User {
 	private int semestre;
 	private java.util.List<String> titulosAcademicos = java.util.List.of();
 	private java.util.List<String> materiasAsignadas = java.util.List.of();
+	private java.util.List<MateriaPrincipalDocente> materiasPrincipales = java.util.List.of();
 
 	public User() {
 	}
@@ -123,5 +124,14 @@ public class User {
 
 	public void setMateriasAsignadas(java.util.List<String> materiasAsignadas) {
 		this.materiasAsignadas = materiasAsignadas == null ? java.util.List.of() : java.util.List.copyOf(materiasAsignadas);
+	}
+
+	public java.util.List<MateriaPrincipalDocente> getMateriasPrincipales() {
+		return materiasPrincipales == null ? java.util.List.of() : java.util.List.copyOf(materiasPrincipales);
+	}
+
+	public void setMateriasPrincipales(java.util.List<MateriaPrincipalDocente> materiasPrincipales) {
+		this.materiasPrincipales = materiasPrincipales == null ? java.util.List.of()
+				: java.util.List.copyOf(materiasPrincipales);
 	}
 }

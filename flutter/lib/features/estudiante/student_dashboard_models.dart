@@ -28,7 +28,8 @@ class StudentProfile {
         phone: _string(json['telefono']),
         role: _string(json['rol']),
         career: _string(json['carrera']),
-        semester: json['semestre'] is num ? (json['semestre'] as num).toInt() : 0,
+        semester:
+            json['semestre'] is num ? (json['semestre'] as num).toInt() : 0,
       );
 }
 
@@ -162,7 +163,8 @@ class StudentDashboardData {
 }
 
 class StudentGroupSessionsData {
-  const StudentGroupSessionsData({required this.enrolled, required this.available});
+  const StudentGroupSessionsData(
+      {required this.enrolled, required this.available});
 
   final List<StudentGroupSession> enrolled;
   final List<StudentGroupSession> available;
@@ -287,6 +289,7 @@ class ClassroomProjectSpace {
 class StudentProjectFollowup {
   const StudentProjectFollowup({
     required this.tutoringId,
+    required this.tutoringState,
     required this.project,
     required this.sessions,
     required this.status,
@@ -295,6 +298,7 @@ class StudentProjectFollowup {
     required this.assignedTeacher,
   });
   final String tutoringId;
+  final String tutoringState;
   final ClassroomProjectSpace project;
   final List<StudentProjectSession> sessions;
   final String status;
@@ -315,14 +319,19 @@ class StudentProjectFollowup {
         : <String, dynamic>{};
     return StudentProjectFollowup(
       tutoringId: _string(json['tutoriaColectivaId']),
+      tutoringState: _string(json['estadoTutoria'], fallback: 'ACTIVA'),
       project: ClassroomProjectSpace(
         tutoringId: _string(json['tutoriaColectivaId']),
         projectId: _string(projectJson['proyectoId']),
         name: _string(projectJson['nombre'], fallback: 'Proyecto de aula'),
         teacherId: _string(projectJson['docenteResponsableId']),
         career: _string(projectJson['tecnologia']),
-        semester: projectJson['semestre'] is num ? (projectJson['semestre'] as num).toInt() : 0,
-        enrolledCount: (projectJson['estudianteIds'] is List ? (projectJson['estudianteIds'] as List).length : 0),
+        semester: projectJson['semestre'] is num
+            ? (projectJson['semestre'] as num).toInt()
+            : 0,
+        enrolledCount: (projectJson['estudianteIds'] is List
+            ? (projectJson['estudianteIds'] as List).length
+            : 0),
         enrolled: true,
         description: _string(projectJson['descripcion']),
       ),
@@ -339,23 +348,32 @@ class StudentProjectFollowup {
 }
 
 class StudentProjectSession {
-  const StudentProjectSession({required this.id, required this.start, required this.end, required this.notes, required this.savedAt});
+  const StudentProjectSession(
+      {required this.id,
+      required this.start,
+      required this.end,
+      required this.notes,
+      required this.savedAt});
   final String id;
   final DateTime? start;
   final DateTime? end;
   final String notes;
   final DateTime? savedAt;
-  factory StudentProjectSession.fromJson(Map<String, dynamic> json) => StudentProjectSession(
-        id: _string(json['id']), start: _date(json['fechaInicio']), end: _date(json['fechaFin']),
-        notes: _string(json['contenido']), savedAt: _date(json['guardadaEn']),
+  factory StudentProjectSession.fromJson(Map<String, dynamic> json) =>
+      StudentProjectSession(
+        id: _string(json['id']),
+        start: _date(json['fechaInicio']),
+        end: _date(json['fechaFin']),
+        notes: _string(json['contenido']),
+        savedAt: _date(json['guardadaEn']),
       );
 }
 
 final studentProjectFollowupProvider =
     FutureProvider.autoDispose<List<StudentProjectFollowup>>((ref) async {
   final response = await ref.read(dioProvider).get<List<dynamic>>(
-    '/api/estudiante/tutorias-colectivas/seguimiento',
-  );
+        '/api/estudiante/tutorias-colectivas/seguimiento',
+      );
   return (response.data ?? const [])
       .whereType<Map<String, dynamic>>()
       .map(StudentProjectFollowup.fromJson)

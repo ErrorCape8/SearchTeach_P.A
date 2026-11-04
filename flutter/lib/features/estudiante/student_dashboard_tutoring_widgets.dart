@@ -64,24 +64,43 @@ class _TutorCard extends StatelessWidget {
                 for (final subject in tutor.subjects)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 5),
-                    child: Row(
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(child: Text(subject.name)),
-                        if (subject.careers.length > 1)
-                          Flexible(
-                            child: Text(
-                              'Compartida con ${subject.careers.where((career) => career != tutor.career).join(', ')}',
-                              textAlign: TextAlign.end,
-                              style:
-                                  const TextStyle(color: _muted, fontSize: 11),
-                            ),
-                          )
-                        else
-                          const Text(
-                            'Exclusiva',
-                            style: TextStyle(color: _muted, fontSize: 11),
-                          ),
+                        Text(subject.name),
+                        const SizedBox(height: 4),
+                        Wrap(
+                          spacing: 5,
+                          runSpacing: 4,
+                          children: subject.careers.length > 1
+                              ? [
+                                  const _SubjectScopeLabel(
+                                    text: 'Compartida con',
+                                    color: Color(0xFFE8F1FF),
+                                    foreground: Color(0xFF2459A6),
+                                  ),
+                                  for (final career in subject.careers)
+                                    _SubjectScopeLabel(
+                                      text: career,
+                                      color: const Color(0xFFE8F1FF),
+                                      foreground: const Color(0xFF2459A6),
+                                    ),
+                                ]
+                              : [
+                                  const _SubjectScopeLabel(
+                                    text: 'Exclusiva para',
+                                    color: Color(0xFFFFF1DF),
+                                    foreground: Color(0xFF9A5A00),
+                                  ),
+                                  _SubjectScopeLabel(
+                                    text: subject.careers.isEmpty
+                                        ? tutor.career
+                                        : subject.careers.first,
+                                    color: const Color(0xFFFFF1DF),
+                                    foreground: const Color(0xFF9A5A00),
+                                  ),
+                                ],
+                        ),
                       ],
                     ),
                   ),
@@ -108,6 +127,35 @@ class _TutorCard extends StatelessWidget {
           const SizedBox(width: 5),
           Text(text, style: const TextStyle(color: _muted, fontSize: 12)),
         ],
+      );
+}
+
+class _SubjectScopeLabel extends StatelessWidget {
+  const _SubjectScopeLabel({
+    required this.text,
+    required this.color,
+    required this.foreground,
+  });
+
+  final String text;
+  final Color color;
+  final Color foreground;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(9),
+        ),
+        child: Text(
+          text,
+          style: TextStyle(
+            color: foreground,
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
       );
 }
 
@@ -267,9 +315,14 @@ class _GroupSessionCard extends StatelessWidget {
 }
 
 class _GroupHistoryCard extends ConsumerStatefulWidget {
-  const _GroupHistoryCard({required this.session, required this.onRated});
+  const _GroupHistoryCard({
+    required this.session,
+    required this.onRated,
+    this.showRating = true,
+  });
   final StudentGroupSession session;
   final VoidCallback onRated;
+  final bool showRating;
 
   @override
   ConsumerState<_GroupHistoryCard> createState() => _GroupHistoryCardState();
@@ -437,12 +490,13 @@ class _GroupHistoryCardState extends ConsumerState<_GroupHistoryCard> {
                         '${widget.session.start == null ? 'Fecha no disponible' : _longDate(widget.session.start!)} · Tutoría grupal finalizada'),
                   ]),
             ),
-            IconButton(
-              tooltip: _rated ? 'Reporte enviado' : 'Calificar clase',
-              onPressed: _sending || _rated ? null : _rate,
-              icon: Icon(_rated ? Icons.check_circle : Icons.star_border,
-                  color: _rated ? Colors.green : Colors.amber),
-            ),
+            if (widget.showRating)
+              IconButton(
+                tooltip: _rated ? 'Reporte enviado' : 'Calificar clase',
+                onPressed: _sending || _rated ? null : _rate,
+                icon: Icon(_rated ? Icons.check_circle : Icons.star_border,
+                    color: _rated ? Colors.green : Colors.amber),
+              ),
           ]),
         ),
       );

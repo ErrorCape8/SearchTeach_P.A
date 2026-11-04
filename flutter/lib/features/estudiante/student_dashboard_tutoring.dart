@@ -103,6 +103,12 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
             onTap: () => setState(() => _section = 'seguimiento-proyecto'),
           ),
           _MenuTile(
+            icon: Icons.folder_shared_outlined,
+            title: 'Proyectos de aula',
+            subtitle: 'Consulta tus proyectos activos y finalizados.',
+            onTap: () => setState(() => _section = 'proyectos-historial'),
+          ),
+          _MenuTile(
             icon: Icons.video_call_outlined,
             title: 'Unirse a videoconferencias',
             subtitle:
@@ -121,6 +127,12 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
             subtitle: 'Revisa tutorías realizadas o canceladas.',
             onTap: () => setState(() => _section = 'historial'),
           ),
+          _MenuTile(
+            icon: Icons.star_outline,
+            title: 'Calificar tutorías',
+            subtitle: 'Valora una tutoría solamente después de finalizarla.',
+            onTap: () => setState(() => _section = 'calificar'),
+          ),
         ],
       );
 
@@ -135,6 +147,14 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
           'Inscríbete en el espacio de tu tecnología y semestre.'
         ),
       'sesiones' => ('Mis sesiones', 'Tutorías confirmadas y en curso.'),
+      'proyectos-historial' => (
+          'Proyectos de aula',
+          'Consulta tus proyectos activos y finalizados.'
+        ),
+      'calificar' => (
+          'Calificar tutorías',
+          'Valora tus tutorías después de que hayan finalizado.'
+        ),
       'chats-videoconferencias' => (
           'Unirse a videoconferencias',
           'Accede a la conversación o entra a la sala de tus sesiones.'
@@ -158,6 +178,10 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
         return _projectSpaces();
       case 'seguimiento-proyecto':
         return _projectFollowup();
+      case 'proyectos-historial':
+        return _projectHistory();
+      case 'calificar':
+        return _ratingList();
       case 'sesiones':
         return _sessionsList();
       case 'chats-videoconferencias':
@@ -182,98 +206,168 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
           child:
               Text('No se pudo cargar el seguimiento de tu proyecto: $error'),
         )),
-        data: (projects) => projects.isEmpty
-            ? const _EmptyCard(
-                icon: Icons.assignment_outlined,
-                title: 'Aún no tienes un proyecto inscrito',
-                message:
-                    'Cuando te inscribas, aquí verás el horario y los reportes de tu tutor.',
-              )
-            : ListView(
-                padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
-                children: [
-                  for (final item in projects)
-                    Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(item.project.name,
-                                  style: const TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w800,
-                                      color: _navy)),
-                              Text(
-                                  '${item.project.career} · Semestre ${item.project.semester} · Tutor ${item.project.teacherId}'),
-                              Text(item.status == 'FINALIZADO'
-                                  ? 'Proyecto finalizado por el docente líder.'
-                                  : item.status == 'PENDIENTE_CONFIRMACION'
-                                      ? 'El cierre del proyecto está pendiente de revisión del docente líder.'
-                                      : 'Proyecto en curso.'),
-                              if (item.meetingAt != null)
+        data: (projects) {
+          final activeProjects = projects
+              .where((item) => item.tutoringState != 'DISUELTA')
+              .toList();
+          return activeProjects.isEmpty
+              ? const _EmptyCard(
+                  icon: Icons.assignment_outlined,
+                  title: 'Aún no tienes un proyecto inscrito',
+                  message:
+                      'Cuando te inscribas, aquí verás el horario y los reportes de tu tutor.',
+                )
+              : ListView(
+                  padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
+                  children: [
+                    for (final item in activeProjects)
+                      Card(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(item.project.name,
+                                    style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w800,
+                                        color: _navy)),
                                 Text(
-                                  'Reunión de PA: ${_longDate(item.meetingAt!.toLocal())} · ${TimeOfDay.fromDateTime(item.meetingAt!.toLocal()).format(context)}',
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.w600),
-                                ),
-                              const SizedBox(height: 12),
-                              const Text('Horario e historial de sesiones',
-                                  style:
-                                      TextStyle(fontWeight: FontWeight.w700)),
-                              if (item.nextSession != null)
-                                ListTile(
-                                  contentPadding: EdgeInsets.zero,
-                                  leading: const Icon(Icons.event_available,
-                                      color: _blue),
-                                  title: const Text('Próxima sesión',
-                                      style: TextStyle(
-                                          fontWeight: FontWeight.w700)),
-                                  subtitle: Text(
-                                      '${_longDate(item.nextSession!.start!.toLocal())} · ${TimeOfDay.fromDateTime(item.nextSession!.start!.toLocal()).format(context)} – ${TimeOfDay.fromDateTime(item.nextSession!.end!.toLocal()).format(context)}'),
-                                ),
-                              if (item.sessions.isEmpty)
-                                const Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 8),
-                                  child: Text(
-                                      'El tutor aún no ha registrado un horario.'),
-                                ),
-                              for (final session in item.sessions)
-                                ListTile(
-                                  contentPadding: EdgeInsets.zero,
-                                  leading:
-                                      const Icon(Icons.event_note_outlined),
-                                  title: Text(session.start == null
-                                      ? 'Fecha pendiente'
-                                      : _longDate(session.start!.toLocal())),
-                                  subtitle: Text(
-                                      '${session.start == null ? '' : TimeOfDay.fromDateTime(session.start!.toLocal()).format(context)} – ${session.end == null ? '' : TimeOfDay.fromDateTime(session.end!.toLocal()).format(context)}\n${session.notes}',
-                                      maxLines: 5,
-                                      overflow: TextOverflow.ellipsis),
-                                  isThreeLine: true,
-                                  onTap: () async {
-                                    await Navigator.of(context)
-                                        .push(MaterialPageRoute(
-                                      builder: (_) => ProyectoAulaChatPage(
-                                        tutoringId: item.tutoringId,
-                                        projectId: item.project.projectId,
-                                        sessionId: session.id,
-                                        title: item.project.name,
-                                        teacherMode: false,
+                                    '${item.project.career} · Semestre ${item.project.semester} · Tutor ${item.project.teacherId}'),
+                                if (item.project.description.isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 6),
+                                    child: Text(
+                                      item.project.description,
+                                      style: const TextStyle(color: _muted),
+                                    ),
+                                  ),
+                                if (item.invitationCode.isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 8),
+                                    child: SelectableText(
+                                      'Código para integrantes: ${item.invitationCode}',
+                                      style: const TextStyle(
+                                        color: _blue,
+                                        fontWeight: FontWeight.w700,
                                       ),
-                                    ));
-                                    if (mounted) {
-                                      ref.invalidate(
-                                          studentProjectFollowupProvider);
-                                    }
-                                  },
-                                ),
-                            ]),
+                                    ),
+                                  ),
+                                Text(item.status == 'FINALIZADO'
+                                    ? 'Proyecto finalizado por el docente líder.'
+                                    : item.status == 'PENDIENTE_CONFIRMACION'
+                                        ? 'El cierre del proyecto está pendiente de revisión del docente líder.'
+                                        : 'Proyecto en curso.'),
+                                if (item.meetingAt != null)
+                                  Text(
+                                    'Reunión de PA: ${_longDate(item.meetingAt!.toLocal())} · ${TimeOfDay.fromDateTime(item.meetingAt!.toLocal()).format(context)}',
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w600),
+                                  ),
+                                const SizedBox(height: 12),
+                                const Text('Horario e historial de sesiones',
+                                    style:
+                                        TextStyle(fontWeight: FontWeight.w700)),
+                                if (item.nextSession != null)
+                                  ListTile(
+                                    contentPadding: EdgeInsets.zero,
+                                    leading: const Icon(Icons.event_available,
+                                        color: _blue),
+                                    title: const Text('Próxima sesión',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.w700)),
+                                    subtitle: Text(
+                                        '${_longDate(item.nextSession!.start!.toLocal())} · ${TimeOfDay.fromDateTime(item.nextSession!.start!.toLocal()).format(context)} – ${TimeOfDay.fromDateTime(item.nextSession!.end!.toLocal()).format(context)}'),
+                                  ),
+                                if (item.sessions.isEmpty)
+                                  const Padding(
+                                    padding: EdgeInsets.symmetric(vertical: 8),
+                                    child: Text(
+                                        'El tutor aún no ha registrado un horario.'),
+                                  ),
+                                for (final session in item.sessions)
+                                  ListTile(
+                                    contentPadding: EdgeInsets.zero,
+                                    leading:
+                                        const Icon(Icons.event_note_outlined),
+                                    title: Text(session.start == null
+                                        ? 'Fecha pendiente'
+                                        : _longDate(session.start!.toLocal())),
+                                    subtitle: Text(
+                                        '${session.start == null ? '' : TimeOfDay.fromDateTime(session.start!.toLocal()).format(context)} – ${session.end == null ? '' : TimeOfDay.fromDateTime(session.end!.toLocal()).format(context)}\n${session.notes}',
+                                        maxLines: 5,
+                                        overflow: TextOverflow.ellipsis),
+                                    isThreeLine: true,
+                                    onTap: () async {
+                                      await Navigator.of(context)
+                                          .push(MaterialPageRoute(
+                                        builder: (_) => ProyectoAulaChatPage(
+                                          tutoringId: item.tutoringId,
+                                          projectId: item.project.projectId,
+                                          sessionId: session.id,
+                                          title: item.project.name,
+                                          teacherMode: false,
+                                        ),
+                                      ));
+                                      if (mounted) {
+                                        ref.invalidate(
+                                            studentProjectFollowupProvider);
+                                      }
+                                    },
+                                  ),
+                              ]),
+                        ),
                       ),
+                  ],
+                );
+        },
+      );
+
+  Widget _projectHistory() => ref.watch(studentProjectFollowupProvider).when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, _) => Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text('No se pudieron cargar tus proyectos de aula: $error'),
+          ),
+        ),
+        data: (projects) {
+          final visibleProjects = projects
+              .where((item) => item.tutoringState != 'DISUELTA')
+              .toList();
+          if (visibleProjects.isEmpty) {
+            return const _EmptyCard(
+              icon: Icons.folder_off_outlined,
+              title: 'No tienes proyectos de aula',
+              message: 'Cuando te inscribas en un proyecto aparecerá aquí.',
+            );
+          }
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
+            children: [
+              for (final item in visibleProjects)
+                Card(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: ListTile(
+                    leading: Icon(
+                      item.status == 'FINALIZADO'
+                          ? Icons.check_circle_outline
+                          : Icons.folder_outlined,
+                      color:
+                          item.status == 'FINALIZADO' ? Colors.blueGrey : _blue,
                     ),
-                ],
-              ),
+                    title: Text(item.project.name),
+                    subtitle: Text(
+                      '${item.project.career} · Semestre ${item.project.semester}\n'
+                      '${item.status == 'FINALIZADO' ? 'Finalizado' : 'En curso'}',
+                    ),
+                    isThreeLine: true,
+                  ),
+                ),
+            ],
+          );
+        },
       );
 
   Widget _history() {
@@ -285,11 +379,37 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
     final individualHistory = widget.data.tutorings
         .where((t) => t.status == 'REALIZADA' || t.status == 'CANCELADA')
         .toList();
-    if (completedGroups.isEmpty && individualHistory.isEmpty) {
+    return ref.watch(studentProjectFollowupProvider).when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, _) => _historyContent(
+            completedGroups,
+            individualHistory,
+            const [],
+          ),
+          data: (projects) => _historyContent(
+            completedGroups,
+            individualHistory,
+            projects
+                .where((item) =>
+                    item.tutoringState != 'DISUELTA' &&
+                    item.status == 'FINALIZADO')
+                .toList(),
+          ),
+        );
+  }
+
+  Widget _historyContent(
+    List<StudentGroupSession> completedGroups,
+    List<StudentTutoring> individualHistory,
+    List<StudentProjectFollowup> completedProjects,
+  ) {
+    if (completedGroups.isEmpty &&
+        individualHistory.isEmpty &&
+        completedProjects.isEmpty) {
       return const _EmptyCard(
         icon: Icons.history,
         title: 'Tu historial está vacío',
-        message: 'Las tutorías finalizadas aparecerán aquí.',
+        message: 'Las tutorías y proyectos finalizados aparecerán aquí.',
       );
     }
     return ListView(
@@ -298,9 +418,43 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
         ...completedGroups.map((session) => _GroupHistoryCard(
               session: session,
               onRated: () => ref.invalidate(studentGroupSessionsProvider),
+              showRating: false,
             )),
         ...individualHistory
             .map((tutoring) => _TutoringCard(tutoring: tutoring)),
+        ...completedProjects.map((item) => Card(
+              margin: const EdgeInsets.only(bottom: 12),
+              child: ListTile(
+                leading: const Icon(Icons.check_circle_outline,
+                    color: Colors.blueGrey),
+                title: Text(item.project.name),
+                subtitle: Text(
+                    '${item.project.career} · Semestre ${item.project.semester}\nProyecto de aula finalizado'),
+                isThreeLine: true,
+              ),
+            )),
+      ],
+    );
+  }
+
+  Widget _ratingList() {
+    final completed = widget.data.groupSessions
+        .where((session) => session.state == 'FINALIZADA')
+        .toList();
+    if (completed.isEmpty) {
+      return const _EmptyCard(
+        icon: Icons.star_border,
+        title: 'No hay tutorías para calificar',
+        message: 'La opción aparecerá cuando una tutoría haya terminado.',
+      );
+    }
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
+      children: [
+        ...completed.map((session) => _GroupHistoryCard(
+              session: session,
+              onRated: () => ref.invalidate(studentGroupSessionsProvider),
+            )),
       ],
     );
   }
@@ -449,10 +603,22 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
     }
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
-      itemCount: spaces.length,
+      itemCount: spaces.length + 1,
       separatorBuilder: (_, __) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
-        final space = spaces[index];
+        if (index == 0) {
+          return OutlinedButton.icon(
+            onPressed: widget.onJoinProjectCode,
+            icon: const Icon(Icons.vpn_key_outlined),
+            label: const Text('Inscribir en PA con código'),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              foregroundColor: _blue,
+              side: const BorderSide(color: _blue),
+            ),
+          );
+        }
+        final space = spaces[index - 1];
         final full = space.enrolledCount >= 4;
         return Card(
           child: Padding(

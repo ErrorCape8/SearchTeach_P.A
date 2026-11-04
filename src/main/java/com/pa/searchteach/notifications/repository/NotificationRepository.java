@@ -7,4 +7,5 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 public interface NotificationRepository extends MongoRepository<Notification, String> {
     List<Notification> findByUserIdOrderByCreatedAtDesc(String userId);
     long countByUserIdAndReadFalse(String userId);
+    boolean existsByUserIdAndTitleAndMessage(String userId, String title, String message);
 }

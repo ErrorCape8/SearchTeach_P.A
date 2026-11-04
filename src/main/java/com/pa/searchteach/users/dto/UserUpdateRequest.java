@@ -8,6 +8,8 @@ public class UserUpdateRequest {
 	private String estado;
 	private String carrera;
 	private java.util.List<String> titulosAcademicos;
+	private java.util.List<com.pa.searchteach.users.model.MateriaPrincipalDocente> materiasPrincipales;
+	private Integer semestre;
 	private String nuevaContrasena;
 
 	public UserUpdateRequest() {
@@ -78,6 +80,18 @@ public class UserUpdateRequest {
 	public void setTitulosAcademicos(java.util.List<String> titulosAcademicos) {
 		this.titulosAcademicos = titulosAcademicos;
 	}
+
+	public java.util.List<com.pa.searchteach.users.model.MateriaPrincipalDocente> getMateriasPrincipales() {
+		return materiasPrincipales;
+	}
+
+	public void setMateriasPrincipales(
+			java.util.List<com.pa.searchteach.users.model.MateriaPrincipalDocente> materiasPrincipales) {
+		this.materiasPrincipales = materiasPrincipales;
+	}
+
+	public Integer getSemestre() { return semestre; }
+	public void setSemestre(Integer semestre) { this.semestre = semestre; }
 
 	public String getNuevaContrasena() {
 		return nuevaContrasena;

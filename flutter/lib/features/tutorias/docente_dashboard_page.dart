@@ -13,6 +13,7 @@ import 'docente_proyectos_aula_page.dart';
 import 'docente_lider_proyectos_page.dart';
 import 'livekit_room_page.dart';
 import 'tutoria_chat_page.dart';
+import 'docente_perfil_page.dart';
 
 const _teacherGreen = Color(0xFF16834A);
 const _teacherCanvas = Color(0xFFF3F8F4);
@@ -102,6 +103,7 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
                 const DocenteLiderProyectosPage(),
                 const NotificationsInbox(),
                 _history(),
+                const DocentePerfilPage(),
               ],
             ),
           ),
@@ -140,6 +142,10 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
                       icon: Icon(Icons.history_outlined),
                       selectedIcon: Icon(Icons.history),
                       label: 'Historial'),
+                  NavigationDestination(
+                      icon: Icon(Icons.person_outline),
+                      selectedIcon: Icon(Icons.person),
+                      label: 'Perfil'),
                 ],
               ),
       ),
@@ -174,6 +180,15 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
                   onTap: () => setState(() => _tab = i),
                 ),
               ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+              child: ListTile(
+                selected: _tab == 7,
+                leading: const Icon(Icons.person_outline),
+                title: const Text('Perfil'),
+                onTap: () => setState(() => _tab = 7),
+              ),
+            ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
               child: ListTile(

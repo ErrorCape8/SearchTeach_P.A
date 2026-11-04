@@ -9,6 +9,7 @@ class AdminUser {
     this.carrera = '',
     this.semestre = 0,
     this.titulosAcademicos = const [],
+    this.materiasPrincipales = const [],
   });
 
   final String id;
@@ -20,6 +21,7 @@ class AdminUser {
   final String carrera;
   final int semestre;
   final List<String> titulosAcademicos;
+  final List<Map<String, dynamic>> materiasPrincipales;
 
   bool get isActivo => estado.trim().toLowerCase() == 'activo';
   bool get isRevocado => estado.trim().toLowerCase() == 'revocado';
@@ -34,6 +36,7 @@ class AdminUser {
     String? carrera,
     int? semestre,
     List<String>? titulosAcademicos,
+    List<Map<String, dynamic>>? materiasPrincipales,
   }) {
     return AdminUser(
       id: id ?? this.id,
@@ -45,6 +48,7 @@ class AdminUser {
       carrera: carrera ?? this.carrera,
       semestre: semestre ?? this.semestre,
       titulosAcademicos: titulosAcademicos ?? this.titulosAcademicos,
+      materiasPrincipales: materiasPrincipales ?? this.materiasPrincipales,
     );
   }
 
@@ -70,6 +74,11 @@ class AdminUser {
       titulosAcademicos: json['titulosAcademicos'] is List
           ? (json['titulosAcademicos'] as List).whereType<String>().toList()
           : const [],
+      materiasPrincipales: json['materiasPrincipales'] is List
+          ? (json['materiasPrincipales'] as List)
+              .whereType<Map<String, dynamic>>()
+              .toList()
+          : const [],
     );
   }
 
@@ -84,6 +93,7 @@ class AdminUser {
       'carrera': carrera,
       'semestre': semestre,
       'titulosAcademicos': titulosAcademicos,
+      'materiasPrincipales': materiasPrincipales,
     };
   }
 }

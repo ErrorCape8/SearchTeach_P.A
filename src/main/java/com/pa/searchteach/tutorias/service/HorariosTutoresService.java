@@ -184,6 +184,12 @@ public class HorariosTutoresService {
 			throw new ResponseStatusException(HttpStatus.CONFLICT,
 					"El docente no está asignado a la tecnología seleccionada.");
 		}
+		if (!docente.getMateriasPrincipales().isEmpty()
+				&& docente.getMateriasPrincipales().stream()
+						.noneMatch(item -> item.aplica(tecnologia, semestre, materia))) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT,
+					"El docente no tiene autorizada esa materia principal para el semestre seleccionado.");
+		}
 	}
 
 	public HorarioTutor crear(String docenteId, HorarioTutorSolicitud solicitud) {
@@ -191,14 +197,31 @@ public class HorariosTutoresService {
 		if (horarios.findByDocenteId(docenteId).isPresent()) {
 			throw new ResponseStatusException(HttpStatus.CONFLICT, "El docente ya tiene un horario asignado.");
 		}
-		return horarios.save(construir(null, docente.getId(), solicitud));
+		HorarioTutor horario = construir(null, docente.getId(), solicitud);
+		validarCapacidades(docente, horario);
+		return horarios.save(horario);
 	}
 
 	public HorarioTutor actualizar(String docenteId, HorarioTutorSolicitud solicitud) {
 		obtenerDocente(docenteId);
 		HorarioTutor actual = horarios.findByDocenteId(docenteId)
 				.orElseThrow(() -> new NotFoundException("El docente todavía no tiene un horario asignado."));
-		return horarios.save(construir(actual.id(), docenteId, solicitud));
+		HorarioTutor horario = construir(actual.id(), docenteId, solicitud);
+		validarCapacidades(obtenerDocente(docenteId), horario);
+		return horarios.save(horario);
+	}
+
+	private void validarCapacidades(User docente, HorarioTutor horario) {
+		if (docente.getMateriasPrincipales().isEmpty()) {
+			return;
+		}
+		for (MateriaHorario materia : horario.materias()) {
+			if (docente.getMateriasPrincipales().stream()
+					.noneMatch(item -> item.aplica(horario.carrera(), horario.semestre(), materia.nombre()))) {
+				throw new ResponseStatusException(HttpStatus.CONFLICT,
+						"El docente no tiene autorizada una de las materias principales seleccionadas.");
+			}
+		}
 	}
 
 	public void eliminar(String docenteId) {

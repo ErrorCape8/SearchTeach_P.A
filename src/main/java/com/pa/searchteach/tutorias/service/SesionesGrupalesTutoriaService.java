@@ -131,12 +131,6 @@ public class SesionesGrupalesTutoriaService {
 			}
 			SesionTutoria guardada = sesiones.save(sesion.valorar(estudianteId, estrellas, texto, ahora()));
 			actualizacionesTutorias.publicar("VALORACION", sesionId);
-			coordinadores.findAll().forEach(coordinador -> notificationService.notifyUser(
-					coordinador.getId(),
-					"Nuevo reporte de tutoría",
-					"Un estudiante calificó al tutor " + sesion.docenteId()
-							+ " en " + (sesion.materia() == null ? "una tutoría" : sesion.materia()) + ".",
-					"/coordinacion/reportes-tutorias"));
 			return guardada;
 	}
 
@@ -249,6 +243,28 @@ public class SesionesGrupalesTutoriaService {
 				.filter(sesion -> !"FINALIZADA".equals(sesion.estadoClase()))
 				.filter(sesion -> !sesion.fechaFin().isAfter(ahora))
 				.forEach(this::cerrarSiVencida);
+	}
+
+	@Scheduled(fixedDelay = 30000)
+	public void notificarTutoriasProximas() {
+		LocalDateTime ahora = ahora();
+		LocalDateTime limite = ahora.plusMinutes(30);
+		sesiones.findAll().stream()
+				.filter(sesion -> !"FINALIZADA".equals(sesion.estadoClase()))
+				.filter(sesion -> !sesion.fechaInicio().isBefore(ahora)
+						&& !sesion.fechaInicio().isAfter(limite))
+				.forEach(sesion -> {
+					String materia = sesion.materia() == null || sesion.materia().isBlank()
+							? "tutoría" : sesion.materia();
+					String hora = sesion.fechaInicio().format(
+							java.time.format.DateTimeFormatter.ofPattern("dd/MM HH:mm"));
+					String mensaje = "Tu tutoría de " + materia + " comienza el "
+							+ hora + ". Prepárate para ingresar.";
+					notificationService.notifyUserOnce(
+							sesion.docenteId(), "Tutoría próxima", mensaje, "/docente");
+					sesion.estudianteIds().forEach(estudianteId -> notificationService.notifyUserOnce(
+							estudianteId, "Tutoría próxima", mensaje, "/estudiante"));
+				});
 	}
 
 	public List<SesionTutoria> listarPublicadas() {
