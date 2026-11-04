@@ -339,7 +339,17 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
         .where((t) => t.status == 'REALIZADA' || t.status == 'CANCELADA')
         .toList();
     return ref.watch(studentProjectFollowupProvider).when(
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => ListView(
+            padding: const EdgeInsets.all(24),
+            children: const [
+              _PageHeading(
+                title: 'Historial de tutorías',
+                subtitle: 'Consulta tus sesiones y proyectos finalizados.',
+              ),
+              SizedBox(height: 32),
+              Center(child: CircularProgressIndicator()),
+            ],
+          ),
           error: (error, _) => _historyContent(
             completedGroups,
             individualHistory,
@@ -365,34 +375,52 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
     if (completedGroups.isEmpty &&
         individualHistory.isEmpty &&
         completedProjects.isEmpty) {
-      return const _EmptyCard(
-        icon: Icons.history,
-        title: 'Tu historial está vacío',
-        message: 'Las tutorías y proyectos finalizados aparecerán aquí.',
+      return ListView(
+        padding: const EdgeInsets.all(24),
+        children: const [
+          _PageHeading(
+            title: 'Historial de tutorías',
+            subtitle: 'Consulta tus sesiones y proyectos finalizados.',
+          ),
+          SizedBox(height: 18),
+          _EmptyCard(
+            icon: Icons.history,
+            title: 'Tu historial está vacío',
+            message: 'Las tutorías y proyectos finalizados aparecerán aquí.',
+          ),
+        ],
       );
     }
     return ListView(
-      padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
+      padding: const EdgeInsets.fromLTRB(24, 22, 24, 32),
       children: [
-        Row(
+        const _PageHeading(
+          title: 'Historial de tutorías',
+          subtitle: 'Consulta tus sesiones y proyectos finalizados.',
+        ),
+        const SizedBox(height: 18),
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
           children: [
-            Expanded(
+            SizedBox(
+              width: 150,
               child: _HistoryMetricCard(
                 value:
                     '${completedGroups.length + individualHistory.where((item) => item.status == 'REALIZADA').length}',
                 label: 'Realizadas',
               ),
             ),
-            const SizedBox(width: 6),
-            Expanded(
+            SizedBox(
+              width: 150,
               child: _HistoryMetricCard(
                 value:
                     '${individualHistory.where((item) => item.status == 'CANCELADA').length}',
                 label: 'Canceladas',
               ),
             ),
-            const SizedBox(width: 6),
-            Expanded(
+            SizedBox(
+              width: 150,
               child: _HistoryMetricCard(
                 value: '${completedProjects.length}',
                 label: 'Proyectos',
@@ -400,21 +428,35 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
             ),
           ],
         ),
-        const SizedBox(height: 10),
-        const Text(
-          'Sesiones realizadas',
-          style: TextStyle(
-            color: _navy,
-            fontSize: 10,
-            fontWeight: FontWeight.w800,
+        const SizedBox(height: 22),
+        if (completedGroups.isNotEmpty) ...[
+          const Text(
+            'Tutorías grupales realizadas',
+            style: TextStyle(
+              color: _navy,
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+            ),
           ),
-        ),
-        const SizedBox(height: 6),
-        ...completedGroups.map((session) => _GroupHistoryCard(
-              session: session,
-              onRated: () => ref.invalidate(studentGroupSessionsProvider),
-              showRating: false,
-            )),
+          const SizedBox(height: 10),
+          ...completedGroups.map((session) => _GroupHistoryCard(
+                session: session,
+                onRated: () => ref.invalidate(studentGroupSessionsProvider),
+                showRating: false,
+              )),
+        ],
+        if (individualHistory.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          const Text(
+            'Tutorías individuales',
+            style: TextStyle(
+              color: _navy,
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 10),
+        ],
         ...individualHistory.map(
           (tutoring) => _TutoringCard(
             tutoring: tutoring,
@@ -429,17 +471,48 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
             ),
           ),
         ),
-        ...completedProjects.map((item) => Card(
+        if (completedProjects.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          const Text(
+            'Proyectos finalizados',
+            style: TextStyle(
+              color: _navy,
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 10),
+          ...completedProjects.map(
+            (item) => Card(
               margin: const EdgeInsets.only(bottom: 12),
+              color: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+                side: const BorderSide(color: _line),
+              ),
               child: ListTile(
-                leading: const Icon(Icons.check_circle_outline,
-                    color: Colors.blueGrey),
-                title: Text(item.project.name),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                leading: const CircleAvatar(
+                  backgroundColor: Color(0xFFE7F1FC),
+                  child: Icon(Icons.check_circle_outline, color: _blue),
+                ),
+                title: Text(
+                  item.project.name,
+                  style: const TextStyle(
+                    color: _navy,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
                 subtitle: Text(
-                    '${item.project.career} · Semestre ${item.project.semester}\nProyecto de aula finalizado'),
+                  '${item.project.career} · Semestre ${item.project.semester}\nProyecto de aula finalizado',
+                ),
                 isThreeLine: true,
               ),
-            )),
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -1026,17 +1099,11 @@ class _HistoryMetricCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        height: 45,
+        height: 72,
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(9),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x10000000),
-              blurRadius: 7,
-              offset: Offset(0, 2),
-            ),
-          ],
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: _line),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -1045,11 +1112,18 @@ class _HistoryMetricCard extends StatelessWidget {
               value,
               style: const TextStyle(
                 color: Color(0xFF0D4FC4),
-                fontSize: 13,
+                fontSize: 19,
                 fontWeight: FontWeight.w800,
               ),
             ),
-            Text(label, style: const TextStyle(color: _muted, fontSize: 7)),
+            Text(
+              label,
+              style: const TextStyle(
+                color: _muted,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ],
         ),
       );

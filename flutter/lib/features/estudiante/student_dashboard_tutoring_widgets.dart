@@ -554,24 +554,26 @@ class _GroupHistoryCardState extends ConsumerState<_GroupHistoryCard> {
 
   @override
   Widget build(BuildContext context) => Card(
-        margin: const EdgeInsets.only(bottom: 8),
+        margin: const EdgeInsets.only(bottom: 12),
         color: Colors.white,
-        elevation: 2,
-        shadowColor: const Color(0x14000000),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11)),
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: const BorderSide(color: _line),
+        ),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(10, 9, 10, 8),
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
                   const CircleAvatar(
-                    radius: 11,
+                    radius: 20,
                     backgroundColor: Color(0xFFE6EEFF),
-                    child: Icon(Icons.groups_outlined, color: _blue, size: 12),
+                    child: Icon(Icons.groups_outlined, color: _blue, size: 20),
                   ),
-                  const SizedBox(width: 7),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -580,13 +582,13 @@ class _GroupHistoryCardState extends ConsumerState<_GroupHistoryCard> {
                           widget.session.subject,
                           style: const TextStyle(
                             color: _navy,
-                            fontSize: 12,
+                            fontSize: 15,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
                         Text(
                           '${widget.session.start == null ? 'Fecha no disponible' : _longDate(widget.session.start!.toLocal())} · Tutoría grupal',
-                          style: const TextStyle(color: _muted, fontSize: 7),
+                          style: const TextStyle(color: _muted, fontSize: 12),
                         ),
                       ],
                     ),
@@ -594,20 +596,16 @@ class _GroupHistoryCardState extends ConsumerState<_GroupHistoryCard> {
                   const _StatusPill(text: 'Realizada'),
                 ],
               ),
-              const SizedBox(height: 7),
+              const SizedBox(height: 12),
               Row(
                 children: [
                   OutlinedButton(
                     onPressed: _openHistory,
                     style: OutlinedButton.styleFrom(
-                      minimumSize: const Size(0, 25),
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      visualDensity: VisualDensity.compact,
+                      foregroundColor: _blue,
+                      side: const BorderSide(color: Color(0xFFD5E4F5)),
                     ),
-                    child: const Text(
-                      'Ver registro de clase',
-                      style: TextStyle(fontSize: 8),
-                    ),
+                    child: const Text('Ver registro de clase'),
                   ),
                   const Spacer(),
                   if (widget.showRating)

@@ -34,6 +34,7 @@ class _AdminEditarUsuarioViewState
   final Set<String> _selectedSubjects = {};
   final Map<String, int> _subjectSemesters = {};
   bool _loadingSubjectCatalog = false;
+  int _selectedSubjectSemester = 1;
   String _primaryTechnology = '';
   late String _career;
 
@@ -305,41 +306,58 @@ class _AdminEditarUsuarioViewState
               if (value == null) return;
               setState(() {
                 _primaryTechnology = value;
+                _selectedSubjectSemester = 1;
               });
               _loadSubjectCatalog(value);
             },
           ),
           if (_loadingSubjectCatalog) const LinearProgressIndicator(),
-          if (_subjectCatalog.isNotEmpty)
-            for (final semester in _subjectCatalog.keys.toList()..sort())
-              ExpansionTile(
-                initiallyExpanded: true,
-                title: Text('Semestre $semester'),
-                children: [
-                  for (final subject in _subjectCatalog[semester]!)
-                    CheckboxListTile(
-                      dense: true,
-                      value: _selectedSubjects
-                          .contains('$_primaryTechnology|$subject'),
-                      title: Text(subject),
-                      onChanged: (selected) => setState(() {
-                        final key = '$_primaryTechnology|$subject';
-                        if (selected == true) {
-                          _selectedSubjects.add(key);
-                        } else {
-                          _selectedSubjects.remove(key);
-                        }
-                        _primarySubjects = _selectedSubjects.map((entry) {
-                          final parts = entry.split('|');
-                          return <String, dynamic>{
-                            'tecnologia': parts.first,
-                            'materia': parts.skip(1).join('|')
-                          };
-                        }).toList();
-                      }),
-                    ),
-                ],
+          if (_subjectCatalog.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            const Text(
+              'Selecciona un semestre para ver sus materias',
+              style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+            ),
+            const SizedBox(height: 4),
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              children: [
+                for (final semester in _subjectCatalog.keys.toList()..sort())
+                  ChoiceChip(
+                    label: Text('Semestre $semester'),
+                    selected: _selectedSubjectSemester == semester,
+                    onSelected: (_) =>
+                        setState(() => _selectedSubjectSemester = semester),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            for (final subject
+                in _subjectCatalog[_selectedSubjectSemester] ?? const [])
+              CheckboxListTile(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                value:
+                    _selectedSubjects.contains('$_primaryTechnology|$subject'),
+                title: Text(subject),
+                onChanged: (selected) => setState(() {
+                  final key = '$_primaryTechnology|$subject';
+                  if (selected == true) {
+                    _selectedSubjects.add(key);
+                  } else {
+                    _selectedSubjects.remove(key);
+                  }
+                  _primarySubjects = _selectedSubjects.map((entry) {
+                    final parts = entry.split('|');
+                    return <String, dynamic>{
+                      'tecnologia': parts.first,
+                      'materia': parts.skip(1).join('|')
+                    };
+                  }).toList();
+                }),
               ),
+          ],
           if (_primarySubjects.isNotEmpty) ...[
             const SizedBox(height: 8),
             Wrap(
@@ -594,6 +612,12 @@ class _AdminEditarUsuarioViewState
       }
       setState(() {
         _subjectCatalog = catalog;
+        if (!catalog.containsKey(_selectedSubjectSemester) &&
+            catalog.isNotEmpty) {
+          _selectedSubjectSemester = catalog.keys.reduce(
+            (first, next) => first < next ? first : next,
+          );
+        }
         _loadingSubjectCatalog = false;
         _primarySubjects = _selectedSubjects.map((entry) {
           final separator = entry.indexOf('|');
@@ -607,7 +631,9 @@ class _AdminEditarUsuarioViewState
       if (mounted) {
         setState(() => _loadingSubjectCatalog = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('No se cargó el plan de estudios: ${error.message ?? 'error de conexión'}')),
+          SnackBar(
+              content: Text(
+                  'No se cargó el plan de estudios: ${error.message ?? 'error de conexión'}')),
         );
       }
     }

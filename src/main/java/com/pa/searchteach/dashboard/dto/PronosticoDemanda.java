@@ -4,6 +4,7 @@ import java.util.List;
 
 public record PronosticoDemanda(
 		List<WeeklyTutoringCount> historialSolicitudes,
+		List<WeeklyTutoringCount> prediccionesSemanales,
 		long estimadoProximaSemana,
 		long minimoProximaSemana,
 		long maximoProximaSemana,

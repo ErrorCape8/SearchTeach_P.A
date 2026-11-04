@@ -3,8 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/api_client.dart';
-import '../tutorias/livekit_room_page.dart';
-import '../tutorias/tutoria_historial_page.dart';
 import '../tutorias/proyecto_aula_chat_page.dart';
 import '../tutorias/tutoria_chat_page.dart';
 import 'student_dashboard_models.dart';

@@ -195,18 +195,14 @@ class _StudentSidebar extends StatelessWidget {
               const SizedBox(height: 12),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Container(
+                child: SizedBox(
                   height: 68,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
                   child: Transform.scale(
                     scale: 1.06,
                     child: const BrandLogo(
                       width: 104,
                       height: 64,
-                      color: Colors.black,
+                      color: Colors.white,
                     ),
                   ),
                 ),

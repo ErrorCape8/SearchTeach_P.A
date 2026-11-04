@@ -35,7 +35,6 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
       0 => _home(dashboard),
       1 => _quality(),
       2 => _forecast(),
-      3 => const _PaAccessView(),
       _ => _profile(),
     };
 
@@ -127,10 +126,6 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                         label: Text('Pronóstico'),
                       ),
                       NavigationRailDestination(
-                        icon: Icon(Icons.science_outlined),
-                        label: Text('Proyectos'),
-                      ),
-                      NavigationRailDestination(
                         icon: Icon(Icons.person_outline),
                         label: Text('Perfil'),
                       ),
@@ -167,8 +162,6 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                       icon: Icons.star_outline, label: 'Calidad'),
                   SlidingPillDestination(
                       icon: Icons.bar_chart, label: 'Pronóstico'),
-                  SlidingPillDestination(
-                      icon: Icons.science_outlined, label: 'Proyectos'),
                   SlidingPillDestination(
                       icon: Icons.person_outline, label: 'Perfil'),
                 ],
@@ -250,28 +243,6 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                     ),
                   ),
                 ],
-              ),
-              const SizedBox(height: 16),
-              _ForecastPreview(
-                subjects: data.tutoriasPorMateria,
-                onTap: () => setState(() => _selectedTab = 2),
-              ),
-              const SizedBox(height: 22),
-              _SectionCard(
-                title: 'Tutorías por semana',
-                subtitle: 'Últimas 10 semanas',
-                child: _WeeklyChart(data.historialSemanal),
-              ),
-              const SizedBox(height: 18),
-              _SectionCard(
-                title: 'Asistencia por materia',
-                subtitle: 'Indicador basado en asistencias registradas',
-                child: _SubjectSummaryList(data.tutoriasPorMateria),
-              ),
-              const SizedBox(height: 12),
-              const _InfoNote(
-                text:
-                    'La asistencia se calcula solo con tutorías finalizadas que tienen el resultado de asistencia registrado.',
               ),
             ],
           ),
@@ -383,28 +354,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
   }
 }
 
-class _PaAccessView extends StatelessWidget {
-  const _PaAccessView();
-
-  @override
-  Widget build(BuildContext context) => const Center(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Text(
-            'El seguimiento y los informes de proyectos de aula están disponibles únicamente para el docente de apoyo asignado y los estudiantes inscritos.',
-            textAlign: TextAlign.center,
-          ),
-        ),
-      );
-}
-
-const _titles = [
-  'Panel institucional',
-  'Calidad',
-  'Pronóstico',
-  'Proyectos',
-  'Perfil'
-];
+const _titles = ['Panel institucional', 'Calidad', 'Pronóstico', 'Perfil'];
 
 class _MetricCard extends StatelessWidget {
   const _MetricCard({
@@ -476,50 +426,11 @@ class _SectionCard extends StatelessWidget {
       );
 }
 
-class _ForecastPreview extends StatelessWidget {
-  const _ForecastPreview({required this.subjects, required this.onTap});
-
-  final List<SubjectTutoringSummary> subjects;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final forecasts = subjects
-        .map((subject) => subject.pronostico)
-        .whereType<PronosticoDemanda>()
-        .toList(growable: false);
-    final estimated = forecasts.fold<int>(
-      0,
-      (total, forecast) => total + forecast.estimadoProximaSemana,
-    );
-    return Card(
-      margin: EdgeInsets.zero,
-      child: ListTile(
-        onTap: onTap,
-        leading: const CircleAvatar(
-          backgroundColor: Color(0xFFEDE6FA),
-          child: Icon(Icons.insights_outlined, color: _purple),
-        ),
-        title: const Text(
-          'Próxima semana',
-          style: TextStyle(fontWeight: FontWeight.w700, color: _ink),
-        ),
-        subtitle: Text(
-          forecasts.isEmpty
-              ? 'Se requieren solicitudes en 4 semanas por asignatura'
-              : 'Modelo lineal: ~$estimated solicitudes · ${forecasts.length} asignaturas con historial suficiente',
-          style: const TextStyle(color: _muted, fontSize: 12),
-        ),
-        trailing: const Icon(Icons.chevron_right, color: _muted),
-      ),
-    );
-  }
-}
-
 class _WeeklyChart extends StatelessWidget {
-  const _WeeklyChart(this.weeks);
+  const _WeeklyChart(this.weeks, {this.showDates = false});
 
   final List<WeeklyTutoringCount> weeks;
+  final bool showDates;
 
   @override
   Widget build(BuildContext context) {
@@ -527,44 +438,72 @@ class _WeeklyChart extends StatelessWidget {
       0,
       (current, week) => week.total > current ? week.total : current,
     );
+    if (weeks.isEmpty) {
+      return const SizedBox(
+        height: 100,
+        child: Center(
+          child: Text(
+            'Aún no hay semanas registradas.',
+            style: TextStyle(color: _muted),
+          ),
+        ),
+      );
+    }
     return SizedBox(
-      height: 144,
+      height: 176,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           for (var index = 0; index < weeks.length; index++)
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 3),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     Text(
                       '${weeks[index].total}',
-                      style: const TextStyle(fontSize: 9, color: _muted),
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: _muted,
+                      ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 7),
                     Expanded(
-                      child: Align(
-                        alignment: Alignment.bottomCenter,
-                        child: FractionallySizedBox(
-                          heightFactor: maximum == 0
-                              ? 0.025
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final factor = maximum == 0
+                              ? 0.035
                               : (weeks[index].total / maximum)
-                                  .clamp(0.025, 1.0)
-                                  .toDouble(),
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              color: _purple.withValues(alpha: 0.88),
-                              borderRadius: BorderRadius.circular(5),
+                                  .clamp(0.035, 1.0)
+                                  .toDouble();
+                          return Align(
+                            alignment: Alignment.bottomCenter,
+                            child: Container(
+                              width: double.infinity,
+                              height: constraints.maxHeight * factor,
+                              decoration: BoxDecoration(
+                                color: _purple,
+                                borderRadius: const BorderRadius.vertical(
+                                  top: Radius.circular(7),
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
+                          );
+                        },
                       ),
                     ),
                     const SizedBox(height: 5),
-                    Text('S${index + 1}',
-                        style: const TextStyle(fontSize: 9, color: _muted)),
+                    Text(
+                        showDates
+                            ? '${weeks[index].semanaInicio.day}/${weeks[index].semanaInicio.month}'
+                            : 'S${index + 1}',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: _muted,
+                          fontWeight: FontWeight.w600,
+                        )),
                   ],
                 ),
               ),
@@ -663,26 +602,16 @@ class _SubjectSummaryRow extends StatelessWidget {
 }
 
 class _DemandForecastCard extends StatelessWidget {
-  const _DemandForecastCard({
-    required this.subject,
-    required this.horizonWeeks,
-  });
+  const _DemandForecastCard({required this.subject});
 
   final SubjectTutoringSummary subject;
-  final int horizonWeeks;
 
   @override
   Widget build(BuildContext context) {
     final forecast = subject.pronostico;
-    final estimate = horizonWeeks == 1
-        ? forecast?.estimadoProximaSemana
-        : forecast?.estimadoProximasCuatroSemanas;
-    final minimum = horizonWeeks == 1
-        ? forecast?.minimoProximaSemana
-        : forecast?.minimoProximasCuatroSemanas;
-    final maximum = horizonWeeks == 1
-        ? forecast?.maximoProximaSemana
-        : forecast?.maximoProximasCuatroSemanas;
+    final estimate = forecast?.estimadoProximasCuatroSemanas;
+    final minimum = forecast?.minimoProximasCuatroSemanas;
+    final maximum = forecast?.maximoProximasCuatroSemanas;
     final trendLabel = switch (forecast?.tendencia) {
       'SUBE' => 'Demanda creciente',
       'BAJA' => 'Demanda decreciente',
@@ -697,6 +626,9 @@ class _DemandForecastCard extends StatelessWidget {
 
     return Card(
       margin: EdgeInsets.zero,
+      elevation: 0,
+      color: const Color(0xFFF9F4FC),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -729,8 +661,7 @@ class _DemandForecastCard extends StatelessWidget {
             const SizedBox(height: 12),
             if (estimate != null && minimum != null && maximum != null) ...[
               Text(
-                '~$estimate solicitudes para '
-                '${horizonWeeks == 1 ? 'la próxima semana' : 'las próximas 4 semanas'}',
+                '~$estimate solicitudes en 4 semanas',
                 style: const TextStyle(
                   color: _purple,
                   fontSize: 20,
@@ -744,7 +675,10 @@ class _DemandForecastCard extends StatelessWidget {
                 style: const TextStyle(color: _muted, fontSize: 12),
               ),
               const SizedBox(height: 14),
-              _WeeklyChart(forecast!.historialSolicitudes),
+              _WeeklyChart(
+                forecast!.prediccionesSemanales,
+                showDates: true,
+              ),
             ] else
               const Text(
                 'Se requieren solicitudes registradas en al menos 4 semanas completas dentro del historial disponible.',
@@ -779,28 +713,20 @@ class _EvaluationEmptyState extends StatelessWidget {
       );
 }
 
-class _ForecastPage extends StatefulWidget {
+class _ForecastPage extends StatelessWidget {
   const _ForecastPage({required this.dashboard});
 
   final DirectorDashboard dashboard;
 
   @override
-  State<_ForecastPage> createState() => _ForecastPageState();
-}
-
-class _ForecastPageState extends State<_ForecastPage> {
-  int _selectedHorizon = 1;
-
-  @override
   Widget build(BuildContext context) {
-    final subjects = widget.dashboard.tutoriasPorMateria.toList()
+    final subjects = dashboard.tutoriasPorMateria
+        .where(
+            (subject) => subject.pronostico?.prediccionesSemanales.length == 4)
+        .toList()
       ..sort((left, right) {
-        final leftForecast = _selectedHorizon == 1
-            ? left.pronostico?.estimadoProximaSemana
-            : left.pronostico?.estimadoProximasCuatroSemanas;
-        final rightForecast = _selectedHorizon == 1
-            ? right.pronostico?.estimadoProximaSemana
-            : right.pronostico?.estimadoProximasCuatroSemanas;
+        final leftForecast = left.pronostico?.estimadoProximasCuatroSemanas;
+        final rightForecast = right.pronostico?.estimadoProximasCuatroSemanas;
         return (rightForecast ?? -1).compareTo(leftForecast ?? -1);
       });
 
@@ -814,41 +740,23 @@ class _ForecastPageState extends State<_ForecastPage> {
         ),
         const SizedBox(height: 5),
         const Text(
-          'Regresión lineal por asignatura a partir de solicitudes registradas en MongoDB.',
+          'Pronósticos calculados por el modelo para las próximas cuatro semanas.',
           style: TextStyle(color: _muted),
-        ),
-        const SizedBox(height: 16),
-        SegmentedButton<int>(
-          segments: const [
-            ButtonSegment(value: 1, label: Text('Próxima semana')),
-            ButtonSegment(value: 4, label: Text('Próximas 4 semanas')),
-          ],
-          selected: {_selectedHorizon},
-          onSelectionChanged: (selection) {
-            setState(() => _selectedHorizon = selection.first);
-          },
         ),
         const SizedBox(height: 16),
         if (subjects.isEmpty)
           const _InfoNote(
             text:
-                'Aún no hay solicitudes de tutoría registradas por asignatura.',
+                'El modelo todavía no puede generar pronósticos. Necesita al menos cuatro semanas completas de solicitudes en una materia compatible.',
           )
         else ...[
           for (final subject in subjects) ...[
             _DemandForecastCard(
               subject: subject,
-              horizonWeeks: _selectedHorizon,
             ),
             const SizedBox(height: 12),
           ],
         ],
-        _SectionCard(
-          title: 'Histórico de tutorías',
-          subtitle: 'Solicitudes registradas durante las últimas 10 semanas',
-          child: _WeeklyChart(widget.dashboard.historialSemanal),
-        ),
-        const SizedBox(height: 16),
         const _InfoNote(
           text:
               'REPTree predice de forma iterativa usando las últimas 4 semanas completas; requiere al menos 4 semanas de historial. Si el modelo no está disponible o no puede procesar una materia, no se muestra un pronóstico. La tendencia se considera estable cuando el cambio es menor a 1 solicitud o al 10% del promedio de las últimas 4 semanas.',

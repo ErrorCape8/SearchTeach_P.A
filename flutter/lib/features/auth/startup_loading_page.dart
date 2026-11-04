@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/widgets/brand_logo.dart';
+
 class StartupLoadingPage extends StatefulWidget {
   const StartupLoadingPage({super.key});
 
@@ -53,7 +55,14 @@ class _StartupLoadingPageState extends State<StartupLoadingPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Image.asset('assets/brand/logo.png', height: 82),
+                Transform.scale(
+                  scale: 1.06,
+                  child: const BrandLogo(
+                    width: 104,
+                    height: 82,
+                    color: Colors.black,
+                  ),
+                ),
                 const SizedBox(height: 28),
                 const Text(
                   'Preparando SearchTeach',

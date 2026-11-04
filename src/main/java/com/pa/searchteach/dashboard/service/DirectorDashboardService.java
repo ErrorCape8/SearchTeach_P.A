@@ -4,6 +4,7 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -198,7 +199,8 @@ public class DirectorDashboardService {
 			Optional<List<Long>> predicciones = pronosticoReptreeService.pronosticar(
 					materia, historial, primeraSemanaPronosticada);
 			if (predicciones.isPresent()) {
-				return Optional.of(crearPronosticoReptree(historial, predicciones.get()));
+				return Optional.of(crearPronosticoReptree(
+						historial, predicciones.get(), primeraSemanaPronosticada));
 			}
 		} catch (Exception exception) {
 			LOGGER.warn("Falló REPTree para {}; no se mostrará pronóstico.", materia, exception);
@@ -208,14 +210,19 @@ public class DirectorDashboardService {
 
 	private PronosticoDemanda crearPronosticoReptree(
 			List<WeeklyTutoringCount> historial,
-			List<Long> predicciones) {
+			List<Long> predicciones,
+			LocalDate primeraSemanaPronosticada) {
 		long estimadoProximaSemana = predicciones.getFirst();
 		long estimadoProximasCuatroSemanas = 0;
-		for (Long prediccion : predicciones) {
+		List<WeeklyTutoringCount> prediccionesSemanales = new ArrayList<>(predicciones.size());
+		for (int index = 0; index < predicciones.size(); index++) {
+			Long prediccion = predicciones.get(index);
 			if (prediccion == null) {
 				throw new IllegalStateException("REPTree devolvió una predicción vacía.");
 			}
 			estimadoProximasCuatroSemanas += prediccion.longValue();
+			prediccionesSemanales.add(new WeeklyTutoringCount(
+					primeraSemanaPronosticada.plusWeeks(index), prediccion.longValue()));
 		}
 		long solicitudesRecientes = 0;
 		for (int index = historial.size() - 4; index < historial.size(); index++) {
@@ -229,6 +236,7 @@ public class DirectorDashboardService {
 
 		return new PronosticoDemanda(
 				List.copyOf(historial),
+				List.copyOf(prediccionesSemanales),
 				estimadoProximaSemana,
 				estimadoProximaSemana,
 				estimadoProximaSemana,

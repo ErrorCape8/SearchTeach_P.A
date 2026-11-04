@@ -125,6 +125,7 @@ class SubjectTutoringSummary {
 class PronosticoDemanda {
   const PronosticoDemanda({
     required this.historialSolicitudes,
+    required this.prediccionesSemanales,
     required this.estimadoProximaSemana,
     required this.minimoProximaSemana,
     required this.maximoProximaSemana,
@@ -137,6 +138,7 @@ class PronosticoDemanda {
   });
 
   final List<WeeklyTutoringCount> historialSolicitudes;
+  final List<WeeklyTutoringCount> prediccionesSemanales;
   final int estimadoProximaSemana;
   final int minimoProximaSemana;
   final int maximoProximaSemana;
@@ -148,12 +150,6 @@ class PronosticoDemanda {
   final String? modelo;
 
   factory PronosticoDemanda.fromJson(Map<String, dynamic> json) {
-    final weekly = json['historialSolicitudes'];
-    if (weekly is! List) {
-      throw const FormatException(
-        'El historial de solicitudes no tiene un formato válido.',
-      );
-    }
     final trend = json['tendencia'];
     if (trend is! String ||
         !const {'SUBE', 'ESTABLE', 'BAJA'}.contains(trend)) {
@@ -167,24 +163,14 @@ class PronosticoDemanda {
     }
 
     return PronosticoDemanda(
-      historialSolicitudes: weekly.map((entry) {
-        if (entry is! Map<String, dynamic>) {
-          throw const FormatException(
-            'Una semana de solicitudes no tiene un formato válido.',
-          );
-        }
-        final weekStart =
-            DateTime.tryParse(entry['semanaInicio'] as String? ?? '');
-        if (weekStart == null) {
-          throw const FormatException(
-            'La fecha de una semana de solicitudes no es válida.',
-          );
-        }
-        return WeeklyTutoringCount(
-          semanaInicio: weekStart,
-          total: _readInt(entry, 'total'),
-        );
-      }).toList(growable: false),
+      historialSolicitudes: _readWeeklyCounts(
+        json['historialSolicitudes'],
+        'historialSolicitudes',
+      ),
+      prediccionesSemanales: _readWeeklyCounts(
+        json['prediccionesSemanales'] ?? const [],
+        'prediccionesSemanales',
+      ),
       estimadoProximaSemana: _readInt(json, 'estimadoProximaSemana'),
       minimoProximaSemana: _readInt(json, 'minimoProximaSemana'),
       maximoProximaSemana: _readInt(json, 'maximoProximaSemana'),
@@ -198,6 +184,31 @@ class PronosticoDemanda {
       alertaCreciente: alert,
       modelo: json['modelo'] as String?,
     );
+  }
+
+  static List<WeeklyTutoringCount> _readWeeklyCounts(
+    Object? raw,
+    String field,
+  ) {
+    if (raw is! List) {
+      throw FormatException('El campo "$field" no tiene un formato válido.');
+    }
+    return raw.map((entry) {
+      if (entry is! Map<String, dynamic>) {
+        throw FormatException(
+            'Una semana de "$field" no tiene un formato válido.');
+      }
+      final weekStart =
+          DateTime.tryParse(entry['semanaInicio'] as String? ?? '');
+      if (weekStart == null) {
+        throw FormatException(
+            'La fecha de una semana de "$field" no es válida.');
+      }
+      return WeeklyTutoringCount(
+        semanaInicio: weekStart,
+        total: _readInt(entry, 'total'),
+      );
+    }).toList(growable: false);
   }
 
   static int _readInt(Map<String, dynamic> json, String key) {

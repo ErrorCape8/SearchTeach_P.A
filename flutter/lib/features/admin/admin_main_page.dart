@@ -131,6 +131,7 @@ class AdminMainPage extends ConsumerWidget {
               subtitle: headerSubtitle,
               isEditing: hasSelectedUser,
               onBack: notifier.clearSelectedUser,
+              showLogo: MediaQuery.sizeOf(context).width < 980,
             );
 
             return Center(

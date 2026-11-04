@@ -8,63 +8,25 @@ import 'package:go_router/go_router.dart';
 import '../../core/api_client.dart';
 import '../../core/tutoring_updates.dart';
 import '../../core/widgets/brand_logo.dart';
-import '../../core/widgets/sliding_pill_navigation_bar.dart';
 import '../auth/auth_repository.dart';
 import '../notifications/notifications_page.dart';
 import 'docente_proyectos_aula_page.dart';
 import 'docente_lider_proyectos_page.dart';
 import 'livekit_room_page.dart';
-import 'tutoria_historial_page.dart';
 import 'tutoria_chat_page.dart';
-import 'docente_perfil_page.dart';
 
-const _teacherGreen = Color(0xFF16834A);
+const _teacherGreen = Color(0xFF0C8A53);
 const _teacherCanvas = Color(0xFFF3F8F4);
-const _teacherNavy = Color(0xFF18352A);
-const _teacherSidebar = Color(0xFF0E8A62);
+const _teacherNavy = Color(0xFF0A6843);
 
 final _teacherSessionsProvider =
     FutureProvider.autoDispose<List<_TeacherTutoringSession>>((ref) async {
-  final dio = ref.read(dioProvider);
-  final responses = await Future.wait([
-    dio.get<List<dynamic>>('/api/tutorias/grupales/docente'),
-    dio.get<List<dynamic>>('/api/tutorias/docente'),
-  ]);
-  final groupSessions = (responses[0].data ?? const [])
+  final response = await ref
+      .read(dioProvider)
+      .get<List<dynamic>>('/api/tutorias/grupales/docente');
+  return (response.data ?? const [])
       .whereType<Map<String, dynamic>>()
       .map(_TeacherTutoringSession.fromJson)
-      .toList();
-  final individualSessions = (responses[1].data ?? const [])
-      .whereType<Map<String, dynamic>>()
-      .where((session) =>
-          session['estado'] == 'PROGRAMADA' ||
-          session['estado'] == 'EN_CURSO' ||
-          session['estado'] == 'REALIZADA')
-      .map(_TeacherTutoringSession.fromIndividualJson);
-  return [...groupSessions, ...individualSessions];
-});
-
-final _teacherProjectCountProvider =
-    FutureProvider.autoDispose<int>((ref) async {
-  final response = await ref.read(dioProvider).get<List<dynamic>>(
-        '/api/docente/tutorias-colectivas',
-      );
-  return (response.data ?? const [])
-      .whereType<Map<String, dynamic>>()
-      .where((row) => row['proyecto'] is Map<String, dynamic>)
-      .length;
-});
-
-final _teacherStudentNamesProvider = FutureProvider.autoDispose
-    .family<List<String>, String>((ref, sessionId) async {
-  final response = await ref.read(dioProvider).get<List<dynamic>>(
-        '/api/tutorias/grupales/${Uri.encodeComponent(sessionId)}/estudiantes',
-      );
-  return (response.data ?? const [])
-      .whereType<Map<String, dynamic>>()
-      .map((student) => student['nombre'])
-      .whereType<String>()
-      .where((name) => name.trim().isNotEmpty)
       .toList(growable: false);
 });
 
@@ -79,8 +41,6 @@ class DocenteDashboardPage extends ConsumerStatefulWidget {
 class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
     with WidgetsBindingObserver {
   int _tab = 0;
-  DateTime? _selectedDate;
-  DateTime _calendarMonth = DateTime(DateTime.now().year, DateTime.now().month);
 
   @override
   void initState() {
@@ -107,272 +67,269 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
     ref.listen(tutoringUpdatesProvider, (_, next) {
       if (next.hasValue && mounted) ref.invalidate(_teacherSessionsProvider);
     });
-    final width = MediaQuery.sizeOf(context).width;
-    final wide = width >= 850;
-    final profile = ref.watch(docenteProfileProvider);
-    final teacherName = profile.value?['nombre'] is String
-        ? profile.value!['nombre'] as String
-        : 'Docente';
-    final titles = <int, String>{
-      0: 'Inicio',
-      1: 'Sesiones',
-      2: 'Empezar tutoría',
-      3: 'Proyectos de aula',
-      4: 'Líder PA',
-      5: 'Avisos',
-      6: 'Historial',
-      7: 'Mi perfil',
-    };
-
+    final wide = MediaQuery.sizeOf(context).width >= 850;
     return Theme(
       data: Theme.of(context).copyWith(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: _teacherGreen,
-          brightness: Theme.of(context).brightness,
-        ).copyWith(primary: _teacherGreen),
+        colorScheme:
+            Theme.of(context).colorScheme.copyWith(primary: _teacherGreen),
         scaffoldBackgroundColor: _teacherCanvas,
       ),
       child: Scaffold(
         backgroundColor: _teacherCanvas,
-        body: Row(
-          children: [
-            if (wide)
-              _TeacherSidebar(
-                activeTab: _tab,
-                teacherName: teacherName,
-                onSelect: (tab) => setState(() => _tab = tab),
-              ),
-            Expanded(
-              child: Column(
-                children: [
-                  _TeacherHeader(
-                    title: titles[_tab] ?? 'SearchTeach',
-                    onLogout: _logout,
-                  ),
-                  Expanded(
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: IndexedStack(
-                            index: _tab,
-                            children: [
-                              _home(teacherName),
-                              _sessions(),
-                              _startTutoring(),
-                              DocenteProyectosAulaPage(
-                                onOpenLeaderView: () =>
-                                    setState(() => _tab = 4),
-                              ),
-                              const DocenteLiderProyectosPage(),
-                              const NotificationsInbox(
-                                accentColor: _teacherGreen,
-                              ),
-                              _history(),
-                              const DocentePerfilPage(),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+        appBar: AppBar(
+          backgroundColor: _teacherGreen,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          title: const Text('Panel docente',
+              style: TextStyle(fontWeight: FontWeight.w800)),
+          actions: [
+            const NotificationBellButton(),
+            IconButton(
+              tooltip: 'Cerrar sesión',
+              onPressed: _logout,
+              icon: const Icon(Icons.logout),
             ),
           ],
         ),
+        body: Row(children: [
+          if (wide) _desktopMenu(),
+          Expanded(
+            child: IndexedStack(
+              index: _tab,
+              children: [
+                _home(),
+                _sessions(),
+                _startTutoring(),
+                const DocenteProyectosAulaPage(),
+                const DocenteLiderProyectosPage(),
+                const NotificationsInbox(),
+                _history(),
+              ],
+            ),
+          ),
+        ]),
         bottomNavigationBar: wide
             ? null
-            : SlidingPillNavigationBar(
-                selectedColor: _teacherGreen,
-                indicatorColor: const Color(0xFFDDF2E5),
-                selectedIndex: switch (_tab) {
-                  1 || 2 => 1,
-                  3 => 2,
-                  7 => 3,
-                  0 => 0,
-                  _ => 4,
-                },
-                onDestinationSelected: (value) {
-                  if (value == 4) {
-                    _openMoreNavigation(context);
-                  } else {
-                    setState(() {
-                      _tab = switch (value) {
-                        1 => 1,
-                        2 => 3,
-                        3 => 7,
-                        _ => 0,
-                      };
-                    });
-                  }
-                },
+            : NavigationBar(
+                selectedIndex: _tab,
+                onDestinationSelected: (value) => setState(() => _tab = value),
                 destinations: const [
-                  SlidingPillDestination(
-                      icon: Icons.home_outlined,
-                      selectedIcon: Icons.home,
+                  NavigationDestination(
+                      icon: Icon(Icons.home_outlined),
+                      selectedIcon: Icon(Icons.home),
                       label: 'Inicio'),
-                  SlidingPillDestination(
-                      icon: Icons.event_note_outlined,
-                      selectedIcon: Icons.event_note,
-                      label: 'Sesiones'),
-                  SlidingPillDestination(
-                      icon: Icons.school_outlined,
-                      selectedIcon: Icons.school,
+                  NavigationDestination(
+                      icon: Icon(Icons.event_note_outlined),
+                      selectedIcon: Icon(Icons.event_note),
+                      label: 'Tutorías'),
+                  NavigationDestination(
+                      icon: Icon(Icons.play_circle_outline),
+                      selectedIcon: Icon(Icons.play_circle),
+                      label: 'Empezar'),
+                  NavigationDestination(
+                      icon: Icon(Icons.school_outlined),
+                      selectedIcon: Icon(Icons.school),
                       label: 'Proyectos'),
-                  SlidingPillDestination(
-                      icon: Icons.person_outline,
-                      selectedIcon: Icons.person,
-                      label: 'Perfil'),
-                  SlidingPillDestination(icon: Icons.more_horiz, label: 'Más'),
+                  NavigationDestination(
+                      icon: Icon(Icons.fact_check_outlined),
+                      selectedIcon: Icon(Icons.fact_check),
+                      label: 'Líder PA'),
+                  NavigationDestination(
+                      icon: Icon(Icons.notifications_none_outlined),
+                      selectedIcon: Icon(Icons.notifications),
+                      label: 'Avisos'),
+                  NavigationDestination(
+                      icon: Icon(Icons.history_outlined),
+                      selectedIcon: Icon(Icons.history),
+                      label: 'Historial'),
                 ],
               ),
       ),
     );
   }
 
-  Future<void> _openMoreNavigation(BuildContext context) async {
-    const destinations = <(int, String, IconData)>[
-      (2, 'Empezar tutoría', Icons.video_call_outlined),
-      (4, 'Líder PA', Icons.groups_outlined),
-      (5, 'Avisos', Icons.notifications_outlined),
-      (6, 'Historial', Icons.history_outlined),
-    ];
-    final tab = await showModalBottomSheet<int>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) => SafeArea(
-        child: ListView(
-          shrinkWrap: true,
-          padding: const EdgeInsets.only(bottom: 12),
-          children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 4, 20, 12),
-              child: Text(
-                'Más secciones',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+  Widget _desktopMenu() => Material(
+        color: _teacherNavy,
+        child: SizedBox(
+          width: 250,
+          child: Column(children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 18, 14, 18),
+              child: SizedBox(
+                height: 112,
+                child: Transform.scale(
+                  scale: 1.06,
+                  child: const BrandLogo(
+                    width: 190,
+                    height: 112,
+                    color: Colors.white,
+                  ),
+                ),
               ),
             ),
-            for (final (tab, label, icon) in destinations)
-              ListTile(
-                leading: Icon(icon, color: _teacherGreen),
-                title: Text(label),
-                selected: _tab == tab,
-                onTap: () => Navigator.pop(context, tab),
-              ),
-          ],
-        ),
-      ),
-    );
-    if (tab != null && mounted) setState(() => _tab = tab);
-  }
-
-  Widget _home(String teacherName) => ref.watch(_teacherSessionsProvider).when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => _TeacherLoadError(
-          message: 'No se pudieron cargar tus tutorías: $error',
-          onRetry: () => ref.invalidate(_teacherSessionsProvider),
-        ),
-        data: (sessions) {
-          final scheduled = sessions
-              .where((session) => session.state != 'FINALIZADA')
-              .toList()
-            ..sort((a, b) => (a.start ?? DateTime(9999))
-                .compareTo(b.start ?? DateTime(9999)));
-          final projects = ref.watch(_teacherProjectCountProvider);
-          final activeCount = scheduled.length;
-          final nextSession = scheduled.isEmpty ? null : scheduled.first;
-          return ListView(
-            padding: const EdgeInsets.all(24),
-            children: [
-              Text(
-                'Hola, ${teacherName.split(' ').first}',
-                style: const TextStyle(
-                  color: _teacherNavy,
-                  fontSize: 25,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 5),
-              const Text(
-                'Aquí tienes el resumen de tus tutorías y actividades.',
-                style: TextStyle(color: Color(0xFF687A70)),
-              ),
-              const SizedBox(height: 22),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: [
-                  _TeacherMetricCard(
-                    icon: Icons.event_available_outlined,
-                    label: 'Tutorías activas',
-                    value: '$activeCount',
-                    color: _teacherGreen,
-                  ),
-                  _TeacherMetricCard(
-                    icon: Icons.groups_outlined,
-                    label: 'Estudiantes inscritos',
-                    value:
-                        '${scheduled.fold<int>(0, (total, item) => total + item.students.length)}',
-                    color: const Color(0xFF2878B8),
-                  ),
-                  projects.when(
-                    data: (count) => _TeacherMetricCard(
-                      icon: Icons.school_outlined,
-                      label: 'Proyectos de aula',
-                      value: '$count',
-                      color: const Color(0xFF9A6B18),
-                    ),
-                    error: (_, __) => const _TeacherMetricCard(
-                      icon: Icons.school_outlined,
-                      label: 'Proyectos de aula',
-                      value: '—',
-                      color: Color(0xFF9A6B18),
-                    ),
-                    loading: () => const _TeacherMetricCard(
-                      icon: Icons.school_outlined,
-                      label: 'Proyectos de aula',
-                      value: '…',
-                      color: Color(0xFF9A6B18),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 22),
-              Row(
-                children: [
-                  const Expanded(
-                    child: Text(
-                      'Próxima tutoría',
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 22),
+              child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text('DOCENTE',
                       style: TextStyle(
-                        color: _teacherNavy,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () => setState(() => _tab = 1),
-                    child: const Text('Ver agenda'),
-                  ),
-                ],
-              ),
-              if (nextSession == null)
-                const _TeacherEmptyCard(
-                  icon: Icons.event_busy_outlined,
-                  message: 'No tienes tutorías pendientes.',
-                )
-              else
-                _TeacherSessionCard(
-                  session: nextSession,
-                  view: _SessionView.scheduled,
-                  onRequestDateChange: () => _requestDateChange(nextSession),
-                  onOpenChat: () => _openSessionChat(nextSession),
-                  onStart: () => _openRoom(nextSession, ended: false),
-                  onHistory: () => _openRoom(nextSession, ended: true),
+                          color: Colors.white70,
+                          fontSize: 11,
+                          letterSpacing: 1.5,
+                          fontWeight: FontWeight.w700))),
+            ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 16, 16, 4),
+              child: Divider(height: 1, color: Color(0x44FFFFFF)),
+            ),
+            const SizedBox(height: 10),
+            for (var i = 0; i < 3; i++)
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                child: ListTile(
+                  selected: _tab == i,
+                  selectedColor: Colors.white,
+                  selectedTileColor: const Color(0xFF064D33),
+                  textColor: Colors.white,
+                  iconColor: Colors.white70,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  leading: Icon(_teacherIcons[i]),
+                  title: Text(_teacherLabels[i]),
+                  onTap: () => setState(() => _tab = i),
                 ),
-            ],
-          );
-        },
+              ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+              child: ListTile(
+                selected: _tab == 3,
+                selectedColor: Colors.white,
+                selectedTileColor: const Color(0xFF064D33),
+                textColor: Colors.white,
+                iconColor: Colors.white70,
+                leading: const Icon(Icons.school_outlined),
+                title: const Text('Proyectos de aula'),
+                onTap: () => setState(() => _tab = 3),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+              child: ListTile(
+                selected: _tab == 4,
+                selectedColor: Colors.white,
+                selectedTileColor: const Color(0xFF064D33),
+                textColor: Colors.white,
+                iconColor: Colors.white70,
+                leading: const Icon(Icons.fact_check_outlined),
+                title: const Text('Líder PA'),
+                onTap: () => setState(() => _tab = 4),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+              child: ListTile(
+                selected: _tab == 5,
+                selectedColor: Colors.white,
+                selectedTileColor: const Color(0xFF064D33),
+                textColor: Colors.white,
+                iconColor: Colors.white70,
+                leading: const Icon(Icons.notifications_none_outlined),
+                title: const Text('Avisos'),
+                onTap: () => setState(() => _tab = 5),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+              child: ListTile(
+                selected: _tab == 6,
+                selectedColor: Colors.white,
+                selectedTileColor: const Color(0xFF064D33),
+                textColor: Colors.white,
+                iconColor: Colors.white70,
+                leading: const Icon(Icons.history_outlined),
+                title: const Text('Historial'),
+                onTap: () => setState(() => _tab = 6),
+              ),
+            ),
+            const Spacer(),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: Divider(height: 1, color: Color(0x44FFFFFF)),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 14, 18, 18),
+              child: Row(children: [
+                CircleAvatar(
+                  backgroundColor: Colors.white.withValues(alpha: .18),
+                  foregroundColor: Colors.white,
+                  child: const Text('D'),
+                ),
+                const SizedBox(width: 10),
+                const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Docente',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700)),
+                      Text('SearchTeach',
+                          style:
+                              TextStyle(color: Colors.white70, fontSize: 11)),
+                    ]),
+              ]),
+            ),
+          ]),
+        ),
+      );
+
+  Widget _home() => ListView(
+        padding: const EdgeInsets.all(24),
+        children: [
+          const Text('¡Hola, docente!',
+              style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w800,
+                  color: _teacherNavy)),
+          const SizedBox(height: 6),
+          const Text(
+              'Consulta tus tutorías, solicita cambios de fecha y acompaña tus proyectos de aula.'),
+          const SizedBox(height: 20),
+          _TeacherHomeTile(
+              icon: Icons.event_note_outlined,
+              title: 'Mis tutorías',
+              subtitle:
+                  'Revisa sesiones y solicita a coordinación cambiar una fecha.',
+              onTap: () => setState(() => _tab = 1)),
+          _TeacherHomeTile(
+              icon: Icons.play_circle_outline,
+              title: 'Empezar tutorías',
+              subtitle:
+                  'Abre la sala, toma asistencia y consulta el chat de tus sesiones.',
+              onTap: () => setState(() => _tab = 2)),
+          _TeacherHomeTile(
+              icon: Icons.school_outlined,
+              title: 'Proyectos de aula',
+              subtitle:
+                  'Escribe reportes, programa sesiones y responde a los estudiantes.',
+              onTap: () => setState(() => _tab = 3)),
+          _TeacherHomeTile(
+              icon: Icons.fact_check_outlined,
+              title: 'Líder PA',
+              subtitle:
+                  'Revisa la documentación de los tutores y confirma el trabajo del proyecto.',
+              onTap: () => setState(() => _tab = 4)),
+          _TeacherHomeTile(
+              icon: Icons.notifications_none_outlined,
+              title: 'Avisos',
+              subtitle: 'Consulta las notificaciones de tu cuenta.',
+              onTap: () => setState(() => _tab = 5)),
+          _TeacherHomeTile(
+              icon: Icons.history_outlined,
+              title: 'Historial',
+              subtitle: 'Consulta las tutorías finalizadas y sus chats.',
+              onTap: () => setState(() => _tab = 6)),
+        ],
       );
 
   Widget _sessions() => _buildSessions(view: _SessionView.scheduled);
@@ -381,247 +338,383 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
 
   Widget _history() => _buildSessions(view: _SessionView.history);
 
-  Widget _buildSessions({required _SessionView view}) =>
-      ref.watch(_teacherSessionsProvider).when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, _) => Center(
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                Text('No se pudieron cargar tus tutorías: $error'),
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: () => ref.invalidate(_teacherSessionsProvider),
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Reintentar'),
+  Widget _buildSessions({required _SessionView view}) => ref
+      .watch(_teacherSessionsProvider)
+      .when(
+        loading: () => view == _SessionView.history
+            ? _historyPage(
+                body: const Center(child: CircularProgressIndicator()))
+            : const Center(child: CircularProgressIndicator()),
+        error: (error, _) => view == _SessionView.history
+            ? _historyPage(
+                body: _historyMessage(
+                  'No se pudo cargar el historial: $error',
+                  onRetry: () => ref.invalidate(_teacherSessionsProvider),
                 ),
-              ]),
-            ),
-            data: (allSessions) {
-              final filteredSessions = allSessions
-                  .where((session) => switch (view) {
-                        _SessionView.history => session.state == 'FINALIZADA' ||
-                            session.state == 'REALIZADA',
-                        _SessionView.scheduled ||
-                        _SessionView.start =>
-                          session.state != 'FINALIZADA' &&
-                              session.state != 'REALIZADA',
-                      })
-                  .toList()
-                ..sort((a, b) => (a.start ?? DateTime(9999))
-                    .compareTo(b.start ?? DateTime(9999)));
-              final sessions =
-                  view != _SessionView.scheduled || _selectedDate == null
-                      ? filteredSessions
-                      : filteredSessions.where((session) {
-                          final start = session.start?.toLocal();
-                          return start != null &&
-                              start.year == _selectedDate!.year &&
-                              start.month == _selectedDate!.month &&
-                              start.day == _selectedDate!.day;
-                        }).toList();
-              if (view == _SessionView.scheduled) {
-                return _sessionsCalendarPage(sessions, filteredSessions);
-              }
-              return sessions.isEmpty
-                  ? _TeacherEmptyCard(
-                      icon: view == _SessionView.history
-                          ? Icons.history
-                          : Icons.video_call_outlined,
-                      message: view == _SessionView.history
-                          ? 'Aún no tienes tutorías finalizadas.'
-                          : 'No tienes tutorías disponibles para iniciar.',
-                    )
-                  : ListView(
-                      padding: const EdgeInsets.all(20),
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                  view == _SessionView.history
-                                      ? 'Historial de tutorías'
-                                      : 'Empezar tutoría',
-                                  style: const TextStyle(
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.bold,
-                                      color: _teacherNavy)),
-                            ),
-                            if (view == _SessionView.start)
-                              TextButton.icon(
-                                onPressed: () => setState(() => _tab = 6),
-                                icon: const Icon(Icons.history),
-                                label: const Text('Historial'),
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        for (final session in sessions)
-                          _TeacherSessionCard(
-                            session: session,
-                            view: view,
-                            onRequestDateChange: () =>
-                                _requestDateChange(session),
-                            onOpenChat: () => _openSessionChat(
-                              session,
-                              readOnly: view == _SessionView.history,
-                            ),
-                            onStart: () => _openRoom(session, ended: false),
-                            onHistory: () => _openRoom(session, ended: true),
-                          ),
-                      ],
-                    );
-            },
-          );
-
-  Widget _sessionsCalendarPage(
-    List<_TeacherTutoringSession> sessions,
-    List<_TeacherTutoringSession> allSessions,
-  ) {
-    final titleDate = _selectedDate;
-    return ListView(
-      padding: const EdgeInsets.all(22),
-      children: [
-        Row(
-          children: [
-            const Expanded(
-              child: Text(
-                'Agenda de tutorías',
-                style: TextStyle(
-                  color: _teacherNavy,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                ),
+              )
+            : Center(
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  Text('No se pudieron cargar tus tutorías: $error'),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: () => ref.invalidate(_teacherSessionsProvider),
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Reintentar'),
+                  ),
+                ]),
               ),
-            ),
-            TextButton.icon(
-              onPressed: () => setState(() => _tab = 2),
-              icon: const Icon(Icons.play_circle_outline),
-              label: const Text('Empezar tutoría'),
-            ),
-            IconButton(
-              tooltip: 'Ver historial',
-              onPressed: () => setState(() => _tab = 6),
-              icon: const Icon(Icons.history),
-            ),
-          ],
-        ),
-        const SizedBox(height: 14),
-        _TeacherCalendarCard(
-          month: _calendarMonth,
-          selectedDate: _selectedDate,
-          sessions: allSessions,
-          onMonthChanged: (month) => setState(() => _calendarMonth = month),
-          onDateSelected: (date) => setState(() {
-            _selectedDate = date;
-            _calendarMonth = DateTime(date.year, date.month);
-          }),
-        ),
-        const SizedBox(height: 22),
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                titleDate == null
-                    ? 'Todas las próximas sesiones'
-                    : 'Sesiones del ${_dateLabel(titleDate)}',
-                style: const TextStyle(
-                  color: _teacherNavy,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
-            if (titleDate != null)
-              TextButton(
-                onPressed: () => setState(() => _selectedDate = null),
-                child: const Text('Ver todas'),
-              ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        if (sessions.isEmpty)
-          _TeacherEmptyCard(
-            icon: Icons.event_busy_outlined,
-            message: titleDate == null
-                ? 'No tienes tutorías pendientes.'
-                : 'No hay sesiones en la fecha seleccionada.',
-          )
-        else
-          for (final session in sessions)
-            _TeacherSessionCard(
-              session: session,
-              view: _SessionView.scheduled,
-              onRequestDateChange: () => _requestDateChange(session),
-              onOpenChat: () => _openSessionChat(session),
-              onStart: () => _openRoom(session, ended: false),
-              onHistory: () => _openRoom(session, ended: true),
-            ),
-      ],
-    );
-  }
-
-  Future<void> _openSessionChat(
-    _TeacherTutoringSession session, {
-    bool readOnly = false,
-  }) async {
-    if (session.isIndividual) return;
-    await Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => TutoriaChatPage(
-        sessionId: session.id,
-        subject: session.subject,
-        readOnly: readOnly,
-      ),
-    ));
-  }
-
-  Future<void> _openRoom(
-    _TeacherTutoringSession session, {
-    required bool ended,
-  }) async {
-    if (ended) {
-      await Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) => TutoriaHistorialPage(
-          sessionId: session.id,
-          subject: session.subject,
-          isIndividual: session.isIndividual,
-        ),
-      ));
-      return;
-    }
-    if (session.isIndividual && !ended && session.state == 'PROGRAMADA') {
-      try {
-        await ref.read(dioProvider).patch(
-              '/api/tutorias/${Uri.encodeComponent(session.id)}/iniciar',
+        data: (allSessions) {
+          final sessions = allSessions
+              .where((session) => switch (view) {
+                    _SessionView.history => session.state == 'FINALIZADA',
+                    _SessionView.scheduled ||
+                    _SessionView.start =>
+                      session.state != 'FINALIZADA',
+                  })
+              .toList()
+            ..sort((a, b) => (a.start ?? DateTime(9999))
+                .compareTo(b.start ?? DateTime(9999)));
+          if (view == _SessionView.history) {
+            return _historyPage(
+              count: sessions.length,
+              body: sessions.isEmpty
+                  ? _historyMessage('Aún no tienes tutorías finalizadas.')
+                  : ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                      itemCount: sessions.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      itemBuilder: (context, index) =>
+                          _historySessionCard(sessions[index]),
+                    ),
             );
-      } on DioException catch (error) {
-        if (!mounted) return;
-        final data = error.response?.data;
-        final message = data is Map && data['message'] is String
-            ? data['message'] as String
-            : error.message ?? 'No se pudo iniciar la tutoría.';
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(message)));
-        return;
-      }
-    }
-    if (!mounted) return;
-    await Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => LiveKitRoomPage(
-        sessionId: session.id,
-        subject: session.subject,
-        modality: session.modality,
-        teacherMode: true,
-        students: session.students,
-        ended: ended,
-        endAt: session.end,
-        isIndividualTutoring: session.isIndividual,
-        onNavigateToDashboard: (tab) {
-          Navigator.of(context).pop();
-          if (mounted) setState(() => _tab = tab);
+          }
+          return sessions.isEmpty
+              ? const Center(
+                  child: Text('No tienes tutorías grupales asignadas.'))
+              : ListView(
+                  padding: const EdgeInsets.all(20),
+                  children: [
+                    Text(
+                        switch (view) {
+                          _SessionView.scheduled => 'Mis tutorías',
+                          _SessionView.start => 'Empezar tutorías',
+                          _SessionView.history => 'Historial'
+                        },
+                        style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: _teacherNavy)),
+                    const SizedBox(height: 10),
+                    for (final session in sessions)
+                      Card(
+                        child: Column(children: [
+                          ListTile(
+                            contentPadding: const EdgeInsets.all(16),
+                            leading: const CircleAvatar(
+                                backgroundColor: Color(0xFFE6F4EA),
+                                child: Icon(Icons.event_available,
+                                    color: _teacherGreen)),
+                            title: Text(session.subject,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w700)),
+                            subtitle: Text(
+                                '${session.start == null ? 'Fecha no disponible' : _dateTimeLabel(session.start!)} · ${_modalityLabel(session.modality)} · Semestre ${session.semester} · ${session.technologies.join(', ')}\n${session.students.isEmpty ? 'Publicada · sin inscritos' : 'Estudiantes inscritos: ${session.students.length}'}${session.state == 'FINALIZADA' ? '\nClase finalizada' : ''}'),
+                            isThreeLine: true,
+                            trailing: session.id.isNotEmpty &&
+                                    session.start != null &&
+                                    session.end != null &&
+                                    session.state != 'FINALIZADA'
+                                ? IconButton.filledTonal(
+                                    tooltip: 'Solicitar cambio de fecha',
+                                    onPressed: () =>
+                                        _requestDateChange(session),
+                                    icon: const Icon(
+                                        Icons.edit_calendar_outlined),
+                                  )
+                                : null,
+                          ),
+                          if (session.id.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                              child: Wrap(
+                                alignment: WrapAlignment.end,
+                                spacing: 8,
+                                children: [
+                                  OutlinedButton.icon(
+                                    onPressed: () => Navigator.of(context)
+                                        .push(MaterialPageRoute(
+                                      builder: (_) => TutoriaChatPage(
+                                          sessionId: session.id,
+                                          subject: session.subject,
+                                          readOnly:
+                                              view == _SessionView.history),
+                                    )),
+                                    icon: const Icon(Icons.forum_outlined),
+                                    label: const Text('Abrir chat'),
+                                  ),
+                                  if (view != _SessionView.scheduled)
+                                    FilledButton.icon(
+                                      onPressed: () async {
+                                        await Navigator.of(context)
+                                            .push(MaterialPageRoute(
+                                          builder: (_) => LiveKitRoomPage(
+                                              sessionId: session.id,
+                                              subject: session.subject,
+                                              modality: session.modality,
+                                              teacherMode: true,
+                                              students: session.students,
+                                              ended:
+                                                  view == _SessionView.history,
+                                              endAt: session.end),
+                                        ));
+                                        if (mounted) {
+                                          ref.invalidate(
+                                              _teacherSessionsProvider);
+                                        }
+                                      },
+                                      icon: Icon(view == _SessionView.history
+                                          ? Icons.history
+                                          : Icons.video_call_outlined),
+                                      label: Text(view == _SessionView.history
+                                          ? 'Ver historial'
+                                          : 'Empezar tutoría'),
+                                    ),
+                                ],
+                              ),
+                            ),
+                        ]),
+                      ),
+                  ],
+                );
         },
-      ),
-    ));
-    if (mounted) ref.invalidate(_teacherSessionsProvider);
-  }
+      );
+
+  Widget _historyPage({required Widget body, int? count}) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+            child: Row(
+              children: [
+                Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE6F4EA),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(Icons.history, color: _teacherGreen),
+                ),
+                const SizedBox(width: 14),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Historial de tutorías',
+                        style: TextStyle(
+                          color: _teacherNavy,
+                          fontSize: 23,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      SizedBox(height: 3),
+                      Text(
+                        'Consulta tus sesiones finalizadas, sus datos y chats.',
+                        style: TextStyle(color: Color(0xFF687A70)),
+                      ),
+                    ],
+                  ),
+                ),
+                if (count != null)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE6F4EA),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '$count ${count == 1 ? 'sesión' : 'sesiones'}',
+                      style: const TextStyle(
+                        color: _teacherNavy,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          Expanded(child: body),
+        ],
+      );
+
+  Widget _historyMessage(String message, {VoidCallback? onRetry}) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 460),
+            padding: const EdgeInsets.all(28),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border.all(color: const Color(0xFFE3ECE5)),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.history, color: _teacherGreen, size: 34),
+                const SizedBox(height: 12),
+                Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Color(0xFF53665B)),
+                ),
+                if (onRetry != null) ...[
+                  const SizedBox(height: 14),
+                  OutlinedButton.icon(
+                    onPressed: onRetry,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Reintentar'),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      );
+
+  Widget _historySessionCard(_TeacherTutoringSession session) => Card(
+        elevation: 0,
+        margin: EdgeInsets.zero,
+        color: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: Color(0xFFE3ECE5)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const CircleAvatar(
+                    backgroundColor: Color(0xFFE6F4EA),
+                    child: Icon(Icons.event_available, color: _teacherGreen),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      session.subject,
+                      style: const TextStyle(
+                        color: _teacherNavy,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE6F4EA),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Text(
+                      'Finalizada',
+                      style: TextStyle(
+                        color: _teacherNavy,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _HistoryDetail(
+                    icon: Icons.calendar_month_outlined,
+                    label: session.start == null
+                        ? 'Fecha no disponible'
+                        : _dateTimeLabel(session.start!),
+                  ),
+                  _HistoryDetail(
+                    icon: Icons.school_outlined,
+                    label: 'Semestre ${session.semester}',
+                  ),
+                  _HistoryDetail(
+                    icon: Icons.meeting_room_outlined,
+                    label: _modalityLabel(session.modality),
+                  ),
+                  _HistoryDetail(
+                    icon: Icons.people_outline,
+                    label: '${session.students.length} estudiantes',
+                  ),
+                ],
+              ),
+              if (session.technologies.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                Text(
+                  session.technologies.join(' · '),
+                  style: const TextStyle(color: Color(0xFF687A70)),
+                ),
+              ],
+              if (session.id.isNotEmpty) ...[
+                const SizedBox(height: 14),
+                const Divider(height: 1, color: Color(0xFFEAF0EB)),
+                const SizedBox(height: 10),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => TutoriaChatPage(
+                              sessionId: session.id,
+                              subject: session.subject,
+                              readOnly: true,
+                            ),
+                          ),
+                        ),
+                        icon: const Icon(Icons.forum_outlined),
+                        label: const Text('Abrir chat'),
+                      ),
+                      FilledButton.tonalIcon(
+                        onPressed: () async {
+                          await Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => LiveKitRoomPage(
+                                sessionId: session.id,
+                                subject: session.subject,
+                                modality: session.modality,
+                                teacherMode: true,
+                                students: session.students,
+                                ended: true,
+                                endAt: session.end,
+                              ),
+                            ),
+                          );
+                          if (mounted) ref.invalidate(_teacherSessionsProvider);
+                        },
+                        icon: const Icon(Icons.history),
+                        label: const Text('Ver historial'),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      );
 
   Future<void> _requestDateChange(_TeacherTutoringSession session) async {
     final originalStart = session.start;
@@ -666,709 +759,68 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
 
 enum _SessionView { scheduled, start, history }
 
-class _TeacherSidebar extends StatelessWidget {
-  const _TeacherSidebar({
-    required this.activeTab,
-    required this.teacherName,
-    required this.onSelect,
-  });
+class _HistoryDetail extends StatelessWidget {
+  const _HistoryDetail({required this.icon, required this.label});
 
-  final int activeTab;
-  final String teacherName;
-  final ValueChanged<int> onSelect;
-
-  @override
-  Widget build(BuildContext context) => Container(
-        width: 224,
-        color: _teacherSidebar,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const SizedBox(height: 22),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                children: [
-                  Container(
-                    width: 42,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Transform.scale(
-                      scale: 1.08,
-                      child: const BrandLogo(
-                        width: 38,
-                        height: 34,
-                        color: Colors.black,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  const Expanded(
-                    child: Text(
-                      'SearchTeach',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 28),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24),
-              child: Text(
-                'MENÚ PRINCIPAL',
-                style: TextStyle(
-                  color: Color(0xFFD4EEE2),
-                  fontSize: 10,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 1.1,
-                ),
-              ),
-            ),
-            const SizedBox(height: 10),
-            Expanded(
-              child: ListView(
-                padding: EdgeInsets.zero,
-                children: [
-                  _item(0, 'Inicio', Icons.home_outlined),
-                  _item(1, 'Sesiones', Icons.calendar_month_outlined),
-                  _item(2, 'Empezar tutoría', Icons.video_call_outlined),
-                  _item(3, 'Proyectos de aula', Icons.school_outlined),
-                  _item(4, 'Líder PA', Icons.groups_outlined),
-                  _item(5, 'Avisos', Icons.notifications_outlined),
-                  _item(6, 'Historial', Icons.history_outlined),
-                  _item(7, 'Mi perfil', Icons.person_outline),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(18, 12, 18, 20),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 19,
-                    backgroundColor: Colors.white,
-                    child: Text(
-                      _initials(teacherName),
-                      style: const TextStyle(
-                        color: _teacherSidebar,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          teacherName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const Text(
-                          'Docente',
-                          style: TextStyle(
-                            color: Color(0xFFD4EEE2),
-                            fontSize: 11,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      );
-
-  Widget _item(int tab, String label, IconData icon) {
-    final selected = activeTab == tab;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
-      child: ListTile(
-        dense: true,
-        visualDensity: VisualDensity.compact,
-        selected: selected,
-        selectedColor: Colors.white,
-        selectedTileColor: _teacherNavy,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        leading: Icon(
-          icon,
-          color: Colors.white,
-          size: 21,
-        ),
-        title: Text(
-          label,
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        onTap: () => onSelect(tab),
-      ),
-    );
-  }
-}
-
-class _TeacherHeader extends StatelessWidget {
-  const _TeacherHeader({
-    required this.title,
-    required this.onLogout,
-  });
-
-  final String title;
-  final VoidCallback onLogout;
-
-  @override
-  Widget build(BuildContext context) => Container(
-        height: 76,
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        decoration: const BoxDecoration(
-          color: _teacherSidebar,
-          boxShadow: [
-            BoxShadow(
-              color: Color(0x12000000),
-              blurRadius: 12,
-              offset: Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                title,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
-            const NotificationBellButton(accentColor: _teacherGreen),
-            IconButton(
-              tooltip: 'Cerrar sesión',
-              onPressed: onLogout,
-              icon: const Icon(Icons.logout, color: Colors.white),
-            ),
-          ],
-        ),
-      );
-}
-
-class _TeacherCalendarCard extends StatelessWidget {
-  const _TeacherCalendarCard({
-    required this.month,
-    required this.selectedDate,
-    required this.sessions,
-    required this.onMonthChanged,
-    required this.onDateSelected,
-  });
-
-  final DateTime month;
-  final DateTime? selectedDate;
-  final List<_TeacherTutoringSession> sessions;
-  final ValueChanged<DateTime> onMonthChanged;
-  final ValueChanged<DateTime> onDateSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    final daysInMonth = DateUtils.getDaysInMonth(month.year, month.month);
-    final mondayOffset = DateTime(month.year, month.month, 1).weekday - 1;
-    final cells = <DateTime?>[
-      ...List<DateTime?>.filled(mondayOffset, null),
-      for (var day = 1; day <= daysInMonth; day++)
-        DateTime(month.year, month.month, day),
-    ];
-    while (cells.length % 7 != 0) {
-      cells.add(null);
-    }
-    final sessionDays = sessions
-        .map((session) => session.start?.toLocal())
-        .whereType<DateTime>()
-        .map((date) => DateTime(date.year, date.month, date.day).toString())
-        .toSet();
-    const weekdays = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-    return Card(
-      elevation: 0,
-      color: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: const BorderSide(color: Color(0xFFE7EEE9)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    '${_monthName(month.month)} ${month.year}',
-                    style: TextStyle(
-                      color: _teacherNavy,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-                IconButton(
-                  visualDensity: VisualDensity.compact,
-                  tooltip: 'Mes anterior',
-                  onPressed: () => onMonthChanged(
-                    DateTime(month.year, month.month - 1),
-                  ),
-                  icon: const Icon(Icons.chevron_left),
-                ),
-                IconButton(
-                  visualDensity: VisualDensity.compact,
-                  tooltip: 'Mes siguiente',
-                  onPressed: () => onMonthChanged(
-                    DateTime(month.year, month.month + 1),
-                  ),
-                  icon: const Icon(Icons.chevron_right),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                for (final weekday in weekdays)
-                  Expanded(
-                    child: Center(
-                      child: Text(
-                        weekday,
-                        style: TextStyle(
-                          color: const Color(0xFF79887F),
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: cells.length,
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 7,
-                childAspectRatio: 1.22,
-              ),
-              itemBuilder: (context, index) {
-                final date = cells[index];
-                if (date == null) return const SizedBox.shrink();
-                final selected = selectedDate != null &&
-                    selectedDate!.year == date.year &&
-                    selectedDate!.month == date.month &&
-                    selectedDate!.day == date.day;
-                final hasSessions = sessionDays.contains(
-                  DateTime(date.year, date.month, date.day).toString(),
-                );
-                final today = DateUtils.isSameDay(date, DateTime.now());
-                return InkWell(
-                  onTap: () => onDateSelected(date),
-                  borderRadius: BorderRadius.circular(9),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        width: 32,
-                        height: 32,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: selected ? _teacherSidebar : null,
-                          shape: BoxShape.circle,
-                          border: today && !selected
-                              ? Border.all(color: _teacherSidebar)
-                              : null,
-                        ),
-                        child: Text(
-                          '${date.day}',
-                          style: TextStyle(
-                            color: selected ? Colors.white : _teacherNavy,
-                            fontSize: 12,
-                            fontWeight: selected || today
-                                ? FontWeight.w800
-                                : FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Container(
-                        width: 4,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color:
-                              hasSessions ? _teacherGreen : Colors.transparent,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 10),
-            const Row(
-              children: [
-                Icon(Icons.circle, size: 8, color: _teacherGreen),
-                SizedBox(width: 6),
-                Text(
-                  'Día con tutorías',
-                  style: TextStyle(
-                    color: Color(0xFF687A70),
-                    fontSize: 11,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _TeacherSessionCard extends ConsumerWidget {
-  const _TeacherSessionCard({
-    required this.session,
-    required this.view,
-    required this.onRequestDateChange,
-    required this.onOpenChat,
-    required this.onStart,
-    required this.onHistory,
-  });
-
-  final _TeacherTutoringSession session;
-  final _SessionView view;
-  final VoidCallback onRequestDateChange;
-  final VoidCallback onOpenChat;
-  final VoidCallback onStart;
-  final VoidCallback onHistory;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final isHistory = view == _SessionView.history;
-    final isStart = view == _SessionView.start;
-    final studentNames = !session.isIndividual &&
-            session.id.isNotEmpty &&
-            session.students.isNotEmpty
-        ? ref.watch(_teacherStudentNamesProvider(session.id))
-        : null;
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: 0,
-      color: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: const BorderSide(color: Color(0xFFE7EEE9)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(15),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE7F4EC),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
-                    Icons.menu_book_outlined,
-                    color: _teacherGreen,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        session.subject,
-                        style: const TextStyle(
-                          color: _teacherNavy,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${session.start == null ? 'Fecha no disponible' : _dateTimeLabel(session.start!.toLocal())} · ${_modalityLabel(session.modality)}',
-                        style: const TextStyle(
-                          color: Color(0xFF687A70),
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (!isHistory &&
-                    !session.isIndividual &&
-                    session.id.isNotEmpty &&
-                    session.start != null &&
-                    session.end != null)
-                  IconButton(
-                    tooltip: 'Solicitar cambio de fecha',
-                    onPressed: onRequestDateChange,
-                    icon: const Icon(Icons.edit_calendar_outlined),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 7,
-              runSpacing: 6,
-              children: [
-                if (!session.isIndividual)
-                  _TeacherTag(label: 'Semestre ${session.semester}'),
-                _TeacherTag(label: '${session.students.length} estudiantes'),
-                _TeacherTag(label: session.state),
-                for (final tech in session.technologies.take(3))
-                  _TeacherTag(label: tech),
-              ],
-            ),
-            if (session.students.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              if (session.isIndividual)
-                const Text(
-                  'Tutoría individual · 1 estudiante',
-                  style: TextStyle(
-                    color: Color(0xFF687A70),
-                    fontSize: 11,
-                  ),
-                )
-              else if (studentNames == null)
-                Text(
-                  '${session.students.length} estudiantes inscritos',
-                  style: const TextStyle(
-                    color: Color(0xFF687A70),
-                    fontSize: 11,
-                  ),
-                )
-              else
-                studentNames.when(
-                  loading: () => const Text(
-                    'Cargando estudiantes…',
-                    style: TextStyle(
-                      color: Color(0xFF687A70),
-                      fontSize: 11,
-                    ),
-                  ),
-                  error: (error, _) => Text(
-                    'No se pudieron cargar los estudiantes: $error',
-                    style: const TextStyle(
-                      color: Color(0xFF9B2C2C),
-                      fontSize: 11,
-                    ),
-                  ),
-                  data: (names) => Text(
-                    names.isEmpty
-                        ? '${session.students.length} estudiantes inscritos'
-                        : 'Estudiantes: ${names.take(4).join(', ')}${names.length > 4 ? ' y ${names.length - 4} más' : ''}',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Color(0xFF687A70),
-                      fontSize: 11,
-                    ),
-                  ),
-                ),
-            ],
-            const SizedBox(height: 12),
-            Wrap(
-              alignment: WrapAlignment.end,
-              spacing: 8,
-              runSpacing: 6,
-              children: [
-                if (!isHistory && !session.isIndividual)
-                  OutlinedButton.icon(
-                    onPressed: session.id.isEmpty ? null : onOpenChat,
-                    icon: const Icon(Icons.chat_bubble_outline, size: 17),
-                    label: const Text('Chat'),
-                  ),
-                if (isStart)
-                  FilledButton.icon(
-                    onPressed: session.id.isEmpty ? null : onStart,
-                    icon: const Icon(Icons.video_call_outlined, size: 18),
-                    label: const Text('Entrar a sala'),
-                  ),
-                if (isHistory)
-                  FilledButton.tonalIcon(
-                    onPressed: session.id.isEmpty ? null : onHistory,
-                    icon: const Icon(Icons.history, size: 18),
-                    label: const Text('Ver historial'),
-                  ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _TeacherTag extends StatelessWidget {
-  const _TeacherTag({required this.label});
+  final IconData icon;
   final String label;
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
         decoration: BoxDecoration(
-          color: const Color(0xFFF0F5F1),
+          color: const Color(0xFFF3F8F4),
           borderRadius: BorderRadius.circular(20),
         ),
-        child: Text(
-          label,
-          style: const TextStyle(
-            color: Color(0xFF53665B),
-            fontSize: 10,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      );
-}
-
-class _TeacherMetricCard extends StatelessWidget {
-  const _TeacherMetricCard({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.color,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) => ConstrainedBox(
-        constraints: const BoxConstraints(minWidth: 150, maxWidth: 220),
-        child: Card(
-          elevation: 0,
-          color: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-            side: const BorderSide(color: Color(0xFFE7EEE9)),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(15),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundColor: color.withValues(alpha: 0.1),
-                  child: Icon(icon, color: color, size: 20),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        value,
-                        style: TextStyle(
-                          color: color,
-                          fontSize: 21,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      Text(
-                        label,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Color(0xFF687A70),
-                          fontSize: 10,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 15, color: _teacherGreen),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Color(0xFF53665B),
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-          ),
+          ],
         ),
       );
 }
 
-class _TeacherEmptyCard extends StatelessWidget {
-  const _TeacherEmptyCard({required this.icon, required this.message});
+const _teacherLabels = ['Inicio', 'Tutorías', 'Empezar tutorías'];
+const _teacherIcons = [
+  Icons.home_outlined,
+  Icons.event_note_outlined,
+  Icons.play_circle_outline
+];
+
+class _TeacherHomeTile extends StatelessWidget {
+  const _TeacherHomeTile(
+      {required this.icon,
+      required this.title,
+      required this.subtitle,
+      required this.onTap});
   final IconData icon;
-  final String message;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) => Card(
-        elevation: 0,
-        color: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-          side: const BorderSide(color: Color(0xFFE7EEE9)),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            children: [
-              Icon(icon, color: _teacherGreen, size: 30),
-              const SizedBox(height: 8),
-              Text(
-                message,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Color(0xFF687A70)),
-              ),
-            ],
-          ),
-        ),
-      );
-}
-
-class _TeacherLoadError extends StatelessWidget {
-  const _TeacherLoadError({required this.message, required this.onRetry});
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(message, textAlign: TextAlign.center),
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                onPressed: onRetry,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Reintentar'),
-              ),
-            ],
-          ),
+        child: ListTile(
+          onTap: onTap,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+          leading: CircleAvatar(
+              backgroundColor: const Color(0xFFE6F4EA),
+              child: Icon(icon, color: _teacherGreen)),
+          title:
+              Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+          subtitle: Text(subtitle),
+          trailing: const Icon(Icons.chevron_right),
         ),
       );
 }
@@ -1383,8 +835,7 @@ class _TeacherTutoringSession {
       required this.end,
       required this.semester,
       required this.modality,
-      required this.state,
-      this.isIndividual = false});
+      required this.state});
   final String id;
   final String subject;
   final List<String> technologies;
@@ -1394,7 +845,6 @@ class _TeacherTutoringSession {
   final int semester;
   final String modality;
   final String state;
-  final bool isIndividual;
 
   factory _TeacherTutoringSession.fromJson(Map<String, dynamic> json) =>
       _TeacherTutoringSession(
@@ -1418,28 +868,6 @@ class _TeacherTutoringSession {
         state: json['estadoClase'] is String
             ? json['estadoClase'] as String
             : 'PROGRAMADA',
-      );
-
-  factory _TeacherTutoringSession.fromIndividualJson(
-          Map<String, dynamic> json) =>
-      _TeacherTutoringSession(
-        id: json['id'] is String ? json['id'] as String : '',
-        subject:
-            json['materia'] is String ? json['materia'] as String : 'Tutoría',
-        technologies: const [],
-        students: json['estudianteId'] is String
-            ? [json['estudianteId'] as String]
-            : const [],
-        start: DateTime.tryParse(json['fechaInicio']?.toString() ?? ''),
-        end: DateTime.tryParse(json['fechaFin']?.toString() ?? ''),
-        semester: 0,
-        modality: json['modalidad'] is String &&
-                (json['modalidad'] as String).isNotEmpty
-            ? json['modalidad'] as String
-            : 'PRESENCIAL',
-        state:
-            json['estado'] is String ? json['estado'] as String : 'PROGRAMADA',
-        isIndividual: true,
       );
 }
 
@@ -1554,28 +982,6 @@ String _dateTimeLabel(DateTime value) =>
 
 String _dateLabel(DateTime value) =>
     '${value.day.toString().padLeft(2, '0')}/${value.month.toString().padLeft(2, '0')}/${value.year}';
-
-String _monthName(int month) => const [
-      'Enero',
-      'Febrero',
-      'Marzo',
-      'Abril',
-      'Mayo',
-      'Junio',
-      'Julio',
-      'Agosto',
-      'Septiembre',
-      'Octubre',
-      'Noviembre',
-      'Diciembre',
-    ][month - 1];
-
-String _initials(String name) {
-  final parts =
-      name.trim().split(RegExp(r'\s+')).where((part) => part.isNotEmpty);
-  if (parts.isEmpty) return 'D';
-  return parts.take(2).map((part) => part[0].toUpperCase()).join();
-}
 
 String _modalityLabel(String modality) => switch (modality.toUpperCase()) {
       'VIRTUAL' => 'Virtual',

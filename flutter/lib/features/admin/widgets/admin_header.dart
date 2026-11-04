@@ -12,12 +12,14 @@ class AdminHeader extends StatelessWidget {
     required this.subtitle,
     this.isEditing = false,
     this.onBack,
+    this.showLogo = true,
   });
 
   final String title;
   final String subtitle;
   final bool isEditing;
   final VoidCallback? onBack;
+  final bool showLogo;
 
   @override
   Widget build(BuildContext context) {
@@ -73,21 +75,15 @@ class AdminHeader extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 14),
-                ] else ...[
+                ] else if (showLogo) ...[
                   Container(
                     width: 62,
                     height: 50,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(9),
-                    ),
+                    alignment: Alignment.center,
                     child: Transform.scale(
                       scale: 1.08,
                       child: const BrandLogo(
-                        width: 58,
-                        height: 48,
-                        color: Colors.black,
-                      ),
+                          width: 58, height: 48, color: Colors.black),
                     ),
                   ),
                   const SizedBox(width: 14),
