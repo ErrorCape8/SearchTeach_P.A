@@ -8,5 +8,9 @@ public record DashboardSummary(
 		long tutoriasProgramadas,
 		Double tasaAsistencia,
 		List<WeeklyTutoringCount> historialSemanal,
-		List<SubjectTutoringSummary> tutoriasPorMateria) {
+		List<SubjectTutoringSummary> tutoriasPorMateria,
+		AttendanceTrainingData datosModeloAsistencia,
+		boolean modeloAsistenciaDisponible,
+		List<SubjectAttendancePrediction> prediccionesAsistencia,
+		long tutoriasProgramadasNoEvaluables) {
 }

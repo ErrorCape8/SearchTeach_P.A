@@ -7,6 +7,5 @@ public record SubjectTutoringSummary(
 		long estudiantesInscritos,
 		long asistenciasConfirmadas,
 		long asistenciasRegistradas,
-		Double tasaAsistencia,
-		PronosticoDemanda pronostico) {
+		Double tasaAsistencia) {
 }

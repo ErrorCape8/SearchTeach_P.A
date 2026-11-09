@@ -1,0 +1,1211 @@
+@relation tutorias_SINTETICO_v3_completo
+
+@attribute materia {Programacion,Estadistica,'Algebra Lineal','Calculo Diferencial','Estructuras de Datos','Bases de Datos',Fisica,Ingles}
+@attribute modalidad {PRESENCIAL,VIRTUAL}
+@attribute dia_semana {LUNES,MARTES,MIERCOLES,JUEVES,VIERNES,SABADO}
+@attribute hora numeric
+@attribute asistio {si,no}
+
+@data
+Programacion,PRESENCIAL,LUNES,9,si
+Programacion,PRESENCIAL,LUNES,15,si
+Estadistica,PRESENCIAL,LUNES,10,si
+'Algebra Lineal',PRESENCIAL,LUNES,12,si
+'Calculo Diferencial',VIRTUAL,MARTES,18,si
+Programacion,VIRTUAL,MIERCOLES,11,si
+'Estructuras de Datos',PRESENCIAL,MIERCOLES,14,no
+'Bases de Datos',VIRTUAL,JUEVES,14,si
+'Calculo Diferencial',PRESENCIAL,JUEVES,15,si
+'Calculo Diferencial',VIRTUAL,JUEVES,17,si
+'Calculo Diferencial',VIRTUAL,VIERNES,8,si
+'Estructuras de Datos',VIRTUAL,VIERNES,14,no
+'Estructuras de Datos',VIRTUAL,SABADO,12,si
+Programacion,PRESENCIAL,LUNES,14,si
+Programacion,PRESENCIAL,LUNES,12,si
+'Bases de Datos',VIRTUAL,LUNES,14,si
+Programacion,PRESENCIAL,MARTES,10,si
+Estadistica,PRESENCIAL,MARTES,17,si
+'Algebra Lineal',PRESENCIAL,MIERCOLES,15,si
+Programacion,PRESENCIAL,MIERCOLES,18,no
+'Bases de Datos',VIRTUAL,JUEVES,8,si
+'Algebra Lineal',VIRTUAL,JUEVES,14,si
+'Calculo Diferencial',PRESENCIAL,VIERNES,15,si
+Fisica,PRESENCIAL,VIERNES,9,si
+'Estructuras de Datos',VIRTUAL,VIERNES,15,no
+'Calculo Diferencial',VIRTUAL,VIERNES,18,no
+Estadistica,PRESENCIAL,LUNES,10,si
+'Calculo Diferencial',VIRTUAL,MARTES,9,si
+'Algebra Lineal',VIRTUAL,MARTES,11,si
+'Bases de Datos',VIRTUAL,MARTES,11,no
+'Estructuras de Datos',PRESENCIAL,MARTES,16,si
+'Bases de Datos',PRESENCIAL,MIERCOLES,15,no
+'Estructuras de Datos',VIRTUAL,MIERCOLES,13,si
+Programacion,PRESENCIAL,MIERCOLES,9,si
+Programacion,PRESENCIAL,MIERCOLES,13,si
+'Calculo Diferencial',PRESENCIAL,MIERCOLES,11,no
+'Bases de Datos',VIRTUAL,JUEVES,10,si
+Programacion,VIRTUAL,JUEVES,13,no
+Estadistica,PRESENCIAL,JUEVES,16,si
+'Estructuras de Datos',PRESENCIAL,JUEVES,11,si
+'Estructuras de Datos',VIRTUAL,VIERNES,9,si
+Programacion,VIRTUAL,VIERNES,9,si
+'Calculo Diferencial',VIRTUAL,VIERNES,10,si
+'Estructuras de Datos',VIRTUAL,SABADO,15,si
+Programacion,PRESENCIAL,LUNES,10,si
+'Bases de Datos',VIRTUAL,LUNES,10,si
+Estadistica,VIRTUAL,MARTES,7,no
+Fisica,PRESENCIAL,MARTES,17,si
+Estadistica,PRESENCIAL,MARTES,14,si
+'Calculo Diferencial',PRESENCIAL,MARTES,18,si
+Fisica,PRESENCIAL,MIERCOLES,11,si
+'Bases de Datos',PRESENCIAL,MIERCOLES,12,si
+'Estructuras de Datos',PRESENCIAL,JUEVES,9,si
+Programacion,VIRTUAL,JUEVES,14,si
+'Calculo Diferencial',PRESENCIAL,JUEVES,9,si
+Fisica,VIRTUAL,VIERNES,14,no
+'Bases de Datos',VIRTUAL,VIERNES,9,si
+Fisica,PRESENCIAL,VIERNES,15,no
+'Algebra Lineal',VIRTUAL,SABADO,13,si
+Programacion,PRESENCIAL,LUNES,13,si
+'Bases de Datos',PRESENCIAL,LUNES,15,si
+Fisica,VIRTUAL,LUNES,18,si
+Ingles,PRESENCIAL,LUNES,17,si
+'Calculo Diferencial',PRESENCIAL,MARTES,11,no
+'Bases de Datos',PRESENCIAL,MARTES,13,si
+'Calculo Diferencial',PRESENCIAL,MARTES,9,si
+'Estructuras de Datos',PRESENCIAL,MARTES,16,si
+'Algebra Lineal',VIRTUAL,MARTES,15,no
+Estadistica,PRESENCIAL,MARTES,7,si
+Programacion,PRESENCIAL,MIERCOLES,11,si
+'Calculo Diferencial',PRESENCIAL,MIERCOLES,8,si
+'Bases de Datos',VIRTUAL,MIERCOLES,8,no
+'Bases de Datos',PRESENCIAL,MIERCOLES,11,si
+'Calculo Diferencial',PRESENCIAL,MIERCOLES,7,si
+Estadistica,PRESENCIAL,MIERCOLES,18,si
+'Calculo Diferencial',PRESENCIAL,JUEVES,9,si
+Programacion,PRESENCIAL,JUEVES,14,si
+'Calculo Diferencial',VIRTUAL,JUEVES,14,no
+'Estructuras de Datos',VIRTUAL,JUEVES,16,si
+Fisica,VIRTUAL,VIERNES,17,si
+Fisica,VIRTUAL,SABADO,14,no
+Programacion,VIRTUAL,SABADO,15,no
+'Bases de Datos',PRESENCIAL,LUNES,15,si
+'Bases de Datos',VIRTUAL,LUNES,16,no
+Estadistica,VIRTUAL,MARTES,16,si
+Fisica,VIRTUAL,MARTES,10,si
+'Bases de Datos',PRESENCIAL,MARTES,12,si
+'Estructuras de Datos',PRESENCIAL,MARTES,9,si
+Programacion,VIRTUAL,MARTES,7,si
+Fisica,PRESENCIAL,MIERCOLES,17,si
+'Bases de Datos',VIRTUAL,VIERNES,17,si
+'Calculo Diferencial',VIRTUAL,SABADO,14,no
+Estadistica,VIRTUAL,SABADO,17,no
+'Calculo Diferencial',PRESENCIAL,LUNES,10,si
+'Bases de Datos',PRESENCIAL,LUNES,8,si
+Programacion,VIRTUAL,LUNES,8,si
+Programacion,VIRTUAL,LUNES,10,si
+Fisica,PRESENCIAL,LUNES,14,si
+'Calculo Diferencial',PRESENCIAL,MARTES,19,si
+'Bases de Datos',VIRTUAL,MARTES,14,no
+'Estructuras de Datos',PRESENCIAL,MARTES,8,si
+'Calculo Diferencial',PRESENCIAL,MARTES,10,si
+Ingles,VIRTUAL,MARTES,10,no
+Fisica,PRESENCIAL,MARTES,15,si
+'Algebra Lineal',PRESENCIAL,MIERCOLES,13,no
+'Bases de Datos',VIRTUAL,MIERCOLES,9,no
+'Calculo Diferencial',PRESENCIAL,MIERCOLES,16,si
+'Bases de Datos',VIRTUAL,MIERCOLES,14,no
+Programacion,PRESENCIAL,MIERCOLES,13,si
+Programacion,PRESENCIAL,JUEVES,16,si
+'Estructuras de Datos',VIRTUAL,JUEVES,14,si
+'Estructuras de Datos',PRESENCIAL,JUEVES,9,si
+Fisica,VIRTUAL,JUEVES,14,si
+'Calculo Diferencial',VIRTUAL,JUEVES,13,no
+'Algebra Lineal',VIRTUAL,VIERNES,9,si
+Programacion,VIRTUAL,VIERNES,7,si
+Programacion,PRESENCIAL,VIERNES,9,si
+'Algebra Lineal',VIRTUAL,SABADO,14,no
+Estadistica,VIRTUAL,LUNES,9,si
+'Bases de Datos',PRESENCIAL,LUNES,16,si
+'Calculo Diferencial',VIRTUAL,LUNES,19,no
+'Bases de Datos',PRESENCIAL,LUNES,15,si
+'Estructuras de Datos',PRESENCIAL,LUNES,8,si
+'Algebra Lineal',PRESENCIAL,MARTES,14,no
+'Calculo Diferencial',PRESENCIAL,MARTES,9,no
+'Estructuras de Datos',PRESENCIAL,MARTES,17,si
+'Bases de Datos',VIRTUAL,MARTES,7,si
+Programacion,VIRTUAL,MARTES,16,si
+Programacion,PRESENCIAL,MIERCOLES,17,si
+'Bases de Datos',VIRTUAL,MIERCOLES,15,si
+Programacion,PRESENCIAL,MIERCOLES,8,si
+'Algebra Lineal',PRESENCIAL,MIERCOLES,8,si
+Fisica,PRESENCIAL,MIERCOLES,12,si
+'Algebra Lineal',PRESENCIAL,MIERCOLES,9,si
+'Calculo Diferencial',PRESENCIAL,MIERCOLES,15,no
+'Estructuras de Datos',PRESENCIAL,JUEVES,15,si
+Programacion,VIRTUAL,JUEVES,17,si
+Ingles,VIRTUAL,JUEVES,13,si
+Programacion,PRESENCIAL,JUEVES,14,no
+'Estructuras de Datos',VIRTUAL,JUEVES,8,si
+Programacion,VIRTUAL,VIERNES,12,si
+'Algebra Lineal',PRESENCIAL,VIERNES,13,no
+'Calculo Diferencial',VIRTUAL,VIERNES,9,no
+'Algebra Lineal',VIRTUAL,VIERNES,19,no
+'Bases de Datos',PRESENCIAL,VIERNES,13,si
+'Estructuras de Datos',VIRTUAL,SABADO,16,si
+Programacion,PRESENCIAL,SABADO,13,si
+Fisica,PRESENCIAL,LUNES,13,si
+'Estructuras de Datos',PRESENCIAL,LUNES,18,no
+'Algebra Lineal',PRESENCIAL,LUNES,10,no
+'Estructuras de Datos',VIRTUAL,MARTES,15,si
+Programacion,PRESENCIAL,MARTES,8,si
+Programacion,PRESENCIAL,MARTES,10,no
+Fisica,VIRTUAL,MIERCOLES,10,si
+'Bases de Datos',PRESENCIAL,MIERCOLES,9,no
+'Bases de Datos',PRESENCIAL,MIERCOLES,9,si
+Estadistica,VIRTUAL,JUEVES,15,si
+'Calculo Diferencial',VIRTUAL,JUEVES,11,si
+Programacion,VIRTUAL,VIERNES,11,si
+'Calculo Diferencial',VIRTUAL,LUNES,10,si
+Programacion,VIRTUAL,MARTES,13,si
+Fisica,PRESENCIAL,MARTES,10,si
+'Estructuras de Datos',PRESENCIAL,MARTES,13,no
+Programacion,VIRTUAL,MARTES,11,si
+Programacion,VIRTUAL,MARTES,9,si
+'Algebra Lineal',PRESENCIAL,MIERCOLES,12,no
+Estadistica,PRESENCIAL,MIERCOLES,16,no
+Estadistica,VIRTUAL,MIERCOLES,10,si
+'Algebra Lineal',VIRTUAL,JUEVES,15,no
+Ingles,PRESENCIAL,JUEVES,9,no
+'Bases de Datos',PRESENCIAL,JUEVES,14,si
+Programacion,PRESENCIAL,JUEVES,15,si
+Programacion,VIRTUAL,VIERNES,14,no
+'Calculo Diferencial',VIRTUAL,VIERNES,14,no
+'Algebra Lineal',VIRTUAL,VIERNES,8,no
+'Bases de Datos',PRESENCIAL,LUNES,14,si
+'Bases de Datos',PRESENCIAL,LUNES,18,si
+Ingles,VIRTUAL,LUNES,11,si
+Programacion,PRESENCIAL,MARTES,16,si
+Ingles,PRESENCIAL,MARTES,7,si
+'Calculo Diferencial',PRESENCIAL,MARTES,12,no
+'Algebra Lineal',VIRTUAL,MARTES,9,no
+'Calculo Diferencial',PRESENCIAL,MARTES,14,si
+'Bases de Datos',PRESENCIAL,MIERCOLES,8,no
+Programacion,VIRTUAL,MIERCOLES,9,si
+Ingles,PRESENCIAL,MIERCOLES,13,si
+'Calculo Diferencial',VIRTUAL,JUEVES,16,si
+'Bases de Datos',PRESENCIAL,JUEVES,8,si
+'Bases de Datos',PRESENCIAL,JUEVES,12,si
+'Estructuras de Datos',VIRTUAL,VIERNES,12,no
+'Bases de Datos',VIRTUAL,VIERNES,9,si
+Programacion,PRESENCIAL,VIERNES,10,si
+'Bases de Datos',PRESENCIAL,LUNES,14,si
+Ingles,VIRTUAL,MARTES,15,si
+'Calculo Diferencial',VIRTUAL,MARTES,8,no
+Estadistica,PRESENCIAL,MIERCOLES,10,si
+'Bases de Datos',PRESENCIAL,MIERCOLES,18,si
+'Estructuras de Datos',PRESENCIAL,JUEVES,11,si
+'Estructuras de Datos',PRESENCIAL,JUEVES,14,si
+'Bases de Datos',VIRTUAL,JUEVES,11,si
+'Bases de Datos',PRESENCIAL,JUEVES,14,si
+'Bases de Datos',VIRTUAL,VIERNES,10,si
+Programacion,PRESENCIAL,VIERNES,10,si
+'Bases de Datos',VIRTUAL,SABADO,10,si
+'Calculo Diferencial',VIRTUAL,LUNES,9,si
+'Estructuras de Datos',PRESENCIAL,LUNES,13,si
+Programacion,VIRTUAL,MARTES,9,si
+'Estructuras de Datos',PRESENCIAL,MARTES,8,si
+Fisica,VIRTUAL,MARTES,9,no
+Estadistica,VIRTUAL,MARTES,17,si
+'Estructuras de Datos',VIRTUAL,MIERCOLES,9,si
+'Estructuras de Datos',VIRTUAL,MIERCOLES,11,si
+Estadistica,VIRTUAL,MIERCOLES,14,si
+'Bases de Datos',PRESENCIAL,MIERCOLES,16,si
+Programacion,VIRTUAL,JUEVES,11,no
+'Algebra Lineal',VIRTUAL,JUEVES,8,si
+'Algebra Lineal',PRESENCIAL,JUEVES,11,no
+'Bases de Datos',VIRTUAL,JUEVES,13,no
+Estadistica,VIRTUAL,LUNES,9,si
+Fisica,VIRTUAL,LUNES,14,si
+'Estructuras de Datos',PRESENCIAL,LUNES,17,si
+'Estructuras de Datos',PRESENCIAL,MARTES,19,no
+'Estructuras de Datos',PRESENCIAL,MARTES,12,no
+Programacion,PRESENCIAL,MARTES,17,si
+'Calculo Diferencial',VIRTUAL,MARTES,18,no
+'Bases de Datos',PRESENCIAL,MARTES,15,si
+'Bases de Datos',PRESENCIAL,MIERCOLES,14,si
+'Algebra Lineal',PRESENCIAL,MIERCOLES,10,no
+'Estructuras de Datos',PRESENCIAL,MIERCOLES,15,si
+Programacion,VIRTUAL,MIERCOLES,16,si
+Fisica,VIRTUAL,MIERCOLES,14,si
+'Calculo Diferencial',PRESENCIAL,MIERCOLES,13,si
+Estadistica,PRESENCIAL,JUEVES,17,si
+'Algebra Lineal',PRESENCIAL,JUEVES,12,si
+Programacion,VIRTUAL,JUEVES,17,no
+'Calculo Diferencial',VIRTUAL,JUEVES,10,si
+Programacion,PRESENCIAL,JUEVES,9,si
+'Bases de Datos',PRESENCIAL,VIERNES,14,no
+'Bases de Datos',VIRTUAL,VIERNES,12,no
+'Bases de Datos',VIRTUAL,SABADO,10,no
+'Estructuras de Datos',VIRTUAL,LUNES,11,si
+Fisica,PRESENCIAL,LUNES,16,no
+'Bases de Datos',VIRTUAL,MARTES,9,no
+'Bases de Datos',PRESENCIAL,MARTES,8,si
+'Estructuras de Datos',PRESENCIAL,MARTES,10,si
+Estadistica,VIRTUAL,MARTES,16,si
+'Estructuras de Datos',PRESENCIAL,MARTES,15,si
+'Calculo Diferencial',VIRTUAL,MARTES,16,no
+'Bases de Datos',VIRTUAL,MIERCOLES,14,no
+Fisica,PRESENCIAL,MIERCOLES,14,si
+Programacion,PRESENCIAL,MIERCOLES,15,si
+'Calculo Diferencial',PRESENCIAL,MIERCOLES,11,si
+'Bases de Datos',PRESENCIAL,MIERCOLES,7,si
+'Estructuras de Datos',VIRTUAL,JUEVES,11,no
+'Algebra Lineal',VIRTUAL,JUEVES,7,no
+Estadistica,PRESENCIAL,JUEVES,13,si
+'Algebra Lineal',VIRTUAL,JUEVES,10,si
+Fisica,PRESENCIAL,JUEVES,8,no
+Fisica,PRESENCIAL,JUEVES,17,no
+'Algebra Lineal',VIRTUAL,JUEVES,13,si
+'Algebra Lineal',VIRTUAL,JUEVES,14,no
+'Calculo Diferencial',VIRTUAL,VIERNES,8,si
+'Calculo Diferencial',VIRTUAL,VIERNES,17,no
+'Estructuras de Datos',VIRTUAL,VIERNES,8,si
+Ingles,VIRTUAL,VIERNES,7,no
+Programacion,PRESENCIAL,LUNES,10,si
+'Calculo Diferencial',PRESENCIAL,LUNES,16,si
+Fisica,VIRTUAL,LUNES,12,no
+Programacion,PRESENCIAL,LUNES,14,si
+Fisica,PRESENCIAL,MARTES,11,no
+'Estructuras de Datos',VIRTUAL,MARTES,11,no
+Programacion,PRESENCIAL,MARTES,13,si
+Estadistica,PRESENCIAL,MARTES,9,si
+Programacion,PRESENCIAL,MARTES,15,si
+'Calculo Diferencial',VIRTUAL,MARTES,16,si
+Programacion,VIRTUAL,MARTES,7,si
+Programacion,PRESENCIAL,MARTES,7,no
+Fisica,VIRTUAL,MIERCOLES,9,no
+'Calculo Diferencial',PRESENCIAL,MIERCOLES,18,si
+Fisica,PRESENCIAL,MIERCOLES,15,si
+'Calculo Diferencial',PRESENCIAL,JUEVES,14,no
+'Calculo Diferencial',PRESENCIAL,JUEVES,8,no
+'Calculo Diferencial',PRESENCIAL,JUEVES,11,si
+'Bases de Datos',PRESENCIAL,JUEVES,19,si
+'Estructuras de Datos',PRESENCIAL,JUEVES,17,si
+'Algebra Lineal',PRESENCIAL,VIERNES,11,no
+'Bases de Datos',VIRTUAL,VIERNES,8,no
+'Calculo Diferencial',VIRTUAL,VIERNES,15,no
+'Calculo Diferencial',VIRTUAL,VIERNES,10,no
+'Algebra Lineal',PRESENCIAL,SABADO,15,no
+'Algebra Lineal',VIRTUAL,LUNES,16,si
+'Algebra Lineal',PRESENCIAL,LUNES,16,no
+Estadistica,PRESENCIAL,MARTES,10,si
+'Bases de Datos',PRESENCIAL,MARTES,13,si
+Programacion,PRESENCIAL,MARTES,11,no
+'Estructuras de Datos',PRESENCIAL,MARTES,9,si
+'Calculo Diferencial',VIRTUAL,MIERCOLES,15,no
+Programacion,VIRTUAL,MIERCOLES,14,si
+'Bases de Datos',PRESENCIAL,MIERCOLES,16,si
+'Calculo Diferencial',PRESENCIAL,MIERCOLES,15,si
+Fisica,PRESENCIAL,JUEVES,9,si
+Programacion,PRESENCIAL,JUEVES,11,si
+'Estructuras de Datos',PRESENCIAL,JUEVES,12,no
+'Bases de Datos',VIRTUAL,VIERNES,16,si
+'Calculo Diferencial',PRESENCIAL,VIERNES,12,si
+'Algebra Lineal',PRESENCIAL,VIERNES,14,si
+'Bases de Datos',VIRTUAL,LUNES,16,si
+Programacion,VIRTUAL,LUNES,10,si
+'Bases de Datos',VIRTUAL,MARTES,17,si
+'Bases de Datos',VIRTUAL,MIERCOLES,10,si
+'Calculo Diferencial',PRESENCIAL,MIERCOLES,13,no
+Programacion,PRESENCIAL,MIERCOLES,11,si
+Estadistica,VIRTUAL,JUEVES,10,si
+Estadistica,PRESENCIAL,JUEVES,16,si
+Fisica,VIRTUAL,JUEVES,11,si
+'Bases de Datos',VIRTUAL,JUEVES,8,si
+'Estructuras de Datos',VIRTUAL,VIERNES,9,no
+Programacion,VIRTUAL,VIERNES,12,si
+Fisica,VIRTUAL,VIERNES,9,no
+Programacion,PRESENCIAL,LUNES,7,si
+'Algebra Lineal',PRESENCIAL,LUNES,17,si
+'Calculo Diferencial',PRESENCIAL,MARTES,10,si
+Programacion,VIRTUAL,MARTES,15,no
+'Bases de Datos',VIRTUAL,MARTES,12,si
+'Bases de Datos',PRESENCIAL,MARTES,10,si
+Programacion,VIRTUAL,MIERCOLES,14,si
+'Estructuras de Datos',PRESENCIAL,MIERCOLES,15,si
+Programacion,PRESENCIAL,MIERCOLES,18,si
+'Calculo Diferencial',PRESENCIAL,MIERCOLES,14,no
+'Calculo Diferencial',VIRTUAL,JUEVES,11,no
+Programacion,PRESENCIAL,JUEVES,9,si
+Estadistica,VIRTUAL,JUEVES,14,si
+'Algebra Lineal',PRESENCIAL,VIERNES,9,si
+'Calculo Diferencial',PRESENCIAL,LUNES,9,si
+'Calculo Diferencial',VIRTUAL,LUNES,15,no
+Estadistica,PRESENCIAL,MARTES,17,no
+'Algebra Lineal',PRESENCIAL,MARTES,8,si
+'Algebra Lineal',PRESENCIAL,MARTES,12,si
+Estadistica,PRESENCIAL,MIERCOLES,7,si
+Fisica,VIRTUAL,MIERCOLES,17,no
+Estadistica,VIRTUAL,MIERCOLES,15,si
+Programacion,PRESENCIAL,JUEVES,17,si
+'Estructuras de Datos',PRESENCIAL,JUEVES,16,si
+'Estructuras de Datos',VIRTUAL,JUEVES,8,si
+Fisica,PRESENCIAL,VIERNES,17,no
+'Algebra Lineal',VIRTUAL,VIERNES,11,no
+Programacion,VIRTUAL,VIERNES,8,si
+'Bases de Datos',VIRTUAL,VIERNES,15,si
+'Estructuras de Datos',PRESENCIAL,VIERNES,13,si
+'Bases de Datos',VIRTUAL,SABADO,10,no
+'Bases de Datos',VIRTUAL,SABADO,14,no
+Programacion,VIRTUAL,LUNES,19,si
+'Calculo Diferencial',PRESENCIAL,LUNES,10,si
+'Algebra Lineal',PRESENCIAL,LUNES,19,si
+Programacion,VIRTUAL,LUNES,12,si
+Programacion,VIRTUAL,MARTES,15,no
+Programacion,PRESENCIAL,MARTES,15,si
+'Calculo Diferencial',PRESENCIAL,MARTES,11,si
+Fisica,VIRTUAL,MARTES,14,no
+'Bases de Datos',VIRTUAL,MIERCOLES,8,si
+'Calculo Diferencial',VIRTUAL,MIERCOLES,10,si
+Estadistica,PRESENCIAL,JUEVES,11,si
+Programacion,VIRTUAL,JUEVES,16,si
+'Algebra Lineal',PRESENCIAL,VIERNES,14,si
+'Bases de Datos',PRESENCIAL,VIERNES,12,no
+Programacion,PRESENCIAL,SABADO,11,no
+Programacion,PRESENCIAL,LUNES,17,si
+Programacion,PRESENCIAL,MARTES,10,si
+'Bases de Datos',VIRTUAL,MARTES,9,no
+Ingles,PRESENCIAL,MARTES,9,si
+'Calculo Diferencial',VIRTUAL,MIERCOLES,14,si
+Estadistica,VIRTUAL,MIERCOLES,8,si
+'Calculo Diferencial',PRESENCIAL,MIERCOLES,18,si
+Programacion,PRESENCIAL,JUEVES,11,si
+'Bases de Datos',VIRTUAL,JUEVES,11,si
+'Estructuras de Datos',PRESENCIAL,JUEVES,14,si
+Fisica,PRESENCIAL,JUEVES,12,si
+'Bases de Datos',VIRTUAL,VIERNES,17,no
+'Algebra Lineal',VIRTUAL,VIERNES,13,si
+'Bases de Datos',VIRTUAL,VIERNES,16,no
+'Calculo Diferencial',VIRTUAL,SABADO,8,no
+Programacion,PRESENCIAL,LUNES,13,si
+'Bases de Datos',PRESENCIAL,LUNES,8,no
+'Estructuras de Datos',VIRTUAL,LUNES,17,si
+'Estructuras de Datos',VIRTUAL,MARTES,12,no
+Estadistica,PRESENCIAL,MARTES,10,si
+'Calculo Diferencial',VIRTUAL,MARTES,10,si
+Programacion,PRESENCIAL,MARTES,15,si
+'Algebra Lineal',PRESENCIAL,MARTES,9,si
+'Bases de Datos',PRESENCIAL,MARTES,17,si
+'Estructuras de Datos',PRESENCIAL,MARTES,9,si
+Ingles,VIRTUAL,MIERCOLES,10,no
+Programacion,VIRTUAL,MIERCOLES,17,si
+Ingles,PRESENCIAL,MIERCOLES,16,si
+Programacion,PRESENCIAL,MIERCOLES,17,no
+'Bases de Datos',PRESENCIAL,MIERCOLES,11,si
+'Algebra Lineal',PRESENCIAL,MIERCOLES,17,si
+'Calculo Diferencial',PRESENCIAL,MIERCOLES,8,no
+Estadistica,PRESENCIAL,JUEVES,14,no
+Fisica,PRESENCIAL,JUEVES,15,no
+'Estructuras de Datos',PRESENCIAL,JUEVES,19,si
+Programacion,VIRTUAL,JUEVES,12,no
+'Estructuras de Datos',VIRTUAL,JUEVES,13,si
+'Bases de Datos',VIRTUAL,JUEVES,8,si
+Programacion,VIRTUAL,JUEVES,18,no
+'Bases de Datos',PRESENCIAL,VIERNES,18,no
+Ingles,VIRTUAL,VIERNES,13,no
+'Estructuras de Datos',VIRTUAL,VIERNES,11,no
+Programacion,VIRTUAL,SABADO,10,si
+'Bases de Datos',PRESENCIAL,SABADO,15,no
+'Bases de Datos',PRESENCIAL,SABADO,9,no
+'Bases de Datos',PRESENCIAL,LUNES,10,si
+'Bases de Datos',PRESENCIAL,LUNES,17,si
+'Estructuras de Datos',PRESENCIAL,LUNES,11,si
+Programacion,PRESENCIAL,MARTES,13,si
+'Bases de Datos',PRESENCIAL,MARTES,15,si
+'Algebra Lineal',VIRTUAL,MARTES,11,no
+Programacion,PRESENCIAL,MARTES,8,si
+Fisica,VIRTUAL,MIERCOLES,15,si
+'Bases de Datos',VIRTUAL,MIERCOLES,10,si
+Estadistica,PRESENCIAL,MIERCOLES,15,si
+Fisica,PRESENCIAL,MIERCOLES,7,si
+'Calculo Diferencial',PRESENCIAL,MIERCOLES,9,si
+'Bases de Datos',VIRTUAL,MIERCOLES,10,si
+'Bases de Datos',VIRTUAL,MIERCOLES,10,si
+'Bases de Datos',PRESENCIAL,JUEVES,9,si
+'Algebra Lineal',VIRTUAL,JUEVES,17,si
+Programacion,PRESENCIAL,JUEVES,14,si
+'Estructuras de Datos',VIRTUAL,JUEVES,14,si
+Estadistica,VIRTUAL,VIERNES,14,no
+Programacion,VIRTUAL,VIERNES,17,no
+Programacion,VIRTUAL,VIERNES,8,si
+'Bases de Datos',VIRTUAL,VIERNES,14,si
+'Bases de Datos',VIRTUAL,SABADO,12,no
+Programacion,VIRTUAL,SABADO,14,no
+'Bases de Datos',VIRTUAL,LUNES,17,no
+Fisica,PRESENCIAL,LUNES,15,no
+'Estructuras de Datos',VIRTUAL,MARTES,15,no
+'Bases de Datos',VIRTUAL,MARTES,13,si
+Estadistica,PRESENCIAL,MIERCOLES,12,no
+'Estructuras de Datos',PRESENCIAL,MIERCOLES,10,no
+'Estructuras de Datos',VIRTUAL,MIERCOLES,13,si
+'Calculo Diferencial',VIRTUAL,MIERCOLES,10,si
+'Estructuras de Datos',VIRTUAL,MIERCOLES,9,si
+Programacion,VIRTUAL,JUEVES,15,si
+'Estructuras de Datos',PRESENCIAL,JUEVES,8,no
+Estadistica,VIRTUAL,JUEVES,16,si
+'Bases de Datos',PRESENCIAL,JUEVES,15,si
+Estadistica,VIRTUAL,VIERNES,12,no
+'Estructuras de Datos',VIRTUAL,VIERNES,14,no
+Programacion,VIRTUAL,SABADO,12,si
+'Algebra Lineal',VIRTUAL,SABADO,14,no
+Programacion,VIRTUAL,LUNES,13,no
+'Estructuras de Datos',PRESENCIAL,LUNES,14,si
+Fisica,PRESENCIAL,LUNES,12,si
+'Bases de Datos',PRESENCIAL,MARTES,7,si
+'Calculo Diferencial',PRESENCIAL,MARTES,10,no
+Estadistica,VIRTUAL,MARTES,16,si
+'Estructuras de Datos',PRESENCIAL,MARTES,10,si
+Ingles,VIRTUAL,MIERCOLES,18,no
+Programacion,PRESENCIAL,MIERCOLES,13,si
+Programacion,VIRTUAL,JUEVES,12,si
+'Estructuras de Datos',PRESENCIAL,JUEVES,16,no
+'Estructuras de Datos',PRESENCIAL,JUEVES,14,si
+'Estructuras de Datos',VIRTUAL,VIERNES,11,no
+Programacion,PRESENCIAL,LUNES,12,si
+Estadistica,PRESENCIAL,LUNES,16,si
+'Estructuras de Datos',VIRTUAL,MARTES,11,no
+'Estructuras de Datos',VIRTUAL,MARTES,7,si
+'Estructuras de Datos',PRESENCIAL,MARTES,12,no
+'Algebra Lineal',VIRTUAL,MIERCOLES,16,no
+Programacion,PRESENCIAL,MIERCOLES,15,no
+Fisica,VIRTUAL,MIERCOLES,9,si
+'Calculo Diferencial',VIRTUAL,MIERCOLES,10,si
+Programacion,VIRTUAL,JUEVES,8,si
+Estadistica,PRESENCIAL,JUEVES,15,si
+'Bases de Datos',VIRTUAL,JUEVES,13,no
+Programacion,VIRTUAL,JUEVES,18,no
+'Algebra Lineal',VIRTUAL,VIERNES,10,si
+'Calculo Diferencial',VIRTUAL,SABADO,15,no
+Ingles,VIRTUAL,SABADO,13,no
+'Bases de Datos',PRESENCIAL,LUNES,10,no
+Programacion,VIRTUAL,MARTES,15,si
+Ingles,VIRTUAL,MARTES,8,no
+'Calculo Diferencial',PRESENCIAL,MARTES,15,no
+'Algebra Lineal',VIRTUAL,MIERCOLES,11,no
+'Calculo Diferencial',VIRTUAL,MIERCOLES,19,no
+Fisica,PRESENCIAL,MIERCOLES,8,no
+'Estructuras de Datos',VIRTUAL,MIERCOLES,15,no
+Programacion,VIRTUAL,JUEVES,15,si
+Fisica,PRESENCIAL,JUEVES,9,si
+Fisica,PRESENCIAL,JUEVES,13,si
+Programacion,VIRTUAL,JUEVES,16,si
+Programacion,VIRTUAL,JUEVES,18,no
+'Estructuras de Datos',VIRTUAL,VIERNES,19,si
+'Calculo Diferencial',PRESENCIAL,VIERNES,11,no
+'Estructuras de Datos',VIRTUAL,SABADO,16,no
+Estadistica,PRESENCIAL,LUNES,14,si
+Fisica,VIRTUAL,MARTES,14,no
+Fisica,PRESENCIAL,MARTES,15,si
+Programacion,VIRTUAL,MARTES,14,si
+'Bases de Datos',VIRTUAL,MIERCOLES,16,si
+Fisica,PRESENCIAL,MIERCOLES,15,si
+'Estructuras de Datos',PRESENCIAL,MIERCOLES,10,si
+'Calculo Diferencial',VIRTUAL,MIERCOLES,11,no
+'Algebra Lineal',PRESENCIAL,JUEVES,15,si
+'Estructuras de Datos',VIRTUAL,JUEVES,14,no
+Programacion,VIRTUAL,JUEVES,7,no
+'Calculo Diferencial',PRESENCIAL,VIERNES,14,no
+Ingles,PRESENCIAL,VIERNES,15,no
+Programacion,VIRTUAL,VIERNES,16,no
+'Algebra Lineal',VIRTUAL,SABADO,11,no
+'Bases de Datos',VIRTUAL,LUNES,7,no
+'Algebra Lineal',PRESENCIAL,LUNES,10,si
+Programacion,VIRTUAL,LUNES,10,no
+'Calculo Diferencial',PRESENCIAL,LUNES,15,no
+Ingles,VIRTUAL,LUNES,10,si
+'Algebra Lineal',PRESENCIAL,LUNES,7,si
+Programacion,PRESENCIAL,MARTES,17,si
+'Calculo Diferencial',PRESENCIAL,MARTES,9,si
+Ingles,PRESENCIAL,MARTES,10,si
+Programacion,VIRTUAL,MARTES,8,no
+'Calculo Diferencial',PRESENCIAL,MARTES,7,no
+'Bases de Datos',PRESENCIAL,MIERCOLES,9,si
+'Algebra Lineal',VIRTUAL,MIERCOLES,11,si
+'Calculo Diferencial',PRESENCIAL,MIERCOLES,14,no
+Fisica,VIRTUAL,MIERCOLES,14,no
+Programacion,PRESENCIAL,MIERCOLES,12,si
+'Algebra Lineal',VIRTUAL,JUEVES,16,si
+Estadistica,VIRTUAL,JUEVES,11,si
+Programacion,VIRTUAL,JUEVES,15,no
+'Bases de Datos',VIRTUAL,JUEVES,9,si
+Programacion,VIRTUAL,JUEVES,13,no
+Estadistica,VIRTUAL,JUEVES,10,no
+'Bases de Datos',PRESENCIAL,VIERNES,8,no
+'Bases de Datos',PRESENCIAL,VIERNES,12,si
+Fisica,VIRTUAL,VIERNES,11,si
+Programacion,PRESENCIAL,VIERNES,8,no
+'Bases de Datos',VIRTUAL,VIERNES,9,no
+'Estructuras de Datos',VIRTUAL,SABADO,9,no
+'Bases de Datos',VIRTUAL,SABADO,17,no
+'Bases de Datos',VIRTUAL,LUNES,9,si
+'Calculo Diferencial',PRESENCIAL,LUNES,12,si
+Fisica,VIRTUAL,LUNES,13,no
+'Bases de Datos',VIRTUAL,MARTES,13,no
+Programacion,PRESENCIAL,MARTES,11,no
+Fisica,PRESENCIAL,MARTES,10,no
+'Estructuras de Datos',VIRTUAL,MARTES,16,si
+Fisica,VIRTUAL,MARTES,15,no
+Programacion,PRESENCIAL,MARTES,16,no
+'Bases de Datos',PRESENCIAL,MIERCOLES,11,no
+Estadistica,PRESENCIAL,MIERCOLES,15,si
+Programacion,PRESENCIAL,MIERCOLES,13,si
+'Estructuras de Datos',VIRTUAL,MIERCOLES,16,no
+'Bases de Datos',PRESENCIAL,JUEVES,12,no
+Programacion,VIRTUAL,JUEVES,16,no
+'Bases de Datos',VIRTUAL,JUEVES,10,no
+Ingles,VIRTUAL,JUEVES,16,si
+Programacion,PRESENCIAL,VIERNES,14,si
+'Bases de Datos',PRESENCIAL,VIERNES,15,no
+'Bases de Datos',VIRTUAL,VIERNES,14,si
+Programacion,VIRTUAL,VIERNES,9,no
+'Bases de Datos',PRESENCIAL,VIERNES,11,si
+Fisica,VIRTUAL,SABADO,15,si
+'Calculo Diferencial',VIRTUAL,LUNES,19,no
+'Calculo Diferencial',PRESENCIAL,LUNES,11,si
+Programacion,VIRTUAL,LUNES,12,no
+'Calculo Diferencial',PRESENCIAL,LUNES,14,no
+Fisica,VIRTUAL,LUNES,13,si
+'Calculo Diferencial',PRESENCIAL,LUNES,14,si
+'Algebra Lineal',VIRTUAL,MARTES,15,no
+Programacion,PRESENCIAL,MARTES,10,si
+Programacion,VIRTUAL,MARTES,14,si
+'Bases de Datos',VIRTUAL,MARTES,15,no
+'Estructuras de Datos',PRESENCIAL,MARTES,11,si
+'Bases de Datos',VIRTUAL,MARTES,16,si
+'Bases de Datos',VIRTUAL,MIERCOLES,15,si
+'Bases de Datos',VIRTUAL,MIERCOLES,7,si
+'Algebra Lineal',VIRTUAL,MIERCOLES,14,no
+'Bases de Datos',VIRTUAL,MIERCOLES,13,no
+'Algebra Lineal',VIRTUAL,MIERCOLES,13,si
+'Algebra Lineal',PRESENCIAL,MIERCOLES,9,si
+Ingles,PRESENCIAL,JUEVES,14,si
+Estadistica,VIRTUAL,JUEVES,16,no
+Programacion,PRESENCIAL,JUEVES,12,si
+'Estructuras de Datos',PRESENCIAL,JUEVES,11,si
+Estadistica,VIRTUAL,JUEVES,8,si
+Programacion,PRESENCIAL,JUEVES,8,no
+'Bases de Datos',VIRTUAL,JUEVES,14,no
+Programacion,PRESENCIAL,VIERNES,15,no
+'Calculo Diferencial',VIRTUAL,VIERNES,9,no
+'Bases de Datos',VIRTUAL,VIERNES,16,no
+'Bases de Datos',VIRTUAL,LUNES,15,si
+'Calculo Diferencial',PRESENCIAL,MARTES,13,si
+'Estructuras de Datos',VIRTUAL,MARTES,15,si
+'Bases de Datos',PRESENCIAL,MARTES,18,si
+Programacion,VIRTUAL,MARTES,16,si
+'Bases de Datos',VIRTUAL,MARTES,8,si
+Ingles,PRESENCIAL,MARTES,8,si
+Estadistica,PRESENCIAL,MIERCOLES,9,si
+Programacion,PRESENCIAL,MIERCOLES,14,si
+Programacion,VIRTUAL,MIERCOLES,16,no
+Programacion,VIRTUAL,MIERCOLES,10,si
+'Estructuras de Datos',PRESENCIAL,JUEVES,13,si
+'Calculo Diferencial',PRESENCIAL,JUEVES,9,si
+Programacion,VIRTUAL,JUEVES,17,no
+Fisica,VIRTUAL,JUEVES,18,no
+'Bases de Datos',VIRTUAL,JUEVES,10,si
+'Algebra Lineal',PRESENCIAL,VIERNES,10,si
+'Algebra Lineal',VIRTUAL,SABADO,8,no
+'Calculo Diferencial',PRESENCIAL,LUNES,10,si
+'Calculo Diferencial',PRESENCIAL,LUNES,12,si
+Programacion,VIRTUAL,MARTES,13,si
+'Calculo Diferencial',PRESENCIAL,MARTES,9,si
+Programacion,VIRTUAL,MIERCOLES,8,si
+'Bases de Datos',VIRTUAL,MIERCOLES,10,si
+'Bases de Datos',PRESENCIAL,JUEVES,10,si
+'Algebra Lineal',PRESENCIAL,JUEVES,16,si
+Estadistica,PRESENCIAL,JUEVES,15,si
+'Bases de Datos',PRESENCIAL,JUEVES,11,no
+'Bases de Datos',VIRTUAL,VIERNES,8,si
+'Algebra Lineal',PRESENCIAL,VIERNES,15,si
+Estadistica,VIRTUAL,LUNES,15,no
+Ingles,VIRTUAL,LUNES,15,si
+'Calculo Diferencial',PRESENCIAL,LUNES,17,si
+'Bases de Datos',PRESENCIAL,MARTES,9,si
+'Calculo Diferencial',PRESENCIAL,MARTES,10,si
+'Algebra Lineal',PRESENCIAL,MIERCOLES,15,no
+'Calculo Diferencial',PRESENCIAL,MIERCOLES,15,no
+Fisica,VIRTUAL,MIERCOLES,8,no
+Programacion,VIRTUAL,JUEVES,14,no
+'Bases de Datos',PRESENCIAL,JUEVES,18,si
+Fisica,PRESENCIAL,JUEVES,7,si
+'Bases de Datos',VIRTUAL,VIERNES,13,no
+Ingles,VIRTUAL,VIERNES,16,no
+'Algebra Lineal',PRESENCIAL,VIERNES,11,no
+'Calculo Diferencial',VIRTUAL,MARTES,16,si
+Programacion,VIRTUAL,MARTES,15,si
+Fisica,VIRTUAL,MARTES,9,no
+'Estructuras de Datos',VIRTUAL,MIERCOLES,14,si
+Programacion,PRESENCIAL,MIERCOLES,13,si
+Programacion,VIRTUAL,MIERCOLES,7,si
+'Calculo Diferencial',PRESENCIAL,JUEVES,10,si
+Programacion,VIRTUAL,JUEVES,7,si
+'Calculo Diferencial',PRESENCIAL,JUEVES,19,no
+'Algebra Lineal',PRESENCIAL,VIERNES,9,si
+'Estructuras de Datos',VIRTUAL,VIERNES,13,si
+'Estructuras de Datos',VIRTUAL,VIERNES,15,si
+Fisica,VIRTUAL,VIERNES,12,si
+Estadistica,PRESENCIAL,SABADO,12,si
+'Estructuras de Datos',VIRTUAL,LUNES,13,si
+Fisica,PRESENCIAL,LUNES,14,si
+'Calculo Diferencial',VIRTUAL,LUNES,10,no
+Programacion,PRESENCIAL,MARTES,10,si
+Programacion,VIRTUAL,MARTES,9,si
+Fisica,VIRTUAL,MIERCOLES,13,no
+'Bases de Datos',VIRTUAL,MIERCOLES,10,si
+'Calculo Diferencial',VIRTUAL,MIERCOLES,10,no
+Programacion,PRESENCIAL,MIERCOLES,16,si
+Programacion,PRESENCIAL,MIERCOLES,11,si
+'Estructuras de Datos',VIRTUAL,JUEVES,8,si
+Programacion,PRESENCIAL,JUEVES,15,si
+'Bases de Datos',PRESENCIAL,JUEVES,15,si
+'Bases de Datos',PRESENCIAL,LUNES,15,si
+Estadistica,PRESENCIAL,LUNES,10,si
+'Calculo Diferencial',VIRTUAL,LUNES,13,no
+'Estructuras de Datos',PRESENCIAL,MARTES,12,si
+Fisica,PRESENCIAL,MARTES,10,si
+'Calculo Diferencial',PRESENCIAL,MARTES,8,si
+Ingles,PRESENCIAL,MIERCOLES,16,si
+'Algebra Lineal',PRESENCIAL,MIERCOLES,9,si
+'Estructuras de Datos',PRESENCIAL,JUEVES,15,si
+Fisica,PRESENCIAL,JUEVES,15,si
+'Bases de Datos',VIRTUAL,JUEVES,13,no
+Estadistica,PRESENCIAL,JUEVES,10,si
+Programacion,VIRTUAL,JUEVES,15,si
+'Bases de Datos',VIRTUAL,VIERNES,17,si
+Fisica,VIRTUAL,VIERNES,14,no
+Programacion,PRESENCIAL,VIERNES,9,si
+'Bases de Datos',VIRTUAL,LUNES,16,no
+'Calculo Diferencial',VIRTUAL,LUNES,16,no
+Estadistica,PRESENCIAL,LUNES,17,si
+'Bases de Datos',PRESENCIAL,MARTES,17,no
+'Calculo Diferencial',VIRTUAL,MARTES,10,si
+'Calculo Diferencial',PRESENCIAL,MIERCOLES,14,si
+'Bases de Datos',VIRTUAL,MIERCOLES,16,si
+'Bases de Datos',PRESENCIAL,MIERCOLES,17,si
+Fisica,PRESENCIAL,MIERCOLES,16,no
+Fisica,PRESENCIAL,MIERCOLES,16,no
+'Calculo Diferencial',PRESENCIAL,MIERCOLES,8,si
+'Algebra Lineal',VIRTUAL,MIERCOLES,13,no
+'Algebra Lineal',PRESENCIAL,JUEVES,12,si
+Programacion,VIRTUAL,JUEVES,14,no
+'Algebra Lineal',PRESENCIAL,JUEVES,16,si
+Fisica,VIRTUAL,JUEVES,11,si
+'Bases de Datos',PRESENCIAL,JUEVES,17,si
+Fisica,VIRTUAL,VIERNES,13,no
+'Calculo Diferencial',VIRTUAL,VIERNES,15,no
+'Bases de Datos',VIRTUAL,VIERNES,11,si
+'Algebra Lineal',VIRTUAL,VIERNES,15,no
+Ingles,VIRTUAL,VIERNES,16,no
+'Calculo Diferencial',PRESENCIAL,LUNES,15,si
+Ingles,PRESENCIAL,LUNES,16,si
+'Bases de Datos',VIRTUAL,MARTES,13,si
+Programacion,VIRTUAL,MARTES,11,no
+'Calculo Diferencial',PRESENCIAL,MARTES,13,si
+Estadistica,VIRTUAL,MARTES,8,si
+Estadistica,VIRTUAL,MARTES,11,no
+Programacion,VIRTUAL,MARTES,13,no
+'Calculo Diferencial',VIRTUAL,MIERCOLES,16,si
+'Calculo Diferencial',VIRTUAL,MIERCOLES,14,si
+Estadistica,PRESENCIAL,MIERCOLES,17,si
+'Algebra Lineal',PRESENCIAL,MIERCOLES,17,no
+Estadistica,PRESENCIAL,MIERCOLES,11,no
+'Algebra Lineal',PRESENCIAL,MIERCOLES,11,si
+Estadistica,VIRTUAL,JUEVES,14,no
+'Bases de Datos',PRESENCIAL,JUEVES,14,no
+Programacion,VIRTUAL,JUEVES,12,si
+'Estructuras de Datos',VIRTUAL,VIERNES,13,si
+Programacion,PRESENCIAL,VIERNES,9,si
+Programacion,VIRTUAL,SABADO,14,si
+Estadistica,VIRTUAL,SABADO,15,si
+'Bases de Datos',VIRTUAL,SABADO,15,no
+Programacion,VIRTUAL,LUNES,10,si
+'Calculo Diferencial',PRESENCIAL,LUNES,13,si
+'Estructuras de Datos',VIRTUAL,LUNES,11,si
+Programacion,VIRTUAL,LUNES,12,si
+'Estructuras de Datos',VIRTUAL,MARTES,16,si
+'Estructuras de Datos',VIRTUAL,MARTES,15,si
+Programacion,PRESENCIAL,MARTES,17,si
+'Calculo Diferencial',PRESENCIAL,MARTES,9,si
+'Bases de Datos',VIRTUAL,MIERCOLES,15,si
+'Algebra Lineal',PRESENCIAL,MIERCOLES,9,si
+Programacion,VIRTUAL,VIERNES,11,no
+Fisica,VIRTUAL,VIERNES,15,no
+Programacion,PRESENCIAL,LUNES,13,si
+Estadistica,PRESENCIAL,LUNES,16,si
+Estadistica,PRESENCIAL,LUNES,19,si
+Programacion,VIRTUAL,MARTES,16,no
+'Algebra Lineal',VIRTUAL,MARTES,14,no
+Estadistica,PRESENCIAL,MARTES,15,si
+Fisica,PRESENCIAL,MARTES,14,no
+'Bases de Datos',VIRTUAL,MARTES,9,no
+Programacion,VIRTUAL,MIERCOLES,15,si
+'Bases de Datos',PRESENCIAL,MIERCOLES,10,si
+'Bases de Datos',VIRTUAL,MIERCOLES,9,no
+'Estructuras de Datos',VIRTUAL,MIERCOLES,11,si
+Programacion,VIRTUAL,VIERNES,12,si
+'Calculo Diferencial',VIRTUAL,VIERNES,14,no
+Programacion,VIRTUAL,LUNES,9,no
+'Bases de Datos',VIRTUAL,LUNES,18,si
+'Bases de Datos',PRESENCIAL,LUNES,17,si
+Programacion,PRESENCIAL,MARTES,11,no
+'Algebra Lineal',VIRTUAL,MARTES,10,si
+Programacion,VIRTUAL,MARTES,15,si
+'Calculo Diferencial',VIRTUAL,MARTES,12,no
+Fisica,PRESENCIAL,MARTES,12,si
+'Calculo Diferencial',VIRTUAL,MIERCOLES,15,si
+Fisica,VIRTUAL,MIERCOLES,9,no
+'Bases de Datos',VIRTUAL,MIERCOLES,8,no
+Ingles,PRESENCIAL,MIERCOLES,18,no
+Programacion,VIRTUAL,MIERCOLES,12,si
+'Estructuras de Datos',PRESENCIAL,JUEVES,16,no
+Programacion,VIRTUAL,JUEVES,14,si
+'Calculo Diferencial',VIRTUAL,JUEVES,10,no
+Programacion,VIRTUAL,JUEVES,10,si
+'Estructuras de Datos',VIRTUAL,VIERNES,7,si
+'Calculo Diferencial',PRESENCIAL,SABADO,8,no
+Estadistica,VIRTUAL,SABADO,7,no
+'Bases de Datos',VIRTUAL,SABADO,8,no
+Estadistica,PRESENCIAL,LUNES,11,no
+'Estructuras de Datos',VIRTUAL,LUNES,13,si
+'Algebra Lineal',VIRTUAL,LUNES,10,no
+'Algebra Lineal',PRESENCIAL,LUNES,12,si
+Programacion,PRESENCIAL,LUNES,13,si
+Fisica,VIRTUAL,LUNES,11,no
+Fisica,PRESENCIAL,MARTES,16,si
+'Bases de Datos',PRESENCIAL,MARTES,14,si
+Estadistica,VIRTUAL,MARTES,14,si
+'Calculo Diferencial',PRESENCIAL,MIERCOLES,7,si
+'Estructuras de Datos',PRESENCIAL,MIERCOLES,10,no
+'Calculo Diferencial',VIRTUAL,MIERCOLES,10,si
+'Calculo Diferencial',VIRTUAL,JUEVES,11,no
+Fisica,PRESENCIAL,JUEVES,11,si
+Programacion,PRESENCIAL,VIERNES,13,no
+'Calculo Diferencial',VIRTUAL,VIERNES,8,no
+Fisica,PRESENCIAL,VIERNES,10,no
+'Estructuras de Datos',VIRTUAL,SABADO,7,no
+Fisica,VIRTUAL,SABADO,10,si
+Estadistica,VIRTUAL,LUNES,17,si
+Programacion,PRESENCIAL,LUNES,15,si
+'Calculo Diferencial',VIRTUAL,LUNES,7,si
+Programacion,PRESENCIAL,MARTES,9,no
+Programacion,PRESENCIAL,MARTES,12,si
+'Bases de Datos',PRESENCIAL,MIERCOLES,15,no
+'Estructuras de Datos',PRESENCIAL,MIERCOLES,10,si
+'Estructuras de Datos',PRESENCIAL,MIERCOLES,12,si
+Estadistica,VIRTUAL,JUEVES,7,si
+Estadistica,PRESENCIAL,JUEVES,12,no
+'Bases de Datos',PRESENCIAL,JUEVES,14,si
+'Bases de Datos',PRESENCIAL,JUEVES,7,si
+'Estructuras de Datos',VIRTUAL,VIERNES,15,no
+Programacion,PRESENCIAL,VIERNES,10,si
+Fisica,PRESENCIAL,LUNES,9,si
+Programacion,PRESENCIAL,LUNES,14,si
+Fisica,VIRTUAL,LUNES,15,si
+Fisica,PRESENCIAL,LUNES,14,si
+Programacion,PRESENCIAL,MARTES,11,si
+Programacion,VIRTUAL,MARTES,11,si
+'Estructuras de Datos',VIRTUAL,MARTES,12,no
+Ingles,PRESENCIAL,MARTES,9,si
+'Estructuras de Datos',VIRTUAL,MARTES,17,no
+Programacion,VIRTUAL,MIERCOLES,11,si
+'Estructuras de Datos',VIRTUAL,MIERCOLES,9,si
+'Estructuras de Datos',VIRTUAL,MIERCOLES,13,no
+'Bases de Datos',PRESENCIAL,MIERCOLES,15,si
+Programacion,PRESENCIAL,MIERCOLES,15,no
+'Calculo Diferencial',VIRTUAL,JUEVES,17,si
+'Bases de Datos',VIRTUAL,JUEVES,10,no
+'Bases de Datos',PRESENCIAL,JUEVES,16,si
+'Bases de Datos',PRESENCIAL,JUEVES,15,si
+'Calculo Diferencial',PRESENCIAL,JUEVES,16,si
+Programacion,PRESENCIAL,VIERNES,9,no
+Estadistica,VIRTUAL,VIERNES,9,no
+Estadistica,VIRTUAL,VIERNES,15,no
+Fisica,PRESENCIAL,VIERNES,15,si
+Fisica,VIRTUAL,SABADO,10,no
+Programacion,VIRTUAL,SABADO,13,si
+Fisica,VIRTUAL,SABADO,10,no
+'Calculo Diferencial',PRESENCIAL,LUNES,14,si
+'Bases de Datos',VIRTUAL,LUNES,15,no
+Programacion,VIRTUAL,LUNES,14,no
+Estadistica,PRESENCIAL,LUNES,15,no
+Estadistica,PRESENCIAL,MARTES,14,si
+Estadistica,PRESENCIAL,MARTES,18,no
+Programacion,PRESENCIAL,MARTES,10,si
+'Algebra Lineal',PRESENCIAL,MARTES,13,si
+'Bases de Datos',PRESENCIAL,MARTES,19,si
+Fisica,PRESENCIAL,MARTES,7,no
+Programacion,PRESENCIAL,MIERCOLES,10,si
+Fisica,VIRTUAL,MIERCOLES,11,no
+'Bases de Datos',VIRTUAL,MIERCOLES,14,no
+'Bases de Datos',PRESENCIAL,JUEVES,12,no
+Programacion,VIRTUAL,JUEVES,10,si
+'Bases de Datos',PRESENCIAL,JUEVES,10,si
+Fisica,PRESENCIAL,JUEVES,12,no
+'Algebra Lineal',VIRTUAL,JUEVES,14,no
+'Bases de Datos',VIRTUAL,VIERNES,13,si
+'Algebra Lineal',VIRTUAL,VIERNES,14,si
+Estadistica,VIRTUAL,VIERNES,10,si
+'Algebra Lineal',VIRTUAL,VIERNES,17,no
+Programacion,VIRTUAL,LUNES,7,no
+Programacion,VIRTUAL,LUNES,11,si
+'Estructuras de Datos',VIRTUAL,LUNES,8,si
+Estadistica,PRESENCIAL,MARTES,10,si
+Fisica,VIRTUAL,MARTES,9,si
+'Bases de Datos',VIRTUAL,MARTES,12,si
+'Calculo Diferencial',VIRTUAL,MARTES,8,no
+Fisica,VIRTUAL,MARTES,7,no
+'Estructuras de Datos',PRESENCIAL,MARTES,13,si
+'Bases de Datos',PRESENCIAL,MIERCOLES,18,si
+'Algebra Lineal',PRESENCIAL,MIERCOLES,14,si
+'Calculo Diferencial',VIRTUAL,MIERCOLES,12,no
+'Bases de Datos',PRESENCIAL,MIERCOLES,8,no
+'Bases de Datos',PRESENCIAL,MIERCOLES,8,no
+Fisica,VIRTUAL,MIERCOLES,12,no
+Programacion,PRESENCIAL,MIERCOLES,13,si
+'Estructuras de Datos',PRESENCIAL,JUEVES,11,si
+'Calculo Diferencial',VIRTUAL,JUEVES,15,no
+Programacion,PRESENCIAL,JUEVES,15,si
+'Estructuras de Datos',PRESENCIAL,JUEVES,13,si
+'Bases de Datos',VIRTUAL,JUEVES,7,si
+Fisica,PRESENCIAL,JUEVES,17,no
+'Bases de Datos',VIRTUAL,VIERNES,17,no
+'Algebra Lineal',VIRTUAL,VIERNES,8,no
+'Calculo Diferencial',VIRTUAL,VIERNES,14,no
+Programacion,VIRTUAL,VIERNES,18,no
+'Calculo Diferencial',VIRTUAL,VIERNES,12,no
+'Bases de Datos',PRESENCIAL,LUNES,16,si
+'Bases de Datos',PRESENCIAL,LUNES,11,si
+Programacion,PRESENCIAL,LUNES,8,si
+'Calculo Diferencial',VIRTUAL,LUNES,11,si
+'Algebra Lineal',VIRTUAL,MARTES,17,no
+'Bases de Datos',PRESENCIAL,MARTES,17,si
+Programacion,PRESENCIAL,MARTES,9,si
+'Calculo Diferencial',VIRTUAL,MARTES,17,no
+'Calculo Diferencial',VIRTUAL,MARTES,15,si
+Programacion,PRESENCIAL,MIERCOLES,8,si
+'Estructuras de Datos',PRESENCIAL,MIERCOLES,11,si
+'Estructuras de Datos',VIRTUAL,MIERCOLES,12,si
+'Bases de Datos',PRESENCIAL,JUEVES,13,si
+'Calculo Diferencial',PRESENCIAL,JUEVES,9,si
+'Estructuras de Datos',PRESENCIAL,JUEVES,10,no
+Ingles,VIRTUAL,JUEVES,7,si
+Fisica,PRESENCIAL,JUEVES,14,no
+'Calculo Diferencial',VIRTUAL,VIERNES,8,si
+'Bases de Datos',VIRTUAL,VIERNES,13,no
+'Estructuras de Datos',PRESENCIAL,VIERNES,10,si
+'Calculo Diferencial',VIRTUAL,VIERNES,15,no
+'Calculo Diferencial',VIRTUAL,LUNES,10,si
+Fisica,PRESENCIAL,LUNES,12,no
+Programacion,PRESENCIAL,LUNES,15,si
+'Bases de Datos',VIRTUAL,MARTES,9,si
+Programacion,VIRTUAL,MARTES,9,si
+Fisica,PRESENCIAL,MARTES,17,si
+'Calculo Diferencial',PRESENCIAL,MARTES,10,si
+'Calculo Diferencial',VIRTUAL,MIERCOLES,13,si
+Ingles,PRESENCIAL,MIERCOLES,11,si
+'Bases de Datos',PRESENCIAL,MIERCOLES,10,si
+Estadistica,VIRTUAL,MIERCOLES,7,si
+'Bases de Datos',PRESENCIAL,JUEVES,8,si
+Estadistica,VIRTUAL,JUEVES,12,si
+'Algebra Lineal',PRESENCIAL,JUEVES,7,si
+Fisica,PRESENCIAL,JUEVES,15,si
+Estadistica,PRESENCIAL,JUEVES,12,si
+'Estructuras de Datos',PRESENCIAL,VIERNES,8,si
+Programacion,PRESENCIAL,VIERNES,16,no
+'Estructuras de Datos',VIRTUAL,LUNES,12,si
+'Estructuras de Datos',PRESENCIAL,LUNES,10,si
+Estadistica,PRESENCIAL,MARTES,17,si
+'Estructuras de Datos',PRESENCIAL,MARTES,12,si
+'Algebra Lineal',PRESENCIAL,MARTES,12,si
+'Bases de Datos',PRESENCIAL,MARTES,7,no
+Ingles,VIRTUAL,MIERCOLES,17,si
+Fisica,VIRTUAL,MIERCOLES,19,si
+Estadistica,PRESENCIAL,MIERCOLES,16,si
+'Calculo Diferencial',VIRTUAL,JUEVES,14,no
+Estadistica,VIRTUAL,JUEVES,8,si
+Estadistica,VIRTUAL,VIERNES,17,no
+'Calculo Diferencial',PRESENCIAL,VIERNES,8,si
+'Bases de Datos',PRESENCIAL,LUNES,16,si
+'Calculo Diferencial',PRESENCIAL,LUNES,14,no
+'Bases de Datos',VIRTUAL,LUNES,8,si
+'Calculo Diferencial',VIRTUAL,MARTES,10,si
+'Estructuras de Datos',PRESENCIAL,MARTES,17,si
+Programacion,VIRTUAL,MARTES,12,si
+Programacion,PRESENCIAL,MARTES,7,si
+Estadistica,PRESENCIAL,MARTES,14,no
+'Algebra Lineal',PRESENCIAL,MIERCOLES,11,si
+Programacion,PRESENCIAL,MIERCOLES,16,si
+'Bases de Datos',VIRTUAL,MIERCOLES,11,no
+Fisica,VIRTUAL,MIERCOLES,9,si
+'Bases de Datos',VIRTUAL,JUEVES,10,si
+'Algebra Lineal',PRESENCIAL,JUEVES,12,si
+'Estructuras de Datos',VIRTUAL,JUEVES,12,si
+'Bases de Datos',VIRTUAL,VIERNES,12,no
+'Estructuras de Datos',VIRTUAL,VIERNES,16,si
+Fisica,VIRTUAL,SABADO,7,no
+Programacion,PRESENCIAL,LUNES,14,no
+'Bases de Datos',PRESENCIAL,LUNES,9,si
+'Bases de Datos',VIRTUAL,MARTES,11,no
+'Bases de Datos',VIRTUAL,MARTES,11,no
+Programacion,VIRTUAL,MARTES,9,no
+'Estructuras de Datos',VIRTUAL,MARTES,16,si
+'Bases de Datos',VIRTUAL,MIERCOLES,13,no
+Fisica,PRESENCIAL,MIERCOLES,16,si
+'Algebra Lineal',PRESENCIAL,MIERCOLES,9,si
+'Bases de Datos',VIRTUAL,MIERCOLES,19,no
+Programacion,VIRTUAL,JUEVES,11,si
+'Estructuras de Datos',PRESENCIAL,JUEVES,9,si
+'Calculo Diferencial',VIRTUAL,VIERNES,15,no
+'Calculo Diferencial',VIRTUAL,VIERNES,9,no
+'Bases de Datos',PRESENCIAL,SABADO,8,si
+Programacion,PRESENCIAL,SABADO,16,no
+'Calculo Diferencial',PRESENCIAL,MARTES,15,si
+'Bases de Datos',VIRTUAL,MARTES,12,si
+'Bases de Datos',VIRTUAL,MARTES,18,si
+'Algebra Lineal',VIRTUAL,MIERCOLES,13,no
+Programacion,VIRTUAL,MIERCOLES,13,si
+Programacion,PRESENCIAL,JUEVES,16,si
+Programacion,VIRTUAL,JUEVES,15,si
+Fisica,PRESENCIAL,JUEVES,8,no
+'Estructuras de Datos',PRESENCIAL,JUEVES,14,no
+'Estructuras de Datos',PRESENCIAL,VIERNES,11,si
+'Estructuras de Datos',VIRTUAL,VIERNES,11,no
+Programacion,VIRTUAL,VIERNES,9,no
+'Estructuras de Datos',PRESENCIAL,VIERNES,15,si
+Programacion,VIRTUAL,LUNES,15,no
+'Bases de Datos',PRESENCIAL,LUNES,10,si
+'Calculo Diferencial',PRESENCIAL,LUNES,7,si
+'Calculo Diferencial',PRESENCIAL,LUNES,9,si
+Programacion,PRESENCIAL,LUNES,9,si
+'Calculo Diferencial',PRESENCIAL,MARTES,11,si
+'Estructuras de Datos',VIRTUAL,MARTES,9,si
+Fisica,PRESENCIAL,MARTES,17,si
+Programacion,VIRTUAL,MARTES,16,si
+'Algebra Lineal',PRESENCIAL,MARTES,9,si
+'Algebra Lineal',PRESENCIAL,MARTES,19,si
+'Algebra Lineal',PRESENCIAL,MARTES,9,si
+'Calculo Diferencial',PRESENCIAL,MIERCOLES,17,si
+'Bases de Datos',PRESENCIAL,MIERCOLES,10,si
+'Estructuras de Datos',PRESENCIAL,MIERCOLES,9,si
+Estadistica,VIRTUAL,MIERCOLES,8,si
+'Bases de Datos',VIRTUAL,MIERCOLES,9,no
+Programacion,VIRTUAL,MIERCOLES,9,no
+'Bases de Datos',PRESENCIAL,JUEVES,11,si
+Programacion,VIRTUAL,JUEVES,15,si
+Fisica,PRESENCIAL,JUEVES,10,si
+'Bases de Datos',PRESENCIAL,JUEVES,13,si
+Programacion,VIRTUAL,JUEVES,16,si
+Programacion,VIRTUAL,JUEVES,8,no
+Estadistica,VIRTUAL,JUEVES,14,si
+'Bases de Datos',PRESENCIAL,VIERNES,10,si
+'Calculo Diferencial',VIRTUAL,VIERNES,12,no
+Ingles,VIRTUAL,VIERNES,8,no
+'Bases de Datos',VIRTUAL,VIERNES,15,si
+'Bases de Datos',PRESENCIAL,LUNES,19,si
+Fisica,PRESENCIAL,LUNES,10,si
+'Estructuras de Datos',VIRTUAL,LUNES,18,si
+Estadistica,VIRTUAL,LUNES,15,no
+'Bases de Datos',PRESENCIAL,LUNES,15,si
+'Bases de Datos',PRESENCIAL,LUNES,10,si
+Fisica,PRESENCIAL,MARTES,16,si
+Fisica,VIRTUAL,MARTES,12,si
+'Estructuras de Datos',VIRTUAL,MARTES,14,si
+'Algebra Lineal',VIRTUAL,MARTES,13,no
+Programacion,PRESENCIAL,MARTES,13,si
+Programacion,VIRTUAL,MARTES,16,si
+'Bases de Datos',PRESENCIAL,MIERCOLES,10,si
+'Calculo Diferencial',PRESENCIAL,MIERCOLES,9,no
+'Estructuras de Datos',VIRTUAL,MIERCOLES,16,si
+'Calculo Diferencial',VIRTUAL,MIERCOLES,14,no
+Programacion,VIRTUAL,MIERCOLES,14,si
+Estadistica,VIRTUAL,MIERCOLES,10,no
+'Bases de Datos',VIRTUAL,JUEVES,15,si
+'Estructuras de Datos',PRESENCIAL,JUEVES,10,si
+'Algebra Lineal',PRESENCIAL,JUEVES,17,no
+'Calculo Diferencial',PRESENCIAL,JUEVES,12,si
+'Bases de Datos',VIRTUAL,JUEVES,15,si
+'Bases de Datos',VIRTUAL,VIERNES,16,si
+'Estructuras de Datos',VIRTUAL,VIERNES,13,si
+Fisica,PRESENCIAL,VIERNES,14,si
+'Estructuras de Datos',VIRTUAL,VIERNES,14,si
+Programacion,VIRTUAL,SABADO,8,si
+'Calculo Diferencial',PRESENCIAL,LUNES,12,si
+Programacion,VIRTUAL,LUNES,17,si
+Programacion,PRESENCIAL,LUNES,15,si
+Fisica,VIRTUAL,LUNES,12,si
+Fisica,PRESENCIAL,MARTES,17,si
+Fisica,PRESENCIAL,MARTES,15,si
+Estadistica,PRESENCIAL,MARTES,15,si
+'Calculo Diferencial',VIRTUAL,MARTES,10,si
+Programacion,VIRTUAL,MARTES,15,si
+'Bases de Datos',VIRTUAL,MIERCOLES,15,si
+Estadistica,PRESENCIAL,MIERCOLES,15,no
+Programacion,VIRTUAL,JUEVES,15,no
+Fisica,VIRTUAL,JUEVES,14,si
+'Estructuras de Datos',PRESENCIAL,JUEVES,14,si
+'Bases de Datos',VIRTUAL,VIERNES,9,no
+'Calculo Diferencial',VIRTUAL,VIERNES,15,no
+Programacion,VIRTUAL,VIERNES,19,no
+'Bases de Datos',PRESENCIAL,VIERNES,16,si
+'Calculo Diferencial',VIRTUAL,SABADO,12,si
+'Algebra Lineal',PRESENCIAL,LUNES,15,si
+Programacion,PRESENCIAL,LUNES,12,si
+Programacion,VIRTUAL,LUNES,14,si
+Programacion,VIRTUAL,MARTES,10,si
+Fisica,PRESENCIAL,MARTES,17,si
+'Estructuras de Datos',PRESENCIAL,MARTES,16,si
+'Algebra Lineal',PRESENCIAL,MARTES,12,si
+'Calculo Diferencial',VIRTUAL,MIERCOLES,9,no
+Fisica,VIRTUAL,MIERCOLES,9,no
+'Bases de Datos',PRESENCIAL,MIERCOLES,16,no
+Programacion,VIRTUAL,MIERCOLES,12,no
+'Bases de Datos',VIRTUAL,JUEVES,16,si
+Estadistica,PRESENCIAL,JUEVES,9,no
+Fisica,PRESENCIAL,VIERNES,8,si
+Ingles,VIRTUAL,VIERNES,13,si
+'Bases de Datos',VIRTUAL,VIERNES,14,si
+'Calculo Diferencial',VIRTUAL,VIERNES,15,no
+Estadistica,VIRTUAL,VIERNES,9,no
+Estadistica,VIRTUAL,LUNES,9,no
+'Algebra Lineal',VIRTUAL,LUNES,14,si
+Ingles,PRESENCIAL,MARTES,15,si
+Fisica,VIRTUAL,MARTES,17,no
+Fisica,PRESENCIAL,MIERCOLES,11,si
+'Estructuras de Datos',VIRTUAL,MIERCOLES,10,si
+'Algebra Lineal',PRESENCIAL,JUEVES,11,si
+'Estructuras de Datos',VIRTUAL,JUEVES,11,si
+'Estructuras de Datos',VIRTUAL,JUEVES,17,si
+Programacion,VIRTUAL,VIERNES,7,si
+'Algebra Lineal',VIRTUAL,VIERNES,14,no
+Estadistica,PRESENCIAL,VIERNES,13,no
+'Bases de Datos',PRESENCIAL,VIERNES,9,si
+Programacion,VIRTUAL,SABADO,15,no
+Fisica,VIRTUAL,LUNES,8,si
+'Bases de Datos',VIRTUAL,LUNES,17,no
+Fisica,PRESENCIAL,LUNES,14,si
+'Calculo Diferencial',PRESENCIAL,MIERCOLES,13,no
+Programacion,VIRTUAL,MIERCOLES,7,si
+'Calculo Diferencial',PRESENCIAL,MIERCOLES,14,no
+'Estructuras de Datos',VIRTUAL,MIERCOLES,13,si
+'Bases de Datos',PRESENCIAL,JUEVES,13,si
+Programacion,VIRTUAL,JUEVES,9,no
+Fisica,PRESENCIAL,VIERNES,17,no
+Programacion,VIRTUAL,VIERNES,7,no
+'Bases de Datos',VIRTUAL,VIERNES,10,si
+'Calculo Diferencial',VIRTUAL,SABADO,11,si
+'Bases de Datos',VIRTUAL,SABADO,19,no
+'Bases de Datos',VIRTUAL,LUNES,11,si
+'Calculo Diferencial',VIRTUAL,LUNES,8,si
+'Estructuras de Datos',PRESENCIAL,LUNES,11,si
+Programacion,PRESENCIAL,MARTES,14,no
+Fisica,VIRTUAL,MARTES,16,si
+'Bases de Datos',PRESENCIAL,MARTES,13,si
+Ingles,VIRTUAL,MARTES,19,si
+'Calculo Diferencial',VIRTUAL,MIERCOLES,14,si
+'Estructuras de Datos',VIRTUAL,JUEVES,16,no
+Estadistica,PRESENCIAL,JUEVES,16,si
+'Algebra Lineal',VIRTUAL,VIERNES,11,no
+'Algebra Lineal',PRESENCIAL,SABADO,15,si
+'Bases de Datos',VIRTUAL,SABADO,9,no
+Programacion,PRESENCIAL,LUNES,10,si
+Programacion,PRESENCIAL,LUNES,14,si
+Programacion,PRESENCIAL,LUNES,10,no
+Programacion,PRESENCIAL,LUNES,16,si
+'Bases de Datos',VIRTUAL,LUNES,9,no
+'Bases de Datos',PRESENCIAL,LUNES,11,si
+'Estructuras de Datos',PRESENCIAL,MARTES,11,si
+'Calculo Diferencial',VIRTUAL,MARTES,11,si
+'Calculo Diferencial',PRESENCIAL,MARTES,7,si
+'Calculo Diferencial',PRESENCIAL,MARTES,14,si
+Ingles,PRESENCIAL,MIERCOLES,9,si
+Fisica,PRESENCIAL,MIERCOLES,13,si
+Estadistica,VIRTUAL,MIERCOLES,14,no
+Ingles,PRESENCIAL,MIERCOLES,7,si
+'Bases de Datos',PRESENCIAL,MIERCOLES,15,si
+Programacion,PRESENCIAL,MIERCOLES,16,si
+'Bases de Datos',VIRTUAL,JUEVES,9,si
+Ingles,PRESENCIAL,JUEVES,14,no
+'Estructuras de Datos',VIRTUAL,JUEVES,12,si
+'Algebra Lineal',VIRTUAL,JUEVES,16,si
+'Algebra Lineal',PRESENCIAL,JUEVES,8,si
+Fisica,VIRTUAL,VIERNES,7,si
+'Calculo Diferencial',PRESENCIAL,VIERNES,14,si
+'Estructuras de Datos',VIRTUAL,SABADO,10,si
+Fisica,VIRTUAL,SABADO,15,no
+Fisica,PRESENCIAL,LUNES,18,si
+'Algebra Lineal',PRESENCIAL,MARTES,11,no
+'Bases de Datos',VIRTUAL,MARTES,8,no
+Programacion,PRESENCIAL,MARTES,8,si
+'Calculo Diferencial',VIRTUAL,MARTES,10,no
+'Bases de Datos',VIRTUAL,MARTES,11,no
+Programacion,VIRTUAL,MIERCOLES,19,no
+'Estructuras de Datos',VIRTUAL,MIERCOLES,8,si
+'Estructuras de Datos',VIRTUAL,MIERCOLES,14,no
+'Calculo Diferencial',PRESENCIAL,MIERCOLES,14,si
+'Bases de Datos',VIRTUAL,MIERCOLES,12,no
+'Bases de Datos',PRESENCIAL,MIERCOLES,13,si
+'Bases de Datos',PRESENCIAL,MIERCOLES,13,si
+Programacion,PRESENCIAL,JUEVES,17,no
+Programacion,PRESENCIAL,JUEVES,15,no
+'Estructuras de Datos',VIRTUAL,JUEVES,12,no
+Fisica,VIRTUAL,JUEVES,14,si
+'Calculo Diferencial',VIRTUAL,JUEVES,16,no
+'Algebra Lineal',VIRTUAL,VIERNES,10,si
+'Estructuras de Datos',VIRTUAL,VIERNES,14,no
+'Estructuras de Datos',PRESENCIAL,VIERNES,15,si
+'Calculo Diferencial',VIRTUAL,VIERNES,13,no
+Programacion,VIRTUAL,LUNES,17,si
+'Algebra Lineal',PRESENCIAL,LUNES,15,no
+Fisica,VIRTUAL,LUNES,16,no
+'Calculo Diferencial',VIRTUAL,MARTES,9,no
+Fisica,PRESENCIAL,MARTES,9,si
+Programacion,PRESENCIAL,MARTES,17,si
+Programacion,PRESENCIAL,MARTES,14,no
+Programacion,PRESENCIAL,MIERCOLES,15,si
+'Bases de Datos',VIRTUAL,MIERCOLES,18,no
+Estadistica,PRESENCIAL,MIERCOLES,15,no
+'Bases de Datos',PRESENCIAL,MIERCOLES,8,no
+'Calculo Diferencial',VIRTUAL,MIERCOLES,16,no
+'Estructuras de Datos',PRESENCIAL,MIERCOLES,15,no
+'Bases de Datos',PRESENCIAL,JUEVES,16,si
+Programacion,VIRTUAL,JUEVES,10,si
+'Algebra Lineal',VIRTUAL,JUEVES,7,no
+Programacion,VIRTUAL,JUEVES,12,si
+'Estructuras de Datos',PRESENCIAL,VIERNES,10,si
+'Algebra Lineal',PRESENCIAL,VIERNES,14,no
+Fisica,VIRTUAL,VIERNES,10,si
+Programacion,PRESENCIAL,VIERNES,11,no
+'Calculo Diferencial',VIRTUAL,VIERNES,14,si
+Fisica,VIRTUAL,VIERNES,7,no
+Fisica,PRESENCIAL,SABADO,12,no
+'Bases de Datos',VIRTUAL,LUNES,11,no
+'Calculo Diferencial',VIRTUAL,LUNES,9,si
+Ingles,VIRTUAL,LUNES,17,si
+'Estructuras de Datos',PRESENCIAL,MARTES,8,no
+'Bases de Datos',VIRTUAL,MARTES,12,no
+'Bases de Datos',VIRTUAL,MARTES,10,no
+Programacion,PRESENCIAL,MARTES,10,no
+'Calculo Diferencial',PRESENCIAL,MARTES,8,si
+'Bases de Datos',PRESENCIAL,MIERCOLES,16,si
+Programacion,VIRTUAL,MIERCOLES,9,no
+'Estructuras de Datos',VIRTUAL,MIERCOLES,15,no
+Programacion,VIRTUAL,MIERCOLES,10,no
+'Estructuras de Datos',VIRTUAL,JUEVES,13,no
+'Bases de Datos',PRESENCIAL,JUEVES,15,si
+Fisica,VIRTUAL,JUEVES,9,no
+Ingles,VIRTUAL,VIERNES,14,no
+'Bases de Datos',PRESENCIAL,VIERNES,16,si
+'Estructuras de Datos',PRESENCIAL,VIERNES,11,si
+'Calculo Diferencial',VIRTUAL,SABADO,15,no

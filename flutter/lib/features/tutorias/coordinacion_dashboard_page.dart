@@ -7,7 +7,6 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api_client.dart';
-import '../../core/widgets/role_toast.dart';
 import '../../core/tutoring_updates.dart';
 import '../../core/widgets/brand_logo.dart';
 import '../../core/widgets/sliding_pill_navigation_bar.dart';
@@ -18,10 +17,9 @@ import 'coordinacion_solicitudes_page.dart';
 
 const _wine = Color(0xFFA9154F);
 const _wineDark = Color(0xFF86123F);
-const _pink = Color(0xFFF8EAF0);
+const _pink = Colors.white;
 const _canvas = Color(0xFFF3F5FA);
 const _muted = Color(0xFF758093);
-const _border = Color(0xFFE8EAF0);
 
 class CoordinacionDashboardPage extends ConsumerStatefulWidget {
   const CoordinacionDashboardPage({super.key});
@@ -203,48 +201,51 @@ class _Header extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: EdgeInsets.fromLTRB(
-          28, MediaQuery.paddingOf(context).top + 15, 24, 16),
+          20, MediaQuery.paddingOf(context).top + 12, 20, 20),
       decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(bottom: BorderSide(color: _border)),
+        gradient: LinearGradient(
+          colors: [_wine, _wineDark],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
       ),
       child: Row(children: [
+        Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white70, width: 2),
+          ),
+          alignment: Alignment.center,
+          child: Text(_initials(display),
+              style: const TextStyle(
+                  color: Colors.white, fontWeight: FontWeight.w800)),
+        ),
+        const SizedBox(width: 14),
         Expanded(
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(isHome ? 'PANEL DE COORDINACIÓN' : 'COORDINACIÓN  /  $title',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                    color: _wine,
-                    fontSize: 10,
-                    letterSpacing: 1.1,
-                    fontWeight: FontWeight.w800)),
-            const SizedBox(height: 4),
             Text(isHome ? 'Hola, $display' : title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                    color: Color(0xFF202536),
-                    fontSize: 22,
-                    height: 1.1,
+                    color: Colors.white,
+                    fontSize: 20,
                     fontWeight: FontWeight.w800)),
-            const SizedBox(height: 3),
-            Text(isHome ? 'Resumen de tutorías y gestión académica' : display,
+            Text(isHome ? 'Coordinador' : display,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: _muted, fontSize: 12)),
+                style: TextStyle(
+                    color: Colors.white.withValues(alpha: .82), fontSize: 13)),
           ]),
         ),
-        const SizedBox(width: 12),
-        IconButton.filledTonal(
+        IconButton(
           tooltip: 'Mi perfil',
           onPressed: onProfile,
-          style: IconButton.styleFrom(
-              backgroundColor: const Color(0xFFF8EAF0),
-              foregroundColor: _wineDark),
           icon: CircleAvatar(
-            radius: 15,
+            radius: 14,
             backgroundColor: Colors.white,
             child: Text(_initials(display),
                 style: const TextStyle(
@@ -259,8 +260,7 @@ class _Header extends StatelessWidget {
           onPressed: () => context
               .findAncestorStateOfType<_CoordinacionDashboardPageState>()
               ?._load(),
-          style: IconButton.styleFrom(foregroundColor: const Color(0xFF596174)),
-          icon: const Icon(Icons.refresh_rounded),
+          icon: const Icon(Icons.refresh_rounded, color: Colors.white),
         ),
       ]),
     );
@@ -299,14 +299,9 @@ class _Navigation extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (wide) {
-      final selectedPosition =
-          _tabIndexes.contains(index) ? _tabIndexes.indexOf(index) : null;
       return Container(
-        width: 208,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          border: Border(right: BorderSide(color: _border)),
-        ),
+        width: 190,
+        color: _wineDark,
         child: Column(children: [
           const SizedBox(height: 14),
           const SizedBox(
@@ -317,25 +312,29 @@ class _Navigation extends StatelessWidget {
           const SizedBox(height: 8),
           const Text('COORDINACIÓN',
               style: TextStyle(
-                  color: _muted,
+                  color: Colors.white70,
                   fontSize: 10,
                   letterSpacing: .7,
                   fontWeight: FontWeight.w600)),
-          const Divider(color: _border, indent: 12, endIndent: 12),
+          const Divider(color: Colors.white24, indent: 12, endIndent: 12),
           Expanded(
               child: NavigationRail(
-            backgroundColor: Colors.white,
-            minWidth: 208,
-            selectedIndex: selectedPosition,
+            backgroundColor: _wineDark,
+            selectedIndex: !_tabIndexes.contains(index)
+                ? null
+                : _tabIndexes.indexOf(index),
             onDestinationSelected: (position) =>
                 onSelect(_tabIndexes[position]),
             labelType: NavigationRailLabelType.all,
-            indicatorColor: const Color(0xFFF8EAF0),
-            selectedIconTheme: const IconThemeData(color: _wine),
-            unselectedIconTheme: const IconThemeData(color: _muted),
-            selectedLabelTextStyle:
-                const TextStyle(color: _wineDark, fontWeight: FontWeight.w700),
-            unselectedLabelTextStyle: const TextStyle(color: _muted),
+            indicatorColor: const Color(0xFF650B2E),
+            selectedIconTheme: const IconThemeData(color: Colors.white),
+            unselectedIconTheme:
+                IconThemeData(color: Colors.white.withValues(alpha: .78)),
+            selectedLabelTextStyle: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.w700),
+            unselectedLabelTextStyle: TextStyle(
+              color: Colors.white.withValues(alpha: .78),
+            ),
             destinations: [
               for (var i = 0; i < _items.length; i++)
                 NavigationRailDestination(
@@ -345,15 +344,15 @@ class _Navigation extends StatelessWidget {
                 ),
             ],
           )),
-          const Divider(color: _border, indent: 10, endIndent: 10),
+          const Divider(color: Colors.white24, indent: 10, endIndent: 10),
           InkWell(
             onTap: () => onSelect(4),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(10, 8, 8, 14),
               child: Row(children: [
                 CircleAvatar(
-                  radius: 16,
-                  backgroundColor: const Color(0xFFF8EAF0),
+                  radius: 14,
+                  backgroundColor: Colors.white,
                   child: Text(_initials(name),
                       style: const TextStyle(
                           color: _wineDark,
@@ -369,13 +368,14 @@ class _Navigation extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                              color: Color(0xFF202536),
+                              color: Colors.white,
                               fontSize: 10,
                               fontWeight: FontWeight.w700)),
                       const Text('Coordinador',
-                          style: TextStyle(color: _muted, fontSize: 10)),
+                          style: TextStyle(color: Colors.white70, fontSize: 9)),
                     ])),
-                const Icon(Icons.chevron_right, color: _muted, size: 16),
+                const Icon(Icons.chevron_right,
+                    color: Colors.white70, size: 16),
               ]),
             ),
           ),
@@ -386,7 +386,7 @@ class _Navigation extends StatelessWidget {
     return SlidingPillNavigationBar(
       selectedIndex: selectedPosition < 0 ? 0 : selectedPosition,
       selectedColor: _wine,
-      indicatorColor: const Color(0xFFF8EAF0),
+      indicatorColor: _pink,
       onDestinationSelected: (position) => onSelect(_tabIndexes[position]),
       destinations: [
         for (final item in _items)
@@ -424,112 +424,44 @@ class _HomeView extends StatelessWidget {
         .toList();
     final assignedLeaders =
         groups.where((group) => group['docenteLiderId'] is String).length;
-    return Align(
-      alignment: Alignment.topCenter,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 1120),
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(26, 26, 26, 32),
-          children: [
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [_wine, _wineDark],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(18),
-                boxShadow: [
-                  BoxShadow(
-                    color: _wine.withValues(alpha: .16),
-                    blurRadius: 22,
-                    offset: const Offset(0, 9),
-                  ),
-                ],
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
+      children: [
+        Row(children: [
+          Expanded(
+              child: _Metric(
+                  value: '${teachers.length}', label: 'Tutores activos')),
+          const SizedBox(width: 10),
+          Expanded(
+              child: _Metric(
+                  value: '$assignedLeaders/${groups.length}',
+                  label: 'Con líder')),
+          const SizedBox(width: 10),
+          Expanded(
+              child: _Metric(value: '${groups.length}', label: 'Grupos PA')),
+        ]),
+        const SizedBox(height: 24),
+        _SectionTitle(
+            title: 'Por asignar',
+            action: 'Ver horarios',
+            onTap: () => onOpen(1)),
+        const SizedBox(height: 10),
+        if (unscheduled.isEmpty)
+          const _EmptyCard(
+              message: 'Todos los tutores tienen un horario registrado.')
+        else
+          _CardList(children: [
+            for (final teacher in unscheduled.take(4))
+              _RecordRow(
+                icon: Icons.groups_2_outlined,
+                title: _text(teacher['nombre'], 'Tutor'),
+                subtitle: 'ID ${_text(teacher['id'], '—')}',
+                badge: 'Sin horario',
+                onTap: () => onOpen(1),
               ),
-              child: Row(children: [
-                const Expanded(
-                  child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('GESTIÓN DE TUTORÍAS',
-                            style: TextStyle(
-                                color: Color(0xFFEFD3DE),
-                                fontSize: 10,
-                                letterSpacing: 1.2,
-                                fontWeight: FontWeight.w800)),
-                        SizedBox(height: 8),
-                        Text('Todo listo para coordinar',
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 22,
-                                fontWeight: FontWeight.w800)),
-                        SizedBox(height: 6),
-                        Text(
-                          'Consulta horarios, asigna liderazgos y atiende solicitudes desde un solo lugar.',
-                          style: TextStyle(
-                              color: Color(0xFFDCC7CF),
-                              fontSize: 13,
-                              height: 1.4),
-                        ),
-                      ]),
-                ),
-                if (MediaQuery.sizeOf(context).width >= 620) ...[
-                  const SizedBox(width: 16),
-                  FilledButton.icon(
-                    onPressed: () => onOpen(1),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: _wineDark,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 14),
-                    ),
-                    icon: const Icon(Icons.calendar_month_rounded, size: 18),
-                    label: const Text('Gestionar horarios'),
-                  ),
-                ],
-              ]),
-            ),
-            const SizedBox(height: 22),
-            Row(children: [
-              Expanded(
-                  child: _Metric(
-                      value: '${teachers.length}', label: 'Tutores activos')),
-              const SizedBox(width: 10),
-              Expanded(
-                  child: _Metric(
-                      value: '$assignedLeaders/${groups.length}',
-                      label: 'Con líder')),
-              const SizedBox(width: 10),
-              Expanded(
-                  child:
-                      _Metric(value: '${groups.length}', label: 'Grupos PA')),
-            ]),
-            const SizedBox(height: 30),
-            _SectionTitle(
-                title: 'Por asignar',
-                action: 'Ver horarios',
-                onTap: () => onOpen(1)),
-            const SizedBox(height: 10),
-            if (unscheduled.isEmpty)
-              const _EmptyCard(
-                  message: 'Todos los tutores tienen un horario registrado.')
-            else
-              _CardList(children: [
-                for (final teacher in unscheduled.take(4))
-                  _RecordRow(
-                    icon: Icons.groups_2_outlined,
-                    title: _text(teacher['nombre'], 'Tutor'),
-                    subtitle: 'ID ${_text(teacher['id'], '—')}',
-                    badge: 'Sin horario',
-                    onTap: () => onOpen(1),
-                  ),
-              ]),
-            const SizedBox(height: 24),
-          ],
-        ),
-      ),
+          ]),
+        const SizedBox(height: 24),
+      ],
     );
   }
 }
@@ -660,6 +592,7 @@ class _ProfileView extends ConsumerWidget {
 
   // ignore: unused_element
   Future<void> _editPhone(BuildContext context, WidgetRef ref) async {
+    final scaffoldMessenger = ScaffoldMessenger.maybeOf(context);
     final controller =
         TextEditingController(text: profile['telefono'] as String? ?? '');
     final phone = await showDialog<String>(
@@ -684,7 +617,7 @@ class _ProfileView extends ConsumerWidget {
       ),
     );
     controller.dispose();
-    if (!context.mounted || phone == null || phone.isEmpty) return;
+    if (phone == null || phone.isEmpty) return;
     try {
       await ref.read(dioProvider).put<Map<String, dynamic>>(
         '/api/usuarios/perfil/telefono',
@@ -692,18 +625,17 @@ class _ProfileView extends ConsumerWidget {
       );
       onRefresh();
     } on DioException catch (error) {
-      if (!context.mounted) return;
       final data = error.response?.data;
       final message = data is Map && data['message'] is String
           ? data['message'] as String
           : 'No se pudo actualizar el teléfono.';
-      RoleToast.show(context,
-          message: message, roleColor: const Color(0xFFA9154F));
+      scaffoldMessenger?.showSnackBar(SnackBar(content: Text(message)));
     }
   }
 
   // ignore: unused_element
   Future<void> _editPassword(BuildContext context, WidgetRef ref) async {
+    final scaffoldMessenger = ScaffoldMessenger.maybeOf(context);
     final current = TextEditingController();
     final next = TextEditingController();
     final passwords = await showDialog<(String, String)>(
@@ -738,12 +670,11 @@ class _ProfileView extends ConsumerWidget {
     );
     current.dispose();
     next.dispose();
-    if (!context.mounted || passwords == null) return;
+    if (passwords == null) return;
     if (passwords.$1.isEmpty || passwords.$2.length < 8) {
-      RoleToast.show(context,
-          message:
-              'Ingresa la contraseña actual y una nueva de al menos 8 caracteres.',
-          roleColor: const Color(0xFFA9154F));
+      scaffoldMessenger?.showSnackBar(const SnackBar(
+          content: Text(
+              'Ingresa la contraseña actual y una nueva de al menos 8 caracteres.')));
       return;
     }
     try {
@@ -754,18 +685,14 @@ class _ProfileView extends ConsumerWidget {
           'nuevaContrasena': passwords.$2
         },
       );
-      if (!context.mounted) return;
-      RoleToast.show(context,
-          message: 'Contraseña actualizada.',
-          roleColor: const Color(0xFFA9154F));
+      scaffoldMessenger?.showSnackBar(
+          const SnackBar(content: Text('Contraseña actualizada.')));
     } on DioException catch (error) {
-      if (!context.mounted) return;
       final data = error.response?.data;
       final message = data is Map && data['message'] is String
           ? data['message'] as String
           : 'No se pudo actualizar la contraseña.';
-      RoleToast.show(context,
-          message: message, roleColor: const Color(0xFFA9154F));
+      scaffoldMessenger?.showSnackBar(SnackBar(content: Text(message)));
     }
   }
 }
@@ -802,21 +729,20 @@ class _FeedbackReportsViewState extends ConsumerState<_FeedbackReportsView> {
         mode: LaunchMode.externalApplication,
       );
       if (!opened && mounted) {
-        RoleToast.show(context,
-            message: 'No se pudo abrir la descarga del informe.',
-            roleColor: const Color(0xFFA9154F));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('No se pudo abrir la descarga del informe.')));
       }
     } on DioException catch (error) {
       if (!mounted) return;
       final message = error.response?.data is String
           ? error.response!.data as String
           : 'No se pudo generar el informe mensual.';
-      RoleToast.show(context,
-          message: message, roleColor: const Color(0xFFA9154F));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
     } on FormatException catch (error) {
       if (mounted) {
-        RoleToast.show(context,
-            message: error.message, roleColor: const Color(0xFFA9154F));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.message)));
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -863,44 +789,24 @@ class _Metric extends StatelessWidget {
   final String value, label;
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 16),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(15),
-          border: Border.all(color: _border),
-          boxShadow: [
-            BoxShadow(
-                color: const Color(0xFF1F2937).withValues(alpha: .035),
-                blurRadius: 14,
-                offset: const Offset(0, 4))
-          ],
-        ),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.black.withValues(alpha: .05),
+                  blurRadius: 12,
+                  offset: const Offset(0, 3))
+            ]),
+        child: Column(children: [
           Text(value,
               style: const TextStyle(
-                  color: Color(0xFF202536),
-                  fontSize: 25,
-                  height: 1,
-                  fontWeight: FontWeight.w800)),
-          const SizedBox(height: 10),
-          Row(children: [
-            Container(
-              width: 29,
-              height: 29,
-              decoration: BoxDecoration(
-                  color: _pink, borderRadius: BorderRadius.circular(9)),
-              child: const Icon(Icons.insights_rounded, color: _wine, size: 16),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-                child: Text(label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        color: _muted,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600))),
-          ]),
+                  color: _wine, fontSize: 21, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 3),
+          Text(label,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: _muted, fontSize: 10.5)),
         ]),
       );
 }
