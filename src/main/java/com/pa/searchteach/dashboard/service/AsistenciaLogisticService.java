@@ -26,22 +26,23 @@ import weka.core.SerializationHelper;
 public class AsistenciaLogisticService {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(AsistenciaLogisticService.class);
-	private static final String MODEL_PATH = "models/asistencia_logistic.model";
+	private static final String MODEL_PATH = "models/asistencia.model";
 	private static final Pattern DIACRITICAL_MARKS = Pattern.compile("\\p{M}+");
 	private static final List<String> MATERIAS = List.of(
-			"Programacion",
-			"Estadistica",
-			"Algebra Lineal",
-			"Calculo Diferencial",
 			"Estructuras de Datos",
+			"Calculo Diferencial",
 			"Bases de Datos",
-			"Fisica",
-			"Ingles");
-	private static final List<String> MODALIDADES = List.of("PRESENCIAL", "VIRTUAL");
+			"Ingles",
+			"Programacion",
+			"Algebra Lineal",
+			"Estadistica",
+			"Fisica");
+	private static final List<String> MODALIDADES = List.of("HIBRIDA", "VIRTUAL", "PRESENCIAL");
 	private static final List<String> DIAS = List.of(
 			"LUNES", "MARTES", "MIERCOLES", "JUEVES", "VIERNES", "SABADO");
 	private static final int CLASS_INDEX = 4;
-	private static final int ATTENDANCE_CLASS_INDEX = 0;
+	private static final List<String> RESULTADOS_ASISTENCIA = List.of("no", "si");
+	private static final String CLASE_ASISTENCIA = "si";
 
 	private volatile Logistic model;
 
@@ -98,11 +99,12 @@ public class AsistenciaLogisticService {
 		} catch (Exception exception) {
 			throw new IllegalStateException("No se pudo clasificar una tutoría con el modelo de asistencia.", exception);
 		}
-		if (distribution.length <= ATTENDANCE_CLASS_INDEX
-				|| !Double.isFinite(distribution[ATTENDANCE_CLASS_INDEX])) {
+		int attendanceClassIndex = RESULTADOS_ASISTENCIA.indexOf(CLASE_ASISTENCIA);
+		if (attendanceClassIndex < 0 || distribution.length <= attendanceClassIndex
+				|| !Double.isFinite(distribution[attendanceClassIndex])) {
 			throw new IllegalStateException("El modelo Weka devolvió una probabilidad de asistencia inválida.");
 		}
-		double attendanceProbability = distribution[ATTENDANCE_CLASS_INDEX];
+		double attendanceProbability = distribution[attendanceClassIndex];
 		return Optional.of(new Prediction(attendanceProbability >= 0.5, attendanceProbability));
 	}
 
@@ -135,8 +137,8 @@ public class AsistenciaLogisticService {
 		attributes.add(new Attribute("modalidad", MODALIDADES));
 		attributes.add(new Attribute("dia_semana", DIAS));
 		attributes.add(new Attribute("hora"));
-		attributes.add(new Attribute("asistio", List.of("si", "no")));
-		Instances header = new Instances("tutorias_SINTETICO_v3_completo", attributes, 0);
+		attributes.add(new Attribute("asistio", RESULTADOS_ASISTENCIA));
+		Instances header = new Instances("tutorias_entrenamiento_weka", attributes, 0);
 		header.setClassIndex(CLASS_INDEX);
 		return header;
 	}

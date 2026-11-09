@@ -83,13 +83,20 @@ public class SesionesGrupalesTutoriaService {
 	public SesionTutoria registrarAsistencia(String sesionId, String docenteId, String estudianteId, boolean asistio) {
 		SesionTutoria sesion = sesiones.findById(sesionId)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No se encontró la tutoría."));
-		if (!sesion.docenteId().equals(docenteId)
-				&& !(docenteId.equals(estudianteId) && asistio && sesion.estudianteIds().contains(estudianteId))) {
+		boolean docenteAsignado = sesion.docenteId().equals(docenteId);
+		boolean autoRegistroVirtual = sesion.modalidad() != ModalidadTutoria.PRESENCIAL
+				&& docenteId.equals(estudianteId) && asistio
+				&& sesion.estudianteIds().contains(estudianteId);
+		if (!docenteAsignado && !autoRegistroVirtual) {
 			throw new ResponseStatusException(HttpStatus.FORBIDDEN,
 					"Solo el docente o el estudiante conectado pueden registrar su asistencia.");
 		}
 		sesion = cerrarSiVencida(sesion);
 		if ("FINALIZADA".equals(sesion.estadoClase())) throw new ResponseStatusException(HttpStatus.CONFLICT, "La tutoría ya finalizó.");
+		if (!"EN_CURSO".equals(sesion.estadoClase())) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT,
+					"El docente debe habilitar la clase antes de registrar asistencia.");
+		}
 		return sesiones.save(sesion.registrarAsistencia(estudianteId, asistio));
 	}
 
@@ -97,6 +104,21 @@ public class SesionesGrupalesTutoriaService {
 		SesionTutoria sesion = obtenerSesionDocente(sesionId, docenteId);
 		String normalizado = motivo == null ? "" : motivo.trim().toUpperCase(java.util.Locale.ROOT);
 		if (!MOTIVOS_CIERRE.contains(normalizado)) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Selecciona un motivo de cierre válido.");
+		if (sesion.modalidad() == ModalidadTutoria.PRESENCIAL) {
+			if (!"EN_CURSO".equals(sesion.estadoClase())) {
+				throw new ResponseStatusException(HttpStatus.CONFLICT,
+						"Habilita la clase antes de finalizarla.");
+			}
+			if (!java.util.Set.of("FINALIZADA", "FALTA_ESTUDIANTES").contains(normalizado)) {
+				throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+						"Para una clase presencial selecciona finalizar la clase o falta de estudiantes.");
+			}
+			if ("FALTA_ESTUDIANTES".equals(normalizado)
+					&& sesion.asistencias().stream().anyMatch(asistencia -> Boolean.TRUE.equals(asistencia.asistio()))) {
+				throw new ResponseStatusException(HttpStatus.CONFLICT,
+						"No puedes cerrar por falta de estudiantes si registraste a alguien presente.");
+			}
+		}
 		SesionTutoria cerrada = sesiones.save(sesion.cerrar(normalizado, ahora()));
 		liveKitRooms.closeGroupTutoringRoom(sesionId);
 		actualizacionesTutorias.publicar("FINALIZADA", sesionId);
@@ -111,6 +133,15 @@ public class SesionesGrupalesTutoriaService {
 		SesionTutoria iniciada = sesiones.save(sesion.iniciar(ahora()));
 		actualizacionesTutorias.publicar("EN_CURSO", sesionId);
 		return iniciada;
+	}
+
+	public SesionTutoria iniciarClasePresencial(String sesionId, String docenteId) {
+		SesionTutoria sesion = obtenerSesionDocente(sesionId, docenteId);
+		if (sesion.modalidad() != ModalidadTutoria.PRESENCIAL) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+					"La habilitacion presencial solo aplica a tutorias presenciales.");
+		}
+		return iniciarClase(sesionId, docenteId);
 	}
 
 	public SesionTutoria valorarClase(String sesionId, String estudianteId, Integer estrellas, String comentario) {

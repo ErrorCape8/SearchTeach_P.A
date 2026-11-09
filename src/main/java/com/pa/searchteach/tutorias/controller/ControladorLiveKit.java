@@ -140,6 +140,13 @@ public class ControladorLiveKit {
 	public record CierreSolicitud(String motivo) {}
 	public record EstudianteSala(String id, String nombre) {}
 
+	@PatchMapping("/{id}/iniciar-presencial")
+	public SesionTutoria iniciarClasePresencial(
+			@PathVariable String id,
+			@AuthenticationPrincipal String usuarioId) {
+		return servicioSesiones.iniciarClasePresencial(id, usuarioId);
+	}
+
 	@GetMapping("/{id}")
 	public SesionTutoria consultarSesion(@PathVariable String id, @AuthenticationPrincipal String usuarioId) {
 		SesionTutoria sesion = sesiones.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No se encontró la tutoría."));

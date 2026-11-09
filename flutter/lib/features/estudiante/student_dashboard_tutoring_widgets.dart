@@ -541,7 +541,7 @@ class _GroupHistoryCardState extends ConsumerState<_GroupHistoryCard> {
   Future<void> _openHistory() async {
     await Navigator.of(context).push(
       MaterialPageRoute(
-        builde°r: (_) => TutoriaHistorialPage(
+        builder: (_) => TutoriaHistorialPage(
           sessionId: widget.session.id,
           subject: widget.session.subject,
           isIndividual: false,

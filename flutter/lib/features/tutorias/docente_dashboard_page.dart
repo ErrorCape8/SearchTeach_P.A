@@ -14,6 +14,7 @@ import '../notifications/notifications_page.dart';
 import 'docente_proyectos_aula_page.dart';
 import 'docente_lider_proyectos_page.dart';
 import 'livekit_room_page.dart';
+import 'presencial_tutoria_page.dart';
 import 'tutoria_chat_page.dart';
 import 'tutoria_historial_page.dart';
 
@@ -396,33 +397,50 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
                                 alignment: WrapAlignment.end,
                                 spacing: 8,
                                 children: [
-                                  OutlinedButton.icon(
-                                    onPressed: () => Navigator.of(context)
-                                        .push(MaterialPageRoute(
-                                      builder: (_) => TutoriaChatPage(
-                                          sessionId: session.id,
-                                          subject: session.subject,
-                                          readOnly:
-                                              view == _SessionView.history),
-                                    )),
-                                    icon: const Icon(Icons.forum_outlined),
-                                    label: const Text('Abrir chat'),
-                                  ),
+                                  if (view != _SessionView.start ||
+                                      session.modality.toUpperCase() !=
+                                          'PRESENCIAL')
+                                    OutlinedButton.icon(
+                                      onPressed: () => Navigator.of(context)
+                                          .push(MaterialPageRoute(
+                                        builder: (_) => TutoriaChatPage(
+                                            sessionId: session.id,
+                                            subject: session.subject,
+                                            readOnly:
+                                                view == _SessionView.history),
+                                      )),
+                                      icon: const Icon(Icons.forum_outlined),
+                                      label: const Text('Abrir chat'),
+                                    ),
                                   if (view != _SessionView.scheduled)
                                     FilledButton.icon(
                                       onPressed: () async {
-                                        await Navigator.of(context)
-                                            .push(MaterialPageRoute(
-                                          builder: (_) => LiveKitRoomPage(
-                                              sessionId: session.id,
-                                              subject: session.subject,
-                                              modality: session.modality,
-                                              teacherMode: true,
-                                              students: session.students,
-                                              ended:
-                                                  view == _SessionView.history,
-                                              endAt: session.end),
-                                        ));
+                                        if (session.modality.toUpperCase() ==
+                                                'PRESENCIAL' &&
+                                            view != _SessionView.history) {
+                                          await Navigator.of(context).push(
+                                            MaterialPageRoute(
+                                              builder: (_) =>
+                                                  PresencialTutoriaPage(
+                                                sessionId: session.id,
+                                                subject: session.subject,
+                                              ),
+                                            ),
+                                          );
+                                        } else {
+                                          await Navigator.of(context)
+                                              .push(MaterialPageRoute(
+                                            builder: (_) => LiveKitRoomPage(
+                                                sessionId: session.id,
+                                                subject: session.subject,
+                                                modality: session.modality,
+                                                teacherMode: true,
+                                                students: session.students,
+                                                ended: view ==
+                                                    _SessionView.history,
+                                                endAt: session.end),
+                                          ));
+                                        }
                                         if (mounted) {
                                           ref.invalidate(
                                               _teacherSessionsProvider);
@@ -430,10 +448,18 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
                                       },
                                       icon: Icon(view == _SessionView.history
                                           ? Icons.history
-                                          : Icons.video_call_outlined),
+                                          : session.modality.toUpperCase() ==
+                                                  'PRESENCIAL'
+                                              ? Icons.fact_check_outlined
+                                              : Icons.video_call_outlined),
                                       label: Text(view == _SessionView.history
                                           ? 'Ver historial'
-                                          : 'Empezar tutoría'),
+                                          : session.modality.toUpperCase() ==
+                                                  'PRESENCIAL'
+                                              ? session.state == 'EN_CURSO'
+                                                  ? 'Tomar asistencia'
+                                                  : 'Habilitar clase presencial'
+                                              : 'Empezar tutoría'),
                                     ),
                                 ],
                               ),
