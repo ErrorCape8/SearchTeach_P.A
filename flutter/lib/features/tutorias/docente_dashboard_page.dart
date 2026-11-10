@@ -375,7 +375,7 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
                                 style: const TextStyle(
                                     fontWeight: FontWeight.w700)),
                             subtitle: Text(
-                                '${session.start == null ? 'Fecha no disponible' : _dateTimeLabel(session.start!)} · ${_modalityLabel(session.modality)} · Semestre ${session.semester} · ${session.technologies.join(', ')}\n${session.students.isEmpty ? 'Publicada · sin inscritos' : 'Estudiantes inscritos: ${session.students.length}'}${session.state == 'FINALIZADA' ? '\nClase finalizada' : ''}'),
+                                '${session.start == null ? 'Fecha no disponible' : _dateTimeLabel(session.start!)} · ${_modalityLabel(session.modality)} · Semestre ${session.semester} · ${session.technologies.join(', ')}${session.modality.toUpperCase() == 'VIRTUAL' || session.location.trim().isEmpty ? '' : '\nLugar: ${session.location}'}\n${session.students.isEmpty ? 'Publicada · sin inscritos' : 'Estudiantes inscritos: ${session.students.length}'}${session.state == 'FINALIZADA' ? '\nClase finalizada' : ''}'),
                             isThreeLine: true,
                             trailing: session.id.isNotEmpty &&
                                     session.start != null &&
@@ -633,6 +633,12 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
                     icon: Icons.meeting_room_outlined,
                     label: _modalityLabel(session.modality),
                   ),
+                  if (session.modality.toUpperCase() != 'VIRTUAL' &&
+                      session.location.trim().isNotEmpty)
+                    _HistoryDetail(
+                      icon: Icons.place_outlined,
+                      label: session.location,
+                    ),
                   _HistoryDetail(
                     icon: Icons.people_outline,
                     label: '${session.students.length} estudiantes',
@@ -1054,6 +1060,7 @@ class _TeacherTutoringSession {
       required this.end,
       required this.semester,
       required this.modality,
+      required this.location,
       required this.state});
   final String id;
   final String subject;
@@ -1063,6 +1070,7 @@ class _TeacherTutoringSession {
   final DateTime? end;
   final int semester;
   final String modality;
+  final String location;
   final String state;
 
   factory _TeacherTutoringSession.fromJson(Map<String, dynamic> json) =>
@@ -1084,6 +1092,7 @@ class _TeacherTutoringSession {
                 (json['modalidad'] as String).isNotEmpty
             ? json['modalidad'] as String
             : 'PRESENCIAL',
+        location: json['ubicacion'] is String ? json['ubicacion'] as String : '',
         state: json['estadoClase'] is String
             ? json['estadoClase'] as String
             : 'PROGRAMADA',

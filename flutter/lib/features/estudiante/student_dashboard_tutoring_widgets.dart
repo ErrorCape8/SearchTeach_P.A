@@ -282,6 +282,12 @@ class _GroupSessionCard extends StatelessWidget {
               const SizedBox(height: 6),
               Text(
                   'Docente ${session.teacherId} · Semestre ${session.semester}'),
+              Text('Modalidad: ${_modalityLabel(session.modality)}',
+                  style: const TextStyle(color: _muted)),
+              if (session.modality.toUpperCase() != 'VIRTUAL' &&
+                  session.location.trim().isNotEmpty)
+                Text('Lugar: ${session.location}',
+                    style: const TextStyle(color: _muted)),
               if (session.start != null)
                 Text(_longDate(session.start!),
                     style: const TextStyle(color: _muted)),
@@ -595,6 +601,13 @@ class _GroupHistoryCardState extends ConsumerState<_GroupHistoryCard> {
                 ],
               ),
               const SizedBox(height: 12),
+              Text('Modalidad: ${_modalityLabel(widget.session.modality)}',
+                  style: const TextStyle(color: _muted)),
+              if (widget.session.modality.toUpperCase() != 'VIRTUAL' &&
+                  widget.session.location.trim().isNotEmpty)
+                Text('Lugar: ${widget.session.location}',
+                    style: const TextStyle(color: _muted)),
+              const SizedBox(height: 8),
               Row(
                 children: [
                   OutlinedButton(

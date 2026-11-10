@@ -121,13 +121,6 @@ class AuthRepository {
             key: sessionPersistenceKey,
             value: rememberMe ? 'true' : 'false',
           );
-      if (rememberMe) {
-        await _ref.read(secureStorageProvider).delete(
-              key: 'transient_session_last_active_at',
-            );
-      } else {
-        await markTransientSessionActive();
-      }
     } on DioException catch (e) {
       final status = e.response?.statusCode;
       if (status == null || status >= 500) {
@@ -216,9 +209,6 @@ class AuthRepository {
   Future<void> clearLocalSession() async {
     await _ref.read(secureStorageProvider).delete(key: 'token');
     await _ref.read(secureStorageProvider).delete(key: sessionPersistenceKey);
-    await _ref
-        .read(secureStorageProvider)
-        .delete(key: 'transient_session_last_active_at');
   }
 }
 

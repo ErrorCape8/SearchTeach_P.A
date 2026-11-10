@@ -302,6 +302,7 @@ public class SesionesGrupalesTutoriaService {
 		LocalDateTime ahora = ahora();
 		return sesiones.findAll().stream()
 				.filter(sesion -> sesion.fechaFin().isAfter(ahora))
+				.filter(sesion -> !"FINALIZADA".equals(sesion.estadoClase()))
 				.sorted((left, right) -> left.fechaInicio().compareTo(right.fechaInicio()))
 				.toList();
 	}
@@ -424,6 +425,7 @@ public class SesionesGrupalesTutoriaService {
 		if (tecnologia.isEmpty() || estudiante.getSemestre() < 1 || estudiante.getSemestre() > 6) return List.of();
 		return sesiones.findAll().stream()
 				.filter(sesion -> sesion.fechaFin().isAfter(ahora()))
+				.filter(sesion -> !"FINALIZADA".equals(sesion.estadoClase()))
 				.filter(sesion -> sesion.estudianteIds().size() < 5)
 				.filter(sesion -> !sesion.estudianteIds().contains(estudianteId))
 				.filter(sesion -> sesion.tecnologias().stream().anyMatch(oferta -> CatalogoMateriasTecnologia.normalizar(oferta).equals(CatalogoMateriasTecnologia.normalizar(tecnologia))))

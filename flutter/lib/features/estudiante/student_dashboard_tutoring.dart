@@ -1006,7 +1006,7 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
                     '${teacher?.name ?? 'Docente'} · ${session.technology} · Semestre ${session.semester}'),
                 if (session.modality.isNotEmpty)
                   Text(
-                    '${_groupSessionModality(session.modality)}${session.location.isEmpty ? '' : ' · ${session.location}'}',
+                    '${_groupSessionModality(session.modality)}${session.modality.toUpperCase() == 'VIRTUAL' || session.location.trim().isEmpty ? '' : ' · ${session.location}'}',
                   ),
                 if (start != null && end != null)
                   Text(
@@ -1157,7 +1157,10 @@ class _GroupChatAndCallCard extends StatelessWidget {
           const SizedBox(height: 5),
           Text('Docente ${session.teacherId} · Semestre ${session.semester}'),
           if (start != null) Text(_longDate(start)),
-          Text('Modalidad: ${session.modality}'),
+          Text('Modalidad: ${_groupSessionModalityLabel(session.modality)}'),
+          if (session.modality.toUpperCase() != 'VIRTUAL' &&
+              session.location.trim().isNotEmpty)
+            Text('Lugar: ${session.location}'),
           const SizedBox(height: 12),
           Wrap(spacing: 8, runSpacing: 8, children: [
             if (session.state == 'EN_CURSO' &&
@@ -1196,6 +1199,13 @@ class _GroupChatAndCallCard extends StatelessWidget {
     );
   }
 }
+
+String _groupSessionModalityLabel(String value) => switch (value.toUpperCase()) {
+      'PRESENCIAL' => 'Presencial',
+      'HIBRIDA' => 'Híbrida',
+      'VIRTUAL' => 'Virtual',
+      _ => value.isEmpty ? 'Por confirmar' : value,
+    };
 
 class _MenuTile extends StatelessWidget {
   const _MenuTile({

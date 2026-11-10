@@ -95,18 +95,10 @@ class App extends StatefulWidget {
 class _AppState extends State<App> {
   StreamSubscription<void>? _authExpiredSubscription;
   StreamSubscription<AppErrorInfo>? _appErrorSubscription;
-  Timer? _sessionHeartbeat;
-  late final _SessionLifecycleObserver _lifecycleObserver =
-      _SessionLifecycleObserver(
-    onPaused: _pauseSessionHeartbeat,
-    onResumed: () => unawaited(_resumeTransientSession()),
-  );
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(_lifecycleObserver);
-    _startSessionHeartbeat();
     _authExpiredSubscription = authExpiredEvents.listen((_) {
       _router.go('/login');
     });
@@ -117,32 +109,10 @@ class _AppState extends State<App> {
     });
   }
 
-  Future<void> _resumeTransientSession() async {
-    final valid = await resumeTransientSession();
-    if (!valid) _router.go('/login');
-    _startSessionHeartbeat();
-  }
-
-  void _pauseSessionHeartbeat() {
-    _sessionHeartbeat?.cancel();
-    _sessionHeartbeat = null;
-    unawaited(markTransientSessionActive());
-  }
-
-  void _startSessionHeartbeat() {
-    _sessionHeartbeat?.cancel();
-    _sessionHeartbeat = Timer.periodic(
-      const Duration(seconds: 15),
-      (_) => unawaited(markTransientSessionActive()),
-    );
-  }
-
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(_lifecycleObserver);
     _authExpiredSubscription?.cancel();
     _appErrorSubscription?.cancel();
-    _sessionHeartbeat?.cancel();
     super.dispose();
   }
 
@@ -158,22 +128,4 @@ class _AppState extends State<App> {
         ),
         routerConfig: _router,
       );
-}
-
-class _SessionLifecycleObserver extends WidgetsBindingObserver {
-  _SessionLifecycleObserver({required this.onPaused, required this.onResumed});
-
-  final VoidCallback onPaused;
-  final VoidCallback onResumed;
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      onResumed();
-    } else if (state == AppLifecycleState.inactive ||
-        state == AppLifecycleState.paused ||
-        state == AppLifecycleState.detached) {
-      onPaused();
-    }
-  }
 }
