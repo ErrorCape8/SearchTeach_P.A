@@ -15,7 +15,6 @@ public record ProyectoAula(
 		@NotBlank String tecnologia,
 		@Positive int semestre,
 		@JsonIgnore String codigoInscripcion,
-		@JsonIgnore String creadorId,
 		String estadoCierre,
 		String motivoCierre,
 		LocalDateTime fechaReunion,
@@ -26,35 +25,6 @@ public record ProyectoAula(
 		LocalDateTime finalizadaEn,
 		String descripcion,
 		String reporteCierre) {
-
-	public ProyectoAula(String proyectoId, String nombre, String docenteResponsableId,
-			List<String> estudianteIds, String tecnologia, int semestre,
-			String codigoInscripcion, String creadorId) {
-		this(proyectoId, nombre, docenteResponsableId, estudianteIds, tecnologia, semestre,
-				codigoInscripcion, creadorId, "EN_CURSO", null, null, null, null, null, null, null, "", null);
-	}
-
-	public ProyectoAula(String proyectoId, String nombre, String docenteResponsableId,
-			List<String> estudianteIds, String tecnologia, int semestre, String codigoInscripcion,
-			String creadorId, String estadoCierre, String motivoCierre, LocalDateTime fechaReunion,
-			String reunionCreadaPorId, String reunionSesionId, LocalDateTime reunionMensajePublicadoEn,
-			String cierreConfirmadoPorId, LocalDateTime finalizadaEn) {
-		this(proyectoId, nombre, docenteResponsableId, estudianteIds, tecnologia, semestre,
-				codigoInscripcion, creadorId, estadoCierre, motivoCierre, fechaReunion,
-				reunionCreadaPorId, reunionSesionId, reunionMensajePublicadoEn,
-				cierreConfirmadoPorId, finalizadaEn, "", null);
-	}
-
-	public ProyectoAula(String proyectoId, String nombre, String docenteResponsableId,
-			List<String> estudianteIds, String tecnologia, int semestre, String codigoInscripcion,
-			String creadorId, String estadoCierre, String motivoCierre, LocalDateTime fechaReunion,
-			String reunionCreadaPorId, String reunionSesionId, LocalDateTime reunionMensajePublicadoEn,
-			String cierreConfirmadoPorId, LocalDateTime finalizadaEn, String descripcion) {
-		this(proyectoId, nombre, docenteResponsableId, estudianteIds, tecnologia, semestre,
-				codigoInscripcion, creadorId, estadoCierre, motivoCierre, fechaReunion,
-				reunionCreadaPorId, reunionSesionId, reunionMensajePublicadoEn,
-				cierreConfirmadoPorId, finalizadaEn, descripcion, null);
-	}
 
 	public ProyectoAula {
 		if (proyectoId == null || proyectoId.isBlank()) {
@@ -81,51 +51,51 @@ public record ProyectoAula(
 		if (estudianteIds.size() >= 4) throw new IllegalArgumentException("El grupo ya tiene cuatro estudiantes.");
 		return new ProyectoAula(proyectoId, nombre, docenteResponsableId,
 				java.util.stream.Stream.concat(estudianteIds.stream(), java.util.stream.Stream.of(estudianteId)).toList(),
-				tecnologia, semestre, codigoInscripcion, creadorId,
+				tecnologia, semestre, codigoInscripcion,
 				estadoCierre, motivoCierre, fechaReunion, reunionCreadaPorId, reunionSesionId,
 				reunionMensajePublicadoEn, cierreConfirmadoPorId, finalizadaEn, descripcion, reporteCierre);
 	}
 
 	public ProyectoAula desistir(String estudianteId) {
 		return new ProyectoAula(proyectoId, nombre, docenteResponsableId,
-				estudianteIds.stream().filter(id -> !id.equals(estudianteId)).toList(), tecnologia, semestre,
-				codigoInscripcion, creadorId, estadoCierre, motivoCierre, fechaReunion,
+				estudianteIds.stream().filter(id -> !id.equals(estudianteId)).toList(), tecnologia, semestre, codigoInscripcion,
+				estadoCierre, motivoCierre, fechaReunion,
 				reunionCreadaPorId, reunionSesionId, reunionMensajePublicadoEn, cierreConfirmadoPorId, finalizadaEn, descripcion, reporteCierre);
 	}
 
 	public ProyectoAula programarReunion(LocalDateTime fecha, String docenteId, String sesionId) {
 		return new ProyectoAula(proyectoId, nombre, docenteResponsableId, estudianteIds, tecnologia, semestre,
-				codigoInscripcion, creadorId, estadoCierre, motivoCierre, fecha, docenteId, sesionId,
+				codigoInscripcion, estadoCierre, motivoCierre, fecha, docenteId, sesionId,
 				null, cierreConfirmadoPorId, finalizadaEn, descripcion, reporteCierre);
 	}
 
 	public ProyectoAula marcarMensajeReunionPublicado(LocalDateTime fecha) {
 		return new ProyectoAula(proyectoId, nombre, docenteResponsableId, estudianteIds, tecnologia, semestre,
-				codigoInscripcion, creadorId, estadoCierre, motivoCierre, fechaReunion, reunionCreadaPorId,
+				codigoInscripcion, estadoCierre, motivoCierre, fechaReunion, reunionCreadaPorId,
 				reunionSesionId, fecha, cierreConfirmadoPorId, finalizadaEn, descripcion, reporteCierre);
 	}
 
 	public ProyectoAula solicitarCierre(String motivo) {
 		return new ProyectoAula(proyectoId, nombre, docenteResponsableId, estudianteIds, tecnologia, semestre,
-				codigoInscripcion, creadorId, "PENDIENTE_CONFIRMACION", motivo, fechaReunion,
+				codigoInscripcion, "PENDIENTE_CONFIRMACION", motivo, fechaReunion,
 				reunionCreadaPorId, reunionSesionId, reunionMensajePublicadoEn, null, null, descripcion, reporteCierre);
 	}
 
 	public ProyectoAula confirmarCierre(String liderId, LocalDateTime fecha) {
 		return new ProyectoAula(proyectoId, nombre, docenteResponsableId, estudianteIds, tecnologia, semestre,
-				codigoInscripcion, creadorId, "FINALIZADO", motivoCierre, fechaReunion,
+				codigoInscripcion, "FINALIZADO", motivoCierre, fechaReunion,
 				reunionCreadaPorId, reunionSesionId, reunionMensajePublicadoEn, liderId, fecha, descripcion, reporteCierre);
 	}
 
 	public ProyectoAula rechazarCierre() {
 		return new ProyectoAula(proyectoId, nombre, docenteResponsableId, estudianteIds, tecnologia, semestre,
-				codigoInscripcion, creadorId, "EN_CURSO", null, fechaReunion,
+				codigoInscripcion, "EN_CURSO", null, fechaReunion,
 				reunionCreadaPorId, reunionSesionId, reunionMensajePublicadoEn, null, null, descripcion, reporteCierre);
 	}
 
 	public ProyectoAula conReporteCierre(String reporte) {
 		return new ProyectoAula(proyectoId, nombre, docenteResponsableId, estudianteIds, tecnologia, semestre,
-				codigoInscripcion, creadorId, estadoCierre, motivoCierre, fechaReunion, reunionCreadaPorId,
+				codigoInscripcion, estadoCierre, motivoCierre, fechaReunion, reunionCreadaPorId,
 				reunionSesionId, reunionMensajePublicadoEn, cierreConfirmadoPorId, finalizadaEn, descripcion, reporte);
 	}
 }

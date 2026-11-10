@@ -236,7 +236,7 @@ class ClassroomProjectSpace {
     required this.semester,
     required this.enrolledCount,
     required this.enrolled,
-    this.createOrJoin = false,
+    this.createProjectSlot = false,
     this.description = '',
   });
 
@@ -248,7 +248,7 @@ class ClassroomProjectSpace {
   final int semester;
   final int enrolledCount;
   final bool enrolled;
-  final bool createOrJoin;
+  final bool createProjectSlot;
   final String description;
 
   factory ClassroomProjectSpace.fromJson(Map<String, dynamic> json) =>
@@ -264,11 +264,11 @@ class ClassroomProjectSpace {
             ? (json['estudiantesInscritos'] as num).toInt()
             : 0,
         enrolled: json['inscrito'] == true,
-        createOrJoin: false,
+        createProjectSlot: false,
         description: _string(json['descripcion']),
       );
 
-  factory ClassroomProjectSpace.createOrJoin({
+  factory ClassroomProjectSpace.createProjectSlot({
     required String tutoringId,
     required String career,
     required int semester,
@@ -276,13 +276,13 @@ class ClassroomProjectSpace {
       ClassroomProjectSpace(
         tutoringId: tutoringId,
         projectId: '',
-        name: 'Crear o unirse a un proyecto',
+        name: 'Crear proyecto',
         teacherId: '',
         career: career,
         semester: semester,
         enrolledCount: 0,
         enrolled: false,
-        createOrJoin: true,
+        createProjectSlot: true,
       );
 }
 
@@ -335,10 +335,10 @@ class StudentProjectFollowup {
         enrolled: true,
         description: _string(projectJson['descripcion']),
       ),
-      invitationCode: _string(json['codigoInscripcion']),
       assignedTeacher: _string(json['docenteResponsable']),
       status: _string(projectJson['estadoCierre'], fallback: 'EN_CURSO'),
       meetingAt: _date(projectJson['fechaReunion']),
+      invitationCode: _string(json['codigoInscripcion']),
       sessions: (json['sesiones'] is List ? json['sesiones'] as List : const [])
           .whereType<Map<String, dynamic>>()
           .map(StudentProjectSession.fromJson)
@@ -428,7 +428,7 @@ final studentDashboardProvider =
           .map(ClassroomProjectSpace.fromJson),
     );
     if (entry['permiteCrearProyecto'] == true) {
-      projectSpaces.add(ClassroomProjectSpace.createOrJoin(
+      projectSpaces.add(ClassroomProjectSpace.createProjectSlot(
         tutoringId: tutoringId,
         career: career,
         semester: semester,
@@ -467,7 +467,7 @@ final studentGroupSessionsProvider =
   );
 });
 
-Future<Map<String, dynamic>> createOrJoinClassroomProject({
+Future<Map<String, dynamic>> createClassroomProject({
   required Dio dio,
   required String tutoringId,
   required String name,
@@ -498,15 +498,6 @@ Future<void> enrollInClassroomProjectCode({
   await dio.post<void>(
     '/api/estudiante/tutorias-colectivas/proyectos/inscripcion-codigo',
     data: {'codigo': code},
-  );
-}
-
-Future<void> leaveClassroomProject({
-  required Dio dio,
-  required ClassroomProjectSpace space,
-}) async {
-  await dio.delete<void>(
-    '/api/estudiante/tutorias-colectivas/${space.tutoringId}/proyectos/${space.projectId}/inscripcion',
   );
 }
 

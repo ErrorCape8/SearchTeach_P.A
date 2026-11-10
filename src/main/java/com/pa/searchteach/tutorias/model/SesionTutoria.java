@@ -12,7 +12,7 @@ import jakarta.validation.constraints.Size;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-@Document(collection = "sesiones_tutoria")
+@Document(collection = "sesiones_retroalimentativas")
 public record SesionTutoria(
 		@Id String id,
 		@NotBlank String docenteId,

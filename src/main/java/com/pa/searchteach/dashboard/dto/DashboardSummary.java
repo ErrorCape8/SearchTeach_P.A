@@ -12,5 +12,6 @@ public record DashboardSummary(
 		AttendanceTrainingData datosModeloAsistencia,
 		boolean modeloAsistenciaDisponible,
 		List<SubjectAttendancePrediction> prediccionesAsistencia,
+		List<WeeklyAttendancePrediction> prediccionesAsistenciaSemanales,
 		long tutoriasProgramadasNoEvaluables) {
 }

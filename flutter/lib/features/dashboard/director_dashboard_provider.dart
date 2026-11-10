@@ -88,6 +88,11 @@ class DirectorDashboard {
           asistenciasConfirmadas: _readInt(entry, 'asistenciasConfirmadas'),
           asistenciasRegistradas: _readInt(entry, 'asistenciasRegistradas'),
           tasaAsistencia: _readNullableDouble(entry, 'tasaAsistencia'),
+          pronostico: entry['pronostico'] is Map<String, dynamic>
+              ? PronosticoDemanda.fromJson(
+                  entry['pronostico'] as Map<String, dynamic>,
+                )
+              : null,
         );
       }).toList(growable: false),
       datosModeloAsistencia: AttendanceTrainingData.fromJson(attendanceData),
@@ -144,6 +149,43 @@ class WeeklyTutoringCount {
 
   final DateTime semanaInicio;
   final int total;
+
+  factory WeeklyTutoringCount.fromJson(Map<String, dynamic> json) {
+    final start = DateTime.tryParse(json['semanaInicio'] as String? ?? '');
+    final total = json['total'];
+    if (start == null || total is! num) {
+      throw const FormatException('Una predicción semanal no es válida.');
+    }
+    return WeeklyTutoringCount(semanaInicio: start, total: total.toInt());
+  }
+}
+
+class PronosticoDemanda {
+  const PronosticoDemanda({
+    required this.prediccionesSemanales,
+    required this.estimadoProximasCuatroSemanas,
+    required this.modelo,
+  });
+
+  final List<WeeklyTutoringCount> prediccionesSemanales;
+  final int estimadoProximasCuatroSemanas;
+  final String modelo;
+
+  factory PronosticoDemanda.fromJson(Map<String, dynamic> json) {
+    final predictions = json['prediccionesSemanales'];
+    final estimate = json['estimadoProximasCuatroSemanas'];
+    if (predictions is! List || estimate is! num) {
+      throw const FormatException('El pronóstico semanal no es válido.');
+    }
+    return PronosticoDemanda(
+      prediccionesSemanales: predictions
+          .whereType<Map<String, dynamic>>()
+          .map(WeeklyTutoringCount.fromJson)
+          .toList(growable: false),
+      estimadoProximasCuatroSemanas: estimate.toInt(),
+      modelo: json['modelo'] is String ? json['modelo'] as String : 'REPTREE',
+    );
+  }
 }
 
 class SubjectTutoringSummary {
@@ -155,6 +197,7 @@ class SubjectTutoringSummary {
     required this.asistenciasConfirmadas,
     required this.asistenciasRegistradas,
     required this.tasaAsistencia,
+    required this.pronostico,
   });
 
   final String materia;
@@ -164,6 +207,7 @@ class SubjectTutoringSummary {
   final int asistenciasConfirmadas;
   final int asistenciasRegistradas;
   final double? tasaAsistencia;
+  final PronosticoDemanda? pronostico;
 }
 
 class AttendanceTrainingData {

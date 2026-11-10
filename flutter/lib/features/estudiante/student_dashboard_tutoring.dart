@@ -663,43 +663,38 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
 
   Widget _projectSpaces() {
     final career = widget.data.profile.career.trim();
+    final enrolledProjects = widget.data.projectSpaces.where((space) =>
+        !space.createProjectSlot &&
+        space.enrolled);
     final spaces = widget.data.projectSpaces
-        .where((space) => career.isEmpty || space.career == career)
         .where((space) =>
-            space.createOrJoin || space.enrolled || space.enrolledCount < 4)
-        .where((space) =>
-            !space.createOrJoin ||
-            !widget.data.projectSpaces.any(
-              (project) =>
-                  !project.createOrJoin &&
-                  project.tutoringId == space.tutoringId &&
-                  project.enrolled,
-            ))
+            space.createProjectSlot && (career.isEmpty || space.career == career))
+        .where((_) => enrolledProjects.isEmpty)
         .toList()
       ..sort((a, b) => a.semester.compareTo(b.semester));
+
     if (spaces.isEmpty) {
-      final onlyFullGroups = widget.data.projectSpaces.any((space) =>
-          (career.isEmpty || space.career == career) &&
-          !space.createOrJoin &&
-          !space.enrolled &&
-          space.enrolledCount >= 4);
+      final alreadyEnrolled = enrolledProjects.isNotEmpty;
       return ListView(
         padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
         children: [
-          _projectCodeButton(),
-          const SizedBox(height: 12),
+          if (!alreadyEnrolled) ...[
+            _projectCodeButton(),
+            const SizedBox(height: 12),
+          ],
           _EmptyCard(
             icon: Icons.groups_outlined,
-            title: onlyFullGroups
-                ? 'No hay grupos con cupo disponible'
-                : 'No hay proyectos de aula disponibles',
-            message: onlyFullGroups
-                ? 'Puedes ingresar un codigo para unirte a otro proyecto.'
-                : 'Cuando coordinacion cree un espacio para tu tecnologia aparecera aqui. Tambien puedes ingresar un codigo.',
+            title: alreadyEnrolled
+                ? 'Ya tienes un proyecto inscrito'
+                : 'No hay espacios para crear un proyecto',
+            message: alreadyEnrolled
+                ? 'Consulta el estado de tu equipo en Seguimiento de proyecto.'
+                : 'Cuando coordinación habilite un grupo para tu tecnología, aquí podrás crear tu proyecto de aula.',
           ),
         ],
       );
     }
+
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
       itemCount: spaces.length + 1,
@@ -707,7 +702,6 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
       itemBuilder: (context, index) {
         if (index == 0) return _projectCodeButton();
         final space = spaces[index - 1];
-        final full = space.enrolledCount >= 4;
         return Card(
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -717,31 +711,14 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
                 Text('Semestre ${space.semester}',
                     style: const TextStyle(fontWeight: FontWeight.w700)),
                 const SizedBox(height: 6),
-                Text(space.name),
+                const Text('Crear proyecto'),
                 Text(space.career, style: const TextStyle(color: _muted)),
                 const SizedBox(height: 8),
-                if (!space.createOrJoin) ...[
-                  Text(
-                      'Docente: ${space.teacherId} · ${space.enrolledCount}/4 inscritos'),
-                  const SizedBox(height: 12),
-                ],
                 Align(
                   alignment: Alignment.centerRight,
                   child: FilledButton.tonal(
-                    onPressed: space.createOrJoin
-                        ? () => widget.onProjectEnrollment(space)
-                        : space.enrolled
-                            ? () => widget.onProjectEnrollment(space)
-                            : full
-                                ? null
-                                : widget.onJoinProjectCode,
-                    child: Text(space.createOrJoin
-                        ? 'Asignarme a un grupo'
-                        : space.enrolled
-                            ? 'Desistir de esta tutoría'
-                            : full
-                                ? 'Cupo completo'
-                                : 'Asignación automática'),
+                    onPressed: () => widget.onProjectEnrollment(space),
+                    child: const Text('Crear proyecto'),
                   ),
                 ),
               ],
@@ -755,7 +732,7 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
   Widget _projectCodeButton() => OutlinedButton.icon(
         onPressed: widget.onJoinProjectCode,
         icon: const Icon(Icons.vpn_key_outlined),
-        label: const Text('Inscribir en PA con código'),
+        label: const Text('Unirme a un proyecto con código'),
         style: OutlinedButton.styleFrom(
           padding: const EdgeInsets.symmetric(vertical: 14),
           foregroundColor: _blue,

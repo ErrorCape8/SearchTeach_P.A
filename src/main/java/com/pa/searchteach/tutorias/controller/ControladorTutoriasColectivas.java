@@ -24,6 +24,7 @@ import com.pa.searchteach.tutorias.service.SesionesGrupalesTutoriaService;
 import com.pa.searchteach.tutorias.service.ProyectoAulaChatRedisService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -278,12 +279,12 @@ public class ControladorTutoriasColectivas {
 	}
 
 	@PostMapping("/api/estudiante/tutorias-colectivas/{tutoriaId}/proyectos")
-	@ResponseStatus(HttpStatus.CREATED)
-	public ProyectoAulaCreado crearOUnirseAProyectoDeTutoria(
+	public ResponseEntity<ProyectoAulaCreado> crearProyectoDeTutoria(
 			@PathVariable String tutoriaId,
 			@Valid @RequestBody ProyectoAulaNombreSolicitud solicitud,
 			@AuthenticationPrincipal String estudianteId) {
-		return servicio.crearOUnirseAProyecto(tutoriaId, solicitud, estudianteId);
+		ProyectoAulaCreado resultado = servicio.crearProyecto(tutoriaId, solicitud, estudianteId);
+		return ResponseEntity.status(HttpStatus.CREATED).body(resultado);
 	}
 
 	@DeleteMapping("/api/estudiante/tutorias-colectivas/{tutoriaId}/proyectos/{proyectoId}/inscripcion")

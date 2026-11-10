@@ -343,64 +343,146 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage>
   }
 
   Future<void> _toggleProjectEnrollment(ClassroomProjectSpace space) async {
+    if (!space.createProjectSlot) return;
     try {
-      final dio = ref.read(dioProvider);
-      if (space.createOrJoin) {
-        final details = await _askProjectDetails(space);
-        if (details == null) return;
-        final created = await createOrJoinClassroomProject(
-          dio: dio,
-          tutoringId: space.tutoringId,
-          name: details.name,
-          semester: space.semester,
-          description: details.description,
-        );
-        ref.invalidate(studentDashboardProvider);
-        ref.invalidate(studentProjectFollowupProvider);
-        final code = created['codigoInscripcion'];
-        if (code is String && mounted) {
-          await showDialog<void>(
-            context: context,
-            builder: (dialogContext) => AlertDialog(
-              title: const Text('Proyecto creado'),
-              content: Column(mainAxisSize: MainAxisSize.min, children: [
-                Text(
-                    'Comparte este código para que tus integrantes se unan a “${details.name}”:'),
-                const SizedBox(height: 12),
-                SelectableText(code,
-                    style: const TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 5)),
-                const SizedBox(height: 8),
-                Text('Semestre ${space.semester}'),
-                const SizedBox(height: 8),
-                Text(details.description),
-              ]),
-              actions: [
-                TextButton(
-                    onPressed: () => Navigator.pop(dialogContext),
-                    child: const Text('Listo'))
-              ],
-            ),
-          );
-        }
-        _openTutorSection('seguimiento-proyecto');
-        return;
-      } else if (space.enrolled) {
-        await leaveClassroomProject(dio: dio, space: space);
-      } else {
-        await _joinProjectByCode();
-        return;
-      }
+      final details = await _askProjectDetails(space);
+      if (details == null) return;
+      final created = await createClassroomProject(
+        dio: ref.read(dioProvider),
+        tutoringId: space.tutoringId,
+        name: details.name,
+        semester: space.semester,
+        description: details.description,
+      );
       ref.invalidate(studentDashboardProvider);
-      _showMessage(space.enrolled
-          ? 'Saliste del espacio de proyecto de aula.'
-          : 'Te inscribiste en el proyecto de aula.');
+      ref.invalidate(studentProjectFollowupProvider);
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Proyecto creado'),
+          content: Text(
+              'Se creó “${details.name}” para el semestre ${space.semester}.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Listo'),
+            ),
+          ],
+        ),
+      );
+      final code = created['codigoInscripcion'] as String? ?? '';
+      if (code.isNotEmpty && mounted) {
+        await showDialog<void>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('Código para integrantes'),
+            content: SelectableText(code,
+                style: const TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 5)),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text('Listo')),
+            ],
+          ),
+        );
+      }
+      _openTutorSection('seguimiento-proyecto');
     } on DioException catch (error) {
       _showMessage(_apiMessage(error));
     }
   }
+  Future<void> _joinProjectByCode() async {
+    final controller = TextEditingController();
+    try {
+      final code = await showDialog<String>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Ingresar código de inscripción'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            maxLength: 6,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              labelText: 'Código de 6 dígitos',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Cancelar')),
+            FilledButton(
+                onPressed: () =>
+                    Navigator.pop(dialogContext, controller.text.trim()),
+                child: const Text('Buscar proyecto')),
+          ],
+        ),
+      );
+      if (code == null) return;
+      if (!RegExp(r'^\d{6}$').hasMatch(code)) {
+        await _showInvalidProjectCode();
+        return;
+      }
+      final dio = ref.read(dioProvider);
+      final project = await previewClassroomProjectCode(dio: dio, code: code);
+      if (!mounted) return;
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Confirma el proyecto'),
+          content: Text(
+            'Lo registra ${project['creador'] ?? 'un estudiante'}\n'
+            'Semestre ${project['semestre'] ?? '—'} · ${project['tecnologia'] ?? ''}\n'
+            'Proyecto: ${project['nombre'] ?? 'Proyecto de aula'}\n\n'
+            'Descripción: ${project['descripcion'] ?? 'Sin descripción'}\n\n'
+            '¿Quieres unirte a este proyecto?',
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('Cancelar')),
+            FilledButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: const Text('Confirmar inscripción')),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+      await enrollInClassroomProjectCode(dio: dio, code: code);
+      ref.invalidate(studentDashboardProvider);
+      ref.invalidate(studentProjectFollowupProvider);
+      _showMessage('Te uniste al proyecto de aula.');
+      _openTutorSection('seguimiento-proyecto');
+    } on DioException catch (error) {
+      final status = error.response?.statusCode;
+      if (status == 400 || status == 404) {
+        await _showInvalidProjectCode();
+      } else {
+        _showMessage(_apiMessage(error));
+      }
+    } finally {
+      controller.dispose();
+    }
+  }
+
+  Future<void> _showInvalidProjectCode() => showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Código incorrecto'),
+          content: const Text(
+              'Confirma que la tutoría exista o que el código esté bien escrito.'),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Entendido')),
+          ],
+        ),
+      );
 
   Future<({String name, String description})?> _askProjectDetails(
       ClassroomProjectSpace space) async {
@@ -462,74 +544,6 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage>
     } finally {
       nameController.dispose();
       descriptionController.dispose();
-    }
-  }
-
-  Future<void> _joinProjectByCode() async {
-    final controller = TextEditingController();
-    try {
-      final code = await showDialog<String>(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('Ingresar código de inscripción'),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            maxLength: 6,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: 'Código de 6 dígitos',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(dialogContext),
-                child: const Text('Cancelar')),
-            FilledButton(
-                onPressed: () =>
-                    Navigator.pop(dialogContext, controller.text.trim()),
-                child: const Text('Buscar proyecto')),
-          ],
-        ),
-      );
-      if (code == null) return;
-      if (!RegExp(r'^\d{6}$').hasMatch(code)) {
-        _showMessage('El código debe contener seis dígitos.');
-        return;
-      }
-      final dio = ref.read(dioProvider);
-      final project = await previewClassroomProjectCode(dio: dio, code: code);
-      if (!mounted) return;
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('Confirma el proyecto'),
-          content: Text(
-            'Lo registra ${project['creador'] ?? 'un estudiante'}\n'
-            'Semestre ${project['semestre'] ?? '—'} · ${project['tecnologia'] ?? ''}\n'
-            'Proyecto: ${project['nombre'] ?? 'Proyecto de aula'}\n\n'
-            'Descripción: ${project['descripcion'] ?? 'Sin descripción'}\n\n'
-            '¿Quieres unirte a este proyecto?',
-          ),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(dialogContext, false),
-                child: const Text('Cancelar')),
-            FilledButton(
-                onPressed: () => Navigator.pop(dialogContext, true),
-                child: const Text('Confirmar inscripción')),
-          ],
-        ),
-      );
-      if (confirmed != true) return;
-      await enrollInClassroomProjectCode(dio: dio, code: code);
-      ref.invalidate(studentDashboardProvider);
-      _showMessage('Te uniste al proyecto de aula.');
-    } on DioException catch (error) {
-      _showMessage(_apiMessage(error));
-    } finally {
-      controller.dispose();
     }
   }
 

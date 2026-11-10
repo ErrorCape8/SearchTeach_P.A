@@ -11,7 +11,7 @@ import jakarta.validation.constraints.Size;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-@Document(collection = "tutorias_colectivas")
+@Document(collection = "grupos_proyectos_aula")
 public record TutoriaColectiva(
 		@Id String id,
 		@NotBlank String coordinadoraId,
