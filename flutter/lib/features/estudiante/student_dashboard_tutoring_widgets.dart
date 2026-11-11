@@ -7,172 +7,47 @@ class _TutorCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Card(
-        margin: const EdgeInsets.only(bottom: 8),
+        margin: const EdgeInsets.only(bottom: 10),
         color: Colors.white,
-        elevation: 2,
+        elevation: 1,
         shadowColor: const Color(0x14000000),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11)),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(9, 8, 9, 7),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(children: [
-                const CircleAvatar(
-                  radius: 11,
-                  backgroundColor: Color(0xFFE7F1FC),
-                  child: Icon(Icons.person_outline, color: _blue, size: 12),
-                ),
-                const SizedBox(width: 7),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(tutor.name,
-                          style: const TextStyle(
-                              color: _navy,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w800)),
-                      Text(
-                        '${tutor.career} · Semestre ${tutor.semester}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: _muted, fontSize: 7),
-                      ),
-                    ],
-                  ),
-                ),
-                _StatusPill(
-                  text: _modalityLabel(tutor.modality),
-                ),
-              ]),
-              const Divider(height: 12),
-              const Text(
-                'DÍA Y HORARIO',
-                style: TextStyle(
-                  color: _muted,
-                  fontSize: 10,
-                  letterSpacing: .4,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                '${tutor.day} · ${tutor.startTime}–${tutor.endTime}',
-                style: const TextStyle(
-                  color: Color(0xFF202B3A),
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const Divider(height: 12),
-              Text(
-                'MODALIDAD Y UBICACIÓN',
-                style: const TextStyle(
-                  color: _muted,
-                  fontSize: 10,
-                  letterSpacing: .4,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                '${_modalityLabel(tutor.modality)}${tutor.location.isEmpty ? '' : ' · ${tutor.location}'}',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Color(0xFF202B3A),
-                  fontSize: 11,
-                ),
-              ),
-              if (tutor.subjects.isNotEmpty) ...[
-                const Divider(height: 12),
-                const Text(
-                  'MATERIAS DE TU CARRERA',
-                  style: TextStyle(
-                    color: _muted,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: .4,
-                  ),
-                ),
-                for (final subject in tutor.subjects)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 3),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            subject.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Color(0xFF202B3A),
-                              fontSize: 10,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        _SubjectScopeLabel(
-                          text: subject.careers.length > 1
-                              ? 'Compartida'
-                              : 'Exclusiva',
-                          color: subject.careers.length > 1
-                              ? const Color(0xFFE8F1FF)
-                              : const Color(0xFFFFF1DF),
-                          foreground: subject.careers.length > 1
-                              ? const Color(0xFF2459A6)
-                              : const Color(0xFF9A5A00),
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
-              const SizedBox(height: 6),
-              Align(
-                alignment: Alignment.centerRight,
-                child: FilledButton(
-                  onPressed: onEnroll,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: _blue,
-                    minimumSize: const Size(0, 25),
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                    visualDensity: VisualDensity.compact,
-                  ),
-                  child:
-                      const Text('Inscribirme', style: TextStyle(fontSize: 8)),
-                ),
-              ),
-            ],
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        child: ListTile(
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          leading: Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: const Color(0xFFE7F1FC),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.desktop_windows_outlined,
+                color: _blue, size: 20),
           ),
-        ),
-      );
-}
-
-class _SubjectScopeLabel extends StatelessWidget {
-  const _SubjectScopeLabel({
-    required this.text,
-    required this.color,
-    required this.foreground,
-  });
-
-  final String text;
-  final Color color;
-  final Color foreground;
-
-  @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(9),
-        ),
-        child: Text(
-          text,
-          style: TextStyle(
-            color: foreground,
-            fontSize: 10,
-            fontWeight: FontWeight.w700,
+          title: Text(
+            tutor.subjects.isEmpty ? tutor.name : tutor.subjects.first.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+                color: _navy, fontSize: 14, fontWeight: FontWeight.w800),
+          ),
+          subtitle: Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              '${tutor.name} · ${tutor.day} ${tutor.startTime} · ${_modalityLabel(tutor.modality)}${tutor.location.isEmpty ? '' : ' · ${tutor.location}'}',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: _muted, fontSize: 11),
+            ),
+          ),
+          trailing: FilledButton(
+            onPressed: onEnroll,
+            style: FilledButton.styleFrom(
+              backgroundColor: _blue,
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+            ),
+            child: const Text('Reservar'),
           ),
         ),
       );

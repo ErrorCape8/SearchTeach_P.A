@@ -286,61 +286,58 @@ class _NotificationsInboxState extends ConsumerState<NotificationsInbox> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-          child: Wrap(
-            alignment: WrapAlignment.spaceBetween,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: 12,
-            runSpacing: 8,
+          padding: const EdgeInsets.fromLTRB(24, 18, 24, 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Avisos de tu cuenta',
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.primary,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                    ),
+              Card(
+                margin: EdgeInsets.zero,
+                child: SwitchListTile(
+                  secondary: CircleAvatar(
+                    backgroundColor: Theme.of(context)
+                        .colorScheme
+                        .primary
+                        .withValues(alpha: .1),
+                    child: Icon(Icons.notifications_active_outlined,
+                        color: Theme.of(context).colorScheme.primary),
                   ),
-                  const SizedBox(height: 3),
+                  title: const Text('Notificaciones en este dispositivo',
+                      style: TextStyle(fontWeight: FontWeight.w800)),
+                  subtitle: const Text(
+                      'Recibe avisos de tutorías y actividad académica.'),
+                  value: _pushEnabled,
+                  onChanged: _enabling || _pushStatusLoading
+                      ? null
+                      : (enabled) => enabled ? _enablePush() : _disablePush(),
+                  activeThumbColor: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text('Recientes',
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.w800)),
+                  ),
                   unreadCount.when(
                     data: (count) => Text(
                       count == 1 ? '1 sin leer' : '$count sin leer',
                       style: TextStyle(
-                          color: Theme.of(context).colorScheme.primary),
+                          color: Theme.of(context).colorScheme.primary,
+                          fontSize: 12),
                     ),
-                    loading: () => const Text('Actualizando avisos…'),
-                    error: (_, __) =>
-                        const Text('No se pudo consultar el contador.'),
+                    loading: () => const Text('Actualizando…'),
+                    error: (_, __) => const Text(''),
                   ),
+                  if (_items.any((item) => !item.read)) ...[
+                    const SizedBox(width: 8),
+                    TextButton(
+                        onPressed: _markAllRead,
+                        child: const Text('Marcar todo leído')),
+                  ],
                 ],
               ),
-              Wrap(spacing: 8, children: [
-                OutlinedButton.icon(
-                  onPressed: _enabling || _pushStatusLoading
-                      ? null
-                      : _pushEnabled
-                          ? _disablePush
-                          : _enablePush,
-                  icon: _enabling || _pushStatusLoading
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Icon(Icons.notifications_active_outlined),
-                  label: Text(_pushStatusLoading
-                      ? 'Verificando dispositivo…'
-                      : _pushEnabled
-                          ? 'Desactivar en este dispositivo'
-                          : 'Activar en este dispositivo'),
-                ),
-                if (_items.any((item) => !item.read))
-                  TextButton(
-                      onPressed: _markAllRead,
-                      child: const Text('Marcar todo como leído')),
-              ]),
             ],
           ),
         ),

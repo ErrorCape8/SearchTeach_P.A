@@ -38,6 +38,7 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
   String? _section;
   String _query = '';
   int _semesterFilter = 0;
+  String _modalityFilter = 'Todas';
   String _sessionFilter = 'disponibles';
   final ScrollController _sessionsScrollController = ScrollController();
 
@@ -82,8 +83,14 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
           const SizedBox(height: 20),
           _MenuTile(
             icon: Icons.event_available_outlined,
-            title: 'Tutores con horario disponible',
-            subtitle: 'Consulta los horarios disponibles para tu carrera.',
+            title: 'Sesiones disponibles',
+            subtitle: 'Elige una tutoría grupal y reserva tu cupo.',
+            onTap: () => _goToSection('publicadas'),
+          ),
+          _MenuTile(
+            icon: Icons.event_available_outlined,
+            title: 'Tutorías colectivas',
+            subtitle: 'Solicita una sesión con un docente de tu carrera.',
             onTap: () => _goToSection('tutores'),
           ),
           _MenuTile(
@@ -107,9 +114,8 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
           ),
           _MenuTile(
             icon: Icons.video_call_outlined,
-            title: 'Unirse a videoconferencias',
-            subtitle:
-                'Entra al chat y a la sala de las tutorias en las que estas inscrita.',
+            title: 'Unirse a clase',
+            subtitle: 'Entra al chat y a la videollamada de tus tutorías.',
             onTap: () => _goToSection('chats-videoconferencias'),
           ),
           _MenuTile(
@@ -120,7 +126,7 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
           ),
           _MenuTile(
             icon: Icons.history,
-            title: 'Historial',
+            title: 'Historial de clases',
             subtitle: 'Revisa tutorías realizadas o canceladas.',
             onTap: () => _goToSection('historial'),
           ),
@@ -974,7 +980,9 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
   }
 
   Widget _publishedGroupSessions({ScrollController? scrollController}) {
-    final sessions = widget.data.availableGroupSessions;
+    final sessions = widget.data.availableGroupSessions.where((session) =>
+        _modalityFilter == 'Todas' ||
+        session.modality.toUpperCase() == _modalityFilter.toUpperCase());
     if (sessions.isEmpty) {
       return ListView(
         controller: scrollController,
@@ -992,10 +1000,40 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
     return ListView.separated(
       controller: scrollController,
       padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
-      itemCount: sessions.length,
+      itemCount: sessions.length + 1,
       separatorBuilder: (_, __) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
-        final session = sessions[index];
+        if (index == 0) {
+          return Wrap(
+            spacing: 8,
+            children: [
+              for (final modality in const [
+                'Todas',
+                'VIRTUAL',
+                'PRESENCIAL',
+                'HIBRIDA',
+              ])
+                ChoiceChip(
+                  label: Text(switch (modality) {
+                    'VIRTUAL' => 'Virtual',
+                    'PRESENCIAL' => 'Presencial',
+                    'HIBRIDA' => 'Híbrida',
+                    _ => modality,
+                  }),
+                  selected: _modalityFilter == modality,
+                  onSelected: (_) => setState(() => _modalityFilter = modality),
+                  selectedColor: _blue,
+                  backgroundColor: Colors.white,
+                  side: BorderSide.none,
+                  labelStyle: TextStyle(
+                    color: _modalityFilter == modality ? Colors.white : _navy,
+                    fontSize: 12,
+                  ),
+                ),
+            ],
+          );
+        }
+        final session = sessions.elementAt(index - 1);
         AvailableTutor? teacher;
         for (final item in widget.data.tutors) {
           if (item.teacherId == session.teacherId) teacher = item;
@@ -1076,7 +1114,7 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
                         ? 'Límite alcanzado'
                         : hasScheduleConflict
                             ? 'Cruce de horario'
-                            : 'Inscribirme'),
+                            : 'Reservar'),
                   ),
                 ),
               ],
