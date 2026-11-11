@@ -59,11 +59,15 @@ class StudentHomeView extends StatelessWidget {
       }
     }
     upcoming.sort((a, b) => a.start.compareTo(b.start));
-    final recent = data.tutorings
-        .where((item) => item.status == 'REALIZADA')
-        .toList()
-      ..sort(
-          (a, b) => (b.start ?? DateTime(0)).compareTo(a.start ?? DateTime(0)));
+    final recent = <({String subject, DateTime? start})>[
+      for (final tutoring
+          in data.tutorings.where((item) => item.status == 'REALIZADA'))
+        (subject: tutoring.subject, start: tutoring.start),
+      for (final session
+          in data.groupSessions.where((item) => item.state == 'FINALIZADA'))
+        (subject: session.subject, start: session.start),
+    ]..sort(
+        (a, b) => (b.start ?? DateTime(0)).compareTo(a.start ?? DateTime(0)));
     return ListView(
       padding: const EdgeInsets.fromLTRB(28, 22, 24, 32),
       children: [
