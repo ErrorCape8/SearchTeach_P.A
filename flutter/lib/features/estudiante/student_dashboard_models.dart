@@ -501,6 +501,16 @@ Future<void> enrollInClassroomProjectCode({
   );
 }
 
+Future<void> leaveClassroomProject({
+  required Dio dio,
+  required String tutoringId,
+  required String projectId,
+}) async {
+  await dio.delete<void>(
+    '/api/estudiante/tutorias-colectivas/$tutoringId/proyectos/$projectId/inscripcion',
+  );
+}
+
 Future<void> enrollInTutoring({
   required Dio dio,
   required AvailableTutor tutor,

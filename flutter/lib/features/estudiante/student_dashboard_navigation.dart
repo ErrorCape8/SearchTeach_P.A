@@ -6,6 +6,7 @@ class _StudentHeader extends StatelessWidget {
   const _StudentHeader({
     required this.profile,
     required this.tab,
+    required this.tutoringSection,
     required this.showProfileShortcut,
     required this.onProfile,
     required this.onNotifications,
@@ -14,6 +15,7 @@ class _StudentHeader extends StatelessWidget {
 
   final StudentProfile profile;
   final int tab;
+  final String? tutoringSection;
   final bool showProfileShortcut;
   final VoidCallback onProfile;
   final VoidCallback onNotifications;
@@ -21,24 +23,34 @@ class _StudentHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final title = switch (tab) {
-      0 => 'Hola, ${profile.name.trim().split(' ').first}',
-      1 => 'Tutorías retroalimentativas',
-      2 => 'Mis tutorías',
-      3 => 'Historial',
-      4 => 'Proyectos de aula',
-      5 => profile.name,
-      _ => 'Avisos',
-    };
-    final subtitle = switch (tab) {
-      0 => 'Estudiante · ${profile.career} · Semestre ${profile.semester}',
-      1 => 'Únete a tutorías y consulta su estado',
-      2 => 'Únete a tutorías y revisa las que tienes registradas',
-      3 => 'Todas las tutorías que has realizado',
-      4 => 'Proyectos de aula de tu tecnología',
-      5 => 'Estudiante',
-      _ => 'Notificaciones dentro de la aplicación',
-    };
+    final section = tutoringSection ?? 'menu';
+    final title = tab == 0
+        ? 'Hola, ${profile.name.trim().split(' ').first}'
+        : tab == 1
+            ? switch (section) {
+                'tutores' => 'Sesiones disponibles',
+                'publicadas' => 'Tutorías colectivas',
+                'proyectos' => 'Asignación de proyecto de aula',
+                'seguimiento-proyecto' => 'Seguimiento de mi proyecto',
+                'proyectos-historial' => 'Proyectos de aula',
+                'sesiones' => 'Mis sesiones',
+                'historial' => 'Historial de clases',
+                'calificar' => 'Calificar tutorías',
+                'chats-videoconferencias' => 'Videoconferencias',
+                _ => 'Tutorías',
+              }
+            : tab == 2
+                ? profile.name
+                : 'Avisos';
+    final subtitle = tab == 0
+        ? 'Estudiante · ${profile.career} · Semestre ${profile.semester}'
+        : tab == 1
+            ? section == 'menu'
+                ? 'Consulta tus sesiones, proyectos e historial'
+                : 'Estudiante · ${profile.career}'
+            : tab == 2
+                ? 'Estudiante'
+                : 'Notificaciones';
     final initials = _studentInitials(profile.name);
     return Container(
       height: 92,
@@ -81,16 +93,13 @@ class _StudentHeader extends StatelessWidget {
           ),
           Row(
             children: [
-              if (tab > 4)
+              if (tab == 1 && section != 'menu')
                 IconButton(
-                  tooltip: 'Volver al inicio',
+                  tooltip: 'Volver a Tutorías',
                   onPressed: onBack,
                   visualDensity: VisualDensity.compact,
-                  icon: const Icon(
-                    Icons.arrow_back_ios_new,
-                    color: Colors.white,
-                    size: 12,
-                  ),
+                  icon: const Icon(Icons.arrow_back_ios_new,
+                      color: Colors.white, size: 16),
                 )
               else
                 CircleAvatar(
@@ -133,7 +142,7 @@ class _StudentHeader extends StatelessWidget {
                   ],
                 ),
               ),
-              if (tab <= 4 && showProfileShortcut)
+              if (tab <= 1 && showProfileShortcut)
                 IconButton(
                   tooltip: 'Mi perfil',
                   onPressed: onProfile,
@@ -184,10 +193,9 @@ class _StudentSidebar extends StatelessWidget {
 
   static const _items = [
     (Icons.home_outlined, 'Inicio'),
-    (Icons.desktop_windows_outlined, 'Tutorías retroalimentativas'),
-    (Icons.check_box_outline_blank, 'Mis tutorías'),
-    (Icons.history, 'Historial'),
-    (Icons.groups_outlined, 'Proyectos de aula'),
+    (Icons.event_note_outlined, 'Tutorías'),
+    (Icons.person_outline, 'Perfil'),
+    (Icons.notifications_none_outlined, 'Avisos'),
   ];
 
   @override
@@ -238,9 +246,7 @@ class _StudentSidebar extends StatelessWidget {
                   child: SizedBox(
                     height: 42,
                     child: Material(
-                      color: tab == index
-                          ? const Color(0xFFDCEEFF)
-                          : Colors.transparent,
+                      color: tab == index ? _blue : Colors.transparent,
                       borderRadius: BorderRadius.circular(7),
                       child: InkWell(
                         borderRadius: BorderRadius.circular(7),
@@ -251,7 +257,8 @@ class _StudentSidebar extends StatelessWidget {
                             Icon(
                               _items[index].$1,
                               size: 18,
-                              color: tab == index ? _blue : _studentMuted,
+                              color:
+                                  tab == index ? Colors.white : _studentMuted,
                             ),
                             const SizedBox(width: 7),
                             Expanded(
@@ -260,7 +267,7 @@ class _StudentSidebar extends StatelessWidget {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
-                                  color: tab == index ? _blue : _navy,
+                                  color: tab == index ? Colors.white : _navy,
                                   fontSize: 12,
                                   fontWeight: FontWeight.w500,
                                 ),
@@ -282,13 +289,13 @@ class _StudentSidebar extends StatelessWidget {
                 child: Container(
                   decoration: BoxDecoration(
                     color:
-                        tab == 5 ? const Color(0xFFDCEEFF) : Colors.transparent,
+                        tab == 2 ? const Color(0xFFDCEEFF) : Colors.transparent,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
                     children: [
                       InkWell(
-                        onTap: () => onSelect(5),
+                        onTap: () => onSelect(2),
                         borderRadius: BorderRadius.circular(20),
                         child: CircleAvatar(
                           radius: 16,
@@ -305,7 +312,7 @@ class _StudentSidebar extends StatelessWidget {
                       const SizedBox(width: 5),
                       Expanded(
                         child: InkWell(
-                          onTap: () => onSelect(5),
+                          onTap: () => onSelect(2),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [

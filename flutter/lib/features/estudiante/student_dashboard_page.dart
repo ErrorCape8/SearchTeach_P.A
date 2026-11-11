@@ -64,8 +64,8 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage>
     final data = ref.watch(studentDashboardProvider);
     final groupSessions = ref.watch(studentGroupSessionsProvider);
     final width = MediaQuery.sizeOf(context).width;
-    final wide = width >= 980;
-    final showAside = width >= 1400 && _tab == 0;
+    final wide = width >= 760;
+    final showAside = width >= 760 && _tab == 0;
     return Theme(
       data: withRoleAccent(
         Theme.of(context).copyWith(
@@ -108,10 +108,11 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage>
                         _StudentHeader(
                           profile: value.profile,
                           tab: _tab,
+                          tutoringSection: _tab == 1 ? _focusTutoring : null,
                           showProfileShortcut: !wide,
-                          onProfile: () => _selectTab(5),
-                          onNotifications: () => _selectTab(6),
-                          onBack: () => _selectTab(0),
+                          onProfile: () => _selectTab(2),
+                          onNotifications: () => _selectTab(3),
+                          onBack: () => _openTutorSection('menu'),
                         ),
                         Expanded(
                           child: Row(
@@ -124,29 +125,32 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage>
                                   children: [
                                     StudentHomeView(
                                       data: dashboard,
+                                      onOpenSessions: () =>
+                                          _openTutorSection('sesiones'),
+                                      onOpenHistory: () =>
+                                          _openTutorSection('historial'),
                                     ),
-                                    for (var sectionIndex = 1;
-                                        sectionIndex <= 4;
-                                        sectionIndex++)
-                                      StudentTutoringView(
-                                        key: ValueKey(sectionIndex),
-                                        data: dashboard,
-                                        focusSection: _tab == sectionIndex &&
-                                                _focusTutoring != null
-                                            ? _focusTutoring
-                                            : _sectionForTab(sectionIndex),
-                                        focusRequest: _focusRequest,
-                                        onEnroll: (tutor) =>
-                                            _enroll(value, tutor),
-                                        onProjectEnrollment:
-                                            _toggleProjectEnrollment,
-                                        onJoinProjectCode: _joinProjectByCode,
-                                        onLeaveGroupSession: _leaveGroupSession,
-                                        onJoinPublishedSession: (session) =>
-                                            _joinPublishedSession(session),
-                                        onAction: _tutoringAction,
-                                        onShowMessage: _showMessage,
-                                      ),
+                                    StudentTutoringView(
+                                      key: const ValueKey('student-tutoring'),
+                                      data: dashboard,
+                                      focusSection:
+                                          _tab == 1 && _focusTutoring != null
+                                              ? _focusTutoring
+                                              : 'menu',
+                                      focusRequest: _focusRequest,
+                                      onEnroll: (tutor) =>
+                                          _enroll(value, tutor),
+                                      onProjectEnrollment:
+                                          _toggleProjectEnrollment,
+                                      onJoinProjectCode: _joinProjectByCode,
+                                      onLeaveGroupSession: _leaveGroupSession,
+                                      onJoinPublishedSession: (session) =>
+                                          _joinPublishedSession(session),
+                                      onAction: _tutoringAction,
+                                      onShowMessage: _showMessage,
+                                      onSectionChanged: (section) => setState(
+                                          () => _focusTutoring = section),
+                                    ),
                                     StudentProfileView(
                                       profile: value.profile,
                                       onTeacherMode: value.profile.role
@@ -184,7 +188,7 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage>
                 data: (_) => SlidingPillNavigationBar(
                   selectedColor: _blue,
                   indicatorColor: const Color(0xFFDCEEFF),
-                  selectedIndex: _tab > 4 ? 0 : _tab,
+                  selectedIndex: _tab.clamp(0, 3),
                   onDestinationSelected: _selectTab,
                   destinations: const [
                     SlidingPillDestination(
@@ -192,19 +196,17 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage>
                         selectedIcon: Icons.home,
                         label: 'Inicio'),
                     SlidingPillDestination(
-                        icon: Icons.desktop_windows_outlined,
-                        selectedIcon: Icons.desktop_windows,
-                        label: 'Tutorías retroalimentativas'),
+                        icon: Icons.event_note_outlined,
+                        selectedIcon: Icons.event_note,
+                        label: 'Tutorías'),
                     SlidingPillDestination(
-                        icon: Icons.check_box_outline_blank,
-                        selectedIcon: Icons.check_box,
-                        label: 'Mis tutorías'),
+                        icon: Icons.person_outline,
+                        selectedIcon: Icons.person,
+                        label: 'Perfil'),
                     SlidingPillDestination(
-                        icon: Icons.history, label: 'Historial'),
-                    SlidingPillDestination(
-                        icon: Icons.groups_outlined,
-                        selectedIcon: Icons.groups,
-                        label: 'Proyectos'),
+                        icon: Icons.notifications_none_outlined,
+                        selectedIcon: Icons.notifications,
+                        label: 'Avisos'),
                   ],
                 ),
               ),
@@ -214,29 +216,15 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage>
 
   void _selectTab(int tab) => setState(() {
         _tab = tab;
-        if (tab >= 1 && tab <= 4) {
-          _focusTutoring = _sectionForTab(tab);
-        }
+        _focusTutoring = tab == 1 ? 'menu' : null;
         _focusRequest++;
       });
 
   void _openTutorSection(String section) => setState(() {
         _focusTutoring = section;
         _focusRequest++;
-        _tab = switch (section) {
-          'tutores' || 'publicadas' => 1,
-          'historial' => 3,
-          'proyectos' || 'proyectos-historial' || 'seguimiento-proyecto' => 4,
-          _ => 2,
-        };
+        _tab = 1;
       });
-
-  String _sectionForTab(int tab) => switch (tab) {
-        1 => 'sesiones',
-        2 => 'menu',
-        3 => 'historial',
-        _ => 'proyectos',
-      };
 
   Future<void> _enroll(
     StudentDashboardData data,

@@ -12,6 +12,7 @@ class StudentTutoringView extends ConsumerStatefulWidget {
     required this.onJoinPublishedSession,
     required this.onAction,
     required this.onShowMessage,
+    required this.onSectionChanged,
     super.key,
   });
 
@@ -26,6 +27,7 @@ class StudentTutoringView extends ConsumerStatefulWidget {
       onJoinPublishedSession;
   final Future<void> Function(StudentTutoring tutoring, String action) onAction;
   final void Function(String message) onShowMessage;
+  final ValueChanged<String> onSectionChanged;
 
   @override
   ConsumerState<StudentTutoringView> createState() =>
@@ -65,6 +67,11 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
     return _sectionContent();
   }
 
+  void _goToSection(String section) {
+    setState(() => _section = section);
+    widget.onSectionChanged(section);
+  }
+
   Widget _menu() => ListView(
         padding: const EdgeInsets.all(24),
         children: [
@@ -76,53 +83,52 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
           _MenuTile(
             icon: Icons.event_available_outlined,
             title: 'Tutores con horario disponible',
-            subtitle:
-                'Consulta los horarios disponibles para tu carrera.',
-            onTap: () => setState(() => _section = 'tutores'),
+            subtitle: 'Consulta los horarios disponibles para tu carrera.',
+            onTap: () => _goToSection('tutores'),
           ),
           _MenuTile(
             icon: Icons.groups_outlined,
-            title: 'Tutorías de proyectos de aula',
-            subtitle: 'Inscríbete o desiste de un espacio de tu tecnología.',
-            onTap: () => setState(() => _section = 'proyectos'),
+            title: 'Asignación de proyecto de aula',
+            subtitle: 'Inscríbete en un espacio disponible para tu tecnología.',
+            onTap: () => _goToSection('proyectos'),
           ),
           _MenuTile(
             icon: Icons.assignment_outlined,
             title: 'Seguimiento de mi proyecto',
             subtitle:
                 'Consulta los reportes del tutor, el horario y las respuestas.',
-            onTap: () => setState(() => _section = 'seguimiento-proyecto'),
+            onTap: () => _goToSection('seguimiento-proyecto'),
           ),
           _MenuTile(
             icon: Icons.folder_shared_outlined,
             title: 'Proyectos de aula',
             subtitle: 'Consulta tus proyectos activos y finalizados.',
-            onTap: () => setState(() => _section = 'proyectos-historial'),
+            onTap: () => _goToSection('proyectos-historial'),
           ),
           _MenuTile(
             icon: Icons.video_call_outlined,
             title: 'Unirse a videoconferencias',
             subtitle:
                 'Entra al chat y a la sala de las tutorias en las que estas inscrita.',
-            onTap: () => setState(() => _section = 'chats-videoconferencias'),
+            onTap: () => _goToSection('chats-videoconferencias'),
           ),
           _MenuTile(
             icon: Icons.event_note_outlined,
             title: 'Mis sesiones',
             subtitle: 'Consulta las tutorías programadas y en curso.',
-            onTap: () => setState(() => _section = 'sesiones'),
+            onTap: () => _goToSection('sesiones'),
           ),
           _MenuTile(
             icon: Icons.history,
             title: 'Historial',
             subtitle: 'Revisa tutorías realizadas o canceladas.',
-            onTap: () => setState(() => _section = 'historial'),
+            onTap: () => _goToSection('historial'),
           ),
           _MenuTile(
             icon: Icons.star_outline,
             title: 'Calificar tutorías',
             subtitle: 'Valora una tutoría solamente después de finalizarla.',
-            onTap: () => setState(() => _section = 'calificar'),
+            onTap: () => _goToSection('calificar'),
           ),
         ],
       );
@@ -277,6 +283,21 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
                                       }
                                     },
                                   ),
+                                if (item.status == 'EN_CURSO' &&
+                                    item.tutoringState == 'ACTIVA')
+                                  Align(
+                                    alignment: Alignment.centerRight,
+                                    child: TextButton.icon(
+                                      onPressed: () =>
+                                          _leaveClassroomProject(item),
+                                      icon: const Icon(Icons.exit_to_app),
+                                      label:
+                                          const Text('Desistir del proyecto'),
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: Colors.red.shade700,
+                                      ),
+                                    ),
+                                  ),
                               ]),
                         ),
                       ),
@@ -284,6 +305,45 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
                 );
         },
       );
+
+  Future<void> _leaveClassroomProject(StudentProjectFollowup project) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Desistir del proyecto'),
+        content: Text(
+            '¿Quieres salir de “${project.project.name}”? Perderás acceso a su seguimiento y chat.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red.shade700),
+            child: const Text('Confirmar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await leaveClassroomProject(
+        dio: ref.read(dioProvider),
+        tutoringId: project.tutoringId,
+        projectId: project.project.projectId,
+      );
+      ref.invalidate(studentProjectFollowupProvider);
+      ref.invalidate(studentDashboardProvider);
+      widget.onShowMessage('Saliste del proyecto de aula.');
+    } on DioException catch (error) {
+      final response = error.response?.data;
+      final message = response is Map && response['message'] is String
+          ? response['message'] as String
+          : 'No se pudo desistir del proyecto.';
+      widget.onShowMessage(message);
+    }
+  }
 
   Widget _projectHistory() => ref.watch(studentProjectFollowupProvider).when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -663,12 +723,12 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
 
   Widget _projectSpaces() {
     final career = widget.data.profile.career.trim();
-    final enrolledProjects = widget.data.projectSpaces.where((space) =>
-        !space.createProjectSlot &&
-        space.enrolled);
+    final enrolledProjects = widget.data.projectSpaces
+        .where((space) => !space.createProjectSlot && space.enrolled);
     final spaces = widget.data.projectSpaces
         .where((space) =>
-            space.createProjectSlot && (career.isEmpty || space.career == career))
+            space.createProjectSlot &&
+            (career.isEmpty || space.career == career))
         .where((_) => enrolledProjects.isEmpty)
         .toList()
       ..sort((a, b) => a.semester.compareTo(b.semester));
@@ -686,10 +746,10 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
             icon: Icons.groups_outlined,
             title: alreadyEnrolled
                 ? 'Ya tienes un proyecto inscrito'
-                : 'No hay espacios para crear un proyecto',
+                : 'No hay espacios disponibles para inscripción',
             message: alreadyEnrolled
                 ? 'Consulta el estado de tu equipo en Seguimiento de proyecto.'
-                : 'Cuando coordinación habilite un grupo para tu tecnología, aquí podrás crear tu proyecto de aula.',
+                : 'Cuando coordinación habilite un espacio para tu tecnología, aparecerá aquí.',
           ),
         ],
       );
@@ -711,14 +771,14 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
                 Text('Semestre ${space.semester}',
                     style: const TextStyle(fontWeight: FontWeight.w700)),
                 const SizedBox(height: 6),
-                const Text('Crear proyecto'),
+                const Text('Espacio disponible para proyecto de aula'),
                 Text(space.career, style: const TextStyle(color: _muted)),
                 const SizedBox(height: 8),
                 Align(
                   alignment: Alignment.centerRight,
                   child: FilledButton.tonal(
                     onPressed: () => widget.onProjectEnrollment(space),
-                    child: const Text('Crear proyecto'),
+                    child: const Text('Inscribir PA'),
                   ),
                 ),
               ],
@@ -1177,7 +1237,8 @@ class _GroupChatAndCallCard extends StatelessWidget {
   }
 }
 
-String _groupSessionModalityLabel(String value) => switch (value.toUpperCase()) {
+String _groupSessionModalityLabel(String value) =>
+    switch (value.toUpperCase()) {
       'PRESENCIAL' => 'Presencial',
       'HIBRIDA' => 'Híbrida',
       'VIRTUAL' => 'Virtual',
