@@ -109,7 +109,11 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage>
                           profile: value.profile,
                           tab: _tab,
                           tutoringSection: _tab == 1 ? _focusTutoring : null,
-                          showProfileShortcut: !wide,
+                          showProfileShortcut: false,
+                          onRefresh: () {
+                            ref.invalidate(studentDashboardProvider);
+                            ref.invalidate(studentGroupSessionsProvider);
+                          },
                           onProfile: () => _selectTab(2),
                           onNotifications: () => _selectTab(3),
                           onBack: () => _openTutorSection('menu'),
@@ -166,6 +170,7 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage>
                                       ),
                                       const NotificationsInbox(
                                         accentColor: _blue,
+                                        htmlStyle: true,
                                       ),
                                     ],
                                   ),

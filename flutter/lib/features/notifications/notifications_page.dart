@@ -131,9 +131,14 @@ class NotificationsPage extends StatelessWidget {
 }
 
 class NotificationsInbox extends ConsumerStatefulWidget {
-  const NotificationsInbox({super.key, this.accentColor});
+  const NotificationsInbox({
+    super.key,
+    this.accentColor,
+    this.htmlStyle = false,
+  });
 
   final Color? accentColor;
+  final bool htmlStyle;
   @override
   ConsumerState<NotificationsInbox> createState() => _NotificationsInboxState();
 }
@@ -286,25 +291,41 @@ class _NotificationsInboxState extends ConsumerState<NotificationsInbox> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(24, 18, 24, 8),
+          padding: EdgeInsets.fromLTRB(
+            widget.htmlStyle ? 22 : 24,
+            18,
+            widget.htmlStyle ? 22 : 24,
+            8,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Card(
                 margin: EdgeInsets.zero,
+                elevation: 2,
+                shadowColor: const Color(0x12141E3C),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18)),
                 child: SwitchListTile(
-                  secondary: CircleAvatar(
-                    backgroundColor: Theme.of(context)
-                        .colorScheme
-                        .primary
-                        .withValues(alpha: .1),
+                  secondary: Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withValues(alpha: .1),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                     child: Icon(Icons.notifications_active_outlined,
                         color: Theme.of(context).colorScheme.primary),
                   ),
                   title: const Text('Notificaciones en este dispositivo',
-                      style: TextStyle(fontWeight: FontWeight.w800)),
+                      style:
+                          TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
                   subtitle: const Text(
-                      'Recibe avisos de tutorías y actividad académica.'),
+                      'Recibe avisos de tutorías y actividad académica.',
+                      style: TextStyle(fontSize: 11)),
                   value: _pushEnabled,
                   onChanged: _enabling || _pushStatusLoading
                       ? null
@@ -315,10 +336,11 @@ class _NotificationsInboxState extends ConsumerState<NotificationsInbox> {
               const SizedBox(height: 16),
               Row(
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: Text('Recientes',
                         style: TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.w800)),
+                            fontSize: widget.htmlStyle ? 15 : 16,
+                            fontWeight: FontWeight.w800)),
                   ),
                   unreadCount.when(
                     data: (count) => Text(
@@ -373,112 +395,128 @@ class _NotificationsInboxState extends ConsumerState<NotificationsInbox> {
                                   ])))
                       : RefreshIndicator(
                           onRefresh: _load,
-                          child: ListView.separated(
-                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                            itemCount: _items.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(height: 8),
-                            itemBuilder: (context, index) {
-                              final item = _items[index];
-                              return Card(
-                                  elevation: item.read ? 0 : 1,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(14),
-                                    side: BorderSide(
-                                      color: item.read
-                                          ? const Color(0xFFE7EAF0)
-                                          : Theme.of(context)
-                                              .colorScheme
-                                              .primary
-                                              .withValues(alpha: .35),
-                                    ),
-                                  ),
-                                  child: ExpansionTile(
-                                    leading: CircleAvatar(
-                                      backgroundColor: item.read
-                                          ? Colors.blueGrey
-                                              .withValues(alpha: .12)
-                                          : Theme.of(context)
-                                              .colorScheme
-                                              .primary
-                                              .withValues(alpha: .12),
-                                      child: Icon(
-                                          item.read
-                                              ? Icons.notifications_none
-                                              : Icons
-                                                  .notifications_active_outlined,
-                                          color: item.read
-                                              ? Colors.blueGrey
-                                              : Theme.of(context)
-                                                  .colorScheme
-                                                  .primary),
-                                    ),
-                                    title: Text(item.title,
-                                        style: TextStyle(
-                                            fontWeight: item.read
-                                                ? FontWeight.w500
-                                                : FontWeight.w800)),
-                                    subtitle: Padding(
-                                        padding: const EdgeInsets.only(top: 5),
-                                        child: Text(
-                                          _notificationPreview(item.message),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        )),
-                                    initiallyExpanded: _expandedNotifications
-                                        .contains(item.id),
-                                    onExpansionChanged: (expanded) {
-                                      setState(() {
-                                        if (expanded) {
-                                          _expandedNotifications.add(item.id);
-                                        } else {
-                                          _expandedNotifications
-                                              .remove(item.id);
-                                        }
-                                      });
-                                      if (expanded) _markRead(item);
-                                    },
-                                    children: [
-                                      Padding(
-                                        padding: const EdgeInsets.fromLTRB(
-                                            16, 0, 16, 12),
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(item.message),
-                                            if (item.createdAt != null) ...[
-                                              const SizedBox(height: 8),
-                                              Text(
-                                                _dateLabel(item.createdAt!),
-                                                style: TextStyle(
-                                                  color: Colors.grey.shade600,
-                                                  fontSize: 12,
-                                                ),
-                                              ),
-                                            ],
-                                            if (item.route != null &&
-                                                item.route != '/notificaciones')
-                                              Align(
-                                                alignment:
-                                                    Alignment.centerRight,
-                                                child: TextButton.icon(
-                                                  onPressed: () =>
-                                                      _markReadAndNavigate(
-                                                          item),
-                                                  icon: const Icon(
-                                                      Icons.open_in_new),
-                                                  label:
-                                                      const Text('Ver detalle'),
-                                                ),
-                                              ),
-                                          ],
-                                        ),
+                          child: widget.htmlStyle
+                              ? ListView(
+                                  padding:
+                                      const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                                  children: [
+                                    Card(
+                                      margin: EdgeInsets.zero,
+                                      elevation: 2,
+                                      shadowColor: const Color(0x12141E3C),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(18),
                                       ),
-                                    ],
-                                  ));
-                            },
-                          )),
+                                      child: Column(
+                                        children: [
+                                          for (var index = 0;
+                                              index < _items.length;
+                                              index++) ...[
+                                            if (index > 0)
+                                              const Padding(
+                                                padding: EdgeInsets.symmetric(
+                                                    horizontal: 14),
+                                                child: Divider(
+                                                    height: 1,
+                                                    color: Color(0xFFE8EBF1)),
+                                              ),
+                                            _notificationTile(
+                                                context, _items[index]),
+                                          ],
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : ListView.separated(
+                                  padding:
+                                      const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                                  itemCount: _items.length,
+                                  separatorBuilder: (_, __) =>
+                                      const SizedBox(height: 8),
+                                  itemBuilder: (context, index) =>
+                                      _notificationTile(context, _items[index]),
+                                )),
+        ),
+      ],
+    );
+  }
+
+  Widget _notificationTile(BuildContext context, NotificationItem item) {
+    final accent = Theme.of(context).colorScheme.primary;
+    return ExpansionTile(
+      tilePadding: EdgeInsets.symmetric(
+        horizontal: widget.htmlStyle ? 14 : 16,
+        vertical: widget.htmlStyle ? 1 : 0,
+      ),
+      leading: Container(
+        width: widget.htmlStyle ? 40 : 42,
+        height: widget.htmlStyle ? 40 : 42,
+        decoration: BoxDecoration(
+          color: item.read
+              ? Colors.blueGrey.withValues(alpha: .12)
+              : accent.withValues(alpha: .12),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Icon(
+          item.read
+              ? Icons.notifications_none
+              : Icons.notifications_active_outlined,
+          color: item.read ? Colors.blueGrey : accent,
+        ),
+      ),
+      title: Text(
+        item.title,
+        style: TextStyle(
+          fontSize: widget.htmlStyle ? 13 : null,
+          fontWeight: item.read ? FontWeight.w500 : FontWeight.w800,
+        ),
+      ),
+      subtitle: Padding(
+        padding: const EdgeInsets.only(top: 4),
+        child: Text(
+          _notificationPreview(item.message),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(fontSize: widget.htmlStyle ? 11 : null),
+        ),
+      ),
+      initiallyExpanded: _expandedNotifications.contains(item.id),
+      onExpansionChanged: (expanded) {
+        setState(() {
+          if (expanded) {
+            _expandedNotifications.add(item.id);
+          } else {
+            _expandedNotifications.remove(item.id);
+          }
+        });
+        if (expanded) _markRead(item);
+      },
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(item.message),
+              if (item.createdAt != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  _dateLabel(item.createdAt!),
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                ),
+              ],
+              if (item.route != null && item.route != '/notificaciones')
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: () => _markReadAndNavigate(item),
+                    icon: const Icon(Icons.open_in_new),
+                    label: const Text('Ver detalle'),
+                  ),
+                ),
+            ],
+          ),
         ),
       ],
     );

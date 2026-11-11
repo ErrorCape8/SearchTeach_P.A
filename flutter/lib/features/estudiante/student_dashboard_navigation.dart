@@ -8,6 +8,7 @@ class _StudentHeader extends StatelessWidget {
     required this.tab,
     required this.tutoringSection,
     required this.showProfileShortcut,
+    required this.onRefresh,
     required this.onProfile,
     required this.onNotifications,
     required this.onBack,
@@ -17,6 +18,7 @@ class _StudentHeader extends StatelessWidget {
   final int tab;
   final String? tutoringSection;
   final bool showProfileShortcut;
+  final VoidCallback onRefresh;
   final VoidCallback onProfile;
   final VoidCallback onNotifications;
   final VoidCallback onBack;
@@ -28,9 +30,9 @@ class _StudentHeader extends StatelessWidget {
         ? 'Hola, ${profile.name.trim().split(' ').first}'
         : tab == 1
             ? switch (section) {
-                'tutores' => 'Sesiones disponibles',
-                'publicadas' => 'Tutorías colectivas',
-                'proyectos' => 'Asignación de proyecto de aula',
+                'tutores' => 'Tutorías colectivas',
+                'publicadas' => 'Sesiones disponibles',
+                'proyectos' => 'Proyecto de aula',
                 'seguimiento-proyecto' => 'Seguimiento de mi proyecto',
                 'proyectos-historial' => 'Proyectos de aula',
                 'sesiones' => 'Mis sesiones',
@@ -43,18 +45,22 @@ class _StudentHeader extends StatelessWidget {
                 ? profile.name
                 : 'Avisos';
     final subtitle = tab == 0
-        ? 'Estudiante · ${profile.career} · Semestre ${profile.semester}'
+        ? [
+            'Estudiante',
+            if (profile.career.isNotEmpty) profile.career,
+            if (profile.semester > 0) 'Semestre ${profile.semester}',
+          ].join(' · ')
         : tab == 1
             ? section == 'menu'
-                ? 'Consulta tus sesiones, proyectos e historial'
+                ? 'Todo sobre tus sesiones'
                 : 'Estudiante · ${profile.career}'
             : tab == 2
                 ? 'Estudiante'
                 : 'Notificaciones';
     final initials = _studentInitials(profile.name);
     return Container(
-      height: 110,
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      height: 72,
+      padding: const EdgeInsets.symmetric(horizontal: 18),
       clipBehavior: Clip.hardEdge,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -159,11 +165,43 @@ class _StudentHeader extends StatelessWidget {
               const SizedBox(width: 8),
               Material(
                 color: Colors.white.withValues(alpha: .16),
+                borderRadius: BorderRadius.circular(22),
+                child: InkWell(
+                  onTap: onRefresh,
+                  borderRadius: BorderRadius.circular(22),
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.sync, color: Colors.white, size: 15),
+                        if (MediaQuery.sizeOf(context).width >= 600) ...[
+                          const SizedBox(width: 5),
+                          const Text(
+                            'Actualizar',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Material(
+                color: Colors.white.withValues(alpha: .16),
                 shape: const CircleBorder(),
                 child: IconButton(
                   tooltip: 'Avisos',
                   onPressed: onNotifications,
                   visualDensity: VisualDensity.compact,
+                  constraints:
+                      const BoxConstraints.tightFor(width: 38, height: 38),
                   icon: const NotificationUnreadIcon(
                     icon: Icons.notifications_none_outlined,
                   ),
@@ -202,7 +240,7 @@ class _StudentSidebar extends StatelessWidget {
   Widget build(BuildContext context) => Material(
         color: Colors.white,
         child: SizedBox(
-          width: 204,
+          width: 190,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -408,7 +446,7 @@ class _StudentSidePanel extends StatelessWidget {
     final bookedDates = sessions.map((item) => item.start).toList();
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(0, 14, 16, 20),
+      padding: const EdgeInsets.fromLTRB(0, 18, 16, 20),
       children: [
         _StudentCalendarCard(now: now, bookedDates: bookedDates),
         const SizedBox(height: 14),
@@ -418,7 +456,7 @@ class _StudentSidePanel extends StatelessWidget {
             'Próximas sesiones',
             style: TextStyle(
               color: _navy,
-              fontSize: 10,
+              fontSize: 12,
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -483,9 +521,9 @@ class _StudentCalendarCard extends StatelessWidget {
       color: Colors.white,
       elevation: 2,
       shadowColor: const Color(0x14000000),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(10, 10, 10, 8),
+        padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -493,7 +531,7 @@ class _StudentCalendarCard extends StatelessWidget {
               '$month ${now.year}',
               style: const TextStyle(
                 color: Color(0xFF202B3A),
-                fontSize: 9,
+                fontSize: 12,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -514,7 +552,7 @@ class _StudentCalendarCard extends StatelessWidget {
                   ),
               ],
             ),
-            const SizedBox(height: 3),
+            const SizedBox(height: 5),
             for (var week = 0; week < 6; week++)
               Row(
                 children: [
@@ -532,7 +570,7 @@ class _StudentCalendarCard extends StatelessWidget {
             const SizedBox(height: 5),
             const Text(
               'Hoy y los días con sesiones están marcados.',
-              style: TextStyle(color: _studentMuted, fontSize: 7),
+              style: TextStyle(color: _studentMuted, fontSize: 9),
             ),
           ],
         ),
@@ -558,11 +596,11 @@ class _StudentCalendarCard extends StatelessWidget {
         item.day == date.day);
     final selected = isToday || hasSession;
     return SizedBox(
-      height: 19,
+      height: 25,
       child: Center(
         child: Container(
-          width: 21,
-          height: 16,
+          width: 25,
+          height: 22,
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: isToday
@@ -580,7 +618,7 @@ class _StudentCalendarCard extends StatelessWidget {
                   : selected
                       ? const Color(0xFF0D4FC4)
                       : const Color(0xFF273444),
-              fontSize: 10,
+              fontSize: 11,
               fontWeight: isToday ? FontWeight.w700 : FontWeight.normal,
             ),
           ),
@@ -605,14 +643,14 @@ class _UpcomingSessionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final time = TimeOfDay.fromDateTime(item.start).format(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const CircleAvatar(
-            radius: 10,
+            radius: 12,
             backgroundColor: Color(0xFFE6EEFF),
-            child: Icon(Icons.groups_outlined, color: _blue, size: 11),
+            child: Icon(Icons.groups_outlined, color: _blue, size: 13),
           ),
           const SizedBox(width: 6),
           Expanded(
@@ -625,7 +663,7 @@ class _UpcomingSessionTile extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: Color(0xFF202B3A),
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -635,7 +673,7 @@ class _UpcomingSessionTile extends StatelessWidget {
                   '${item.location.isEmpty ? '' : ' · ${item.location}'}',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: _studentMuted, fontSize: 7),
+                  style: const TextStyle(color: _studentMuted, fontSize: 9),
                 ),
               ],
             ),

@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/api_client.dart';
 import '../../core/tutoring_updates.dart';
 import '../../core/widgets/brand_logo.dart';
+import '../../core/widgets/role_summary_banner.dart';
 import '../../core/widgets/sliding_pill_navigation_bar.dart';
 import '../auth/auth_repository.dart';
 import '../notifications/notifications_page.dart';
@@ -428,8 +429,20 @@ class _HomeView extends StatelessWidget {
     final assignedLeaders =
         groups.where((group) => group['docenteLiderId'] is String).length;
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
       children: [
+        RoleSummaryBanner(
+          title: 'Panel de coordinación',
+          subtitle: unscheduled.isEmpty
+              ? 'Los horarios y grupos de tutoría están al día.'
+              : 'Hay ${unscheduled.length} tutores que requieren horario.',
+          metric: 'Grupos con líder',
+          value: '$assignedLeaders/${groups.length}',
+          accentColor: _wine,
+          darkColor: _wineDark,
+          icon: Icons.calendar_month_outlined,
+        ),
+        const SizedBox(height: 16),
         Row(children: [
           Expanded(
               child: _Metric(

@@ -120,15 +120,14 @@ class AdminInicioView extends ConsumerWidget {
               title: 'Cuentas sin activar: $accountsWithoutPassword',
               subtitle: 'Usuarios que todavía no han creado su contraseña.',
               trailing: Icons.chevron_right,
-              onTap: () => ref
-                  .read(adminControllerProvider.notifier)
-                  .setTab(1),
+              onTap: () => ref.read(adminControllerProvider.notifier).setTab(1),
             ),
           const SizedBox(height: 10),
           _ActionSummaryCard(
             icon: Icons.notifications_active_outlined,
             title: 'Notificaciones push y recordatorios',
-            subtitle: 'Avisos en el dispositivo y por correo antes de cada tutoría.',
+            subtitle:
+                'Avisos en el dispositivo y por correo antes de cada tutoría.',
             trailing: Icons.notifications_none_outlined,
             onTap: () => context.push('/notificaciones'),
           ),
@@ -173,17 +172,19 @@ class _SummaryBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.fromLTRB(15, 13, 15, 12),
+        padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [Colors.white, Color(0xFFFFF1E2)],
+            colors: [Color(0xFFEA580C), Color(0xFFC2410C)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(22),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: .05),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
+              color: const Color(0xFFEA580C).withValues(alpha: .2),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
@@ -196,16 +197,16 @@ class _SummaryBanner extends StatelessWidget {
                   Text(
                     _dateLabel(DateTime.now()),
                     style: const TextStyle(
-                      color: Color(0xFF8A93A2),
-                      fontSize: 11,
+                      color: Color(0xFFFFD8B8),
+                      fontSize: 12,
                     ),
                   ),
                   const SizedBox(height: 4),
                   const Text(
                     'Resumen del sistema',
                     style: TextStyle(
-                      color: Color(0xFF1E293B),
-                      fontSize: 15,
+                      color: Colors.white,
+                      fontSize: 18,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -215,10 +216,10 @@ class _SummaryBanner extends StatelessWidget {
                     '${pendingCertifications.valueOrNull ?? '…'} '
                     'solicitud(es) de certificado por revisar.'
                     '${isLoadingUsers ? ' Cargando cuentas sin contraseña…' : hasUsersError ? ' No se pudo consultar la activación de cuentas.' : accountsWithoutPassword > 0 ? ' $accountsWithoutPassword cuentas aún no han creado su contraseña.' : ''}',
-                    style: const TextStyle(
-                      color: Color(0xFF64748B),
-                      fontSize: 11,
-                      height: 1.35,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: .86),
+                      fontSize: 12,
+                      height: 1.4,
                     ),
                   ),
                 ],
@@ -226,10 +227,14 @@ class _SummaryBanner extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             Text(
-              isLoadingUsers ? '…' : hasUsersError ? '!' : '$accountsWithoutPassword',
+              isLoadingUsers
+                  ? '…'
+                  : hasUsersError
+                      ? '!'
+                      : '$accountsWithoutPassword',
               style: const TextStyle(
-                color: Color(0xFFFFD8B8),
-                fontSize: 40,
+                color: Colors.white,
+                fontSize: 44,
                 fontWeight: FontWeight.w900,
               ),
             ),

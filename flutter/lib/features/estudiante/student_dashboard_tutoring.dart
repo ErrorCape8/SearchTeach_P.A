@@ -74,30 +74,44 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
   }
 
   Widget _menu() => ListView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
         children: [
-          const _PageHeading(
-            title: 'Tutorías',
-            subtitle: 'Encuentra apoyo académico y revisa tus sesiones.',
-          ),
-          const SizedBox(height: 20),
           _MenuTile(
-            icon: Icons.event_available_outlined,
+            icon: Icons.monitor_outlined,
             title: 'Sesiones disponibles',
-            subtitle: 'Elige una tutoría grupal y reserva tu cupo.',
+            subtitle: 'Materia, docente, horario y modalidad.',
             onTap: () => _goToSection('publicadas'),
           ),
           _MenuTile(
-            icon: Icons.event_available_outlined,
+            icon: Icons.calendar_month_outlined,
+            title: 'Mis sesiones',
+            subtitle: 'Las sesiones en las que estás inscrito.',
+            onTap: () => _goToSection('sesiones'),
+          ),
+          _MenuTile(
+            icon: Icons.groups_outlined,
             title: 'Tutorías colectivas',
-            subtitle: 'Solicita una sesión con un docente de tu carrera.',
+            subtitle: 'Cronograma de tu semestre, docentes y aula.',
             onTap: () => _goToSection('tutores'),
           ),
           _MenuTile(
             icon: Icons.groups_outlined,
-            title: 'Asignación de proyecto de aula',
-            subtitle: 'Inscríbete en un espacio disponible para tu tecnología.',
+            title: 'Proyecto de aula',
+            subtitle: 'Crea tu proyecto o únete con un código.',
             onTap: () => _goToSection('proyectos'),
+          ),
+          _MenuTile(
+            icon: Icons.history_outlined,
+            title: 'Historial de clases',
+            subtitle: 'Las clases que ya has tenido.',
+            onTap: () => _goToSection('historial'),
+          ),
+          _MenuTile(
+            icon: Icons.play_circle_outline,
+            title: 'Unirse a clase',
+            subtitle: 'Mira tus tutorías programadas y entra a la de hoy.',
+            primary: true,
+            onTap: () => _goToSection('chats-videoconferencias'),
           ),
           _MenuTile(
             icon: Icons.assignment_outlined,
@@ -111,24 +125,6 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
             title: 'Proyectos de aula',
             subtitle: 'Consulta tus proyectos activos y finalizados.',
             onTap: () => _goToSection('proyectos-historial'),
-          ),
-          _MenuTile(
-            icon: Icons.video_call_outlined,
-            title: 'Unirse a clase',
-            subtitle: 'Entra al chat y a la videollamada de tus tutorías.',
-            onTap: () => _goToSection('chats-videoconferencias'),
-          ),
-          _MenuTile(
-            icon: Icons.event_note_outlined,
-            title: 'Mis sesiones',
-            subtitle: 'Consulta las tutorías programadas y en curso.',
-            onTap: () => _goToSection('sesiones'),
-          ),
-          _MenuTile(
-            icon: Icons.history,
-            title: 'Historial de clases',
-            subtitle: 'Revisa tutorías realizadas o canceladas.',
-            onTap: () => _goToSection('historial'),
           ),
           _MenuTile(
             icon: Icons.star_outline,
@@ -1289,31 +1285,58 @@ class _MenuTile extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.onTap,
+    this.primary = false,
   });
   final IconData icon;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
+  final bool primary;
 
   @override
   Widget build(BuildContext context) => Card(
-        margin: const EdgeInsets.only(bottom: 12),
+        margin: const EdgeInsets.only(bottom: 9),
+        color: primary ? _blue : Colors.white,
+        elevation: 2,
+        shadowColor: const Color(0x12141E3C),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         child: ListTile(
           onTap: onTap,
           contentPadding:
-              const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-          leading: CircleAvatar(
-            backgroundColor: const Color(0xFFE7F1FC),
-            child: Icon(icon, color: _blue),
+              const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+          leading: Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: primary
+                  ? Colors.white.withValues(alpha: .18)
+                  : const Color(0xFFE7F1FC),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(icon, color: primary ? Colors.white : _blue),
           ),
-          title: Text(title,
-              style:
-                  const TextStyle(color: _navy, fontWeight: FontWeight.w700)),
+          title: Text(
+            title,
+            style: TextStyle(
+              color: primary ? Colors.white : _navy,
+              fontWeight: FontWeight.w700,
+              fontSize: 14,
+            ),
+          ),
           subtitle: Padding(
             padding: const EdgeInsets.only(top: 4),
-            child: Text(subtitle),
+            child: Text(
+              subtitle,
+              style: TextStyle(
+                color: primary ? Colors.white.withValues(alpha: .86) : _muted,
+                fontSize: 11,
+              ),
+            ),
           ),
-          trailing: const Icon(Icons.chevron_right),
+          trailing: Icon(
+            Icons.chevron_right,
+            color: primary ? Colors.white : const Color(0xFFB3BAC7),
+          ),
         ),
       );
 }

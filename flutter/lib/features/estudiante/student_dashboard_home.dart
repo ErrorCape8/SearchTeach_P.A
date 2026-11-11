@@ -14,36 +14,28 @@ class StudentHomeView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final pendingIndividual = data.tutorings
-        .where((t) =>
-            t.status == 'SOLICITADA' || t.status == 'ALTERNATIVA_PROPUESTA')
-        .length;
-    final pendingGroup = data.groupSessions
-        .where((session) => session.state == 'PROGRAMADA')
-        .length;
-    final pending = pendingIndividual + pendingGroup;
-    final completed = data.tutorings
-            .where((tutoring) => tutoring.status == 'REALIZADA')
-            .length +
-        data.groupSessions
-            .where((session) => session.state == 'FINALIZADA')
-            .length;
-    final hasProject = data.projectSpaces.any((space) => space.enrolled);
-    final activityCount = pending +
-        data.tutorings
-            .where((tutoring) =>
-                tutoring.status == 'PROGRAMADA' ||
-                tutoring.status == 'EN_CURSO')
-            .length +
-        data.groupSessions
-            .where((session) => session.state == 'EN_CURSO')
-            .length;
-    final upcoming = <({String subject, String teacher, DateTime start})>[];
+    final upcoming = <({
+      String subject,
+      String teacher,
+      String modality,
+      String location,
+      DateTime start
+    })>[];
     for (final tutoring in data.tutorings.where(
         (item) => item.status == 'PROGRAMADA' || item.status == 'EN_CURSO')) {
       final start = tutoring.start?.toLocal();
       if (start != null) {
-        upcoming.add((subject: tutoring.subject, teacher: '', start: start));
+        upcoming.add((
+          subject: tutoring.subject,
+          teacher: data.tutors
+                  .where((item) => item.teacherId == tutoring.teacherId)
+                  .map((item) => item.name)
+                  .firstOrNull ??
+              '',
+          modality: tutoring.modality,
+          location: '',
+          start: start,
+        ));
       }
     }
     for (final session in data.groupSessions.where(
@@ -54,130 +46,112 @@ class StudentHomeView extends StatelessWidget {
             .where((item) => item.teacherId == session.teacherId)
             .map((item) => item.name)
             .firstOrNull;
-        upcoming.add(
-            (subject: session.subject, teacher: teacher ?? '', start: start));
+        upcoming.add((
+          subject: session.subject,
+          teacher: teacher ?? '',
+          modality: session.modality,
+          location: session.location,
+          start: start,
+        ));
       }
     }
     upcoming.sort((a, b) => a.start.compareTo(b.start));
-    final recent = <({String subject, DateTime? start})>[
+    final recent = <({String subject, String teacher, DateTime? start})>[
       for (final tutoring
           in data.tutorings.where((item) => item.status == 'REALIZADA'))
-        (subject: tutoring.subject, start: tutoring.start),
+        (
+          subject: tutoring.subject,
+          teacher: data.tutors
+                  .where((item) => item.teacherId == tutoring.teacherId)
+                  .map((item) => item.name)
+                  .firstOrNull ??
+              '',
+          start: tutoring.start,
+        ),
       for (final session
           in data.groupSessions.where((item) => item.state == 'FINALIZADA'))
-        (subject: session.subject, start: session.start),
+        (
+          subject: session.subject,
+          teacher: data.tutors
+                  .where((item) => item.teacherId == session.teacherId)
+                  .map((item) => item.name)
+                  .firstOrNull ??
+              '',
+          start: session.start,
+        ),
     ]..sort(
         (a, b) => (b.start ?? DateTime(0)).compareTo(a.start ?? DateTime(0)));
+    final totalTutorings = data.tutorings.length + data.groupSessions.length;
+    final projects = data.projectSpaces.where((space) => space.enrolled).length;
     return ListView(
-      padding: const EdgeInsets.fromLTRB(28, 22, 24, 32),
+      padding: const EdgeInsets.fromLTRB(24, 18, 18, 32),
       children: [
-        if (upcoming.isNotEmpty) ...[
-          Card(
-            margin: EdgeInsets.zero,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(children: [
-                    const CircleAvatar(
-                      backgroundColor: Color(0xFFE7F1FC),
-                      child: Icon(Icons.play_circle_outline, color: _blue),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                              '${_studentDate(upcoming.first.start)} · ${_studentClock(upcoming.first.start)}',
-                              style: const TextStyle(
-                                  color: _navy, fontWeight: FontWeight.w800)),
-                          Text(upcoming.first.subject,
-                              style: const TextStyle(color: _muted)),
-                        ],
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: onOpenSessions,
-                      child: const Text('Ver sesión'),
-                    ),
-                  ]),
-                  const Divider(height: 20),
-                  Text(
-                    upcoming.first.teacher.isEmpty
-                        ? 'Revisa los detalles y el enlace en Mis sesiones.'
-                        : 'Docente ${upcoming.first.teacher} · ${upcoming.first.start.day}/${upcoming.first.start.month}',
-                    style: const TextStyle(color: _muted, fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 14),
-        ],
-        _ActivitySummaryCard(
-          pending: pending,
-          activityCount: activityCount,
+        _NextTutoringCard(
+          session: upcoming.isEmpty ? null : upcoming.first,
+          onOpenSessions: onOpenSessions,
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 10),
         Row(
           children: [
             Expanded(
               child: _MetricCard(
-                label: 'Pendientes',
-                value: '$pending',
+                label: 'Tutorías',
+                value: '$totalTutorings',
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 8),
             Expanded(
               child: _MetricCard(
-                label: 'Realizadas',
-                value: '$completed',
+                label: 'Próximas',
+                value: '${upcoming.length}',
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 8),
             Expanded(
               child: _MetricCard(
-                label: 'Proyecto de aula',
-                value: hasProject ? 'Sí' : 'No',
+                label: 'Proyectos',
+                value: '$projects',
               ),
             ),
           ],
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 14),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             const Text('Últimas tutorías',
                 style: TextStyle(
-                    color: _navy, fontWeight: FontWeight.w800, fontSize: 16)),
-            TextButton(onPressed: onOpenHistory, child: const Text('Ver todo')),
+                    color: _navy, fontWeight: FontWeight.w800, fontSize: 15)),
+            TextButton(
+              onPressed: onOpenHistory,
+              style: TextButton.styleFrom(
+                visualDensity: VisualDensity.compact,
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+              ),
+              child: const Text('Ver todo'),
+            ),
           ],
         ),
         Card(
           margin: EdgeInsets.zero,
           child: recent.isEmpty
               ? const Padding(
-                  padding: EdgeInsets.all(18),
+                  padding: EdgeInsets.all(16),
                   child: Text('Tus tutorías realizadas aparecerán aquí.',
-                      style: TextStyle(color: _muted)),
+                      style: TextStyle(color: _muted, fontSize: 12)),
                 )
-              : Column(
-                  children: [
-                    for (final tutoring in recent.take(3))
-                      ListTile(
-                        leading: const CircleAvatar(
-                          backgroundColor: Color(0xFFE7F1FC),
-                          child: Icon(Icons.menu_book_outlined, color: _blue),
-                        ),
-                        title: Text(tutoring.subject,
-                            style: const TextStyle(
-                                color: _navy, fontWeight: FontWeight.w700)),
-                        subtitle: Text(_studentDate(tutoring.start),
-                            style: const TextStyle(color: _muted)),
-                      ),
-                  ],
+              : Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  child: Column(
+                    children: [
+                      for (var index = 0;
+                          index < recent.take(3).length;
+                          index++) ...[
+                        if (index > 0) const Divider(height: 1, color: _line),
+                        _RecentTutoringTile(item: recent[index]),
+                      ],
+                    ],
+                  ),
                 ),
         ),
       ],
@@ -185,8 +159,188 @@ class StudentHomeView extends StatelessWidget {
   }
 }
 
-String _studentClock(DateTime date) =>
-    '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+class _NextTutoringCard extends StatelessWidget {
+  const _NextTutoringCard({
+    required this.session,
+    required this.onOpenSessions,
+  });
+
+  final ({
+    String subject,
+    String teacher,
+    String modality,
+    String location,
+    DateTime start
+  })? session;
+  final VoidCallback onOpenSessions;
+
+  @override
+  Widget build(BuildContext context) {
+    final item = session;
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x10141E3C),
+            blurRadius: 12,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+            child: Row(
+              children: [
+                const _StudentIconBox(
+                  icon: Icons.play_circle_outline,
+                  size: 42,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item == null
+                            ? 'No tienes tutorías pendientes'
+                            : '${_studentDate(item.start)} · ${_studentClock(item.start)}',
+                        style: const TextStyle(
+                          color: Color(0xFF202B3A),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      Text(
+                        item == null
+                            ? 'Consulta las sesiones disponibles'
+                            : '${item.subject}${item.teacher.isEmpty ? '' : ' · ${item.teacher}'}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: _muted, fontSize: 11),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                FilledButton(
+                  onPressed: onOpenSessions,
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(0, 36),
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(11),
+                    ),
+                    textStyle: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  child: Text(item == null ? 'Ver sesiones' : 'Unirme'),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: const BoxDecoration(
+              color: Color(0xFFE7F1FC),
+              borderRadius: BorderRadius.vertical(
+                bottom: Radius.circular(18),
+              ),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.location_on_outlined, color: _blue, size: 16),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    item == null
+                        ? 'Consulta sesiones disponibles para encontrar tu próxima clase.'
+                        : '${item.modality.isEmpty ? 'Modalidad por confirmar' : _groupSessionModalityLabel(item.modality)}${item.location.isEmpty ? ' · Revisa el enlace en Mis sesiones.' : ' · ${item.location}'}',
+                    style: const TextStyle(
+                      color: _navy,
+                      fontSize: 10,
+                      height: 1.35,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RecentTutoringTile extends StatelessWidget {
+  const _RecentTutoringTile({required this.item});
+
+  final ({String subject, String teacher, DateTime? start}) item;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+        height: 54,
+        child: Row(
+          children: [
+            const _StudentIconBox(icon: Icons.menu_book_outlined, size: 34),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.subject,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Color(0xFF202B3A),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  Text(
+                    '${item.teacher.isEmpty ? '' : '${item.teacher} · '}${_studentDate(item.start)}',
+                    style: const TextStyle(color: _muted, fontSize: 10),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+}
+
+class _StudentIconBox extends StatelessWidget {
+  const _StudentIconBox({required this.icon, required this.size});
+
+  final IconData icon;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: const Color(0xFFE7F1FC),
+          borderRadius: BorderRadius.circular(size * .32),
+        ),
+        child: Icon(icon, color: _blue, size: size * .48),
+      );
+}
+
+String _studentClock(DateTime date) {
+  final hour = date.hour % 12 == 0 ? 12 : date.hour % 12;
+  final minute = date.minute.toString().padLeft(2, '0');
+  return '$hour:$minute ${date.hour < 12 ? 'AM' : 'PM'}';
+}
 
 String _studentDate(DateTime? date) => date == null
     ? 'Fecha por confirmar'
@@ -206,101 +360,6 @@ String _studentMonth(int month) => const [
       'nov',
       'dic'
     ][month - 1];
-
-class _ActivitySummaryCard extends StatelessWidget {
-  const _ActivitySummaryCard({
-    required this.pending,
-    required this.activityCount,
-  });
-
-  final int pending;
-  final int activityCount;
-
-  @override
-  Widget build(BuildContext context) {
-    final date = DateTime.now();
-    const weekdays = [
-      'Lunes',
-      'Martes',
-      'Miércoles',
-      'Jueves',
-      'Viernes',
-      'Sábado',
-      'Domingo',
-    ];
-    const months = [
-      'enero',
-      'febrero',
-      'marzo',
-      'abril',
-      'mayo',
-      'junio',
-      'julio',
-      'agosto',
-      'septiembre',
-      'octubre',
-      'noviembre',
-      'diciembre',
-    ];
-    return Container(
-      height: 148,
-      padding: const EdgeInsets.fromLTRB(22, 18, 22, 18),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        gradient: const LinearGradient(
-          colors: [Colors.white, Color(0xFFE7EEFF)],
-        ),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x10000000),
-            blurRadius: 8,
-            offset: Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  '${weekdays[date.weekday - 1]} ${date.day} de ${months[date.month - 1]} de ${date.year}',
-                  style: const TextStyle(color: _muted, fontSize: 14),
-                ),
-                const SizedBox(height: 6),
-                const Text(
-                  'Tu actividad',
-                  style: TextStyle(
-                    color: _navy,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                Text(
-                  pending == 0
-                      ? 'No tienes tutorías pendientes.'
-                      : 'Tienes $pending tutoría(s) pendiente(s).',
-                  style: const TextStyle(color: _muted, fontSize: 14),
-                ),
-              ],
-            ),
-          ),
-          Text(
-            '$activityCount',
-            style: const TextStyle(
-              color: Color(0xFFC9D8FA),
-              fontSize: 52,
-              height: 1,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class StudentProfileView extends ConsumerWidget {
   const StudentProfileView({
@@ -326,7 +385,7 @@ class StudentProfileView extends ConsumerWidget {
           subtitle: 'Teléfono',
           onTap: () => _editPhone(context, ref),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         const _ProfileSectionTitle('Seguridad'),
         _ProfileActionCard(
           icon: Icons.lock_outline,
@@ -370,7 +429,7 @@ class StudentProfileView extends ConsumerWidget {
               ),
               _InstitutionalDataRow(
                 icon: Icons.school_outlined,
-                title: 'Tecnología',
+                title: 'Programa',
                 value: profile.career.isEmpty
                     ? 'No registrada'
                     : '${profile.career}${profile.semester > 0 ? ' · Semestre ${profile.semester}' : ''}',
@@ -389,16 +448,16 @@ class StudentProfileView extends ConsumerWidget {
               icon: const Icon(Icons.edit_outlined, size: 13),
               label: const Text(
                 'Registrar semestre',
-                style: TextStyle(fontSize: 9),
+                style: TextStyle(fontSize: 12),
               ),
             ),
           ),
         ],
         const Padding(
-          padding: EdgeInsets.fromLTRB(2, 4, 2, 10),
+          padding: EdgeInsets.fromLTRB(2, 4, 2, 12),
           child: Text(
             'Estos datos los gestiona TI y están bloqueados.',
-            style: TextStyle(color: _muted, fontSize: 8),
+            style: TextStyle(color: _muted, fontSize: 10),
           ),
         ),
         FilledButton(
@@ -407,14 +466,17 @@ class StudentProfileView extends ConsumerWidget {
             backgroundColor: const Color(0xFFFFECEC),
             foregroundColor: const Color(0xFF9D2525),
             elevation: 0,
+            minimumSize: const Size.fromHeight(44),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           ),
-          child: const Text('Cerrar sesión', style: TextStyle(fontSize: 9)),
+          child: const Text('Cerrar sesión', style: TextStyle(fontSize: 13)),
         ),
       ],
     );
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(22, 18, 18, 22),
+      padding: const EdgeInsets.fromLTRB(22, 18, 18, 24),
       children: [
         editable,
         const SizedBox(height: 18),
@@ -646,7 +708,7 @@ class _ProfileSectionTitle extends StatelessWidget {
           title,
           style: const TextStyle(
             color: _navy,
-            fontSize: 13,
+            fontSize: 14,
             fontWeight: FontWeight.w800,
           ),
         ),
@@ -670,27 +732,30 @@ class _ProfileActionCard extends StatelessWidget {
   Widget build(BuildContext context) => Card(
         margin: EdgeInsets.zero,
         color: Colors.white,
+        elevation: 1,
+        shadowColor: const Color(0x12141E3C),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(17)),
         child: ListTile(
           dense: false,
           onTap: onTap,
           leading: CircleAvatar(
             radius: 16,
-            backgroundColor: const Color(0xFFE6EEFF),
+            backgroundColor: const Color(0xFFE7F1FC),
             child: Icon(icon, size: 16, color: _blue),
           ),
           title: Text(
             title,
             style: const TextStyle(
               color: _navy,
-              fontSize: 13,
+              fontSize: 14,
               fontWeight: FontWeight.w700,
             ),
           ),
           subtitle: Text(
             subtitle,
-            style: const TextStyle(color: _muted, fontSize: 11),
+            style: const TextStyle(color: _muted, fontSize: 12),
           ),
-          trailing: const Icon(Icons.chevron_right, size: 14, color: _muted),
+          trailing: const Icon(Icons.chevron_right, size: 20, color: _muted),
         ),
       );
 }
@@ -712,17 +777,17 @@ class _InstitutionalDataRow extends StatelessWidget {
   Widget build(BuildContext context) => Column(
         children: [
           ListTile(
-            dense: true,
+            dense: false,
             leading: CircleAvatar(
-              radius: 14,
-              backgroundColor: const Color(0xFFE6EEFF),
-              child: Icon(icon, size: 14, color: _blue),
+              radius: 17,
+              backgroundColor: const Color(0xFFE7F1FC),
+              child: Icon(icon, size: 17, color: _blue),
             ),
             title: Text(
               title,
               style: const TextStyle(
                 color: _navy,
-                fontSize: 12,
+                fontSize: 13,
                 fontWeight: FontWeight.w700,
               ),
             ),

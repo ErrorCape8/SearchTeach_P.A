@@ -8,10 +8,10 @@ class _MetricCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        height: 76,
+        height: 66,
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(17),
           boxShadow: const [
             BoxShadow(
               color: Color(0x10000000),
@@ -26,7 +26,7 @@ class _MetricCard extends StatelessWidget {
             Text(
               value,
               style: const TextStyle(
-                color: Color(0xFF0D4FC4),
+                color: Color(0xFF1769AA),
                 fontSize: 20,
                 fontWeight: FontWeight.w800,
               ),

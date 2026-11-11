@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../auth/auth_repository.dart';
 import '../../core/widgets/sliding_pill_navigation_bar.dart';
+import '../../core/widgets/role_summary_banner.dart';
 import '../../core/tutoring_updates.dart';
 import '../../core/role_theme.dart';
 import '../../core/widgets/role_dashboard_header.dart';
@@ -201,8 +202,19 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
           onRefresh: () =>
               ref.refresh(directorDashboardProvider.future).then<void>((_) {}),
           child: ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(18, 20, 18, 28),
             children: [
+              RoleSummaryBanner(
+                title: 'Resumen del programa',
+                subtitle:
+                    'Indicadores actualizados desde las tutorías registradas.',
+                metric: 'Programadas',
+                value: '${data.tutoriasProgramadas}',
+                accentColor: _purple,
+                darkColor: const Color(0xFF4B2A96),
+                icon: Icons.insights_outlined,
+              ),
+              const SizedBox(height: 18),
               const Text(
                 'Resumen institucional',
                 style: TextStyle(
