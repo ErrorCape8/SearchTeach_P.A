@@ -17,8 +17,8 @@ import 'coordinacion_solicitudes_page.dart';
 
 const _wine = Color(0xFFA9154F);
 const _wineDark = Color(0xFF86123F);
-const _pink = Colors.white;
-const _canvas = Color(0xFFF3F5FA);
+const _pink = Color(0xFFFCE7EF);
+const _canvas = Color(0xFFF5F7FB);
 const _muted = Color(0xFF758093);
 
 class CoordinacionDashboardPage extends ConsumerStatefulWidget {
@@ -127,7 +127,12 @@ class _CoordinacionDashboardPageState
               ? const Center(child: CircularProgressIndicator(color: _wine))
               : _error != null
                   ? _LoadFailure(message: _error!, onRetry: _load)
-                  : _content(),
+                  : ClipRRect(
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(28),
+                      ),
+                      child: _content(),
+                    ),
         ),
       ],
     );
@@ -201,7 +206,7 @@ class _Header extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: EdgeInsets.fromLTRB(
-          20, MediaQuery.paddingOf(context).top + 12, 20, 20),
+          20, MediaQuery.paddingOf(context).top + 12, 20, 38),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           colors: [_wine, _wineDark],
@@ -291,17 +296,17 @@ class _Navigation extends StatelessWidget {
     (Icons.home_outlined, Icons.home_rounded, 'Inicio'),
     (Icons.calendar_month_outlined, Icons.calendar_month_rounded, 'Horarios'),
     (Icons.groups_outlined, Icons.groups_rounded, 'Líderes'),
-    (Icons.event_available_outlined, Icons.event_available_rounded, 'Cambios'),
     (Icons.assessment_outlined, Icons.assessment_rounded, 'Reportes'),
+    (Icons.person_outline_rounded, Icons.person_rounded, 'Perfil'),
   ];
-  static const _tabIndexes = [0, 1, 2, 3, 5];
+  static const _tabIndexes = [0, 1, 2, 5, 4];
 
   @override
   Widget build(BuildContext context) {
     if (wide) {
       return Container(
         width: 190,
-        color: _wineDark,
+        color: Colors.white,
         child: Column(children: [
           const SizedBox(height: 14),
           const SizedBox(
@@ -312,28 +317,27 @@ class _Navigation extends StatelessWidget {
           const SizedBox(height: 8),
           const Text('COORDINACIÓN',
               style: TextStyle(
-                  color: Colors.white70,
+                  color: _muted,
                   fontSize: 10,
                   letterSpacing: .7,
                   fontWeight: FontWeight.w600)),
-          const Divider(color: Colors.white24, indent: 12, endIndent: 12),
+          const Divider(color: Color(0xFFE8EBF1), indent: 12, endIndent: 12),
           Expanded(
               child: NavigationRail(
-            backgroundColor: _wineDark,
+            backgroundColor: Colors.white,
             selectedIndex: !_tabIndexes.contains(index)
                 ? null
                 : _tabIndexes.indexOf(index),
             onDestinationSelected: (position) =>
                 onSelect(_tabIndexes[position]),
             labelType: NavigationRailLabelType.all,
-            indicatorColor: const Color(0xFF650B2E),
-            selectedIconTheme: const IconThemeData(color: Colors.white),
-            unselectedIconTheme:
-                IconThemeData(color: Colors.white.withValues(alpha: .78)),
-            selectedLabelTextStyle: const TextStyle(
-                color: Colors.white, fontWeight: FontWeight.w700),
-            unselectedLabelTextStyle: TextStyle(
-              color: Colors.white.withValues(alpha: .78),
+            indicatorColor: _pink,
+            selectedIconTheme: const IconThemeData(color: _wine),
+            unselectedIconTheme: const IconThemeData(color: _muted),
+            selectedLabelTextStyle:
+                const TextStyle(color: _wine, fontWeight: FontWeight.w700),
+            unselectedLabelTextStyle: const TextStyle(
+              color: _muted,
             ),
             destinations: [
               for (var i = 0; i < _items.length; i++)
@@ -344,7 +348,7 @@ class _Navigation extends StatelessWidget {
                 ),
             ],
           )),
-          const Divider(color: Colors.white24, indent: 10, endIndent: 10),
+          const Divider(color: Color(0xFFE8EBF1), indent: 10, endIndent: 10),
           InkWell(
             onTap: () => onSelect(4),
             child: Padding(
@@ -352,10 +356,10 @@ class _Navigation extends StatelessWidget {
               child: Row(children: [
                 CircleAvatar(
                   radius: 14,
-                  backgroundColor: Colors.white,
+                  backgroundColor: _pink,
                   child: Text(_initials(name),
                       style: const TextStyle(
-                          color: _wineDark,
+                          color: _wine,
                           fontSize: 9,
                           fontWeight: FontWeight.w800)),
                 ),
@@ -368,14 +372,13 @@ class _Navigation extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                              color: Colors.white,
+                              color: Color(0xFF1B1E22),
                               fontSize: 10,
                               fontWeight: FontWeight.w700)),
                       const Text('Coordinador',
-                          style: TextStyle(color: Colors.white70, fontSize: 9)),
+                          style: TextStyle(color: _muted, fontSize: 9)),
                     ])),
-                const Icon(Icons.chevron_right,
-                    color: Colors.white70, size: 16),
+                const Icon(Icons.chevron_right, color: _muted, size: 16),
               ]),
             ),
           ),
@@ -461,6 +464,21 @@ class _HomeView extends StatelessWidget {
               ),
           ]),
         const SizedBox(height: 24),
+        _SectionTitle(
+          title: 'Solicitudes docentes',
+          action: 'Revisar',
+          onTap: () => onOpen(3),
+        ),
+        const SizedBox(height: 10),
+        _CardList(children: [
+          _RecordRow(
+            icon: Icons.inbox_outlined,
+            title: 'Cambios de horario',
+            subtitle: 'Revisa solicitudes enviadas por los docentes.',
+            badge: 'Abrir',
+            onTap: () => onOpen(3),
+          ),
+        ]),
       ],
     );
   }

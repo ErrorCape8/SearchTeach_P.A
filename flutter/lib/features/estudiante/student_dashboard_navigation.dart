@@ -53,7 +53,7 @@ class _StudentHeader extends StatelessWidget {
                 : 'Notificaciones';
     final initials = _studentInitials(profile.name);
     return Container(
-      height: 92,
+      height: 110,
       padding: const EdgeInsets.symmetric(horizontal: 24),
       clipBehavior: Clip.hardEdge,
       decoration: const BoxDecoration(

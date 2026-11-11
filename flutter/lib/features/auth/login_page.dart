@@ -140,14 +140,17 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               onFieldSubmitted: (_) => _submit(),
             ),
             const SizedBox(height: 24),
-            CheckboxListTile(
-              contentPadding: EdgeInsets.zero,
-              controlAffinity: ListTileControlAffinity.leading,
-              value: _rememberMe,
-              onChanged: state.isLoading
-                  ? null
-                  : (value) => setState(() => _rememberMe = value ?? false),
-              title: const Text('Mantener sesión iniciada'),
+            Material(
+              color: Colors.transparent,
+              child: CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                controlAffinity: ListTileControlAffinity.leading,
+                value: _rememberMe,
+                onChanged: state.isLoading
+                    ? null
+                    : (value) => setState(() => _rememberMe = value ?? false),
+                title: const Text('Mantener sesión iniciada'),
+              ),
             ),
             DarkButton('Iniciar sesión',
                 loading: state.isLoading, onPressed: _submit),

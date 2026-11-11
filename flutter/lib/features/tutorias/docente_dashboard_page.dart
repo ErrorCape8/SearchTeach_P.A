@@ -9,7 +9,9 @@ import '../../core/api_client.dart';
 import '../../core/role_theme.dart';
 import '../../core/tutoring_updates.dart';
 import '../../core/widgets/brand_logo.dart';
+import '../../core/widgets/role_dashboard_header.dart';
 import '../../core/widgets/role_toast.dart';
+import '../../core/widgets/sliding_pill_navigation_bar.dart';
 import '../auth/auth_repository.dart';
 import '../notifications/notifications_page.dart';
 import 'docente_proyectos_aula_page.dart';
@@ -22,7 +24,7 @@ import 'tutoria_chat_page.dart';
 import 'tutoria_historial_page.dart';
 
 const _teacherGreen = Color(0xFF16834A);
-const _teacherCanvas = Color(0xFFF3F8F4);
+const _teacherCanvas = Color(0xFFF5F7FB);
 const _teacherNavy = Color(0xFF18352A);
 
 final _teacherSessionsProvider =
@@ -85,106 +87,119 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
       ),
       child: Scaffold(
         backgroundColor: _teacherCanvas,
-        appBar: AppBar(
-          backgroundColor: _teacherGreen,
-          foregroundColor: Colors.white,
-          elevation: 0,
-          scrolledUnderElevation: 0,
-          surfaceTintColor: Colors.transparent,
-          flexibleSpace: const DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFF16834A), Color(0xFF18352A)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+        body: Row(
+          children: [
+            if (wide) _desktopMenu(),
+            Expanded(
+              child: Column(
+                children: [
+                  RoleDashboardHeader(
+                    title: _headerTitle,
+                    subtitle: 'Docente · SearchTeach',
+                    accentColor: _teacherGreen,
+                    darkColor: _teacherNavy,
+                    initials: 'D',
+                    onRefresh: () => ref.invalidate(_teacherSessionsProvider),
+                    onNotifications: () => setState(() => _tab = 5),
+                    onProfile: () => setState(() => _tab = 7),
+                    onLogout: _logout,
+                  ),
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(28),
+                      ),
+                      child: IndexedStack(
+                        index: _tab,
+                        children: [
+                          _home(),
+                          _sessions(),
+                          _startTutoring(),
+                          const DocenteProyectosAulaPage(),
+                          const DocenteLiderProyectosPage(),
+                          const NotificationsInbox(),
+                          _history(),
+                          const DocentePerfilPage(),
+                          const DocenteSolicitudesPage(),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ),
-          title: Text(
-            _tab == 7
-                ? 'Mi perfil'
-                : _tab == 8
-                    ? 'Solicitudes'
-                    : 'Panel docente',
-            style: const TextStyle(fontWeight: FontWeight.w800),
-          ),
-          actions: [
-            const NotificationBellButton(accentColor: _teacherGreen),
-            IconButton(
-              tooltip: 'Solicitudes de tutorÃ­as',
-              onPressed: () => setState(() => _tab = 8),
-              icon: const Icon(Icons.inbox_outlined),
-            ),
-            IconButton(
-              tooltip: 'Mi perfil',
-              onPressed: () => setState(() => _tab = 7),
-              icon: const Icon(Icons.account_circle_outlined),
-            ),
-            IconButton(
-              tooltip: 'Cerrar sesión',
-              onPressed: _logout,
-              icon: const Icon(Icons.logout),
             ),
           ],
         ),
-        body: Row(children: [
-          if (wide) _desktopMenu(),
-          Expanded(
-            child: IndexedStack(
-              index: _tab,
-              children: [
-                _home(),
-                _sessions(),
-                _startTutoring(),
-                const DocenteProyectosAulaPage(),
-                const DocenteLiderProyectosPage(),
-                const NotificationsInbox(),
-                _history(),
-                const DocentePerfilPage(),
-                const DocenteSolicitudesPage(),
-              ],
-            ),
-          ),
-        ]),
         bottomNavigationBar: wide
             ? null
-            : NavigationBar(
-                selectedIndex: _tab >= 7 ? 0 : _tab,
-                onDestinationSelected: (value) => setState(() => _tab = value),
-                destinations: const [
-                  NavigationDestination(
-                      icon: Icon(Icons.home_outlined),
-                      selectedIcon: Icon(Icons.home),
-                      label: 'Inicio'),
-                  NavigationDestination(
-                      icon: Icon(Icons.event_note_outlined),
-                      selectedIcon: Icon(Icons.event_note),
-                      label: 'Tutorías'),
-                  NavigationDestination(
-                      icon: Icon(Icons.play_circle_outline),
-                      selectedIcon: Icon(Icons.play_circle),
-                      label: 'Empezar'),
-                  NavigationDestination(
-                      icon: Icon(Icons.school_outlined),
-                      selectedIcon: Icon(Icons.school),
-                      label: 'Proyectos'),
-                  NavigationDestination(
-                      icon: Icon(Icons.fact_check_outlined),
-                      selectedIcon: Icon(Icons.fact_check),
-                      label: 'Líder PA'),
-                  NavigationDestination(
-                      icon: Icon(Icons.notifications_none_outlined),
-                      selectedIcon: Icon(Icons.notifications),
-                      label: 'Avisos'),
-                  NavigationDestination(
-                      icon: Icon(Icons.history_outlined),
-                      selectedIcon: Icon(Icons.history),
-                      label: 'Historial'),
+            : SlidingPillNavigationBar(
+                selectedColor: _teacherGreen,
+                indicatorColor: const Color(0xFFE6F4EA),
+                selectedIndex: _navigationTabs.indexOf(_tab).clamp(
+                      0,
+                      _navigationTabs.length - 1,
+                    ),
+                onDestinationSelected: (position) => setState(
+                  () => _tab = _navigationTabs[position],
+                ),
+                destinations: [
+                  const SlidingPillDestination(
+                    icon: Icons.home_outlined,
+                    selectedIcon: Icons.home_rounded,
+                    label: 'Inicio',
+                  ),
+                  const SlidingPillDestination(
+                    icon: Icons.inbox_outlined,
+                    selectedIcon: Icons.inbox_rounded,
+                    label: 'Solicitudes',
+                  ),
+                  const SlidingPillDestination(
+                    icon: Icons.event_note_outlined,
+                    selectedIcon: Icons.event_note_rounded,
+                    label: 'Tutorías',
+                  ),
+                  const SlidingPillDestination(
+                    icon: Icons.groups_outlined,
+                    selectedIcon: Icons.groups_rounded,
+                    label: 'Colectivas',
+                  ),
+                  const SlidingPillDestination(
+                    icon: Icons.star_outline_rounded,
+                    selectedIcon: Icons.star_rounded,
+                    label: 'Líder PA',
+                  ),
+                  const SlidingPillDestination(
+                    icon: Icons.person_outline_rounded,
+                    selectedIcon: Icons.person_rounded,
+                    label: 'Perfil',
+                  ),
+                  const SlidingPillDestination(
+                    icon: Icons.notifications_none_rounded,
+                    selectedIcon: Icons.notifications_rounded,
+                    label: 'Avisos',
+                  ),
                 ],
               ),
       ),
     );
   }
+
+  static const _teacherTabNames = {
+    0: 'Inicio',
+    1: 'Tutorías',
+    2: 'Iniciar tutoría',
+    3: 'Colectivas',
+    4: 'Líder de proyecto de aula',
+    5: 'Avisos',
+    6: 'Historial',
+    7: 'Mi perfil',
+    8: 'Solicitudes',
+  };
+
+  String get _headerTitle =>
+      _tab == 0 ? 'Panel docente' : _teacherTabNames[_tab] ?? 'Panel docente';
+
+  List<int> get _navigationTabs => [0, 8, 1, 3, 4, 7, 5];
 
   Widget _desktopMenu() => Material(
         color: Colors.white,
@@ -914,9 +929,9 @@ class _TeacherHomeDashboard extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.fromLTRB(24, 22, 24, 22),
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(20),
                 gradient: const LinearGradient(
-                    colors: [Color(0xFF087A49), Color(0xFF075E3B)],
+                    colors: [Color(0xFF16834A), Color(0xFF18352A)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight),
                 boxShadow: [
@@ -1033,8 +1048,7 @@ class _TeacherMetricCard extends StatelessWidget {
         padding: const EdgeInsets.all(15),
         decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0xFFE3ECE5)),
+            borderRadius: BorderRadius.circular(18),
             boxShadow: const [
               BoxShadow(
                   color: Color(0x08000000),
@@ -1087,8 +1101,7 @@ class _TeacherHomeTile extends StatelessWidget {
         color: Colors.white,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-          side: const BorderSide(color: Color(0xFFE3ECE5)),
+          borderRadius: BorderRadius.circular(20),
         ),
         child: ListTile(
           onTap: onTap,

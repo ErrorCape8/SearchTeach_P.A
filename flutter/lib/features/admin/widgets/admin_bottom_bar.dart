@@ -15,53 +15,35 @@ class AdminBottomBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, -3),
-          ),
-        ],
-        border: const Border(
-          top: BorderSide(color: Color(0xFFF1F4F9), width: 1),
-        ),
+    return Theme(
+      data: Theme.of(context).copyWith(
+        colorScheme: Theme.of(context)
+            .colorScheme
+            .copyWith(primary: const Color(0xFFEA580C)),
       ),
-      child: SafeArea(
-        top: false,
-        child: Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: Theme.of(context)
-                .colorScheme
-                .copyWith(primary: const Color(0xFFEA580C)),
-          ),
-          child: SlidingPillNavigationBar(
-            selectedColor: const Color(0xFFEA580C),
-            indicatorColor: const Color(0xFFFFF1E6),
-            selectedIndex: currentIndex,
-            onDestinationSelected: onTap,
-            destinations: const [
-              SlidingPillDestination(
-                  icon: Icons.home_outlined,
-                  selectedIcon: Icons.home_rounded,
-                  label: 'Inicio'),
-              SlidingPillDestination(
-                  icon: Icons.people_alt_outlined,
-                  selectedIcon: Icons.people_alt_rounded,
-                  label: 'Usuarios'),
-              SlidingPillDestination(
-                  icon: Icons.person_outline_rounded,
-                  selectedIcon: Icons.person_rounded,
-                  label: 'Perfil'),
-              SlidingPillDestination(
-                  icon: Icons.verified_outlined,
-                  selectedIcon: Icons.verified,
-                  label: 'Certificaciones'),
-            ],
-          ),
-        ),
+      child: SlidingPillNavigationBar(
+        selectedColor: const Color(0xFFEA580C),
+        indicatorColor: const Color(0xFFFFF1E6),
+        selectedIndex: currentIndex,
+        onDestinationSelected: onTap,
+        destinations: const [
+          SlidingPillDestination(
+              icon: Icons.home_outlined,
+              selectedIcon: Icons.home_rounded,
+              label: 'Inicio'),
+          SlidingPillDestination(
+              icon: Icons.people_alt_outlined,
+              selectedIcon: Icons.people_alt_rounded,
+              label: 'Usuarios'),
+          SlidingPillDestination(
+              icon: Icons.verified_outlined,
+              selectedIcon: Icons.verified,
+              label: 'Certificaciones'),
+          SlidingPillDestination(
+              icon: Icons.person_outline_rounded,
+              selectedIcon: Icons.person_rounded,
+              label: 'Perfil'),
+        ],
       ),
     );
   }

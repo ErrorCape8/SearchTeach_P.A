@@ -103,7 +103,7 @@ class AdminMainPage extends ConsumerWidget {
         const Color(0xFFEA580C),
       ),
       child: Scaffold(
-        backgroundColor: const Color(0xFFF3F6FB),
+        backgroundColor: const Color(0xFFF5F7FB),
         body: LayoutBuilder(
           builder: (context, constraints) {
             final isWide = constraints.maxWidth >= 980;
@@ -111,7 +111,7 @@ class AdminMainPage extends ConsumerWidget {
             final contentSurface = Container(
               width: double.infinity,
               decoration: BoxDecoration(
-                color: const Color(0xFFF3F6FB),
+                color: const Color(0xFFF5F7FB),
                 borderRadius: BorderRadius.vertical(
                   top: Radius.circular(isWide ? 18 : 24),
                 ),
@@ -205,8 +205,22 @@ class AdminMainPage extends ConsumerWidget {
                     ),
                     if (!isWide)
                       AdminBottomBar(
-                        currentIndex: hasSelectedUser ? 1 : state.activeTab,
-                        onTap: notifier.setTab,
+                        currentIndex: switch (
+                            hasSelectedUser ? 1 : state.activeTab) {
+                          0 => 0,
+                          1 => 1,
+                          3 => 2,
+                          2 => 3,
+                          _ => 0,
+                        },
+                        onTap: (position) => notifier.setTab(
+                          switch (position) {
+                            0 => 0,
+                            1 => 1,
+                            2 => 3,
+                            _ => 2,
+                          },
+                        ),
                       ),
                   ],
                 ),

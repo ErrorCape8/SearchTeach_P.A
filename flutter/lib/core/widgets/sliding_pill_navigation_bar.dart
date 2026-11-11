@@ -39,16 +39,16 @@ class SlidingPillNavigationBar extends StatelessWidget {
     return SafeArea(
       top: false,
       child: Container(
-        margin: const EdgeInsets.fromLTRB(10, 0, 10, 8),
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 5),
+        margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 7),
         decoration: BoxDecoration(
           color: backgroundColor,
-          borderRadius: BorderRadius.circular(28),
+          borderRadius: BorderRadius.circular(26),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: .09),
-              blurRadius: 18,
-              offset: const Offset(0, 3),
+              color: Colors.black.withValues(alpha: .14),
+              blurRadius: 28,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
@@ -56,7 +56,7 @@ class SlidingPillNavigationBar extends StatelessWidget {
           builder: (context, constraints) {
             final itemWidth = constraints.maxWidth / destinations.length;
             return SizedBox(
-              height: 62,
+              height: 66,
               child: Stack(
                 children: [
                   AnimatedPositioned(
@@ -71,7 +71,7 @@ class SlidingPillNavigationBar extends StatelessWidget {
                       child: DecoratedBox(
                         decoration: BoxDecoration(
                           color: indicatorColor,
-                          borderRadius: BorderRadius.circular(24),
+                          borderRadius: BorderRadius.circular(19),
                         ),
                       ),
                     ),

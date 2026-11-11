@@ -49,7 +49,7 @@ class AdminHeader extends StatelessWidget {
             ),
           ),
           Padding(
-            padding: EdgeInsets.fromLTRB(20, topPadding + 10, 20, 12),
+            padding: EdgeInsets.fromLTRB(20, topPadding + 10, 20, 34),
             child: Row(
               children: [
                 if (isEditing) ...[

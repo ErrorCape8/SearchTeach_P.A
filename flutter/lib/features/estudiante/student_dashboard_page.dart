@@ -17,7 +17,7 @@ part 'student_dashboard_navigation.dart';
 
 const _blue = Color(0xFF1769AA);
 const _navy = Color(0xFF17324F);
-const _canvas = Color(0xFFF4F7FB);
+const _canvas = Color(0xFFF5F7FB);
 
 class StudentDashboardPage extends ConsumerStatefulWidget {
   const StudentDashboardPage({super.key});
@@ -115,63 +115,68 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage>
                           onBack: () => _openTutorSection('menu'),
                         ),
                         Expanded(
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Expanded(
-                                flex: wide ? 3 : 1,
-                                child: IndexedStack(
-                                  index: _tab,
-                                  children: [
-                                    StudentHomeView(
-                                      data: dashboard,
-                                      onOpenSessions: () =>
-                                          _openTutorSection('sesiones'),
-                                      onOpenHistory: () =>
-                                          _openTutorSection('historial'),
-                                    ),
-                                    StudentTutoringView(
-                                      key: const ValueKey('student-tutoring'),
-                                      data: dashboard,
-                                      focusSection:
-                                          _tab == 1 && _focusTutoring != null
-                                              ? _focusTutoring
-                                              : 'menu',
-                                      focusRequest: _focusRequest,
-                                      onEnroll: (tutor) =>
-                                          _enroll(value, tutor),
-                                      onProjectEnrollment:
-                                          _toggleProjectEnrollment,
-                                      onJoinProjectCode: _joinProjectByCode,
-                                      onLeaveGroupSession: _leaveGroupSession,
-                                      onJoinPublishedSession: (session) =>
-                                          _joinPublishedSession(session),
-                                      onAction: _tutoringAction,
-                                      onShowMessage: _showMessage,
-                                      onSectionChanged: (section) => setState(
-                                          () => _focusTutoring = section),
-                                    ),
-                                    StudentProfileView(
-                                      profile: value.profile,
-                                      onTeacherMode: value.profile.role
-                                              .toLowerCase()
-                                              .contains('docente')
-                                          ? () => context.go('/docente')
-                                          : null,
-                                      onLogout: _logout,
-                                    ),
-                                    const NotificationsInbox(
-                                      accentColor: _blue,
-                                    ),
-                                  ],
+                          child: ClipRRect(
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(28),
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Expanded(
+                                  flex: wide ? 3 : 1,
+                                  child: IndexedStack(
+                                    index: _tab,
+                                    children: [
+                                      StudentHomeView(
+                                        data: dashboard,
+                                        onOpenSessions: () =>
+                                            _openTutorSection('sesiones'),
+                                        onOpenHistory: () =>
+                                            _openTutorSection('historial'),
+                                      ),
+                                      StudentTutoringView(
+                                        key: const ValueKey('student-tutoring'),
+                                        data: dashboard,
+                                        focusSection:
+                                            _tab == 1 && _focusTutoring != null
+                                                ? _focusTutoring
+                                                : 'menu',
+                                        focusRequest: _focusRequest,
+                                        onEnroll: (tutor) =>
+                                            _enroll(value, tutor),
+                                        onProjectEnrollment:
+                                            _toggleProjectEnrollment,
+                                        onJoinProjectCode: _joinProjectByCode,
+                                        onLeaveGroupSession: _leaveGroupSession,
+                                        onJoinPublishedSession: (session) =>
+                                            _joinPublishedSession(session),
+                                        onAction: _tutoringAction,
+                                        onShowMessage: _showMessage,
+                                        onSectionChanged: (section) => setState(
+                                            () => _focusTutoring = section),
+                                      ),
+                                      StudentProfileView(
+                                        profile: value.profile,
+                                        onTeacherMode: value.profile.role
+                                                .toLowerCase()
+                                                .contains('docente')
+                                            ? () => context.go('/docente')
+                                            : null,
+                                        onLogout: _logout,
+                                      ),
+                                      const NotificationsInbox(
+                                        accentColor: _blue,
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                              if (showAside)
-                                SizedBox(
-                                  width: 250,
-                                  child: _StudentSidePanel(data: dashboard),
-                                ),
-                            ],
+                                if (showAside)
+                                  SizedBox(
+                                    width: 250,
+                                    child: _StudentSidePanel(data: dashboard),
+                                  ),
+                              ],
+                            ),
                           ),
                         ),
                       ],

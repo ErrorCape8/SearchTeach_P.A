@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../auth/auth_repository.dart';
-import '../notifications/notifications_page.dart';
 import '../../core/widgets/sliding_pill_navigation_bar.dart';
 import '../../core/tutoring_updates.dart';
 import '../../core/role_theme.dart';
+import '../../core/widgets/role_dashboard_header.dart';
 import 'director_dashboard_provider.dart';
 import 'demand_forecast_page.dart';
 import 'proyectos_aula_page.dart';
@@ -14,7 +14,7 @@ import 'proyectos_aula_page.dart';
 const _purple = Color(0xFF6337BF);
 const _ink = Color(0xFF28243A);
 const _muted = Color(0xFF777487);
-const _canvas = Color(0xFFF4F5FA);
+const _canvas = Color(0xFFF5F7FB);
 
 class DashboardPage extends ConsumerStatefulWidget {
   const DashboardPage({super.key});
@@ -57,139 +57,114 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
       ),
       child: Scaffold(
         backgroundColor: _canvas,
-        appBar: AppBar(
-          backgroundColor: _purple,
-          foregroundColor: Colors.white,
-          surfaceTintColor: Colors.transparent,
-          flexibleSpace: const DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFF6337BF), Color(0xFF4B2A96)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+        body: LayoutBuilder(
+          builder: (context, constraints) {
+            final isWide = constraints.maxWidth >= 900;
+            final content = AnimatedSwitcher(
+              duration: const Duration(milliseconds: 180),
+              child: KeyedSubtree(
+                key: ValueKey(_selectedTab),
+                child: screen,
               ),
-            ),
-          ),
-          title: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Hola, líder del programa',
-                  style: TextStyle(fontSize: 18)),
-              Text(
-                _titles[_selectedTab],
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.white.withValues(alpha: .8),
+            );
+            final page = Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: isWide ? 1440 : 720,
+                ),
+                child: Padding(
+                  padding: EdgeInsets.all(isWide ? 20 : 0),
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(28),
+                    ),
+                    child: content,
+                  ),
                 ),
               ),
-            ],
-          ),
-          actions: [
-            const NotificationBellButton(accentColor: _purple),
-            IconButton(
-              tooltip: _selectedTab == 6 ? 'Volver al inicio' : 'Mi perfil',
-              onPressed: () => setState(
-                () => _selectedTab = _selectedTab == 6 ? 0 : 6,
-              ),
-              icon: CircleAvatar(
-                radius: 15,
-                backgroundColor: Colors.white.withValues(alpha: .16),
-                child: Icon(
-                  _selectedTab == 6
-                      ? Icons.person
-                      : Icons.person_outline_rounded,
-                  color: Colors.white,
-                  size: 19,
-                ),
-              ),
-            ),
-            IconButton(
-              tooltip: 'Actualizar',
-              onPressed: () {
+            );
+            final roleHeader = RoleDashboardHeader(
+              title: _selectedTab == 0
+                  ? 'Hola, líder del programa'
+                  : _titles[_selectedTab],
+              subtitle: _selectedTab == 0
+                  ? 'Dirección de programa'
+                  : 'Dirección de programa · SearchTeach',
+              accentColor: _purple,
+              darkColor: const Color(0xFF4B2A96),
+              initials: 'DP',
+              onRefresh: () {
                 ref.invalidate(directorDashboardProvider);
                 ref.invalidate(proyectosAulaProvider);
               },
-              icon: const Icon(Icons.refresh),
-            ),
-          ],
-        ),
-        body: SafeArea(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final isWide = constraints.maxWidth >= 900;
-              final content = AnimatedSwitcher(
-                duration: const Duration(milliseconds: 180),
-                child: KeyedSubtree(
-                  key: ValueKey(_selectedTab),
-                  child: screen,
-                ),
-              );
-              if (!isWide) {
-                return Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 720),
-                    child: content,
-                  ),
-                );
-              }
-              return Row(
+              onNotifications: () =>
+                  context.push('/notificaciones', extra: _purple),
+              onProfile: () => setState(
+                () => _selectedTab = _selectedTab == 6 ? 0 : 6,
+              ),
+            );
+            if (!isWide) {
+              return Column(
                 children: [
-                  NavigationRail(
-                    backgroundColor: Colors.white,
-                    selectedIndex: _selectedTab < 5 ? _selectedTab : null,
-                    onDestinationSelected: (index) =>
-                        setState(() => _selectedTab = index),
-                    labelType: NavigationRailLabelType.all,
-                    groupAlignment: -0.8,
-                    indicatorColor: const Color(0xFFEAE2FA),
-                    selectedIconTheme: const IconThemeData(color: _purple),
-                    unselectedIconTheme: const IconThemeData(color: _muted),
-                    selectedLabelTextStyle: const TextStyle(
-                      color: _purple,
-                      fontWeight: FontWeight.w700,
-                    ),
-                    unselectedLabelTextStyle: const TextStyle(color: _muted),
-                    destinations: const [
-                      NavigationRailDestination(
-                        icon: Icon(Icons.home_outlined),
-                        selectedIcon: Icon(Icons.home_rounded),
-                        label: Text('Inicio'),
-                      ),
-                      NavigationRailDestination(
-                        icon: Icon(Icons.event_note_outlined),
-                        selectedIcon: Icon(Icons.event_note),
-                        label: Text('Tutor\u{00ED}as'),
-                      ),
-                      NavigationRailDestination(
-                        icon: Icon(Icons.star_outline),
-                        label: Text('Calidad'),
-                      ),
-                      NavigationRailDestination(
-                        icon: Icon(Icons.query_stats_outlined),
-                        label: Text('Pron\u{00F3}stico'),
-                      ),
-                      NavigationRailDestination(
-                        icon: Icon(Icons.groups_outlined),
-                        label: Text('Proyectos'),
-                      ),
-                    ],
-                  ),
-                  const VerticalDivider(width: 1, thickness: 1),
-                  Expanded(
-                    child: Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 1440),
-                        child: Padding(
-                          padding: const EdgeInsets.all(20),
-                          child: content,
-                        ),
-                      ),
-                    ),
-                  ),
+                  roleHeader,
+                  Expanded(child: page),
                 ],
               );
-            },
-          ),
+            }
+            return Row(
+              children: [
+                NavigationRail(
+                  backgroundColor: Colors.white,
+                  selectedIndex: _selectedTab < 5 ? _selectedTab : null,
+                  onDestinationSelected: (index) =>
+                      setState(() => _selectedTab = index),
+                  labelType: NavigationRailLabelType.all,
+                  groupAlignment: -0.8,
+                  indicatorColor: const Color(0xFFEAE2FA),
+                  selectedIconTheme: const IconThemeData(color: _purple),
+                  unselectedIconTheme: const IconThemeData(color: _muted),
+                  selectedLabelTextStyle: const TextStyle(
+                    color: _purple,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  unselectedLabelTextStyle: const TextStyle(color: _muted),
+                  destinations: const [
+                    NavigationRailDestination(
+                      icon: Icon(Icons.home_outlined),
+                      selectedIcon: Icon(Icons.home_rounded),
+                      label: Text('Inicio'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.event_note_outlined),
+                      selectedIcon: Icon(Icons.event_note),
+                      label: Text('Tutor\u{00ED}as'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.star_outline),
+                      label: Text('Calidad'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.query_stats_outlined),
+                      label: Text('Pron\u{00F3}stico'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.groups_outlined),
+                      label: Text('Proyectos'),
+                    ),
+                  ],
+                ),
+                const VerticalDivider(width: 1, thickness: 1),
+                Expanded(
+                  child: Column(
+                    children: [
+                      roleHeader,
+                      Expanded(child: page),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
         ),
         bottomNavigationBar: MediaQuery.sizeOf(context).width < 900
             ? SlidingPillNavigationBar(
