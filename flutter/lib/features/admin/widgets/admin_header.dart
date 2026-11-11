@@ -28,8 +28,11 @@ class AdminHeader extends StatelessWidget {
     return Container(
       width: double.infinity,
       decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(bottom: BorderSide(color: Color(0xFFE8EAF0))),
+        gradient: LinearGradient(
+          colors: [Color(0xFFEA580C), Color(0xFFC2410C)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
       ),
       child: Stack(
         children: [
@@ -41,7 +44,7 @@ class AdminHeader extends StatelessWidget {
               height: 130,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFFFFF1E6),
+                color: Colors.white.withValues(alpha: .12),
               ),
             ),
           ),
@@ -57,11 +60,11 @@ class AdminHeader extends StatelessWidget {
                       height: 40,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: const Color(0xFFFFF1E6),
+                        color: Colors.white.withValues(alpha: .16),
                       ),
                       child: const Icon(
                         Icons.chevron_left_rounded,
-                        color: kAdminOrange,
+                        color: Colors.white,
                         size: 28,
                       ),
                     ),
@@ -84,7 +87,7 @@ class AdminHeader extends StatelessWidget {
                       Text(
                         title,
                         style: const TextStyle(
-                          color: Color(0xFF1E293B),
+                          color: Colors.white,
                           fontSize: 17,
                           fontWeight: FontWeight.w800,
                           letterSpacing: -0.2,
@@ -94,7 +97,7 @@ class AdminHeader extends StatelessWidget {
                       Text(
                         subtitle,
                         style: TextStyle(
-                          color: const Color(0xFF64748B),
+                          color: Colors.white70,
                           fontSize: 10,
                           fontWeight: FontWeight.w400,
                         ),

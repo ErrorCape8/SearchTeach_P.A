@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api_client.dart';
+import '../../core/role_theme.dart';
 import '../../core/tutoring_updates.dart';
 import '../../core/widgets/brand_logo.dart';
 import '../../core/widgets/role_toast.dart';
@@ -13,14 +14,16 @@ import '../auth/auth_repository.dart';
 import '../notifications/notifications_page.dart';
 import 'docente_proyectos_aula_page.dart';
 import 'docente_lider_proyectos_page.dart';
+import 'docente_perfil_page.dart';
+import 'docente_solicitudes_page.dart';
 import 'livekit_room_page.dart';
 import 'presencial_tutoria_page.dart';
 import 'tutoria_chat_page.dart';
 import 'tutoria_historial_page.dart';
 
-const _teacherGreen = Color(0xFF0C8A53);
+const _teacherGreen = Color(0xFF16834A);
 const _teacherCanvas = Color(0xFFF3F8F4);
-const _teacherNavy = Color(0xFF0A6843);
+const _teacherNavy = Color(0xFF18352A);
 
 final _teacherSessionsProvider =
     FutureProvider.autoDispose<List<_TeacherTutoringSession>>((ref) async {
@@ -72,23 +75,51 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
     });
     final wide = MediaQuery.sizeOf(context).width >= 850;
     return Theme(
-      data: Theme.of(context).copyWith(
-        colorScheme:
-            Theme.of(context).colorScheme.copyWith(primary: _teacherGreen),
-        scaffoldBackgroundColor: _teacherCanvas,
+      data: withRoleAccent(
+        Theme.of(context).copyWith(
+          colorScheme:
+              Theme.of(context).colorScheme.copyWith(primary: _teacherGreen),
+          scaffoldBackgroundColor: _teacherCanvas,
+        ),
+        _teacherGreen,
       ),
       child: Scaffold(
         backgroundColor: _teacherCanvas,
         appBar: AppBar(
-          backgroundColor: Colors.white,
-          foregroundColor: _teacherNavy,
+          backgroundColor: _teacherGreen,
+          foregroundColor: Colors.white,
           elevation: 0,
           scrolledUnderElevation: 0,
-          surfaceTintColor: Colors.white,
-          title: const Text('Panel docente',
-              style: TextStyle(fontWeight: FontWeight.w800)),
+          surfaceTintColor: Colors.transparent,
+          flexibleSpace: const DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF16834A), Color(0xFF18352A)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+          ),
+          title: Text(
+            _tab == 7
+                ? 'Mi perfil'
+                : _tab == 8
+                    ? 'Solicitudes'
+                    : 'Panel docente',
+            style: const TextStyle(fontWeight: FontWeight.w800),
+          ),
           actions: [
             const NotificationBellButton(accentColor: _teacherGreen),
+            IconButton(
+              tooltip: 'Solicitudes de tutorÃ­as',
+              onPressed: () => setState(() => _tab = 8),
+              icon: const Icon(Icons.inbox_outlined),
+            ),
+            IconButton(
+              tooltip: 'Mi perfil',
+              onPressed: () => setState(() => _tab = 7),
+              icon: const Icon(Icons.account_circle_outlined),
+            ),
             IconButton(
               tooltip: 'Cerrar sesión',
               onPressed: _logout,
@@ -109,6 +140,8 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
                 const DocenteLiderProyectosPage(),
                 const NotificationsInbox(),
                 _history(),
+                const DocentePerfilPage(),
+                const DocenteSolicitudesPage(),
               ],
             ),
           ),
@@ -116,7 +149,7 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
         bottomNavigationBar: wide
             ? null
             : NavigationBar(
-                selectedIndex: _tab,
+                selectedIndex: _tab >= 7 ? 0 : _tab,
                 onDestinationSelected: (value) => setState(() => _tab = value),
                 destinations: const [
                   NavigationDestination(
@@ -254,6 +287,32 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
                 leading: const Icon(Icons.history_outlined),
                 title: const Text('Historial'),
                 onTap: () => setState(() => _tab = 6),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+              child: ListTile(
+                selected: _tab == 7,
+                selectedColor: _teacherNavy,
+                selectedTileColor: const Color(0xFFEAF5EE),
+                textColor: _teacherNavy,
+                iconColor: _teacherGreen,
+                leading: const Icon(Icons.person_outline),
+                title: const Text('Perfil'),
+                onTap: () => setState(() => _tab = 7),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+              child: ListTile(
+                selected: _tab == 8,
+                selectedColor: _teacherNavy,
+                selectedTileColor: const Color(0xFFEAF5EE),
+                textColor: _teacherNavy,
+                iconColor: _teacherGreen,
+                leading: const Icon(Icons.inbox_outlined),
+                title: const Text('Solicitudes'),
+                onTap: () => setState(() => _tab = 8),
               ),
             ),
             const Spacer(),
@@ -835,6 +894,11 @@ class _TeacherHomeDashboard extends ConsumerWidget {
           subtitle: 'Consulta las notificaciones de tu cuenta.',
           onTap: () => onOpen(5)),
       _TeacherHomeTile(
+          icon: Icons.inbox_outlined,
+          title: 'Solicitudes de tutorÃ­as',
+          subtitle: 'Revisa y responde las solicitudes individuales.',
+          onTap: () => onOpen(8)),
+      _TeacherHomeTile(
           icon: Icons.history_outlined,
           title: 'Historial',
           subtitle: 'Consulta tutorías finalizadas y sus chats.',
@@ -1092,7 +1156,8 @@ class _TeacherTutoringSession {
                 (json['modalidad'] as String).isNotEmpty
             ? json['modalidad'] as String
             : 'PRESENCIAL',
-        location: json['ubicacion'] is String ? json['ubicacion'] as String : '',
+        location:
+            json['ubicacion'] is String ? json['ubicacion'] as String : '',
         state: json['estadoClase'] is String
             ? json['estadoClase'] as String
             : 'PROGRAMADA',

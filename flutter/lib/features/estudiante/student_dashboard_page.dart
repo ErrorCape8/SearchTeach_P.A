@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/api_client.dart';
+import '../../core/role_theme.dart';
 import '../../core/tutoring_updates.dart';
 import '../../core/widgets/brand_logo.dart';
 import '../../core/widgets/role_toast.dart';
@@ -66,11 +67,14 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage>
     final wide = width >= 980;
     final showAside = width >= 1400 && _tab == 0;
     return Theme(
-      data: Theme.of(context).copyWith(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: _blue,
-          brightness: Theme.of(context).brightness,
-        ).copyWith(primary: _blue),
+      data: withRoleAccent(
+        Theme.of(context).copyWith(
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: _blue,
+            brightness: Theme.of(context).brightness,
+          ).copyWith(primary: _blue),
+        ),
+        _blue,
       ),
       child: Scaffold(
         backgroundColor: _canvas,
@@ -395,6 +399,7 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage>
       _showMessage(_apiMessage(error));
     }
   }
+
   Future<void> _joinProjectByCode() async {
     final controller = TextEditingController();
     try {

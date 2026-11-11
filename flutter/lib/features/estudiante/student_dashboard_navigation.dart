@@ -41,10 +41,16 @@ class _StudentHeader extends StatelessWidget {
     };
     final initials = _studentInitials(profile.name);
     return Container(
-      height: 76,
+      height: 92,
       padding: const EdgeInsets.symmetric(horizontal: 24),
       clipBehavior: Clip.hardEdge,
-      decoration: const BoxDecoration(color: Colors.white),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF1769AA), Color(0xFF164B83)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
       child: Stack(
         children: [
           Positioned(
@@ -82,14 +88,14 @@ class _StudentHeader extends StatelessWidget {
                   visualDensity: VisualDensity.compact,
                   icon: const Icon(
                     Icons.arrow_back_ios_new,
-                    color: _blue,
+                    color: Colors.white,
                     size: 12,
                   ),
                 )
               else
                 CircleAvatar(
                   radius: 13,
-                  backgroundColor: const Color(0xFF315EA7),
+                  backgroundColor: Colors.white.withValues(alpha: .18),
                   child: Text(
                     initials,
                     style: const TextStyle(
@@ -110,7 +116,7 @@ class _StudentHeader extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: _navy,
+                        color: Colors.white,
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
                       ),
@@ -120,7 +126,7 @@ class _StudentHeader extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: _studentMuted,
+                        color: Colors.white70,
                         fontSize: 11,
                       ),
                     ),
@@ -134,16 +140,16 @@ class _StudentHeader extends StatelessWidget {
                   visualDensity: VisualDensity.compact,
                   icon: CircleAvatar(
                     radius: 14,
-                    backgroundColor: const Color(0xFFDCEEFF),
+                    backgroundColor: Colors.white.withValues(alpha: .18),
                     child: Text(
                       initials,
-                      style: const TextStyle(color: _blue, fontSize: 9),
+                      style: const TextStyle(color: Colors.white, fontSize: 9),
                     ),
                   ),
                 ),
               const SizedBox(width: 8),
               Material(
-                color: const Color(0xFFDCEEFF),
+                color: Colors.white.withValues(alpha: .16),
                 shape: const CircleBorder(),
                 child: IconButton(
                   tooltip: 'Avisos',
@@ -152,7 +158,7 @@ class _StudentHeader extends StatelessWidget {
                   icon: const NotificationUnreadIcon(
                     icon: Icons.notifications_none_outlined,
                   ),
-                  color: _blue,
+                  color: Colors.white,
                 ),
               ),
             ],

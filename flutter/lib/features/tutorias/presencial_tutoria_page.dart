@@ -20,7 +20,7 @@ class PresencialTutoriaPage extends ConsumerStatefulWidget {
 }
 
 class _PresencialTutoriaPageState extends ConsumerState<PresencialTutoriaPage> {
-  static const _green = Color(0xFF0C8A53);
+  static const _green = Color(0xFF16834A);
 
   final Map<String, bool?> _attendance = {};
   final Map<String, String> _studentNames = {};
@@ -69,7 +69,8 @@ class _PresencialTutoriaPageState extends ConsumerState<PresencialTutoriaPage> {
     try {
       final dio = ref.read(dioProvider);
       final sessionResponse = await dio.get<Map<String, dynamic>>(_sessionPath);
-      final studentsResponse = await dio.get<List<dynamic>>('$_sessionPath/estudiantes');
+      final studentsResponse =
+          await dio.get<List<dynamic>>('$_sessionPath/estudiantes');
       final session = sessionResponse.data;
       final students = studentsResponse.data ?? const [];
       if (session == null) {
@@ -201,7 +202,7 @@ class _PresencialTutoriaPageState extends ConsumerState<PresencialTutoriaPage> {
         appBar: AppBar(
           title: const Text('Clase presencial'),
           backgroundColor: Colors.white,
-          foregroundColor: const Color(0xFF0A6843),
+          foregroundColor: const Color(0xFF18352A),
         ),
         body: Center(
           child: ConstrainedBox(
@@ -246,7 +247,7 @@ class _PresencialTutoriaPageState extends ConsumerState<PresencialTutoriaPage> {
                       style: const TextStyle(
                           fontSize: 21,
                           fontWeight: FontWeight.w800,
-                          color: Color(0xFF0A6843))),
+                          color: Color(0xFF18352A))),
                   const SizedBox(height: 6),
                   Text(_ended
                       ? 'Clase finalizada'
@@ -260,7 +261,8 @@ class _PresencialTutoriaPageState extends ConsumerState<PresencialTutoriaPage> {
                   else if (_attendance.isEmpty)
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 16),
-                      child: Text('No hay estudiantes inscritos en esta clase.'),
+                      child:
+                          Text('No hay estudiantes inscritos en esta clase.'),
                     )
                   else
                     for (final entry in _attendance.entries)
@@ -285,7 +287,8 @@ class _PresencialTutoriaPageState extends ConsumerState<PresencialTutoriaPage> {
                         OutlinedButton.icon(
                           onPressed: _saving ||
                                   _loadingAttendance ||
-                                  _attendance.values.any((value) => value == true)
+                                  _attendance.values
+                                      .any((value) => value == true)
                               ? null
                               : () => _finish('FALTA_ESTUDIANTES'),
                           icon: const Icon(Icons.person_off_outlined),

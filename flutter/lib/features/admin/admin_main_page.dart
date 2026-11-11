@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/tutoring_updates.dart';
+import '../../core/role_theme.dart';
 import 'admin_controller.dart';
 import 'views/admin_editar_usuario_view.dart';
 import 'views/admin_detalle_usuario_view.dart';
@@ -92,11 +93,14 @@ class AdminMainPage extends ConsumerWidget {
     }
 
     return Theme(
-      data: Theme.of(context).copyWith(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFFEA580C),
-          brightness: Theme.of(context).brightness,
-        ).copyWith(primary: const Color(0xFFEA580C)),
+      data: withRoleAccent(
+        Theme.of(context).copyWith(
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: const Color(0xFFEA580C),
+            brightness: Theme.of(context).brightness,
+          ).copyWith(primary: const Color(0xFFEA580C)),
+        ),
+        const Color(0xFFEA580C),
       ),
       child: Scaffold(
         backgroundColor: const Color(0xFFF3F6FB),

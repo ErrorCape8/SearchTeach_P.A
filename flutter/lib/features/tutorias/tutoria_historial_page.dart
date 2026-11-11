@@ -221,7 +221,7 @@ class _TutoriaHistorialPageState extends ConsumerState<TutoriaHistorialPage> {
       child: Text(
         status,
         style: const TextStyle(
-          color: Color(0xFF0A6843),
+          color: Color(0xFF18352A),
           fontSize: 12,
           fontWeight: FontWeight.w700,
         ),

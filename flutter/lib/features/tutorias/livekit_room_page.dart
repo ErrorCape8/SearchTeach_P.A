@@ -55,7 +55,7 @@ class LiveKitRoomPage extends ConsumerStatefulWidget {
 
 class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
   static const _sharedRoomBackground = Color(0xFF111318);
-  static const _teacherRoomAccent = Color(0xFF0C8A53);
+  static const _teacherRoomAccent = Color(0xFF16834A);
   static const _studentRoomAccent = Color(0xFF1769AA);
 
   final Room _room = Room();

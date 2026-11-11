@@ -6,7 +6,10 @@ import '../auth/auth_repository.dart';
 import '../notifications/notifications_page.dart';
 import '../../core/widgets/sliding_pill_navigation_bar.dart';
 import '../../core/tutoring_updates.dart';
+import '../../core/role_theme.dart';
 import 'director_dashboard_provider.dart';
+import 'demand_forecast_page.dart';
+import 'proyectos_aula_page.dart';
 
 const _purple = Color(0xFF6337BF);
 const _ink = Color(0xFF28243A);
@@ -28,29 +31,45 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
     ref.listen(tutoringUpdatesProvider, (_, next) {
       if (next.hasValue && mounted) {
         ref.invalidate(directorDashboardProvider);
+        ref.invalidate(proyectosAulaProvider);
       }
     });
     final dashboard = ref.watch(directorDashboardProvider);
     final screen = switch (_selectedTab) {
       0 => _home(dashboard),
-      1 => _quality(),
-      2 => _attendance(),
+      1 => _tutoringOverview(),
+      2 => _quality(),
+      3 => _forecast(),
+      4 => const ProyectosAulaPage(),
+      5 => _attendance(),
       _ => _profile(),
     };
 
     return Theme(
-      data: Theme.of(context).copyWith(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: _purple,
-          brightness: Theme.of(context).brightness,
-        ).copyWith(primary: _purple),
+      data: withRoleAccent(
+        Theme.of(context).copyWith(
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: _purple,
+            brightness: Theme.of(context).brightness,
+          ).copyWith(primary: _purple),
+        ),
+        _purple,
       ),
       child: Scaffold(
         backgroundColor: _canvas,
         appBar: AppBar(
-          backgroundColor: Colors.white,
-          foregroundColor: _ink,
-          surfaceTintColor: Colors.white,
+          backgroundColor: _purple,
+          foregroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          flexibleSpace: const DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF6337BF), Color(0xFF4B2A96)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+          ),
           title: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -58,25 +77,28 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                   style: TextStyle(fontSize: 18)),
               Text(
                 _titles[_selectedTab],
-                style: const TextStyle(fontSize: 12, color: _muted),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.white.withValues(alpha: .8),
+                ),
               ),
             ],
           ),
           actions: [
             const NotificationBellButton(accentColor: _purple),
             IconButton(
-              tooltip: _selectedTab == 3 ? 'Volver al inicio' : 'Mi perfil',
+              tooltip: _selectedTab == 6 ? 'Volver al inicio' : 'Mi perfil',
               onPressed: () => setState(
-                () => _selectedTab = _selectedTab == 3 ? 0 : 3,
+                () => _selectedTab = _selectedTab == 6 ? 0 : 6,
               ),
               icon: CircleAvatar(
                 radius: 15,
-                backgroundColor: const Color(0xFFEAE2FA),
+                backgroundColor: Colors.white.withValues(alpha: .16),
                 child: Icon(
-                  _selectedTab == 3
+                  _selectedTab == 6
                       ? Icons.person
                       : Icons.person_outline_rounded,
-                  color: _purple,
+                  color: Colors.white,
                   size: 19,
                 ),
               ),
@@ -85,6 +107,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
               tooltip: 'Actualizar',
               onPressed: () {
                 ref.invalidate(directorDashboardProvider);
+                ref.invalidate(proyectosAulaProvider);
               },
               icon: const Icon(Icons.refresh),
             ),
@@ -113,7 +136,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                 children: [
                   NavigationRail(
                     backgroundColor: Colors.white,
-                    selectedIndex: _selectedTab.clamp(0, 2).toInt(),
+                    selectedIndex: _selectedTab < 5 ? _selectedTab : null,
                     onDestinationSelected: (index) =>
                         setState(() => _selectedTab = index),
                     labelType: NavigationRailLabelType.all,
@@ -133,12 +156,21 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                         label: Text('Inicio'),
                       ),
                       NavigationRailDestination(
+                        icon: Icon(Icons.event_note_outlined),
+                        selectedIcon: Icon(Icons.event_note),
+                        label: Text('Tutor\u{00ED}as'),
+                      ),
+                      NavigationRailDestination(
                         icon: Icon(Icons.star_outline),
                         label: Text('Calidad'),
                       ),
                       NavigationRailDestination(
-                        icon: Icon(Icons.bar_chart),
-                        label: Text('Asistencia'),
+                        icon: Icon(Icons.query_stats_outlined),
+                        label: Text('Pron\u{00F3}stico'),
+                      ),
+                      NavigationRailDestination(
+                        icon: Icon(Icons.groups_outlined),
+                        label: Text('Proyectos'),
                       ),
                     ],
                   ),
@@ -163,16 +195,23 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
             ? SlidingPillNavigationBar(
                 selectedColor: _purple,
                 indicatorColor: const Color(0xFFEAE2FA),
-                selectedIndex: _selectedTab.clamp(0, 2).toInt(),
+                selectedIndex: _selectedTab < 5 ? _selectedTab : 0,
                 onDestinationSelected: (index) =>
                     setState(() => _selectedTab = index),
                 destinations: const [
                   SlidingPillDestination(
                       icon: Icons.home_outlined, label: 'Inicio'),
                   SlidingPillDestination(
+                      icon: Icons.event_note_outlined,
+                      selectedIcon: Icons.event_note,
+                      label: 'Tutor\u{00ED}as'),
+                  SlidingPillDestination(
                       icon: Icons.star_outline, label: 'Calidad'),
                   SlidingPillDestination(
-                      icon: Icons.fact_check_outlined, label: 'Asistencia'),
+                      icon: Icons.query_stats_outlined,
+                      label: 'Pron\u{00F3}stico'),
+                  SlidingPillDestination(
+                      icon: Icons.groups_outlined, label: 'Proyectos'),
                 ],
               )
             : null,
@@ -204,7 +243,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                 children: [
                   Expanded(
                     child: _MetricCard(
-                      title: 'Tutorías registradas',
+                      title: 'Tutor\u{00ED}as realizadas',
                       value: '${data.totalTutorias}',
                       icon: Icons.menu_book_outlined,
                     ),
@@ -253,9 +292,129 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                   ),
                 ],
               ),
+              const SizedBox(height: 18),
+              OutlinedButton.icon(
+                onPressed: () => setState(() => _selectedTab = 5),
+                icon: const Icon(Icons.query_stats_outlined),
+                label: const Text('Ver predicci\u{00F3}n de asistencia'),
+              ),
             ],
           ),
         ),
+      );
+
+  Widget _tutoringOverview() => ref.watch(directorDashboardProvider).when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, _) => _errorState(error),
+        data: (data) {
+          final maximum = data.historialSemanal.fold<int>(
+            1,
+            (largest, week) => week.total > largest ? week.total : largest,
+          );
+          return RefreshIndicator(
+            onRefresh: () => ref
+                .refresh(directorDashboardProvider.future)
+                .then<void>((_) {}),
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                const Text(
+                  'Actividad de tutor\u{00ED}as',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    color: _ink,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                const Text(
+                  'Resumen de sesiones y participaci\u{00F3}n por materia.',
+                  style: TextStyle(color: _muted),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _MetricCard(
+                        title: 'Tutor\u{00ED}as realizadas',
+                        value: '${data.tutoriasRealizadas}',
+                        icon: Icons.check_circle_outline,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _MetricCard(
+                        title: 'Programadas',
+                        value: '${data.tutoriasProgramadas}',
+                        icon: Icons.event_outlined,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                _SectionCard(
+                  title: 'Por materia',
+                  subtitle: 'Sesiones registradas y asistencia confirmada',
+                  child: _SubjectSummaryList(data.tutoriasPorMateria),
+                ),
+                const SizedBox(height: 14),
+                _SectionCard(
+                  title: 'Actividad semanal',
+                  subtitle: 'Tutor\u{00ED}as registradas por semana',
+                  child: data.historialSemanal.isEmpty
+                      ? const Text(
+                          'Todav\u{00ED}a no hay actividad registrada.')
+                      : Column(
+                          children: [
+                            for (final week
+                                in data.historialSemanal.reversed.take(8))
+                              Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 7),
+                                child: Row(
+                                  children: [
+                                    SizedBox(
+                                      width: 96,
+                                      child: Text(
+                                        '${week.semanaInicio.day}/${week.semanaInicio.month}',
+                                        style: const TextStyle(
+                                          color: _muted,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: LinearProgressIndicator(
+                                        value: week.total / maximum,
+                                        minHeight: 9,
+                                        borderRadius: BorderRadius.circular(8),
+                                        color: _purple,
+                                        backgroundColor:
+                                            const Color(0xFFEDE6FA),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    SizedBox(
+                                      width: 28,
+                                      child: Text(
+                                        '${week.total}',
+                                        textAlign: TextAlign.end,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          color: _ink,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                          ],
+                        ),
+                ),
+              ],
+            ),
+          );
+        },
       );
 
   Widget _quality() => ref.watch(directorDashboardProvider).when(
@@ -299,6 +458,14 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => _errorState(error),
         data: (data) => _AttendancePredictionPage(dashboard: data),
+      );
+
+  Widget _forecast() => ref.watch(directorDashboardProvider).when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, _) => _errorState(error),
+        data: (data) => DemandForecastPage(
+          subjects: data.tutoriasPorMateria,
+        ),
       );
 
   Widget _profile() {
@@ -363,7 +530,15 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
   }
 }
 
-const _titles = ['Panel institucional', 'Calidad', 'Asistencia', 'Perfil'];
+const _titles = [
+  'Panel institucional',
+  'Tutor\u{00ED}as',
+  'Calidad',
+  'Pron\u{00F3}stico',
+  'Proyectos',
+  'Asistencia',
+  'Perfil',
+];
 
 class _MetricCard extends StatelessWidget {
   const _MetricCard({
@@ -601,7 +776,7 @@ class _AttendancePredictionPage extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         _SectionCard(
-          title: 'Tutorías programadas próximas',
+          title: 'Tutor\u{00ED}as realizadas',
           subtitle: 'Probabilidad promedio estimada por materia',
           child: !dashboard.modeloAsistenciaDisponible
               ? const Text(

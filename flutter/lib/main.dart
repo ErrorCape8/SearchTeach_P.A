@@ -124,6 +124,72 @@ class _AppState extends State<App> {
             seedColor: const Color(0xFFA9154F),
             primary: const Color(0xFFA9154F),
           ),
+          scaffoldBackgroundColor: const Color(0xFFF3F5FA),
+          cardTheme: CardThemeData(
+            color: Colors.white,
+            elevation: 2,
+            shadowColor: const Color(0xFF14203C).withValues(alpha: .08),
+            margin: const EdgeInsets.only(bottom: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+              side: const BorderSide(color: Color(0x0F25324A)),
+            ),
+          ),
+          inputDecorationTheme: InputDecorationTheme(
+            filled: true,
+            fillColor: Colors.white,
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 15, vertical: 14),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: Color(0xFFDCE2EB)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: Color(0xFFDCE2EB)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: Color(0xFFA9154F), width: 2),
+            ),
+          ),
+          filledButtonTheme: FilledButtonThemeData(
+            style: FilledButton.styleFrom(
+              minimumSize: const Size(48, 48),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+          ),
+          elevatedButtonTheme: ElevatedButtonThemeData(
+            style: ElevatedButton.styleFrom(
+              minimumSize: const Size(48, 48),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+          ),
+          outlinedButtonTheme: OutlinedButtonThemeData(
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size(44, 44),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+              side: const BorderSide(color: Color(0xFFDCE2EB)),
+            ),
+          ),
+          chipTheme: ChipThemeData(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+            ),
+            side: const BorderSide(color: Color(0xFFDCE2EB)),
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+          ),
+          dividerTheme: const DividerThemeData(
+            color: Color(0xFFE8EBF1),
+            thickness: 1,
+            space: 1,
+          ),
           useMaterial3: true,
         ),
         routerConfig: _router,
