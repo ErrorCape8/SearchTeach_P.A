@@ -75,7 +75,11 @@ class AdminHeader extends StatelessWidget {
                     width: 92,
                     height: 58,
                     alignment: Alignment.center,
-                    child: const BrandLogo(width: 92, height: 58),
+                    child: const BrandLogo(
+                      width: 92,
+                      height: 58,
+                      accentColor: kAdminOrange,
+                    ),
                   ),
                   const SizedBox(width: 14),
                 ],

@@ -56,12 +56,14 @@ class _TutorCard extends StatelessWidget {
 class _TutoringCard extends StatelessWidget {
   const _TutoringCard({
     required this.tutoring,
+    this.teacherName = '',
     this.onConfirm,
     this.onCancel,
     this.onJoinRoom,
     this.onOpenHistory,
   });
   final StudentTutoring tutoring;
+  final String teacherName;
   final VoidCallback? onConfirm;
   final VoidCallback? onCancel;
   final VoidCallback? onJoinRoom;
@@ -89,10 +91,15 @@ class _TutoringCard extends StatelessWidget {
               Text(
                 tutoring.start == null
                     ? 'Horario por confirmar'
-                    : _longDate(tutoring.start!),
+                    : '${_longDate(tutoring.start!.toLocal())}'
+                        '${tutoring.end == null ? '' : ' – ${TimeOfDay.fromDateTime(tutoring.end!.toLocal()).format(context)}'}',
                 style: const TextStyle(color: _muted),
               ),
               const SizedBox(height: 5),
+              if (teacherName.isNotEmpty)
+                Text('Docente: $teacherName',
+                    style: const TextStyle(color: _muted)),
+              if (teacherName.isNotEmpty) const SizedBox(height: 5),
               Text('Modalidad: ${_modalityLabel(tutoring.modality)}',
                   style: const TextStyle(color: _muted)),
               if (onJoinRoom != null) ...[
@@ -136,11 +143,13 @@ class _GroupSessionCard extends StatelessWidget {
   const _GroupSessionCard({
     required this.session,
     required this.studentName,
+    required this.teacherName,
     required this.onLeave,
   });
 
   final StudentGroupSession session;
   final String studentName;
+  final String teacherName;
   final VoidCallback onLeave;
 
   @override
@@ -155,8 +164,7 @@ class _GroupSessionCard extends StatelessWidget {
                   style: const TextStyle(
                       color: _navy, fontWeight: FontWeight.w800, fontSize: 16)),
               const SizedBox(height: 6),
-              Text(
-                  'Docente ${session.teacherId} · Semestre ${session.semester}'),
+              Text('Docente $teacherName · Semestre ${session.semester}'),
               Text('Modalidad: ${_modalityLabel(session.modality)}',
                   style: const TextStyle(color: _muted)),
               if (session.modality.toUpperCase() != 'VIRTUAL' &&
@@ -164,7 +172,9 @@ class _GroupSessionCard extends StatelessWidget {
                 Text('Lugar: ${session.location}',
                     style: const TextStyle(color: _muted)),
               if (session.start != null)
-                Text(_longDate(session.start!),
+                Text(
+                    '${_longDate(session.start!.toLocal())}'
+                    '${session.end == null ? '' : ' – ${TimeOfDay.fromDateTime(session.end!.toLocal()).format(context)}'}',
                     style: const TextStyle(color: _muted)),
               Text('Tecnologías: ${session.technologies.join(', ')}',
                   style: const TextStyle(color: _muted)),

@@ -203,7 +203,11 @@ class _DocenteSolicitudesPageState extends ConsumerState<DocenteSolicitudesPage>
         children: [
           const Text(
             'Solicitudes de tutor\u{00ED}as',
-            style: TextStyle(fontSize: 21, fontWeight: FontWeight.w800),
+            style: TextStyle(
+              color: Color(0xFF18352A),
+              fontSize: 23,
+              fontWeight: FontWeight.w800,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
@@ -311,13 +315,31 @@ class _RequestCard extends StatelessWidget {
       _ => request.state,
     };
     return Card(
+      elevation: 0,
+      margin: const EdgeInsets.only(bottom: 12),
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: const BorderSide(color: Color(0xFFE5ECE7)),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEAF5EE),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.person_outline_rounded,
+                      color: Color(0xFF16834A)),
+                ),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     request.subject,
@@ -327,15 +349,55 @@ class _RequestCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                Chip(label: Text(stateLabel)),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: isPending
+                        ? const Color(0xFFFFF3D9)
+                        : const Color(0xFFEAF5EE),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Text(
+                    stateLabel,
+                    style: TextStyle(
+                      color: isPending
+                          ? const Color(0xFF946200)
+                          : const Color(0xFF16834A),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
               ],
             ),
-            const SizedBox(height: 6),
-            Text('Estudiante: ${request.studentId}'),
-            const SizedBox(height: 4),
-            Text('$dateLabel · $timeLabel · ${request.modality}'),
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 16,
+              runSpacing: 9,
+              children: [
+                _RequestDetail(
+                  icon: Icons.badge_outlined,
+                  label: 'Estudiante: ${request.studentId}',
+                ),
+                _RequestDetail(
+                  icon: Icons.calendar_month_outlined,
+                  label: dateLabel,
+                ),
+                _RequestDetail(
+                  icon: Icons.schedule_outlined,
+                  label: timeLabel,
+                ),
+                _RequestDetail(
+                  icon: Icons.meeting_room_outlined,
+                  label: request.modality,
+                ),
+              ],
+            ),
             if (isPending) ...[
-              const SizedBox(height: 14),
+              const SizedBox(height: 16),
+              const Divider(height: 1, color: Color(0xFFEAF0EB)),
+              const SizedBox(height: 12),
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
@@ -348,7 +410,7 @@ class _RequestCard extends StatelessWidget {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.check_rounded),
-                    label: const Text('Aceptar'),
+                    label: const Text('Aceptar solicitud'),
                   ),
                   OutlinedButton.icon(
                     onPressed: busy ? null : onPropose,
@@ -363,6 +425,28 @@ class _RequestCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _RequestDetail extends StatelessWidget {
+  const _RequestDetail({required this.icon, required this.label});
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 15, color: const Color(0xFF7C8B81)),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Color(0xFF687A70),
+              fontSize: 12,
+            ),
+          ),
+        ],
+      );
 }
 
 class _LoadError extends StatelessWidget {

@@ -53,6 +53,9 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
     super.didUpdateWidget(oldWidget);
     if (widget.focusRequest != oldWidget.focusRequest) {
       _section = widget.focusSection;
+      if (widget.focusSection == 'sesiones') {
+        _sessionFilter = 'encurso';
+      }
     }
   }
 
@@ -73,6 +76,14 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
     widget.onSectionChanged(section);
   }
 
+  void _openEnrolledSessions() {
+    setState(() {
+      _section = 'sesiones';
+      _sessionFilter = 'encurso';
+    });
+    widget.onSectionChanged('sesiones');
+  }
+
   Widget _menu() => ListView(
         padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
         children: [
@@ -86,7 +97,7 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
             icon: Icons.calendar_month_outlined,
             title: 'Mis sesiones',
             subtitle: 'Las sesiones en las que estás inscrito.',
-            onTap: () => _goToSection('sesiones'),
+            onTap: _openEnrolledSessions,
           ),
           _MenuTile(
             icon: Icons.groups_outlined,
@@ -810,8 +821,10 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
     final pending = widget.data.tutorings.where((tutoring) =>
         tutoring.status == 'SOLICITADA' ||
         tutoring.status == 'ALTERNATIVA_PROPUESTA');
-    final activeIndividual = widget.data.tutorings.where((tutoring) =>
-        tutoring.status == 'PROGRAMADA' || tutoring.status == 'EN_CURSO');
+    final activeIndividual = widget.data.tutorings
+        .where((tutoring) =>
+            tutoring.status == 'PROGRAMADA' || tutoring.status == 'EN_CURSO')
+        .toList();
     final cancelled = widget.data.tutorings
         .where((tutoring) => tutoring.status == 'CANCELADA');
     final options = [
@@ -823,7 +836,7 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
       ('pendientes', 'Pendientes', pending.length),
       (
         'encurso',
-        'Próximas y en curso',
+        'Mis sesiones',
         activeGroupSessions.length + activeIndividual.length
       ),
       ('canceladas', 'Canceladas', cancelled.length),
@@ -840,7 +853,57 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
         );
         break;
       case 'encurso':
-        content = activeGroupSessions.isEmpty && activeIndividual.isEmpty
+        final agenda = <({DateTime? start, Widget card})>[
+          for (final session in activeGroupSessions)
+            (
+              start: session.start?.toLocal(),
+              card: _GroupSessionCard(
+                session: session,
+                studentName: widget.data.profile.name,
+                teacherName: widget.data.tutors
+                        .where((tutor) => tutor.teacherId == session.teacherId)
+                        .map((tutor) => tutor.name)
+                        .firstOrNull ??
+                    session.teacherId,
+                onLeave: () => widget.onLeaveGroupSession(session),
+              ),
+            ),
+          for (final tutoring in activeIndividual)
+            (
+              start: tutoring.start?.toLocal(),
+              card: _TutoringCard(
+                tutoring: tutoring,
+                teacherName: widget.data.tutors
+                        .where((tutor) => tutor.teacherId == tutoring.teacherId)
+                        .map((tutor) => tutor.name)
+                        .firstOrNull ??
+                    tutoring.teacherId,
+                onJoinRoom: tutoring.status == 'EN_CURSO' &&
+                        tutoring.modality.toUpperCase() != 'PRESENCIAL'
+                    ? () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => LiveKitRoomPage(
+                              sessionId: tutoring.id,
+                              subject: tutoring.subject,
+                              modality: tutoring.modality,
+                              teacherMode: false,
+                              students: [tutoring.studentId],
+                              endAt: tutoring.end?.toLocal(),
+                              studentMode: true,
+                              studentName: widget.data.profile.name,
+                              isIndividualTutoring: true,
+                            ),
+                          ),
+                        )
+                    : null,
+                onCancel: tutoring.status == 'PROGRAMADA'
+                    ? () => widget.onAction(tutoring, 'cancelar')
+                    : null,
+              ),
+            ),
+        ]..sort((a, b) =>
+            (a.start ?? DateTime(9999)).compareTo(b.start ?? DateTime(9999)));
+        content = agenda.isEmpty
             ? ListView(
                 controller: _sessionsScrollController,
                 padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
@@ -855,37 +918,13 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
               )
             : ListView(
                 controller: _sessionsScrollController,
-                padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
+                padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
                 children: [
-                  ...activeGroupSessions.map((session) => _GroupSessionCard(
-                        session: session,
-                        studentName: widget.data.profile.name,
-                        onLeave: () => widget.onLeaveGroupSession(session),
-                      )),
-                  ...activeIndividual.map((tutoring) => _TutoringCard(
-                        tutoring: tutoring,
-                        onJoinRoom: tutoring.status == 'EN_CURSO' &&
-                                tutoring.modality.toUpperCase() != 'PRESENCIAL'
-                            ? () => Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) => LiveKitRoomPage(
-                                      sessionId: tutoring.id,
-                                      subject: tutoring.subject,
-                                      modality: tutoring.modality,
-                                      teacherMode: false,
-                                      students: [tutoring.studentId],
-                                      endAt: tutoring.end?.toLocal(),
-                                      studentMode: true,
-                                      studentName: widget.data.profile.name,
-                                      isIndividualTutoring: true,
-                                    ),
-                                  ),
-                                )
-                            : null,
-                        onCancel: tutoring.status == 'PROGRAMADA'
-                            ? () => widget.onAction(tutoring, 'cancelar')
-                            : null,
-                      )),
+                  const Text(
+                    'Aquí ves cuándo y dónde te toca cada sesión.',
+                    style: TextStyle(color: _muted, fontSize: 12),
+                  ),
+                  ..._agendaSections(agenda),
                 ],
               );
         break;
@@ -947,6 +986,71 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
         ),
       ],
     );
+  }
+
+  List<Widget> _agendaSections(
+    List<({DateTime? start, Widget card})> agenda,
+  ) {
+    final children = <Widget>[];
+    final today = DateTime.now();
+    final currentWeek = DateTime(today.year, today.month, today.day)
+        .subtract(Duration(days: today.weekday - 1));
+    var index = 0;
+    while (index < agenda.length && agenda[index].start != null) {
+      final start = agenda[index].start!;
+      final weekStart =
+          DateTime(start.year, start.month, start.day)
+              .subtract(Duration(days: start.weekday - 1));
+      var weekEnd = index + 1;
+      while (weekEnd < agenda.length && agenda[weekEnd].start != null) {
+        final next = agenda[weekEnd].start!;
+        final nextWeek = DateTime(next.year, next.month, next.day)
+            .subtract(Duration(days: next.weekday - 1));
+        if (nextWeek != weekStart) break;
+        weekEnd++;
+      }
+
+      final weekLabel = weekStart == currentWeek
+          ? 'Esta semana'
+          : weekStart == currentWeek.add(const Duration(days: 7))
+              ? 'Próxima semana'
+              : 'Semana del ${weekStart.day.toString().padLeft(2, '0')}/${weekStart.month.toString().padLeft(2, '0')}';
+      children.add(_AgendaWeekHeading(
+        label: weekLabel,
+        count: weekEnd - index,
+      ));
+
+      while (index < weekEnd) {
+        final day = agenda[index].start!;
+        final dayStart = DateTime(day.year, day.month, day.day);
+        children.add(_AgendaDayHeading(date: dayStart));
+        while (index < weekEnd) {
+          final itemStart = agenda[index].start!;
+          if (itemStart.year != dayStart.year ||
+              itemStart.month != dayStart.month ||
+              itemStart.day != dayStart.day) {
+            break;
+          }
+          children
+            ..add(agenda[index].card)
+            ..add(const SizedBox(height: 8));
+          index++;
+        }
+      }
+    }
+
+    if (index < agenda.length) {
+      children.add(_AgendaWeekHeading(
+        label: 'Horario por confirmar',
+        count: agenda.length - index,
+      ));
+      for (; index < agenda.length; index++) {
+        children
+          ..add(agenda[index].card)
+          ..add(const SizedBox(height: 8));
+      }
+    }
+    return children;
   }
 
   Widget _groupChatsAndCalls() {

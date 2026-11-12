@@ -313,7 +313,11 @@ class _Navigation extends StatelessWidget {
           const SizedBox(
             height: 64,
             width: 150,
-            child: BrandLogo(width: 150, height: 64),
+            child: BrandLogo(
+              width: 150,
+              height: 64,
+              accentColor: _wine,
+            ),
           ),
           const SizedBox(height: 8),
           const Text('COORDINACIÓN',

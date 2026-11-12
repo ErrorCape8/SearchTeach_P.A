@@ -48,54 +48,100 @@ class DocentePerfilPage extends ConsumerWidget {
         ),
       ),
       data: (data) => ListView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.fromLTRB(20, 22, 20, 32),
         children: [
-          _ProfileHero(
-            name: _value(data['nombre']),
-            career: _value(data['carrera']),
-            role: _value(data['rol']),
-          ),
-          const SizedBox(height: 20),
-          _ProfileCard(
-            title: 'Información de contacto',
-            children: [
-              _ProfileRow(
-                  icon: Icons.email_outlined,
-                  label: 'Correo',
-                  value: _value(data['correo'])),
-              _ProfileRow(
-                icon: Icons.phone_outlined,
-                label: 'Teléfono',
-                value: _value(data['telefono']),
-                onTap: () => _editPhone(context, ref, _value(data['telefono'])),
+          Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 900),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text(
+                    'Mi perfil',
+                    style: TextStyle(
+                      color: _profileNavy,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _ProfileHero(
+                    name: _value(data['nombre']),
+                    career: _value(data['carrera']),
+                    role: _value(data['rol']),
+                  ),
+                  const SizedBox(height: 18),
+                  _ProfileCard(
+                    title: 'Información de contacto',
+                    children: [
+                      _ProfileRow(
+                        icon: Icons.email_outlined,
+                        label: 'Correo institucional',
+                        value: _value(data['correo']),
+                      ),
+                      _ProfileRow(
+                        icon: Icons.phone_outlined,
+                        label: 'Teléfono',
+                        value: _value(data['telefono']),
+                        onTap: () =>
+                            _editPhone(context, ref, _value(data['telefono'])),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  _ProfileCard(
+                    title: 'Información institucional',
+                    children: [
+                      _ProfileRow(
+                        icon: Icons.badge_outlined,
+                        label: 'Identificador de cuenta',
+                        value: _value(data['id']),
+                      ),
+                      _ProfileRow(
+                        icon: Icons.school_outlined,
+                        label: 'Programa académico',
+                        value: _value(data['carrera']),
+                      ),
+                      _ProfileRow(
+                        icon: Icons.workspace_premium_outlined,
+                        label: 'Rol',
+                        value: _value(data['rol']),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  _ProfileCard(
+                    title: 'Perfil académico',
+                    children: [
+                      _ProfileRow(
+                        icon: Icons.menu_book_outlined,
+                        label: 'Materias principales',
+                        value: _capabilities(data['materiasPrincipales']),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  _ProfileCard(
+                    title: 'Certificaciones',
+                    children: [_CertificationsCard(ref: ref)],
+                  ),
+                  const SizedBox(height: 14),
+                  _ProfileCard(
+                    title: 'Seguridad',
+                    children: [
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.lock_outline,
+                            color: _profileGreen),
+                        title: const Text('Cambiar contraseña'),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => _changePassword(context, ref),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-              const SizedBox(height: 16),
-              _CertificationsCard(ref: ref),
-            ],
-          ),
-          const SizedBox(height: 16),
-          _ProfileCard(
-            title: 'Perfil académico',
-            children: [
-              _ProfileRow(
-                icon: Icons.menu_book_outlined,
-                label: 'Materias principales',
-                value: _capabilities(data['materiasPrincipales']),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          _ProfileCard(
-            title: 'Seguridad',
-            children: [
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.lock_outline, color: _profileGreen),
-                title: const Text('Cambiar contraseña'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => _changePassword(context, ref),
-              ),
-            ],
+            ),
           ),
         ],
       ),
@@ -217,6 +263,12 @@ class _ProfileCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Card(
+        elevation: 0,
+        color: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: const BorderSide(color: Color(0xFFE5ECE7)),
+        ),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(18, 16, 18, 8),
           child:
@@ -248,7 +300,11 @@ class _ProfileHero extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.all(22),
         decoration: BoxDecoration(
-          color: const Color(0xFF0E8A62),
+          gradient: const LinearGradient(
+            colors: [Color(0xFF16834A), Color(0xFF18352A)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
           borderRadius: BorderRadius.circular(18),
         ),
         child: LayoutBuilder(

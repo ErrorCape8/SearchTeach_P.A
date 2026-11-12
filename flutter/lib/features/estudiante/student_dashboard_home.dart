@@ -14,6 +14,7 @@ class StudentHomeView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final now = DateTime.now();
     final upcoming = <({
       String subject,
       String teacher,
@@ -21,10 +22,11 @@ class StudentHomeView extends StatelessWidget {
       String location,
       DateTime start
     })>[];
-    for (final tutoring in data.tutorings.where(
-        (item) => item.status == 'PROGRAMADA' || item.status == 'EN_CURSO')) {
+    for (final tutoring in data.tutorings.where((item) =>
+        item.status == 'EN_CURSO' || item.status == 'PROGRAMADA')) {
       final start = tutoring.start?.toLocal();
-      if (start != null) {
+      if (start != null &&
+          (tutoring.status == 'EN_CURSO' || start.isAfter(now))) {
         upcoming.add((
           subject: tutoring.subject,
           teacher: data.tutors
@@ -41,7 +43,8 @@ class StudentHomeView extends StatelessWidget {
     for (final session in data.groupSessions.where(
         (item) => item.state == 'PROGRAMADA' || item.state == 'EN_CURSO')) {
       final start = session.start?.toLocal();
-      if (start != null) {
+      if (start != null &&
+          (session.state == 'EN_CURSO' || start.isAfter(now))) {
         final teacher = data.tutors
             .where((item) => item.teacherId == session.teacherId)
             .map((item) => item.name)

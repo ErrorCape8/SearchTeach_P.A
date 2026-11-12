@@ -1402,7 +1402,11 @@ class _TeacherRoomSidebar extends StatelessWidget {
               const SizedBox(height: 18),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 14),
-                child: const BrandLogo(width: 168, height: 72),
+                child: const BrandLogo(
+                  width: 168,
+                  height: 72,
+                  accentColor: Color(0xFF16834A),
+                ),
               ),
               const SizedBox(height: 24),
               const Padding(
@@ -1524,6 +1528,7 @@ class _StudentRoomSidebar extends StatelessWidget {
                     child: const BrandLogo(
                       width: 104,
                       height: 64,
+                      accentColor: Color(0xFF1769AA),
                     ),
                   ),
                 ),

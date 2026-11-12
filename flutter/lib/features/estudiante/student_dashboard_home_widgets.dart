@@ -107,6 +107,91 @@ class _EmptyCard extends StatelessWidget {
       );
 }
 
+class _AgendaWeekHeading extends StatelessWidget {
+  const _AgendaWeekHeading({required this.label, required this.count});
+
+  final String label;
+  final int count;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(2, 12, 2, 8),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  color: _navy,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            Text(
+              '$count ${count == 1 ? 'sesión' : 'sesiones'}',
+              style: const TextStyle(color: _muted, fontSize: 11),
+            ),
+          ],
+        ),
+      );
+}
+
+class _AgendaDayHeading extends StatelessWidget {
+  const _AgendaDayHeading({required this.date});
+
+  final DateTime date;
+
+  @override
+  Widget build(BuildContext context) {
+    const weekdays = [
+      'Lunes',
+      'Martes',
+      'Miércoles',
+      'Jueves',
+      'Viernes',
+      'Sábado',
+      'Domingo',
+    ];
+    const months = [
+      'enero',
+      'febrero',
+      'marzo',
+      'abril',
+      'mayo',
+      'junio',
+      'julio',
+      'agosto',
+      'septiembre',
+      'octubre',
+      'noviembre',
+      'diciembre',
+    ];
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(2, 8, 2, 6),
+      child: Row(
+        children: [
+          Text(
+            weekdays[date.weekday - 1],
+            style: const TextStyle(
+              color: _navy,
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            '${date.day} de ${months[date.month - 1]}',
+            style: const TextStyle(color: _muted, fontSize: 11),
+          ),
+          const SizedBox(width: 10),
+          const Expanded(child: Divider(height: 1, color: _line)),
+        ],
+      ),
+    );
+  }
+}
+
 String _roleLabel(String role) {
   final normalized = role.toLowerCase();
   final student = normalized.contains('estudiante');

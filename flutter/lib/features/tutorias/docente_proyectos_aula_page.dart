@@ -111,7 +111,7 @@ class DocenteProyectosAulaPage extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Proyectos de aula',
+            'Tutorías colectivas',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   color: const Color(0xFF18352A),
                   fontWeight: FontWeight.w800,
@@ -119,7 +119,7 @@ class DocenteProyectosAulaPage extends ConsumerWidget {
           ),
           const SizedBox(height: 5),
           const Text(
-            'Da seguimiento a tus equipos, agenda conversaciones y consulta el historial de cada proyecto.',
+            'Da seguimiento a tus equipos, agenda encuentros y consulta los avances de cada proyecto.',
             style: TextStyle(color: Color(0xFF687A70)),
           ),
         ],

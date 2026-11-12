@@ -254,6 +254,7 @@ class _StudentSidebar extends StatelessWidget {
                     child: const BrandLogo(
                       width: 104,
                       height: 64,
+                      accentColor: _blue,
                     ),
                   ),
                 ),
@@ -399,10 +400,17 @@ class _StudentSidebar extends StatelessWidget {
       );
 }
 
-class _StudentSidePanel extends StatelessWidget {
+class _StudentSidePanel extends StatefulWidget {
   const _StudentSidePanel({required this.data});
 
   final StudentDashboardData data;
+
+  @override
+  State<_StudentSidePanel> createState() => _StudentSidePanelState();
+}
+
+class _StudentSidePanelState extends State<_StudentSidePanel> {
+  DateTime? _selectedDate;
 
   @override
   Widget build(BuildContext context) {
@@ -410,11 +418,13 @@ class _StudentSidePanel extends StatelessWidget {
     final sessions = <({
       String subject,
       DateTime start,
+      DateTime? end,
+      String teacher,
       String modality,
       String location,
       String status
     })>[];
-    for (final session in data.groupSessions) {
+    for (final session in widget.data.groupSessions) {
       final start = session.start?.toLocal();
       if (start != null &&
           (session.state == 'PROGRAMADA' || session.state == 'EN_CURSO') &&
@@ -422,13 +432,19 @@ class _StudentSidePanel extends StatelessWidget {
         sessions.add((
           subject: session.subject,
           start: start,
+          end: session.end?.toLocal(),
+          teacher: widget.data.tutors
+                  .where((tutor) => tutor.teacherId == session.teacherId)
+                  .map((tutor) => tutor.name)
+                  .firstOrNull ??
+              session.teacherId,
           modality: session.modality,
           location: session.location,
           status: session.state == 'EN_CURSO' ? 'En curso' : 'Pendiente',
         ));
       }
     }
-    for (final tutoring in data.tutorings) {
+    for (final tutoring in widget.data.tutorings) {
       final start = tutoring.start?.toLocal();
       if (start != null &&
           (tutoring.status == 'PROGRAMADA' || tutoring.status == 'EN_CURSO') &&
@@ -436,6 +452,12 @@ class _StudentSidePanel extends StatelessWidget {
         sessions.add((
           subject: tutoring.subject,
           start: start,
+          end: tutoring.end?.toLocal(),
+          teacher: widget.data.tutors
+                  .where((tutor) => tutor.teacherId == tutoring.teacherId)
+                  .map((tutor) => tutor.name)
+                  .firstOrNull ??
+              tutoring.teacherId,
           modality: tutoring.modality,
           location: '',
           status: tutoring.status == 'EN_CURSO' ? 'En curso' : 'Pendiente',
@@ -444,16 +466,28 @@ class _StudentSidePanel extends StatelessWidget {
     }
     sessions.sort((a, b) => a.start.compareTo(b.start));
     final bookedDates = sessions.map((item) => item.start).toList();
+    final selectedDate = _selectedDate ?? now;
+    final selectedSessions = sessions
+        .where((item) =>
+            item.start.year == selectedDate.year &&
+            item.start.month == selectedDate.month &&
+            item.start.day == selectedDate.day)
+        .toList();
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(0, 18, 16, 20),
       children: [
-        _StudentCalendarCard(now: now, bookedDates: bookedDates),
+        _StudentCalendarCard(
+          now: now,
+          bookedDates: bookedDates,
+          selectedDate: selectedDate,
+          onSelectDate: (date) => setState(() => _selectedDate = date),
+        ),
         const SizedBox(height: 14),
         const Padding(
           padding: EdgeInsets.only(left: 2),
           child: Text(
-            'Próximas sesiones',
+            'Sesiones del día',
             style: TextStyle(
               color: _navy,
               fontSize: 12,
@@ -473,13 +507,22 @@ class _StudentSidePanel extends StatelessWidget {
               ? const Padding(
                   padding: EdgeInsets.all(12),
                   child: Text(
-                    'Tus próximas sesiones aparecerán aquí.',
+                    'Tus sesiones aparecerán aquí.',
                     style: TextStyle(color: _studentMuted, fontSize: 8),
                   ),
                 )
-              : Column(
+              : selectedSessions.isEmpty
+                  ? Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Text(
+                        'Sin sesiones el ${selectedDate.day} de ${_shortMonth(selectedDate.month)}.',
+                        style: const TextStyle(
+                            color: _studentMuted, fontSize: 10),
+                      ),
+                    )
+                  : Column(
                   children: [
-                    for (final item in sessions.take(3))
+                    for (final item in selectedSessions)
                       _UpcomingSessionTile(item: item),
                   ],
                 ),
@@ -493,10 +536,14 @@ class _StudentCalendarCard extends StatelessWidget {
   const _StudentCalendarCard({
     required this.now,
     required this.bookedDates,
+    required this.selectedDate,
+    required this.onSelectDate,
   });
 
   final DateTime now;
   final List<DateTime> bookedDates;
+  final DateTime selectedDate;
+  final ValueChanged<DateTime> onSelectDate;
 
   @override
   Widget build(BuildContext context) {
@@ -563,6 +610,8 @@ class _StudentCalendarCard extends StatelessWidget {
                         daysInMonth,
                         now,
                         firstWeekday,
+                        selectedDate,
+                        onSelectDate,
                       ),
                     ),
                 ],
@@ -583,6 +632,8 @@ class _StudentCalendarCard extends StatelessWidget {
     int daysInMonth,
     DateTime today,
     int firstWeekday,
+    DateTime selectedDate,
+    ValueChanged<DateTime> onSelectDate,
   ) {
     final day = offsetDay - firstWeekday;
     if (day < 1 || day > daysInMonth) return const SizedBox(height: 19);
@@ -594,32 +645,40 @@ class _StudentCalendarCard extends StatelessWidget {
         item.year == date.year &&
         item.month == date.month &&
         item.day == date.day);
-    final selected = isToday || hasSession;
+    final isSelected = selectedDate.year == date.year &&
+        selectedDate.month == date.month &&
+        selectedDate.day == date.day;
     return SizedBox(
       height: 25,
       child: Center(
-        child: Container(
-          width: 25,
-          height: 22,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: isToday
-                ? const Color(0xFF0D4FC4)
-                : hasSession
-                    ? const Color(0xFFE6EEFF)
-                    : Colors.transparent,
-            borderRadius: BorderRadius.circular(5),
-          ),
-          child: Text(
-            '$day',
-            style: TextStyle(
-              color: isToday
-                  ? Colors.white
-                  : selected
-                      ? const Color(0xFF0D4FC4)
-                      : const Color(0xFF273444),
-              fontSize: 11,
-              fontWeight: isToday ? FontWeight.w700 : FontWeight.normal,
+        child: InkWell(
+          onTap: () => onSelectDate(date),
+          borderRadius: BorderRadius.circular(5),
+          child: Container(
+            width: 25,
+            height: 22,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? const Color(0xFF0D4FC4)
+                  : hasSession
+                      ? const Color(0xFFE6EEFF)
+                      : Colors.transparent,
+              borderRadius: BorderRadius.circular(5),
+            ),
+            child: Text(
+              '$day',
+              style: TextStyle(
+                color: isSelected
+                    ? Colors.white
+                    : hasSession
+                        ? const Color(0xFF0D4FC4)
+                        : const Color(0xFF273444),
+                fontSize: 11,
+                fontWeight: isSelected || isToday
+                    ? FontWeight.w700
+                    : FontWeight.normal,
+              ),
             ),
           ),
         ),
@@ -634,6 +693,8 @@ class _UpcomingSessionTile extends StatelessWidget {
   final ({
     String subject,
     DateTime start,
+    DateTime? end,
+    String teacher,
     String modality,
     String location,
     String status
@@ -641,7 +702,10 @@ class _UpcomingSessionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final time = TimeOfDay.fromDateTime(item.start).format(context);
+    final time = item.end == null
+        ? TimeOfDay.fromDateTime(item.start).format(context)
+        : '${TimeOfDay.fromDateTime(item.start).format(context)} – '
+            '${TimeOfDay.fromDateTime(item.end!).format(context)}';
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       child: Row(
@@ -668,7 +732,7 @@ class _UpcomingSessionTile extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  '${item.start.day} ${_shortMonth(item.start.month)} · $time · '
+                  '$time · ${item.teacher.isEmpty ? 'Docente por confirmar' : item.teacher} · '
                   '${_studentModalityLabel(item.modality)}'
                   '${item.location.isEmpty ? '' : ' · ${item.location}'}',
                   maxLines: 2,

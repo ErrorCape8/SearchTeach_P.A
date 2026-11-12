@@ -47,7 +47,11 @@ class DocenteLiderProyectosPage extends ConsumerWidget {
             padding: const EdgeInsets.all(20),
             children: [
               const Text('Revisión de proyectos de aula',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                  style: TextStyle(
+                    color: Color(0xFF18352A),
+                    fontSize: 23,
+                    fontWeight: FontWeight.w800,
+                  )),
               const SizedBox(height: 6),
               const Text(
                   'Revisa los reportes del tutor de apoyo y confirma o devuelve las solicitudes de cierre.'),
@@ -77,6 +81,12 @@ class _LeaderProjectCard extends ConsumerWidget {
     final pending = state == 'PENDIENTE_CONFIRMACION';
     final closed = state == 'FINALIZADO';
     return Card(
+      elevation: 0,
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: const BorderSide(color: Color(0xFFE5ECE7)),
+      ),
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -95,13 +105,14 @@ class _LeaderProjectCard extends ConsumerWidget {
             ),
           if (project['reporteCierre'] is String &&
               (project['reporteCierre'] as String).trim().isNotEmpty)
-            Card(
-              color: Colors.blueGrey.shade50,
-              child: Padding(
-                padding: const EdgeInsets.all(10),
-                child: Text(
-                  'Reporte de finalización:\n${project['reporteCierre']}',
-                ),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF3F7F4),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                'Reporte de finalización:\n${project['reporteCierre']}',
               ),
             ),
           if (project['fechaReunion'] != null)

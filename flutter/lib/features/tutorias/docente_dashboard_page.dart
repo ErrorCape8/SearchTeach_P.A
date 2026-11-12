@@ -9,7 +9,6 @@ import '../../core/api_client.dart';
 import '../../core/role_theme.dart';
 import '../../core/tutoring_updates.dart';
 import '../../core/widgets/brand_logo.dart';
-import '../../core/widgets/role_dashboard_header.dart';
 import '../../core/widgets/role_toast.dart';
 import '../../core/widgets/sliding_pill_navigation_bar.dart';
 import '../auth/auth_repository.dart';
@@ -76,6 +75,13 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
       if (next.hasValue && mounted) ref.invalidate(_teacherSessionsProvider);
     });
     final wide = MediaQuery.sizeOf(context).width >= 850;
+    final profile = ref.watch(docenteProfileProvider).asData?.value;
+    final teacherName = profile?['nombre'] is String
+        ? profile!['nombre'] as String
+        : 'Docente';
+    final teacherCareer = profile?['carrera'] is String
+        ? profile!['carrera'] as String
+        : 'SearchTeach';
     return Theme(
       data: withRoleAccent(
         Theme.of(context).copyWith(
@@ -89,20 +95,22 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
         backgroundColor: _teacherCanvas,
         body: Row(
           children: [
-            if (wide) _desktopMenu(),
+            if (wide) _desktopMenu(teacherName, teacherCareer),
             Expanded(
               child: Column(
                 children: [
-                  RoleDashboardHeader(
+                  _TeacherHeader(
                     title: _headerTitle,
-                    subtitle: 'Docente · SearchTeach',
-                    accentColor: _teacherGreen,
-                    darkColor: _teacherNavy,
-                    initials: 'D',
-                    onRefresh: () => ref.invalidate(_teacherSessionsProvider),
+                    subtitle: _tab == 0
+                        ? teacherCareer
+                        : 'Docente · $teacherCareer',
+                    name: teacherName,
+                    onRefresh: () {
+                      ref.invalidate(_teacherSessionsProvider);
+                      ref.invalidate(docenteProfileProvider);
+                      ref.invalidate(notificationUnreadCountProvider);
+                    },
                     onNotifications: () => setState(() => _tab = 5),
-                    onProfile: () => setState(() => _tab = 7),
-                    onLogout: _logout,
                   ),
                   Expanded(
                     child: ClipRRect(
@@ -112,12 +120,15 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
                       child: IndexedStack(
                         index: _tab,
                         children: [
-                          _home(),
+                          _home(teacherName),
                           _sessions(),
                           _startTutoring(),
                           const DocenteProyectosAulaPage(),
                           const DocenteLiderProyectosPage(),
-                          const NotificationsInbox(),
+                          const NotificationsInbox(
+                            accentColor: _teacherGreen,
+                            htmlStyle: true,
+                          ),
                           _history(),
                           const DocentePerfilPage(),
                           const DocenteSolicitudesPage(),
@@ -201,21 +212,25 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
 
   List<int> get _navigationTabs => [0, 8, 1, 3, 4, 7, 5];
 
-  Widget _desktopMenu() => Material(
+  static String _initials(String value) {
+    final parts = value.trim().split(RegExp(r'\s+')).where((part) => part.isNotEmpty);
+    if (parts.isEmpty) return 'D';
+    return parts.take(2).map((part) => part[0].toUpperCase()).join();
+  }
+
+  Widget _desktopMenu(String teacherName, String teacherCareer) => Material(
         color: Colors.white,
         child: SizedBox(
-          width: 250,
+          width: 198,
           child: Column(children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 18, 14, 18),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(12, 14, 12, 16),
               child: SizedBox(
-                height: 112,
-                child: Transform.scale(
-                  scale: 1.06,
-                  child: const BrandLogo(
-                    width: 190,
-                    height: 112,
-                  ),
+                height: 76,
+                child: BrandLogo(
+                  width: 158,
+                  height: 76,
+                  accentColor: _teacherGreen,
                 ),
               ),
             ),
@@ -235,99 +250,32 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
               child: Divider(height: 1, color: Color(0xFFE3ECE5)),
             ),
             const SizedBox(height: 10),
-            for (var i = 0; i < 3; i++)
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                child: ListTile(
-                  selected: _tab == i,
-                  selectedColor: _teacherNavy,
-                  selectedTileColor: const Color(0xFFEAF5EE),
-                  textColor: _teacherNavy,
-                  iconColor: _teacherGreen,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  leading: Icon(_teacherIcons[i]),
-                  title: Text(_teacherLabels[i]),
-                  onTap: () => setState(() => _tab = i),
-                ),
-              ),
+            for (final item in const [
+            (0, Icons.home_outlined, 'Inicio'),
+            (8, Icons.inbox_outlined, 'Solicitudes'),
+            (1, Icons.event_note_outlined, 'Tutorías'),
+            (3, Icons.groups_outlined, 'Colectivas'),
+            (4, Icons.fact_check_outlined, 'Líder PA'),
+            (7, Icons.person_outline_rounded, 'Perfil'),
+            (5, Icons.notifications_none_outlined, 'Avisos'),
+            ])
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
               child: ListTile(
-                selected: _tab == 3,
+                dense: true,
+                selected: _tab == item.$1,
                 selectedColor: _teacherNavy,
                 selectedTileColor: const Color(0xFFEAF5EE),
                 textColor: _teacherNavy,
                 iconColor: _teacherGreen,
-                leading: const Icon(Icons.school_outlined),
-                title: const Text('Proyectos de aula'),
-                onTap: () => setState(() => _tab = 3),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-              child: ListTile(
-                selected: _tab == 4,
-                selectedColor: _teacherNavy,
-                selectedTileColor: const Color(0xFFEAF5EE),
-                textColor: _teacherNavy,
-                iconColor: _teacherGreen,
-                leading: const Icon(Icons.fact_check_outlined),
-                title: const Text('Líder PA'),
-                onTap: () => setState(() => _tab = 4),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-              child: ListTile(
-                selected: _tab == 5,
-                selectedColor: _teacherNavy,
-                selectedTileColor: const Color(0xFFEAF5EE),
-                textColor: _teacherNavy,
-                iconColor: _teacherGreen,
-                leading: const Icon(Icons.notifications_none_outlined),
-                title: const Text('Avisos'),
-                onTap: () => setState(() => _tab = 5),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-              child: ListTile(
-                selected: _tab == 6,
-                selectedColor: _teacherNavy,
-                selectedTileColor: const Color(0xFFEAF5EE),
-                textColor: _teacherNavy,
-                iconColor: _teacherGreen,
-                leading: const Icon(Icons.history_outlined),
-                title: const Text('Historial'),
-                onTap: () => setState(() => _tab = 6),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-              child: ListTile(
-                selected: _tab == 7,
-                selectedColor: _teacherNavy,
-                selectedTileColor: const Color(0xFFEAF5EE),
-                textColor: _teacherNavy,
-                iconColor: _teacherGreen,
-                leading: const Icon(Icons.person_outline),
-                title: const Text('Perfil'),
-                onTap: () => setState(() => _tab = 7),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-              child: ListTile(
-                selected: _tab == 8,
-                selectedColor: _teacherNavy,
-                selectedTileColor: const Color(0xFFEAF5EE),
-                textColor: _teacherNavy,
-                iconColor: _teacherGreen,
-                leading: const Icon(Icons.inbox_outlined),
-                title: const Text('Solicitudes'),
-                onTap: () => setState(() => _tab = 8),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                leading: Icon(item.$2, size: 20),
+                title: Text(item.$3,
+                    style: const TextStyle(
+                        fontSize: 13, fontWeight: FontWeight.w600)),
+                onTap: () => setState(() => _tab = item.$1),
               ),
             ),
             const Spacer(),
@@ -341,28 +289,48 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
                 CircleAvatar(
                   backgroundColor: const Color(0xFFEAF5EE),
                   foregroundColor: _teacherNavy,
-                  child: const Text('D'),
+                  child: Text(_initials(teacherName)),
                 ),
                 const SizedBox(width: 10),
-                const Column(
+                Expanded(
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Docente',
+                      Text(teacherName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                               color: _teacherNavy,
                               fontWeight: FontWeight.w700)),
-                      Text('SearchTeach',
+                      Text(teacherCareer,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                               color: Color(0xFF687A70), fontSize: 11)),
                     ]),
+                ),
               ]),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+              child: OutlinedButton.icon(
+                onPressed: _logout,
+                icon: const Icon(Icons.logout, size: 17),
+                label: const Text('Cerrar sesión'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: _teacherNavy,
+                  minimumSize: const Size.fromHeight(40),
+                ),
+              ),
             ),
           ]),
         ),
       );
 
-  Widget _home() =>
-      _TeacherHomeDashboard(onOpen: (tab) => setState(() => _tab = tab));
+  Widget _home(String name) => _TeacherHomeDashboard(
+        name: name,
+        onOpen: (tab) => setState(() => _tab = tab),
+      );
   Widget _sessions() => _buildSessions(view: _SessionView.scheduled);
 
   Widget _startTutoring() => _buildSessions(view: _SessionView.start);
@@ -438,6 +406,13 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
                     const SizedBox(height: 10),
                     for (final session in sessions)
                       Card(
+                        elevation: 0,
+                        margin: const EdgeInsets.only(bottom: 12),
+                        color: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          side: const BorderSide(color: Color(0xFFE5ECE7)),
+                        ),
                         child: Column(children: [
                           ListTile(
                             contentPadding: const EdgeInsets.all(16),
@@ -486,7 +461,10 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
                                       icon: const Icon(Icons.forum_outlined),
                                       label: const Text('Abrir chat'),
                                     ),
-                                  if (view != _SessionView.scheduled)
+                                  if (view != _SessionView.scheduled ||
+                                      (session.start != null &&
+                                          _isSameDay(
+                                              session.start!, DateTime.now())))
                                     FilledButton.icon(
                                       onPressed: () async {
                                         if (session.modality.toUpperCase() ==
@@ -528,8 +506,10 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
                                               : Icons.video_call_outlined),
                                       label: Text(view == _SessionView.history
                                           ? 'Ver historial'
-                                          : session.modality.toUpperCase() ==
-                                                  'PRESENCIAL'
+                                          : view == _SessionView.scheduled
+                                              ? 'Iniciar tutoría'
+                                              : session.modality.toUpperCase() ==
+                                                      'PRESENCIAL'
                                               ? session.state == 'EN_CURSO'
                                                   ? 'Tomar asistencia'
                                                   : 'Habilitar clase presencial'
@@ -831,11 +811,102 @@ class _HistoryDetail extends StatelessWidget {
       );
 }
 
-const _teacherLabels = ['Inicio', 'Tutorías', 'Empezar tutorías'];
+class _TeacherHeader extends StatelessWidget {
+  const _TeacherHeader({
+    required this.title,
+    required this.subtitle,
+    required this.name,
+    required this.onRefresh,
+    required this.onNotifications,
+  });
+
+  final String title;
+  final String subtitle;
+  final String name;
+  final VoidCallback onRefresh;
+  final VoidCallback onNotifications;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF16834A), Color(0xFF18352A)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: SafeArea(
+          bottom: false,
+          child: SizedBox(
+            height: 78,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 21,
+                    backgroundColor: Colors.white.withValues(alpha: .16),
+                    foregroundColor: Colors.white,
+                    child: Text(
+                      _DocenteDashboardPageState._initials(name),
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          subtitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: .78),
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Actualizar',
+                    onPressed: onRefresh,
+                    color: Colors.white,
+                    icon: const Icon(Icons.refresh_rounded),
+                  ),
+                  IconButton(
+                    tooltip: 'Avisos',
+                    onPressed: onNotifications,
+                    color: Colors.white,
+                    icon: const NotificationUnreadIcon(
+                      icon: Icons.notifications_none_rounded,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+}
 
 class _TeacherHomeDashboard extends ConsumerWidget {
-  const _TeacherHomeDashboard({required this.onOpen});
+  const _TeacherHomeDashboard({required this.onOpen, required this.name});
   final ValueChanged<int> onOpen;
+  final String name;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) =>
@@ -848,16 +919,6 @@ class _TeacherHomeDashboard extends ConsumerWidget {
   Widget _content(BuildContext context, WidgetRef ref,
       List<_TeacherTutoringSession> sessions,
       {bool loading = false, bool error = false}) {
-    final active = sessions.where((s) => s.state != 'FINALIZADA').length;
-    final completed = sessions.where((s) => s.state == 'FINALIZADA').length;
-    final students = sessions.expand((s) => s.students).toSet().length;
-    final upcoming = sessions
-        .where((s) =>
-            s.state != 'FINALIZADA' &&
-            s.start != null &&
-            s.start!.isAfter(DateTime.now()))
-        .toList()
-      ..sort((a, b) => a.start!.compareTo(b.start!));
     final now = DateTime.now();
     const weekdays = [
       'lunes',
@@ -882,247 +943,601 @@ class _TeacherHomeDashboard extends ConsumerWidget {
       'noviembre',
       'diciembre'
     ];
-    final shortcuts = [
-      _TeacherHomeTile(
-          icon: Icons.event_note_outlined,
-          title: 'Mis tutorías',
-          subtitle: 'Revisa sesiones y solicita cambios de fecha.',
-          onTap: () => onOpen(1)),
-      _TeacherHomeTile(
-          icon: Icons.play_circle_outline,
-          title: 'Empezar tutorías',
-          subtitle: 'Entra a la sala, toma asistencia y abre el chat.',
-          onTap: () => onOpen(2)),
-      _TeacherHomeTile(
-          icon: Icons.school_outlined,
-          title: 'Proyectos de aula',
-          subtitle: 'Programa sesiones y acompaña a tus estudiantes.',
-          onTap: () => onOpen(3)),
-      _TeacherHomeTile(
-          icon: Icons.fact_check_outlined,
-          title: 'Líder PA',
-          subtitle: 'Revisa documentos y avances del proyecto.',
-          onTap: () => onOpen(4)),
-      _TeacherHomeTile(
-          icon: Icons.notifications_none_outlined,
-          title: 'Avisos',
-          subtitle: 'Consulta las notificaciones de tu cuenta.',
-          onTap: () => onOpen(5)),
-      _TeacherHomeTile(
-          icon: Icons.inbox_outlined,
-          title: 'Solicitudes de tutorÃ­as',
-          subtitle: 'Revisa y responde las solicitudes individuales.',
-          onTap: () => onOpen(8)),
-      _TeacherHomeTile(
-          icon: Icons.history_outlined,
-          title: 'Historial',
-          subtitle: 'Consulta tutorías finalizadas y sus chats.',
-          onTap: () => onOpen(6)),
-    ];
+    final scheduled = sessions
+        .where((session) =>
+            session.state != 'FINALIZADA' && session.start != null)
+        .toList()
+      ..sort((a, b) => a.start!.compareTo(b.start!));
+    final upcoming = scheduled
+        .where((session) => session.start!.isAfter(now))
+        .toList();
+    final nextSession = upcoming.isEmpty ? null : upcoming.first;
     return Align(
       alignment: Alignment.topCenter,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 1160),
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(28, 22, 28, 32),
-          children: [
-            Container(
-              padding: const EdgeInsets.fromLTRB(24, 22, 24, 22),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
-                gradient: const LinearGradient(
-                    colors: [Color(0xFF16834A), Color(0xFF18352A)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight),
-                boxShadow: [
-                  BoxShadow(
-                      color: _teacherGreen.withValues(alpha: .14),
-                      blurRadius: 20,
-                      offset: const Offset(0, 8))
-                ],
-              ),
-              child: Row(children: [
-                Expanded(
-                    child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                      Text(
-                          '${weekdays[now.weekday - 1]}, ${now.day} de ${months[now.month - 1]} de ${now.year}',
-                          style: TextStyle(
-                              color: Colors.white.withValues(alpha: .78),
-                              fontSize: 12)),
-                      const SizedBox(height: 8),
-                      const Text('Tu actividad docente',
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 23,
-                              fontWeight: FontWeight.w800)),
-                      const SizedBox(height: 5),
-                      Text(
-                          loading
-                              ? 'Estamos actualizando tus tutorías.'
-                              : error
-                                  ? 'No se pudieron actualizar tus datos. Reintenta desde Tutorías.'
-                                  : upcoming.isEmpty
-                                      ? 'Revisa tus tutorías, proyectos y avisos desde este panel.'
-                                      : 'Próxima tutoría: ${upcoming.first.subject} · ${_dateTimeLabel(upcoming.first.start!)}',
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                              color: Colors.white.withValues(alpha: .88),
-                              fontSize: 13,
-                              height: 1.35)),
-                    ])),
-                const SizedBox(width: 14),
-                if (loading)
-                  const SizedBox(
-                      width: 34,
-                      height: 34,
-                      child: CircularProgressIndicator(
-                          color: Colors.white, strokeWidth: 3))
-                else if (error)
-                  IconButton.filledTonal(
-                      tooltip: 'Reintentar',
-                      onPressed: () => ref.invalidate(_teacherSessionsProvider),
-                      icon: const Icon(Icons.refresh_rounded))
+        constraints: const BoxConstraints(maxWidth: 1200),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final showCalendar = constraints.maxWidth >= 900;
+            final schedule = _TeacherScheduleList(
+              sessions: scheduled,
+              loading: loading,
+              error: error,
+              onRetry: () => ref.invalidate(_teacherSessionsProvider),
+              onOpenSessions: () => onOpen(1),
+              onStart: () => onOpen(2),
+            );
+            final content = Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${weekdays[now.weekday - 1]}, ${now.day} de ${months[now.month - 1]} de ${now.year}',
+                  style: const TextStyle(
+                      color: Color(0xFF748078), fontSize: 13),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  'Hola, $name',
+                  style: const TextStyle(
+                    color: _teacherNavy,
+                    fontSize: 26,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  nextSession == null
+                      ? 'Aquí tienes un resumen de tus tutorías y actividades.'
+                      : 'Tu próxima tutoría es ${nextSession.subject} · ${_dateTimeLabel(nextSession.start!)}',
+                  style: const TextStyle(
+                      color: Color(0xFF748078), fontSize: 13),
+                ),
+                const SizedBox(height: 22),
+                if (showCalendar)
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(flex: 7, child: schedule),
+                      const SizedBox(width: 20),
+                      Expanded(
+                        flex: 4,
+                        child: _TeacherCalendarPanel(
+                          sessions: scheduled,
+                          onOpenSessions: () => onOpen(1),
+                        ),
+                      ),
+                    ],
+                  )
                 else
-                  Text('$active',
-                      style: TextStyle(
-                          color: Colors.white.withValues(alpha: .24),
-                          fontSize: 58,
-                          height: 1,
-                          fontWeight: FontWeight.w800)),
-              ]),
-            ),
-            const SizedBox(height: 16),
-            Row(children: [
-              Expanded(
-                  child: _TeacherMetricCard(
-                      value: loading ? '—' : '$active',
-                      label: 'Tutorías activas',
-                      icon: Icons.event_available_outlined)),
-              const SizedBox(width: 12),
-              Expanded(
-                  child: _TeacherMetricCard(
-                      value: loading ? '—' : '$completed',
-                      label: 'Finalizadas',
-                      icon: Icons.task_alt_rounded)),
-              const SizedBox(width: 12),
-              Expanded(
-                  child: _TeacherMetricCard(
-                      value: loading ? '—' : '$students',
-                      label: 'Estudiantes',
-                      icon: Icons.groups_outlined)),
-            ]),
-            const SizedBox(height: 24),
-            Row(children: [
-              const Expanded(
-                  child: Text('Accesos directos',
-                      style: TextStyle(
-                          color: _teacherNavy,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800))),
-              TextButton.icon(
-                  onPressed: () => onOpen(1),
-                  icon: const Icon(Icons.arrow_forward_rounded, size: 16),
-                  label: const Text('Ver tutorías')),
-            ]),
-            const SizedBox(height: 8),
-            for (final tile in shortcuts) tile,
-          ],
+                  schedule,
+                const SizedBox(height: 22),
+                _TeacherQuickLinks(onOpen: onOpen),
+              ],
+            );
+            return ListView(
+              padding: EdgeInsets.fromLTRB(
+                  showCalendar ? 28 : 18, 24, showCalendar ? 28 : 18, 32),
+              children: [content],
+            );
+          },
         ),
       ),
     );
   }
 }
 
-class _TeacherMetricCard extends StatelessWidget {
-  const _TeacherMetricCard(
-      {required this.value, required this.label, required this.icon});
-  final String value;
-  final String label;
-  final IconData icon;
+class _TeacherScheduleList extends StatelessWidget {
+  const _TeacherScheduleList({
+    required this.sessions,
+    required this.loading,
+    required this.error,
+    required this.onRetry,
+    required this.onOpenSessions,
+    required this.onStart,
+  });
+
+  final List<_TeacherTutoringSession> sessions;
+  final bool loading;
+  final bool error;
+  final VoidCallback onRetry;
+  final VoidCallback onOpenSessions;
+  final VoidCallback onStart;
 
   @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(15),
-        decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(18),
-            boxShadow: const [
-              BoxShadow(
-                  color: Color(0x08000000),
-                  blurRadius: 12,
-                  offset: Offset(0, 4))
-            ]),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(value,
-              style: const TextStyle(
-                  color: _teacherNavy,
-                  fontSize: 24,
-                  height: 1,
-                  fontWeight: FontWeight.w800)),
-          const SizedBox(height: 10),
-          Row(children: [
-            Icon(icon, color: _teacherGreen, size: 17),
-            const SizedBox(width: 6),
-            Expanded(
-                child: Text(label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        color: Color(0xFF687A70),
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600)))
-          ]),
-        ]),
+  Widget build(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Tutorías programadas',
+                  style: TextStyle(
+                    color: _teacherNavy,
+                    fontSize: 19,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              TextButton(
+                onPressed: onOpenSessions,
+                child: const Text('Ver todas'),
+              ),
+            ],
+          ),
+          if (loading)
+            const Padding(
+              padding: EdgeInsets.all(28),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (error)
+            _TeacherEmptyCard(
+              icon: Icons.cloud_off_outlined,
+              message: 'No se pudieron cargar las tutorías.',
+              action: TextButton.icon(
+                onPressed: onRetry,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Reintentar'),
+              ),
+            )
+          else if (sessions.isEmpty)
+            const _TeacherEmptyCard(
+              icon: Icons.event_available_outlined,
+              message: 'No tienes tutorías programadas por ahora.',
+            )
+          else
+            for (final session in sessions.take(6))
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _TeacherScheduleCard(
+                  session: session,
+                  onOpen: onOpenSessions,
+                  onStart: onStart,
+                ),
+              ),
+        ],
       );
 }
 
-const _teacherIcons = [
-  Icons.home_outlined,
-  Icons.event_note_outlined,
-  Icons.play_circle_outline
-];
+class _TeacherScheduleCard extends StatelessWidget {
+  const _TeacherScheduleCard({
+    required this.session,
+    required this.onOpen,
+    required this.onStart,
+  });
 
-class _TeacherHomeTile extends StatelessWidget {
-  const _TeacherHomeTile(
-      {required this.icon,
-      required this.title,
-      required this.subtitle,
-      required this.onTap});
+  final _TeacherTutoringSession session;
+  final VoidCallback onOpen;
+  final VoidCallback onStart;
+
+  @override
+  Widget build(BuildContext context) {
+    final start = session.start;
+    final isToday = start != null && _isSameDay(start, DateTime.now());
+    final isActive = session.state == 'EN_CURSO';
+    return Card(
+      elevation: 0,
+      margin: EdgeInsets.zero,
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: const BorderSide(color: Color(0xFFE5ECE7)),
+      ),
+      child: InkWell(
+        onTap: onOpen,
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 4,
+                height: 74,
+                decoration: BoxDecoration(
+                  color: isToday || isActive
+                      ? _teacherGreen
+                      : const Color(0xFFB7C7BC),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      session.subject,
+                      style: const TextStyle(
+                        color: _teacherNavy,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 7),
+                    Wrap(
+                      spacing: 14,
+                      runSpacing: 7,
+                      children: [
+                        _TeacherInlineDetail(
+                          icon: Icons.calendar_today_outlined,
+                          text: start == null
+                              ? 'Fecha pendiente'
+                              : _dateTimeLabel(start),
+                        ),
+                        _TeacherInlineDetail(
+                          icon: Icons.people_outline,
+                          text: '${session.students.length} inscritos',
+                        ),
+                        _TeacherInlineDetail(
+                          icon: Icons.meeting_room_outlined,
+                          text: _modalityLabel(session.modality),
+                        ),
+                      ],
+                    ),
+                    if (session.location.trim().isNotEmpty &&
+                        session.modality.toUpperCase() != 'VIRTUAL') ...[
+                      const SizedBox(height: 7),
+                      _TeacherInlineDetail(
+                        icon: Icons.place_outlined,
+                        text: session.location,
+                      ),
+                    ],
+                    const SizedBox(height: 9),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        _TeacherStatusBadge(
+                          label: isActive
+                              ? 'En curso'
+                              : isToday
+                                  ? 'Hoy'
+                                  : 'Programada',
+                        ),
+                        if (isToday || isActive)
+                          FilledButton.tonalIcon(
+                            onPressed: onStart,
+                            icon: const Icon(Icons.play_arrow_rounded, size: 18),
+                            label: const Text('Iniciar tutoría'),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TeacherCalendarPanel extends StatelessWidget {
+  const _TeacherCalendarPanel({
+    required this.sessions,
+    required this.onOpenSessions,
+  });
+
+  final List<_TeacherTutoringSession> sessions;
+  final VoidCallback onOpenSessions;
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final first = DateTime(now.year, now.month, 1);
+    final offset = first.weekday - 1;
+    final dayCount = DateTime(now.year, now.month + 1, 0).day;
+    const monthNames = [
+      'enero',
+      'febrero',
+      'marzo',
+      'abril',
+      'mayo',
+      'junio',
+      'julio',
+      'agosto',
+      'septiembre',
+      'octubre',
+      'noviembre',
+      'diciembre',
+    ];
+    final cells = <int?>[
+      ...List<int?>.filled(offset, null),
+      ...List<int?>.generate(dayCount, (index) => index + 1),
+    ];
+    while (cells.length % 7 != 0) {
+      cells.add(null);
+    }
+    final nextSessions = sessions
+        .where((session) =>
+            session.start != null &&
+            !session.start!.isBefore(DateTime(now.year, now.month, now.day)))
+        .take(3)
+        .toList();
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE5ECE7)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: Text('Calendario',
+                    style: TextStyle(
+                        color: _teacherNavy,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800)),
+              ),
+              Text('${monthNames[now.month - 1]} ${now.year}',
+                  style: const TextStyle(
+                      color: Color(0xFF687A70), fontSize: 12)),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              for (final label in ['L', 'M', 'X', 'J', 'V', 'S', 'D'])
+                Expanded(
+                  child: Center(
+                    child: Text(label,
+                        style: const TextStyle(
+                            color: Color(0xFF849087),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700)),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          for (var week = 0; week < cells.length ~/ 7; week++)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 5),
+              child: Row(
+                children: [
+                  for (var dayIndex = 0; dayIndex < 7; dayIndex++)
+                    Expanded(
+                      child: _TeacherCalendarDay(
+                        day: cells[week * 7 + dayIndex],
+                        isToday: cells[week * 7 + dayIndex] == now.day,
+                        hasSession: sessions.any((session) =>
+                            session.start?.year == now.year &&
+                            session.start?.month == now.month &&
+                            session.start?.day ==
+                                cells[week * 7 + dayIndex]),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          const SizedBox(height: 16),
+          const Divider(height: 1, color: Color(0xFFEAF0EB)),
+          const SizedBox(height: 14),
+          const Text('Próximas tutorías',
+              style: TextStyle(
+                  color: _teacherNavy, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 8),
+          if (nextSessions.isEmpty)
+            const Text('No tienes próximas tutorías.',
+                style: TextStyle(color: Color(0xFF687A70), fontSize: 12))
+          else
+            for (final session in nextSessions)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 7,
+                      height: 7,
+                      decoration: const BoxDecoration(
+                          color: _teacherGreen, shape: BoxShape.circle),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '${session.subject} · ${_dateTimeLabel(session.start!)}',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            color: _teacherNavy,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: onOpenSessions,
+              child: const Text('Ver agenda'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TeacherCalendarDay extends StatelessWidget {
+  const _TeacherCalendarDay({
+    required this.day,
+    required this.isToday,
+    required this.hasSession,
+  });
+
+  final int? day;
+  final bool isToday;
+  final bool hasSession;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+        height: 34,
+        child: day == null
+            ? const SizedBox.shrink()
+            : Column(
+                children: [
+                  Container(
+                    width: 27,
+                    height: 27,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: isToday ? _teacherGreen : Colors.transparent,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      '$day',
+                      style: TextStyle(
+                        color: isToday ? Colors.white : _teacherNavy,
+                        fontSize: 11,
+                        fontWeight:
+                            isToday ? FontWeight.w800 : FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  if (hasSession)
+                    Container(
+                      width: 4,
+                      height: 4,
+                      decoration: const BoxDecoration(
+                          color: _teacherGreen, shape: BoxShape.circle),
+                    ),
+                ],
+              ),
+      );
+}
+
+class _TeacherQuickLinks extends StatelessWidget {
+  const _TeacherQuickLinks({required this.onOpen});
+  final ValueChanged<int> onOpen;
+
+  @override
+  Widget build(BuildContext context) => Wrap(
+        spacing: 10,
+        runSpacing: 10,
+        children: [
+          _TeacherQuickLink(
+              label: 'Solicitudes',
+              icon: Icons.inbox_outlined,
+              onTap: () => onOpen(8)),
+          _TeacherQuickLink(
+              label: 'Proyectos colectivos',
+              icon: Icons.groups_outlined,
+              onTap: () => onOpen(3)),
+          _TeacherQuickLink(
+              label: 'Líder PA',
+              icon: Icons.fact_check_outlined,
+              onTap: () => onOpen(4)),
+          _TeacherQuickLink(
+              label: 'Historial',
+              icon: Icons.history_outlined,
+              onTap: () => onOpen(6)),
+        ],
+      );
+}
+
+class _TeacherQuickLink extends StatelessWidget {
+  const _TeacherQuickLink({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final String label;
   final IconData icon;
-  final String title;
-  final String subtitle;
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => Card(
-        color: Colors.white,
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+  Widget build(BuildContext context) => OutlinedButton.icon(
+        onPressed: onTap,
+        icon: Icon(icon, size: 18),
+        label: Text(label),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: _teacherNavy,
+          side: const BorderSide(color: Color(0xFFDCE7DF)),
+          backgroundColor: Colors.white,
         ),
-        child: ListTile(
-          onTap: onTap,
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
-          leading: Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-                color: const Color(0xFFEAF5EE),
-                borderRadius: BorderRadius.circular(12)),
-            child: Icon(icon, color: _teacherGreen, size: 21),
-          ),
-          title: Text(title,
+      );
+}
+
+class _TeacherInlineDetail extends StatelessWidget {
+  const _TeacherInlineDetail({required this.icon, required this.text});
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: const Color(0xFF7C8B81)),
+          const SizedBox(width: 5),
+          Text(text,
               style: const TextStyle(
-                  color: _teacherNavy, fontWeight: FontWeight.w700)),
-          subtitle: Text(subtitle,
-              style: const TextStyle(
-                  color: Color(0xFF687A70), fontSize: 12, height: 1.3)),
-          trailing: const Icon(Icons.arrow_forward_rounded,
-              color: _teacherGreen, size: 18),
+                  color: Color(0xFF687A70), fontSize: 11)),
+        ],
+      );
+}
+
+class _TeacherStatusBadge extends StatelessWidget {
+  const _TeacherStatusBadge({required this.label});
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+        decoration: BoxDecoration(
+          color: const Color(0xFFEAF5EE),
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(
+              color: _teacherGreen,
+              fontSize: 11,
+              fontWeight: FontWeight.w700),
+        ),
+      );
+}
+
+class _TeacherEmptyCard extends StatelessWidget {
+  const _TeacherEmptyCard({
+    required this.icon,
+    required this.message,
+    this.action,
+  });
+
+  final IconData icon;
+  final String message;
+  final Widget? action;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.all(22),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFE5ECE7)),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: _teacherGreen, size: 30),
+            const SizedBox(height: 9),
+            Text(message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Color(0xFF687A70))),
+            if (action != null) ...[
+              const SizedBox(height: 7),
+              action!,
+            ],
+          ],
         ),
       );
 }
@@ -1295,3 +1710,8 @@ String _modalityLabel(String modality) => switch (modality.toUpperCase()) {
       'PRESENCIAL' => 'Presencial',
       _ => modality.isEmpty ? 'Modalidad por confirmar' : modality,
     };
+
+bool _isSameDay(DateTime first, DateTime second) =>
+    first.year == second.year &&
+    first.month == second.month &&
+    first.day == second.day;
