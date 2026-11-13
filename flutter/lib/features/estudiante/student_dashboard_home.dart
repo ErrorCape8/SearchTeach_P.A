@@ -209,7 +209,7 @@ class _NextTutoringCard extends StatelessWidget {
                     children: [
                       Text(
                         item == null
-                            ? 'No tienes tutorías pendientes'
+                            ? 'No tienes tutorías programadas'
                             : '${_studentDate(item.start)} · ${_studentClock(item.start)}',
                         style: const TextStyle(
                           color: Color(0xFF202B3A),
@@ -219,7 +219,7 @@ class _NextTutoringCard extends StatelessWidget {
                       ),
                       Text(
                         item == null
-                            ? 'Consulta las sesiones disponibles'
+                            ? 'Las tutorías asignadas aparecerán aquí'
                             : '${item.subject}${item.teacher.isEmpty ? '' : ' · ${item.teacher}'}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -229,21 +229,22 @@ class _NextTutoringCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                FilledButton(
-                  onPressed: onOpenSessions,
-                  style: FilledButton.styleFrom(
-                    minimumSize: const Size(0, 36),
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(11),
+                if (item != null)
+                  FilledButton(
+                    onPressed: onOpenSessions,
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size(0, 36),
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(11),
+                      ),
+                      textStyle: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                    textStyle: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    child: const Text('Unirme'),
                   ),
-                  child: Text(item == null ? 'Ver sesiones' : 'Unirme'),
-                ),
               ],
             ),
           ),
@@ -264,7 +265,7 @@ class _NextTutoringCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     item == null
-                        ? 'Consulta sesiones disponibles para encontrar tu próxima clase.'
+                        ? 'No tienes clases próximas asignadas.'
                         : '${item.modality.isEmpty ? 'Modalidad por confirmar' : _groupSessionModalityLabel(item.modality)}${item.location.isEmpty ? ' · Revisa el enlace en Mis sesiones.' : ' · ${item.location}'}',
                     style: const TextStyle(
                       color: _navy,

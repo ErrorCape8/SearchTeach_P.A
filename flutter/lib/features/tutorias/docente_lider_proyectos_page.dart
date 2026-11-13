@@ -6,12 +6,26 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/api_client.dart';
 import 'proyecto_aula_chat_page.dart';
 
-final _leaderProjectsProvider =
+final teacherLeaderProjectsProvider =
     FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
   final response = await ref.read(dioProvider).get<List<dynamic>>(
         '/api/docente/tutorias-colectivas/lider',
       );
   return (response.data ?? const []).whereType<Map<String, dynamic>>().toList();
+});
+
+final teacherLeaderAssignmentsProvider =
+    FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
+  final response = await ref.read(dioProvider).get<List<dynamic>>(
+        '/api/docente/tutorias-colectivas/lider/asignaciones',
+      );
+  final data = response.data;
+  if (data == null) {
+    throw const FormatException(
+      'El servidor no devolvió las asignaciones del docente líder.',
+    );
+  }
+  return data.whereType<Map<String, dynamic>>().toList(growable: false);
 });
 
 final _leaderSessionsProvider = FutureProvider.autoDispose
@@ -28,17 +42,29 @@ class DocenteLiderProyectosPage extends ConsumerWidget {
   const DocenteLiderProyectosPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) => ref
-      .watch(_leaderProjectsProvider)
-      .when(
+  Widget build(BuildContext context, WidgetRef ref) {
+    final assignments = ref.watch(teacherLeaderAssignmentsProvider);
+    if (assignments.hasError) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(
+            'No se pudieron cargar las asignaciones de liderazgo: ${assignments.error}',
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+    return ref.watch(teacherLeaderProjectsProvider).when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) =>
             Center(child: Text('No se pudieron cargar los reportes: $error')),
         data: (items) {
+          final assignedGroups = assignments.asData?.value ?? const [];
           final projects = items
               .where((row) => row['proyecto'] is Map<String, dynamic>)
               .toList();
-          if (projects.isEmpty) {
+          if (projects.isEmpty && assignedGroups.isEmpty) {
             return const Center(
                 child: Text(
                     'No tienes proyectos de aula para revisar como docente líder.'));
@@ -56,15 +82,63 @@ class DocenteLiderProyectosPage extends ConsumerWidget {
               const Text(
                   'Revisa los reportes del tutor de apoyo y confirma o devuelve las solicitudes de cierre.'),
               const SizedBox(height: 14),
+              for (final group in assignedGroups)
+                _LeaderAssignmentCard(assignment: group),
               for (final row in projects)
                 _LeaderProjectCard(
                   row: row,
-                  onChanged: () => ref.invalidate(_leaderProjectsProvider),
+                  onChanged: () =>
+                      ref.invalidate(teacherLeaderProjectsProvider),
                 ),
             ],
           );
         },
       );
+  }
+}
+
+class _LeaderAssignmentCard extends StatelessWidget {
+  const _LeaderAssignmentCard({required this.assignment});
+
+  final Map<String, dynamic> assignment;
+
+  @override
+  Widget build(BuildContext context) {
+    final supports = (assignment['docentesApoyo'] as List? ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .map((teacher) =>
+            teacher['nombre']?.toString() ?? teacher['id']?.toString() ?? '')
+        .where((name) => name.isNotEmpty)
+        .toList(growable: false);
+    final projects = assignment['proyectos'] as List? ?? const [];
+    final semester = assignment['semestre'] is num
+        ? (assignment['semestre'] as num).toInt()
+        : '—';
+    return Card(
+      elevation: 0,
+      color: const Color(0xFFEAF5EE),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '${assignment['tecnologia'] ?? 'Carrera'} · Semestre $semester',
+              style: const TextStyle(
+                color: Color(0xFF18352A),
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              'Docentes de apoyo: ${supports.isEmpty ? 'Sin asignaciones' : supports.join(', ')}',
+            ),
+            Text('${projects.length} proyectos de aula asignados'),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _LeaderProjectCard extends ConsumerWidget {

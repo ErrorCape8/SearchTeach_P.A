@@ -29,7 +29,6 @@ class _CoordinacionHorariosPageState
   int? _semester;
   int _section = 0;
   bool _loading = true;
-  bool _speedDialOpen = false;
   String? _error;
   @override
   void initState() {
@@ -126,6 +125,39 @@ class _CoordinacionHorariosPageState
       ),
     );
     if (saved != null && mounted) await _load();
+  }
+
+  Future<void> _chooseTutoringType() async {
+    final selected = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Programar tutoría'),
+        content: const Text('Selecciona el tipo de tutoría que deseas crear.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, null),
+            child: const Text('Cerrar'),
+          ),
+          OutlinedButton.icon(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            icon: const Icon(Icons.groups_outlined),
+            label: const Text('Tutorías de proyecto de aula'),
+          ),
+          FilledButton.icon(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            icon: const Icon(Icons.rate_review_outlined),
+            label: const Text('Tutorías retroalimentativas'),
+          ),
+        ],
+      ),
+    );
+    if (selected == null || !mounted) return;
+    if (selected) {
+      await context.push('/coordinacion/tutorias-colectivas');
+      return;
+    }
+    await context.push('/coordinacion/programar-tutorias');
+    if (mounted) _load();
   }
 
   Future<void> _deleteSession(PublishedTutoringSession session) async {
@@ -400,43 +432,13 @@ class _CoordinacionHorariosPageState
           ],
         ),
       ),
-      floatingActionButton: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          if (_speedDialOpen) ...[
-            FloatingActionButton.extended(
-              heroTag: 'tutorias_proyecto_aula',
-              onPressed: () =>
-                  context.push('/coordinacion/tutorias-colectivas'),
-              backgroundColor: Colors.white,
-              foregroundColor: const Color(0xFFA9154F),
-              icon: const Icon(Icons.groups_outlined),
-              label: const Text('Tutorías de proyecto de aula'),
-            ),
-            const SizedBox(height: 12),
-            FloatingActionButton.extended(
-              heroTag: 'tutorias_retroalimentativas',
-              onPressed: () async {
-                await context.push('/coordinacion/programar-tutorias');
-                if (mounted) _load();
-              },
-              backgroundColor: Colors.white,
-              foregroundColor: const Color(0xFFA9154F),
-              icon: const Icon(Icons.rate_review_outlined),
-              label: const Text('Tutorías retroalimentativas'),
-            ),
-            const SizedBox(height: 12),
-          ],
-          FloatingActionButton.extended(
-            heroTag: 'programar_tutorias_speed_dial',
-            onPressed: () => setState(() => _speedDialOpen = !_speedDialOpen),
-            backgroundColor: const Color(0xFFA9154F),
-            foregroundColor: Colors.white,
-            icon: Icon(_speedDialOpen ? Icons.close : Icons.add),
-            label: Text(_speedDialOpen ? 'Cerrar' : 'Programar tutorías'),
-          ),
-        ],
+      floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'programar_tutorias',
+        onPressed: _chooseTutoringType,
+        backgroundColor: const Color(0xFFA9154F),
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.add),
+        label: const Text('Programar tutoría'),
       ),
       body: SafeArea(
         child: Center(

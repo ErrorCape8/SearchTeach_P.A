@@ -105,6 +105,12 @@ public class ControladorTutoriasColectivas {
 		return servicio.listarProyectosParaLider(docenteLiderId);
 	}
 
+	@GetMapping("/api/docente/tutorias-colectivas/lider/asignaciones")
+	public List<com.pa.searchteach.tutorias.dto.TutoriaColectivaLider> listarTutoriasAsignadasAlLider(
+			@AuthenticationPrincipal String docenteLiderId) {
+		return servicio.listarTutoriasParaLider(docenteLiderId);
+	}
+
 	@PostMapping("/api/docente/tutorias-colectivas/{tutoriaId}/proyectos/{proyectoId}/sesiones/{sesionId}/reunion")
 	public com.pa.searchteach.tutorias.model.ProyectoAula programarReunionDeProyecto(
 			@PathVariable String tutoriaId, @PathVariable String proyectoId, @PathVariable String sesionId,

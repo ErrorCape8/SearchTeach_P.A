@@ -356,6 +356,12 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage>
         semester: space.semester,
         description: details.description,
       );
+      final code = created['codigoInscripcion'];
+      if (code is! String || code.trim().isEmpty) {
+        throw const FormatException(
+          'El servidor creó el proyecto, pero no devolvió el código para los integrantes.',
+        );
+      }
       ref.invalidate(studentDashboardProvider);
       ref.invalidate(studentProjectFollowupProvider);
       if (!mounted) return;
@@ -363,8 +369,26 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage>
         context: context,
         builder: (dialogContext) => AlertDialog(
           title: const Text('Proyecto creado'),
-          content: Text(
-              'Se creó “${details.name}” para el semestre ${space.semester}.'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Se creó “${details.name}” para el semestre ${space.semester}.',
+              ),
+              const SizedBox(height: 12),
+              const Text('Comparte este código con tus integrantes:'),
+              const SizedBox(height: 8),
+              SelectableText(
+                code.trim(),
+                style: const TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 5,
+                ),
+              ),
+            ],
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
@@ -373,28 +397,11 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage>
           ],
         ),
       );
-      final code = created['codigoInscripcion'] as String? ?? '';
-      if (code.isNotEmpty && mounted) {
-        await showDialog<void>(
-          context: context,
-          builder: (dialogContext) => AlertDialog(
-            title: const Text('Código para integrantes'),
-            content: SelectableText(code,
-                style: const TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 5)),
-            actions: [
-              TextButton(
-                  onPressed: () => Navigator.pop(dialogContext),
-                  child: const Text('Listo')),
-            ],
-          ),
-        );
-      }
       _openTutorSection('seguimiento-proyecto');
     } on DioException catch (error) {
       _showMessage(_apiMessage(error));
+    } on FormatException catch (error) {
+      _showMessage(error.message);
     }
   }
 

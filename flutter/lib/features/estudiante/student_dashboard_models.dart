@@ -238,6 +238,7 @@ class ClassroomProjectSpace {
     required this.enrolled,
     this.createProjectSlot = false,
     this.description = '',
+    this.studentIds = const [],
   });
 
   final String tutoringId;
@@ -250,6 +251,7 @@ class ClassroomProjectSpace {
   final bool enrolled;
   final bool createProjectSlot;
   final String description;
+  final List<String> studentIds;
 
   factory ClassroomProjectSpace.fromJson(Map<String, dynamic> json) =>
       ClassroomProjectSpace(
@@ -266,6 +268,11 @@ class ClassroomProjectSpace {
         enrolled: json['inscrito'] == true,
         createProjectSlot: false,
         description: _string(json['descripcion']),
+        studentIds: (json['estudianteIds'] is List
+                ? json['estudianteIds'] as List
+                : const [])
+            .whereType<String>()
+            .toList(growable: false),
       );
 
   factory ClassroomProjectSpace.createProjectSlot({
@@ -334,6 +341,11 @@ class StudentProjectFollowup {
             : 0),
         enrolled: true,
         description: _string(projectJson['descripcion']),
+        studentIds: (projectJson['estudianteIds'] is List
+                ? projectJson['estudianteIds'] as List
+                : const [])
+            .whereType<String>()
+            .toList(growable: false),
       ),
       assignedTeacher: _string(json['docenteResponsable']),
       status: _string(projectJson['estadoCierre'], fallback: 'EN_CURSO'),

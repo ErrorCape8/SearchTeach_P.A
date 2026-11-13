@@ -23,6 +23,7 @@ import com.pa.searchteach.tutorias.dto.ProyectoAulaCodigoSolicitud;
 import com.pa.searchteach.tutorias.dto.ProyectoAulaInscripcionPreview;
 import com.pa.searchteach.tutorias.dto.ProyectoAulaNombreSolicitud;
 import com.pa.searchteach.tutorias.dto.ProyectoAsignadoDocente;
+import com.pa.searchteach.tutorias.dto.TutoriaColectivaLider;
 import com.pa.searchteach.tutorias.dto.TutoriaColectivaEstudiante;
 import com.pa.searchteach.tutorias.dto.TutoriaColectivaSolicitud;
 import com.pa.searchteach.tutorias.model.InformeAvanceProyecto;
@@ -270,6 +271,26 @@ public class TutoriasColectivasService {
 				.filter(tutoria -> tutoria.docenteLiderId().equals(docenteLiderId))
 				.flatMap(tutoria -> tutoria.proyectos().stream()
 						.map(proyecto -> new ProyectoAsignadoDocente(tutoria.id(), proyecto)))
+				.toList();
+	}
+
+	public List<TutoriaColectivaLider> listarTutoriasParaLider(String docenteLiderId) {
+		return tutoriaColectivaRepositorio.findAll().stream()
+				.filter(tutoria -> "ACTIVA".equals(tutoria.estado()))
+				.filter(tutoria -> tutoria.docenteLiderId().equals(docenteLiderId))
+				.map(tutoria -> new TutoriaColectivaLider(
+						tutoria.id(),
+						tutoria.tecnologia(),
+						tutoria.semestre(),
+						tutoria.docentesApoyoIds().stream()
+								.map(id -> new TutoriaColectivaLider.DocenteAsignado(
+										id,
+										userRepository.findById(id)
+												.map(User::getNombre)
+												.filter(nombre -> nombre != null && !nombre.isBlank())
+												.orElse(id)))
+								.toList(),
+						tutoria.proyectos()))
 				.toList();
 	}
 

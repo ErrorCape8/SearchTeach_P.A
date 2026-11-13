@@ -1010,8 +1010,6 @@ class _TeacherHomeDashboard extends ConsumerWidget {
                   )
                 else
                   schedule,
-                const SizedBox(height: 22),
-                _TeacherQuickLinks(onOpen: onOpen),
               ],
             );
             return ListView(

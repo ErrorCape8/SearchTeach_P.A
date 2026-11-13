@@ -13,10 +13,13 @@ class DemandForecastPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final forecastSubjects = subjects
-        .where((subject) => subject.pronostico?.prediccionesSemanales.length == 4)
+        .where((subject) =>
+            subject.pronostico?.prediccionesSemanales.isNotEmpty == true)
         .toList()
-      ..sort((left, right) => (right.pronostico?.estimadoProximasCuatroSemanas ?? 0)
-          .compareTo(left.pronostico?.estimadoProximasCuatroSemanas ?? 0));
+      ..sort((left, right) =>
+          right.pronostico!.prediccionesSemanales.first.total.compareTo(
+            left.pronostico!.prediccionesSemanales.first.total,
+          ));
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -28,7 +31,7 @@ class DemandForecastPage extends StatelessWidget {
         ),
         const SizedBox(height: 5),
         const Text(
-          'Estimaciones por materia para cada una de las próximas cuatro semanas, calculadas con las solicitudes guardadas.',
+          'Pronóstico de la próxima semana por materia, calculado con el historial reciente de solicitudes.',
           style: TextStyle(color: _forecastMuted),
         ),
         const SizedBox(height: 16),
@@ -51,7 +54,7 @@ class DemandForecastPage extends StatelessWidget {
           child: Padding(
             padding: EdgeInsets.all(14),
             child: Text(
-              'El modelo REPTree usa las últimas cuatro semanas completas de cada materia. Cada resultado semanal alimenta la siguiente predicción.',
+              'El modelo usa las últimas cuatro semanas completas, incluida la semana pasada, para estimar la próxima semana. Las predicciones posteriores no se muestran aquí.',
               style: TextStyle(color: _forecastMuted, fontSize: 12),
             ),
           ),
@@ -69,9 +72,8 @@ class _SubjectForecastCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final forecast = subject.pronostico!;
-    final maximum = forecast.prediccionesSemanales
-        .map((week) => week.total)
-        .fold<int>(0, (largest, value) => value > largest ? value : largest);
+    final nextWeek = forecast.prediccionesSemanales.first;
+    final maximum = nextWeek.total;
 
     return Card(
       child: Padding(
@@ -86,45 +88,42 @@ class _SubjectForecastCard extends StatelessWidget {
                     color: _forecastInk)),
             const SizedBox(height: 4),
             Text(
-              'Estimado para cuatro semanas: ${forecast.estimadoProximasCuatroSemanas} tutorías · Modelo ${forecast.modelo}',
+              'Próxima semana (${_formatDate(nextWeek.semanaInicio)}): ${nextWeek.total} tutorías · Modelo ${forecast.modelo}',
               style: const TextStyle(color: _forecastMuted, fontSize: 12),
             ),
             const SizedBox(height: 14),
-            for (final week in forecast.prediccionesSemanales) ...[
-              Row(
-                children: [
-                  SizedBox(
-                    width: 102,
-                    child: Text(
-                      'Semana ${_formatDate(week.semanaInicio)}',
+            Row(
+              children: [
+                const SizedBox(
+                  width: 102,
+                  child: Text(
+                    'Próxima semana',
+                    style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: _forecastInk),
+                  ),
+                ),
+                Expanded(
+                  child: LinearProgressIndicator(
+                    value: maximum == 0 ? 0 : 1,
+                    minHeight: 9,
+                    borderRadius: BorderRadius.circular(8),
+                    color: _forecastPurple,
+                    backgroundColor: const Color(0xFFEAE2FA),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                SizedBox(
+                  width: 28,
+                  child: Text('${nextWeek.total}',
+                      textAlign: TextAlign.end,
                       style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: _forecastInk),
-                    ),
-                  ),
-                  Expanded(
-                    child: LinearProgressIndicator(
-                      value: maximum == 0 ? 0 : week.total / maximum,
-                      minHeight: 9,
-                      borderRadius: BorderRadius.circular(8),
-                      color: _forecastPurple,
-                      backgroundColor: const Color(0xFFEAE2FA),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  SizedBox(
-                    width: 28,
-                    child: Text('${week.total}',
-                        textAlign: TextAlign.end,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w700,
-                            color: _forecastPurple)),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-            ],
+                          fontWeight: FontWeight.w700,
+                          color: _forecastPurple)),
+                ),
+              ],
+            ),
           ],
         ),
       ),

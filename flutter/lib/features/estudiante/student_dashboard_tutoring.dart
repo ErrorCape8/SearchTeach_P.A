@@ -39,13 +39,15 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
   String _query = '';
   int _semesterFilter = 0;
   String _modalityFilter = 'Todas';
-  String _sessionFilter = 'disponibles';
+  String _sessionFilter = 'encurso';
   final ScrollController _sessionsScrollController = ScrollController();
+  Timer? _groupSessionRefreshTimer;
 
   @override
   void initState() {
     super.initState();
     _section = widget.focusSection;
+    _syncGroupSessionRefresh();
   }
 
   @override
@@ -56,11 +58,26 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
       if (widget.focusSection == 'sesiones') {
         _sessionFilter = 'encurso';
       }
+      _syncGroupSessionRefresh();
     }
+  }
+
+  void _syncGroupSessionRefresh() {
+    _groupSessionRefreshTimer?.cancel();
+    if (_section != 'chats-videoconferencias') return;
+    _groupSessionRefreshTimer = Timer.periodic(
+      const Duration(seconds: 4),
+      (_) {
+        if (mounted && _section == 'chats-videoconferencias') {
+          ref.invalidate(studentGroupSessionsProvider);
+        }
+      },
+    );
   }
 
   @override
   void dispose() {
+    _groupSessionRefreshTimer?.cancel();
     _sessionsScrollController.dispose();
     super.dispose();
   }
@@ -73,6 +90,7 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
 
   void _goToSection(String section) {
     setState(() => _section = section);
+    _syncGroupSessionRefresh();
     widget.onSectionChanged(section);
   }
 
@@ -81,6 +99,7 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
       _section = 'sesiones';
       _sessionFilter = 'encurso';
     });
+    _syncGroupSessionRefresh();
     widget.onSectionChanged('sesiones');
   }
 
@@ -88,22 +107,10 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
         padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
         children: [
           _MenuTile(
-            icon: Icons.monitor_outlined,
-            title: 'Sesiones disponibles',
-            subtitle: 'Materia, docente, horario y modalidad.',
-            onTap: () => _goToSection('publicadas'),
-          ),
-          _MenuTile(
             icon: Icons.calendar_month_outlined,
             title: 'Mis sesiones',
             subtitle: 'Las sesiones en las que estás inscrito.',
             onTap: _openEnrolledSessions,
-          ),
-          _MenuTile(
-            icon: Icons.groups_outlined,
-            title: 'Tutorías colectivas',
-            subtitle: 'Cronograma de tu semestre, docentes y aula.',
-            onTap: () => _goToSection('tutores'),
           ),
           _MenuTile(
             icon: Icons.groups_outlined,
@@ -150,10 +157,6 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
     switch (_section) {
       case 'menu':
         return _menu();
-      case 'publicadas':
-        return _publishedGroupSessions();
-      case 'tutores':
-        return _availableTutors();
       case 'proyectos':
         return _projectSpaces();
       case 'seguimiento-proyecto':
@@ -214,12 +217,23 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
                                         fontWeight: FontWeight.w800,
                                         color: _navy)),
                                 Text(
-                                    '${item.project.career} · Semestre ${item.project.semester} · Tutor ${item.project.teacherId}'),
+                                  '${item.project.career} · Semestre ${item.project.semester} · '
+                                  'Docente asignado: ${item.assignedTeacher.isNotEmpty ? item.assignedTeacher : item.project.teacherId}',
+                                ),
                                 if (item.project.description.isNotEmpty)
                                   Padding(
                                     padding: const EdgeInsets.only(top: 6),
                                     child: Text(
                                       item.project.description,
+                                      style: const TextStyle(color: _muted),
+                                    ),
+                                  ),
+                                if (item.project.studentIds.isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 8),
+                                    child: Text(
+                                      'Integrantes (${item.project.studentIds.length}/4): '
+                                      '${item.project.studentIds.join(', ')}',
                                       style: const TextStyle(color: _muted),
                                     ),
                                   ),
@@ -818,9 +832,6 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
         .where((session) =>
             session.state == 'PROGRAMADA' || session.state == 'EN_CURSO')
         .toList();
-    final pending = widget.data.tutorings.where((tutoring) =>
-        tutoring.status == 'SOLICITADA' ||
-        tutoring.status == 'ALTERNATIVA_PROPUESTA');
     final activeIndividual = widget.data.tutorings
         .where((tutoring) =>
             tutoring.status == 'PROGRAMADA' || tutoring.status == 'EN_CURSO')
@@ -828,12 +839,6 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
     final cancelled = widget.data.tutorings
         .where((tutoring) => tutoring.status == 'CANCELADA');
     final options = [
-      (
-        'disponibles',
-        'Disponibles para unirme',
-        widget.data.availableGroupSessions.length
-      ),
-      ('pendientes', 'Pendientes', pending.length),
       (
         'encurso',
         'Mis sesiones',
@@ -844,14 +849,6 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
 
     Widget content;
     switch (_sessionFilter) {
-      case 'pendientes':
-        content = _tutoringList(
-          pending,
-          scrollController: _sessionsScrollController,
-          emptyTitle: 'No tienes solicitudes pendientes',
-          emptyMessage: 'Tus solicitudes aparecerán aquí.',
-        );
-        break;
       case 'encurso':
         final agenda = <({DateTime? start, Widget card})>[
           for (final session in activeGroupSessions)
@@ -937,8 +934,11 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
         );
         break;
       default:
-        content = _publishedGroupSessions(
+        content = _tutoringList(
+          const [],
           scrollController: _sessionsScrollController,
+          emptyTitle: 'No tienes sesiones próximas',
+          emptyMessage: 'Tus tutorías confirmadas aparecerán aquí.',
         );
     }
 
@@ -1320,6 +1320,13 @@ class _GroupChatAndCallCard extends StatelessWidget {
     final now = DateTime.now();
     final start = session.start?.toLocal();
     final end = session.end?.toLocal();
+    final isToday = start != null &&
+        start.year == now.year &&
+        start.month == now.month &&
+        start.day == now.day;
+    final canJoin = isToday &&
+        session.state == 'EN_CURSO' &&
+        (end == null || end.isAfter(now));
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -1338,23 +1345,34 @@ class _GroupChatAndCallCard extends StatelessWidget {
             Text('Lugar: ${session.location}'),
           const SizedBox(height: 12),
           Wrap(spacing: 8, runSpacing: 8, children: [
-            if (session.state == 'EN_CURSO' &&
-                session.modality.toUpperCase() != 'PRESENCIAL')
+            if (session.modality.toUpperCase() != 'PRESENCIAL')
               FilledButton.icon(
-                onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) => LiveKitRoomPage(
-                    sessionId: session.id,
-                    subject: session.subject,
-                    modality: session.modality,
-                    teacherMode: false,
-                    students: session.studentIds,
-                    endAt: session.end?.toLocal(),
-                    studentMode: true,
-                    studentName: studentName,
-                  ),
-                )),
+                onPressed: canJoin
+                    ? () => Navigator.of(context).push(MaterialPageRoute(
+                          builder: (_) => LiveKitRoomPage(
+                            sessionId: session.id,
+                            subject: session.subject,
+                            modality: session.modality,
+                            teacherMode: false,
+                            students: session.studentIds,
+                            endAt: session.end?.toLocal(),
+                            studentMode: true,
+                            studentName: studentName,
+                          ),
+                        ))
+                    : null,
                 icon: const Icon(Icons.video_call_outlined),
-                label: const Text('Entrar a la sala'),
+                label: Text(
+                  canJoin
+                      ? 'Entrar a la sala'
+                      : !isToday
+                          ? start != null && start.isBefore(now)
+                              ? 'Sesión no disponible hoy'
+                              : 'Disponible el ${_longDate(start!)}'
+                          : session.state == 'EN_CURSO'
+                              ? 'Sesión finalizada'
+                              : 'Esperando al docente',
+                ),
               ),
             OutlinedButton.icon(
               onPressed: () => Navigator.of(context).push(MaterialPageRoute(

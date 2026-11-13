@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
+import 'package:excel/excel.dart' hide Border;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import '../../../core/widgets/role_toast.dart';
@@ -23,24 +24,29 @@ class _AdminUsuariosViewState extends ConsumerState<AdminUsuariosView> {
   bool _importingUsers = false;
   bool _showFilters = false;
 
-  static const _invalidCsvMessage =
+  static const _invalidImportMessage =
       'no todos los usuairos cumplen con los parametros';
 
-  Future<void> _importCsv() async {
+  Future<void> _importUsers() async {
     final picked = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: const ['csv'],
+      allowedExtensions: const ['csv', 'xlsx'],
       withData: true,
     );
     if (picked == null || picked.files.isEmpty || !mounted) return;
     final bytes = picked.files.single.bytes;
     if (bytes == null) {
-      await _showImportError(_invalidCsvMessage);
+      await _showImportError(_invalidImportMessage);
       return;
     }
 
     try {
-      final users = _parseCsv(utf8.decode(bytes, allowMalformed: false));
+      final extension = picked.files.single.extension?.toLowerCase();
+      final users = switch (extension) {
+        'csv' => _parseCsv(utf8.decode(bytes, allowMalformed: false)),
+        'xlsx' => _parseXlsx(bytes),
+        _ => throw const FormatException(),
+      };
       setState(() => _importingUsers = true);
       await ref.read(dioProvider).post<void>(
         '/api/admin/users/import',
@@ -61,12 +67,14 @@ class _AdminUsuariosViewState extends ConsumerState<AdminUsuariosView> {
         );
       }
     } on FormatException {
-      await _showImportError(_invalidCsvMessage);
+      await _showImportError(_invalidImportMessage);
+    } on UnsupportedError {
+      await _showImportError('El archivo no es un libro XLSX válido.');
     } on DioException catch (error) {
       final body = error.response?.data;
       final message = body is Map && body['message'] is String
           ? body['message'] as String
-          : 'No se pudo importar el archivo CSV.';
+          : 'No se pudo importar el archivo de usuarios.';
       await _showImportError(message);
     } finally {
       if (mounted) setState(() => _importingUsers = false);
@@ -106,10 +114,42 @@ class _AdminUsuariosViewState extends ConsumerState<AdminUsuariosView> {
     if (quoted) throw const FormatException();
     row.add(cell.toString().trim());
     if (row.any((value) => value.isNotEmpty)) rows.add(row);
-    if (rows.length < 2) throw const FormatException();
+    return _parseUserRows(rows);
+  }
 
+  List<Map<String, String>> _parseXlsx(List<int> bytes) {
+    final workbook = Excel.decodeBytes(bytes);
+    if (workbook.tables.isEmpty) throw const FormatException();
+    final sheet = workbook.tables.values.first;
+    final rows = sheet.rows
+        .map((row) => row.map(_cellText).toList(growable: false))
+        .where((row) => row.any((value) => value.isNotEmpty))
+        .toList(growable: false);
+    return _parseUserRows(rows);
+  }
+
+  String _cellText(Data? cell) {
+    final value = cell?.value;
+    return switch (value) {
+      null => '',
+      TextCellValue(:final value) => value.toString().trim(),
+      IntCellValue(:final value) => value.toString(),
+      DoubleCellValue(:final value) => value == value.roundToDouble()
+          ? value.toInt().toString()
+          : value.toString(),
+      BoolCellValue(:final value) => value.toString(),
+      DateCellValue() => value.toString(),
+      TimeCellValue() => value.toString(),
+      FormulaCellValue() => throw const FormatException(),
+      _ => value.toString().trim(),
+    };
+  }
+
+  List<Map<String, String>> _parseUserRows(List<List<String>> rows) {
+    if (rows.length < 2) throw const FormatException();
     const required = ['id', 'nombre', 'correo', 'telefono', 'rol', 'estado'];
-    final headers = rows.first.map((value) => value.toLowerCase()).toList();
+    final headers =
+        rows.first.map((value) => value.trim().toLowerCase()).toList();
     if (headers.toSet().length != headers.length ||
         required.any((header) => !headers.contains(header))) {
       throw const FormatException();
@@ -266,9 +306,9 @@ class _AdminUsuariosViewState extends ConsumerState<AdminUsuariosView> {
           const SizedBox(width: 8),
           Tooltip(
             message:
-                'CSV: id,nombre,correo,telefono,rol,estado,carrera,semestre; semestre requerido para estudiantes',
+                'Importa CSV o XLSX. Columnas: id,nombre,correo,telefono,rol,estado,carrera,semestre; semestre requerido para estudiantes',
             child: IconButton(
-              onPressed: _importingUsers ? null : _importCsv,
+              onPressed: _importingUsers ? null : _importUsers,
               icon: _importingUsers
                   ? const SizedBox(
                       width: 20,
@@ -427,6 +467,12 @@ class _AdminUsuariosViewState extends ConsumerState<AdminUsuariosView> {
                                     onTap: () => ref
                                         .read(adminControllerProvider.notifier)
                                         .selectUser(user),
+                                    onEdit: () {
+                                      final controller = ref
+                                          .read(adminControllerProvider.notifier);
+                                      controller.selectUser(user);
+                                      controller.editSelectedUser();
+                                    },
                                   );
                                 },
                               ),
@@ -484,10 +530,12 @@ class _UserListTile extends StatelessWidget {
   const _UserListTile({
     required this.user,
     required this.onTap,
+    required this.onEdit,
   });
 
   final AdminUser user;
   final VoidCallback onTap;
+  final VoidCallback onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -613,6 +661,12 @@ class _UserListTile extends StatelessWidget {
                   ),
                 ],
               ],
+            ),
+            IconButton(
+              tooltip: 'Editar usuario',
+              onPressed: onEdit,
+              icon: const Icon(Icons.edit_outlined),
+              color: const Color(0xFFEA580C),
             ),
           ],
         ),
