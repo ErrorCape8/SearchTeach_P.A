@@ -7,7 +7,7 @@ import 'pa_widgets.dart';
 String _nombre(WidgetRef ref) =>
     ref.watch(paUsuarioProvider).valueOrNull?.nombre ?? '';
 
-/// Lista de tutorías colectivas donde el docente es líder o apoyo.
+/// `dcol`: tutorías colectivas donde el docente es líder o apoyo.
 class PaColectivasDocentePage extends ConsumerWidget {
   const PaColectivasDocentePage({super.key});
 
@@ -23,12 +23,14 @@ class PaColectivasDocentePage extends ConsumerWidget {
 
     return PaScaffold(
       title: 'Tutorías colectivas',
-      subtitle: 'Como líder o docente de apoyo',
+      subtitle: 'Proyecto de aula asignadas a ti',
       children: [
+        const PaInfo(
+            'Aquí están todas las tutorías de proyecto de aula que coordinación te asignó, como líder o como apoyo.'),
         if (mias.isEmpty)
-          const PaEmpty(
-              'Coordinación aún no te ha asignado a una tutoría colectiva.')
-        else
+          const PaEmpty('Aún no tienes tutorías de proyecto de aula asignadas.')
+        else ...[
+          const PaSection('Tutorías colectivas'),
           PaRowList([
             for (final c in mias)
               PaRow(
@@ -44,13 +46,13 @@ class PaColectivasDocentePage extends ConsumerWidget {
                     paPush(context, PaColectivaDetallePage(colId: c.id)),
               ),
           ]),
+        ],
       ],
     );
   }
 }
 
-/// Detalle de una tutoría colectiva: el líder toma asistencia y consolida;
-/// el apoyo califica con la rúbrica.
+/// `col`: el líder toma asistencia y consolida; el apoyo califica con rúbrica.
 class PaColectivaDetallePage extends ConsumerWidget {
   const PaColectivaDetallePage({required this.colId, super.key});
   final int colId;
@@ -63,8 +65,8 @@ class PaColectivaDetallePage extends ConsumerWidget {
     final lider = paMismoNombre(c.lider, yo);
     final at = st.asistencia[colId] ?? const <String, bool>{};
     final rubricas = st.rubricas.where((x) => x.colId == colId).toList();
-    final enviado = st.reportes
-        .any((r) => r.colId == colId && paMismoNombre(r.por, yo) && r.fecha == 'hoy');
+    final enviado = st.reportes.any(
+        (r) => r.colId == colId && paMismoNombre(r.por, yo) && r.fecha == 'hoy');
 
     return PaScaffold(
       title: c.materia,
@@ -75,19 +77,14 @@ class PaColectivaDetallePage extends ConsumerWidget {
             Row(children: [
               Expanded(
                   child: Text(c.aulaLabel,
-                      style: const TextStyle(
-                          color: paInk,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800))),
+                      style: neuBody(size: 16, weight: FontWeight.w700))),
               PaTag(lider ? 'Docente líder' : 'Docente de apoyo',
                   tone: lider ? PaTone.ok : PaTone.neutral),
             ]),
-            const SizedBox(height: 4),
-            Text(
-                lider
-                    ? 'Eres el líder · Docentes de apoyo: ${c.apoyo.isEmpty ? '—' : c.apoyo.join(', ')}'
-                    : 'Líder: ${c.lider} · Apoyo: ${c.apoyo.join(', ')}',
-                style: const TextStyle(color: paMuted, fontSize: 12.5)),
+            const SizedBox(height: 2),
+            PaHint(lider
+                ? 'Eres el líder · Docentes de apoyo: ${c.apoyo.isEmpty ? '—' : c.apoyo.join(', ')}'
+                : 'Líder: ${c.lider} · Apoyo: ${c.apoyo.join(', ')}'),
           ]),
         ),
         if (lider) ...[
@@ -96,41 +93,33 @@ class PaColectivaDetallePage extends ConsumerWidget {
             for (final a in paAlumnos)
               PaRow(
                 icon: (at[a] ?? false)
-                    ? Icons.check_circle_rounded
+                    ? Icons.check_rounded
                     : Icons.person_outline_rounded,
                 title: a,
                 trailing: PaTag((at[a] ?? false) ? 'Presente' : 'Sin marcar',
-                    tone:
-                        (at[a] ?? false) ? PaTone.ok : PaTone.neutral),
+                    tone: (at[a] ?? false) ? PaTone.ok : PaTone.neutral),
                 onTap: () => ref
                     .read(paStoreProvider.notifier)
                     .toggleAsistencia(colId, a),
               ),
           ]),
           const PaSection('Rúbricas de los docentes de apoyo'),
-          rubricas.isEmpty
-              ? const PaEmpty('Aún no hay rúbricas.')
-              : PaRowList([
-                  for (final x in rubricas)
-                    PaRow(
-                      icon: Icons.description_outlined,
-                      title: x.estudiante,
-                      subtitle: 'Evaluó: ${x.por}',
-                      trailing: PaTag('${x.promedio.toStringAsFixed(1)} / 5'),
-                    ),
-                ]),
-          const SizedBox(height: 4),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: enviado
-                  ? null
-                  : () => paPush(
-                      context, PaReporteConsolidadoPage(colId: colId)),
-              child: Text(enviado
-                  ? 'Reporte enviado a coordinación'
-                  : 'Consolidar reporte'),
-            ),
+          PaRowList([
+            for (final x in rubricas)
+              PaRow(
+                icon: Icons.description_outlined,
+                title: x.estudiante,
+                subtitle: 'Evaluó: ${x.por}',
+                trailing: PaTag('${x.promedio.toStringAsFixed(1)} / 5'),
+              ),
+          ], empty: 'Aún no hay rúbricas.'),
+          NeuButton(
+            enviado
+                ? 'Reporte enviado a coordinación'
+                : 'Consolidar reporte',
+            onPressed: enviado
+                ? null
+                : () => paPush(context, PaReporteConsolidadoPage(colId: colId)),
           ),
         ] else
           _RubricaForm(colId: colId, autor: yo),
@@ -139,6 +128,7 @@ class PaColectivaDetallePage extends ConsumerWidget {
   }
 }
 
+/// `rubric()`: estudiante en chips, cuatro criterios 1–5 y observación.
 class _RubricaForm extends ConsumerStatefulWidget {
   const _RubricaForm({required this.colId, required this.autor});
   final int colId;
@@ -183,61 +173,50 @@ class _RubricaFormState extends ConsumerState<_RubricaForm> {
     final propias = ref
         .watch(paStoreProvider)
         .rubricas
-        .where((x) => x.colId == widget.colId && paMismoNombre(x.por, widget.autor))
+        .where((x) =>
+            x.colId == widget.colId && paMismoNombre(x.por, widget.autor))
         .toList();
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       const PaSection('Rúbrica de evaluación'),
       PaCard(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const PaFieldLabel('Estudiante'),
-          DropdownButtonFormField<String>(
-            initialValue: _estudiante,
-            isExpanded: true,
-            decoration: paInput(),
-            items: [
-              for (final a in paAlumnos)
-                DropdownMenuItem(value: a, child: Text(a)),
-            ],
-            onChanged: (v) => setState(() => _estudiante = v ?? _estudiante),
-          ),
+          const PaFieldLabel('Estudiante', first: true),
+          NeuChipWrap([
+            for (final a in paAlumnos)
+              NeuChip(a,
+                  selected: _estudiante == a,
+                  onTap: () => setState(() => _estudiante = a)),
+          ]),
           for (var i = 0; i < paCriterios.length; i++) ...[
             PaFieldLabel(paCriterios[i]),
-            PaEstrellas(
+            PaScoreRow(
               value: _puntajes[i],
               onChanged: (v) => setState(() => _puntajes[i] = v),
             ),
           ],
-          const PaFieldLabel('Observaciones'),
-          TextField(
+          const PaFieldLabel('Observación'),
+          NeuField(
               controller: _obs,
-              minLines: 2,
-              maxLines: 4,
-              decoration: paInput('Comentarios para el líder (opcional)')),
-          const SizedBox(height: 18),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-                onPressed: _guardar, child: const Text('Guardar rúbrica')),
-          ),
+              hint: 'Retroalimentación para el estudiante'),
+          const SizedBox(height: 14),
+          NeuButton('Guardar rúbrica', onPressed: _guardar),
         ]),
       ),
-      const PaSection('Tus rúbricas guardadas'),
-      propias.isEmpty
-          ? const PaEmpty('Aún no has calificado a nadie.')
-          : PaRowList([
-              for (final x in propias)
-                PaRow(
-                  icon: Icons.description_outlined,
-                  title: x.estudiante,
-                  subtitle: x.obs.isEmpty ? null : x.obs,
-                  trailing: PaTag('${x.promedio.toStringAsFixed(1)} / 5'),
-                ),
-            ]),
+      const PaSection('Tus rúbricas'),
+      PaRowList([
+        for (final x in propias)
+          PaRow(
+            icon: Icons.description_outlined,
+            title: x.estudiante,
+            subtitle: x.obs.isEmpty ? 'Sin observación' : x.obs,
+            trailing: PaTag('${x.promedio.toStringAsFixed(1)} / 5'),
+          ),
+      ], empty: 'Aún no has evaluado a nadie.'),
     ]);
   }
 }
 
-/// Vista previa del reporte que el líder envía a coordinación.
+/// `colrep`: vista previa del reporte que el líder envía a coordinación.
 class PaReporteConsolidadoPage extends ConsumerWidget {
   const PaReporteConsolidadoPage({required this.colId, super.key});
   final int colId;
@@ -279,19 +258,13 @@ class PaReporteConsolidadoPage extends ConsumerWidget {
         ]),
         const PaInfo(
             'Se envía a Coordinación en un solo reporte, con la asistencia y las rúbricas de los docentes de apoyo.'),
-        SizedBox(
-          width: double.infinity,
-          child: FilledButton(
-            onPressed: () {
-              ref
-                  .read(paStoreProvider.notifier)
-                  .enviarReporte(colId, yo.isEmpty ? c.lider : yo);
-              paToast(context, 'Reporte enviado a coordinación');
-              Navigator.of(context).pop();
-            },
-            child: const Text('Enviar a coordinación'),
-          ),
-        ),
+        NeuButton('Enviar a coordinación', onPressed: () {
+          ref
+              .read(paStoreProvider.notifier)
+              .enviarReporte(colId, yo.isEmpty ? c.lider : yo);
+          paToast(context, 'Reporte enviado a coordinación');
+          Navigator.of(context).pop();
+        }),
       ],
     );
   }

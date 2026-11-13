@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
+import '../../core/neu/neu.dart';
 import '../../core/role_theme.dart';
 import '../../core/widgets/role_toast.dart';
 
-const paInk = Color(0xFF17324F);
-const paMuted = Color(0xFF758093);
-const paCanvas = Color(0xFFF3F5FA);
-const paLine = Color(0xFFE4EAF1);
+export '../../core/neu/neu.dart';
+
+// Constantes que ya usaban otras pantallas: ahora apuntan a los tokens neu.
+const paInk = Neu.text;
+const paMuted = Neu.muted;
+const paCanvas = Neu.bg;
+const paLine = Neu.line;
 
 /// Abre una vista conservando (o cambiando) el color de acento del rol.
 Future<T?> paPush<T>(BuildContext context, Widget page, {Color? accent}) {
@@ -28,8 +33,13 @@ Future<T?> paPush<T>(BuildContext context, Widget page, {Color? accent}) {
 void paToast(BuildContext context, String message) =>
     RoleToast.showSnackBar(context, SnackBar(content: Text(message)));
 
-enum PaTone { neutral, ok, warn, error }
+// ═════════════════════════════════════════════════════════════════════════════
+//  TAGS
+// ═════════════════════════════════════════════════════════════════════════════
 
+enum PaTone { neutral, ok, warn, error, quiet }
+
+/// `.tag` (+ `.g`, `.o`, `.r`, `.sh`): 11px/700, radio 10, padding 4×9.
 class PaTag extends StatelessWidget {
   const PaTag(this.text, {this.tone = PaTone.neutral, super.key});
   final String text;
@@ -37,25 +47,30 @@ class PaTag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
+    final p = NeuPalette.of(context);
     final (bg, fg) = switch (tone) {
-      PaTone.ok => (const Color(0xFFE3F5EA), const Color(0xFF1B7A3E)),
-      PaTone.warn => (const Color(0xFFFFF1DB), const Color(0xFFB5640B)),
-      PaTone.error => (const Color(0xFFFDE4E4), const Color(0xFFC0342F)),
-      PaTone.neutral => (primary.withValues(alpha: .12), primary),
+      PaTone.ok => (Neu.okBg, Neu.okFg),
+      PaTone.warn => (Neu.warnBg, Neu.warnFg),
+      PaTone.error => (Neu.errBg, Neu.errFg),
+      PaTone.quiet => (Neu.quietBg, Neu.muted),
+      PaTone.neutral => (p.s, p.c),
     };
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration:
-          BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
+          BoxDecoration(color: bg, borderRadius: BorderRadius.circular(10)),
       child: Text(text,
-          style:
-              TextStyle(color: fg, fontSize: 11.5, fontWeight: FontWeight.w700)),
+          style: neuBody(size: 11, weight: FontWeight.w700, color: fg)),
     );
   }
 }
 
-/// Pantalla base: cabecera con degradado + hoja redondeada con contenido.
+// ═════════════════════════════════════════════════════════════════════════════
+//  PANTALLA BASE
+// ═════════════════════════════════════════════════════════════════════════════
+
+/// Cabecera neumórfica (botón circular + título) y hoja de contenido sobre el
+/// mismo fondo gris: `#app.neu .hd` + `#app.neu .sheet`.
 class PaScaffold extends StatelessWidget {
   const PaScaffold({
     required this.title,
@@ -71,148 +86,111 @@ class PaScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
-    final dark = Color.lerp(primary, Colors.black, .35)!;
-    return Scaffold(
-      backgroundColor: primary,
-      body: Column(children: [
-        Container(
-          width: double.infinity,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [primary, dark]),
-          ),
-          padding: EdgeInsets.fromLTRB(
-              8, MediaQuery.paddingOf(context).top + 6, 8, 22),
-          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            IconButton(
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark
+          .copyWith(statusBarColor: Colors.transparent),
+      child: Scaffold(
+        backgroundColor: Neu.bg,
+        body: Column(children: [
+          NeuHeader(
+            title: title,
+            subtitle: subtitle,
+            leading: NeuCircleButton(
+              icon: Icons.chevron_left_rounded,
               tooltip: 'Volver',
-              color: Colors.white,
-              onPressed: () => Navigator.of(context).maybePop(),
-              icon: const Icon(Icons.arrow_back_rounded),
+              onTap: () => Navigator.of(context).maybePop(),
             ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(title,
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 22,
-                              fontWeight: FontWeight.w800)),
-                      const SizedBox(height: 3),
-                      Text(subtitle,
-                          style: TextStyle(
-                              color: Colors.white.withValues(alpha: .8),
-                              fontSize: 13)),
-                    ]),
-              ),
-            ),
-            ...actions,
-          ]),
-        ),
-        Expanded(
-          child: Container(
-            width: double.infinity,
-            decoration: const BoxDecoration(
-              color: paCanvas,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-            ),
-            child: ClipRRect(
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(28)),
-              child: Align(
-                alignment: Alignment.topCenter,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 900),
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
-                    children: children,
-                  ),
+            actions: [...actions, const NeuHeaderLogo()],
+          ),
+          Expanded(
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 900),
+                child: ListView(
+                  padding: EdgeInsets.fromLTRB(
+                      18, 8, 18, 32 + MediaQuery.paddingOf(context).bottom),
+                  children: children,
                 ),
               ),
             ),
           ),
-        ),
-      ]),
+        ]),
+      ),
     );
   }
 }
 
+// ═════════════════════════════════════════════════════════════════════════════
+//  TARJETAS, KPIs, SECCIONES
+// ═════════════════════════════════════════════════════════════════════════════
+
+/// `.card`: elevada, radio 20, padding 16 y 12 de separación con la siguiente.
 class PaCard extends StatelessWidget {
-  const PaCard(
-      {required this.child,
-      this.padding = const EdgeInsets.all(16),
-      this.onTap,
-      super.key});
+  const PaCard({
+    required this.child,
+    this.padding = const EdgeInsets.all(16),
+    this.onTap,
+    this.clip = false,
+    super.key,
+  });
   final Widget child;
   final EdgeInsetsGeometry padding;
   final VoidCallback? onTap;
+  final bool clip;
 
   @override
-  Widget build(BuildContext context) => Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: const [
-            BoxShadow(
-                color: Color(0x14000000), blurRadius: 12, offset: Offset(0, 4)),
-            BoxShadow(
-                color: Colors.white, blurRadius: 6, offset: Offset(-2, -2)),
-          ],
-        ),
-        child: Material(
-          color: Colors.transparent,
-          borderRadius: BorderRadius.circular(18),
-          child: InkWell(
-              borderRadius: BorderRadius.circular(18),
-              onTap: onTap,
-              child: Padding(padding: padding, child: child)),
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: SizedBox(
+          width: double.infinity,
+          child: NeuSurface(
+            radius: 20,
+            padding: padding,
+            onTap: onTap,
+            clip: clip,
+            child: child,
+          ),
         ),
       );
 }
 
+/// `.kpi`: radio 18, cifra Poppins 22/700 de acento y etiqueta 11.5 gris.
 class PaKpi extends StatelessWidget {
-  const PaKpi(this.value, this.label, {super.key});
+  const PaKpi(this.value, this.label, {this.color, super.key});
   final String value;
   final String label;
+  final Color? color;
 
   @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: const [
-            BoxShadow(
-                color: Color(0x12000000), blurRadius: 10, offset: Offset(0, 3)),
-          ],
+  Widget build(BuildContext context) => NeuSurface(
+        radius: 18,
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+        child: SizedBox(
+          width: double.infinity,
+          child: Column(children: [
+            Text(value,
+                style: neuPoppins(
+                    size: 22,
+                    weight: FontWeight.w700,
+                    color: color ?? NeuPalette.of(context).c)),
+            Text(label,
+                textAlign: TextAlign.center,
+                style: neuBody(size: 11.5, color: Neu.muted)),
+          ]),
         ),
-        child: Column(children: [
-          Text(value,
-              style: TextStyle(
-                  color: Theme.of(context).colorScheme.primary,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800)),
-          const SizedBox(height: 3),
-          Text(label, style: const TextStyle(color: paMuted, fontSize: 11.5)),
-        ]),
       );
 }
 
+/// `.grid` de tres KPIs con 10 px de separación.
 class PaKpiRow extends StatelessWidget {
   const PaKpiRow(this.items, {super.key});
   final List<(String, String)> items;
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 16),
-        child: Row(children: [
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           for (var i = 0; i < items.length; i++) ...[
             if (i > 0) const SizedBox(width: 10),
             Expanded(child: PaKpi(items[i].$1, items[i].$2)),
@@ -221,6 +199,7 @@ class PaKpiRow extends StatelessWidget {
       );
 }
 
+/// `.sec`: título Poppins 15/600 y acción de acento 13/700.
 class PaSection extends StatelessWidget {
   const PaSection(this.title, {this.action, this.onAction, super.key});
   final String title;
@@ -229,26 +208,33 @@ class PaSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(2, 8, 2, 8),
+        padding: const EdgeInsets.fromLTRB(0, 8, 0, 10),
         child: Row(children: [
-          Expanded(
-              child: Text(title,
-                  style: const TextStyle(
-                      color: paInk, fontSize: 16, fontWeight: FontWeight.w800))),
+          Expanded(child: Text(title, style: neuPoppins(size: 15))),
           if (action != null)
-            TextButton(onPressed: onAction, child: Text(action!)),
+            GestureDetector(
+              onTap: onAction,
+              child: Text(action!,
+                  style: neuBody(
+                      size: 13,
+                      weight: FontWeight.w700,
+                      color: NeuPalette.of(context).c)),
+            ),
         ]),
       );
 }
 
+/// `.li`: ícono hundido 40×40, título 14.5/700, subtítulo 12 gris y, a la
+/// derecha, un tag o la flecha `.ch`.
 class PaRow extends StatelessWidget {
-  const PaRow(
-      {required this.icon,
-      required this.title,
-      this.subtitle,
-      this.trailing,
-      this.onTap,
-      super.key});
+  const PaRow({
+    required this.icon,
+    required this.title,
+    this.subtitle,
+    this.trailing,
+    this.onTap,
+    super.key,
+  });
   final IconData icon;
   final String title;
   final String? subtitle;
@@ -257,151 +243,207 @@ class PaRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
-    return ListTile(
-      onTap: onTap,
-      contentPadding: EdgeInsets.zero,
-      leading: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-            color: primary.withValues(alpha: .1),
-            borderRadius: BorderRadius.circular(12)),
-        child: Icon(icon, color: primary, size: 20),
-      ),
-      title: Text(title,
-          style: const TextStyle(color: paInk, fontWeight: FontWeight.w700)),
-      subtitle: subtitle == null
-          ? null
-          : Text(subtitle!,
-              style: const TextStyle(color: paMuted, fontSize: 12.5)),
-      trailing: trailing ??
-          (onTap == null
-              ? null
-              : const Icon(Icons.chevron_right_rounded, color: paMuted)),
+    final row = Padding(
+      padding: const EdgeInsets.symmetric(vertical: 13),
+      child: Row(children: [
+        NeuIconBox(icon),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(title,
+                style: neuBody(
+                    size: 14.5, weight: FontWeight.w700, height: 1.25)),
+            if (subtitle != null)
+              Text(subtitle!,
+                  style: neuBody(size: 12, color: Neu.muted, height: 1.3)),
+          ]),
+        ),
+        if (trailing != null) ...[const SizedBox(width: 12), trailing!],
+        if (trailing == null && onTap != null)
+          const Icon(Icons.chevron_right_rounded,
+              size: 22, color: Neu.chevron),
+      ]),
+    );
+    if (onTap == null) return row;
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+          behavior: HitTestBehavior.opaque, onTap: onTap, child: row),
     );
   }
 }
 
-/// Lista dentro de una tarjeta con separadores.
+/// Tarjeta con `padding: 4px 16px` y filas separadas por 1 px (`.li`).
+/// Con [empty] y sin filas muestra el mensaje vacío dentro de la tarjeta.
 class PaRowList extends StatelessWidget {
-  const PaRowList(this.rows, {super.key});
+  const PaRowList(this.rows, {this.empty, super.key});
   final List<Widget> rows;
+  final String? empty;
 
   @override
   Widget build(BuildContext context) => PaCard(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        child: Column(children: [
-          for (var i = 0; i < rows.length; i++) ...[
-            if (i > 0) const Divider(height: 1, color: paLine),
-            rows[i],
-          ],
-        ]),
+        child: rows.isEmpty && empty != null
+            ? PaEmpty(empty!)
+            : Column(children: [
+                for (var i = 0; i < rows.length; i++)
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      border: i == rows.length - 1
+                          ? null
+                          : const Border(
+                              bottom: BorderSide(color: Neu.line)),
+                    ),
+                    child: SizedBox(width: double.infinity, child: rows[i]),
+                  ),
+              ]),
       );
 }
 
+/// `.empty`.
 class PaEmpty extends StatelessWidget {
   const PaEmpty(this.message, {super.key});
   final String message;
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 12),
-        child: Text(message,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: paMuted)),
+        padding: const EdgeInsets.symmetric(vertical: 26, horizontal: 10),
+        child: Center(
+          child: Text(message,
+              textAlign: TextAlign.center,
+              style: neuBody(size: 14, color: Neu.muted)),
+        ),
       );
 }
 
+/// `.msg`: caja hundida con el texto en el color del tono (inf/ok/err).
 class PaInfo extends StatelessWidget {
-  const PaInfo(this.message, {super.key});
+  const PaInfo(this.message, {this.tone = PaTone.neutral, this.icon, super.key});
   final String message;
+  final PaTone tone;
+  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-          color: primary.withValues(alpha: .08),
-          borderRadius: BorderRadius.circular(14)),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Icon(Icons.info_outline_rounded, color: primary, size: 18),
-        const SizedBox(width: 8),
-        Expanded(
-            child: Text(message,
-                style: const TextStyle(color: paInk, fontSize: 13))),
-      ]),
+    final p = NeuPalette.of(context);
+    final color = switch (tone) {
+      PaTone.ok => Neu.okFg,
+      PaTone.error => Neu.errFg,
+      _ => p.d,
+    };
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: SizedBox(
+        width: double.infinity,
+        child: NeuSunken(
+          radius: 14,
+          padding: const EdgeInsets.all(12),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+            if (icon != null) ...[
+              Icon(icon, size: 18, color: color),
+              const SizedBox(width: 10),
+            ],
+            Expanded(
+                child: Text(message,
+                    style: neuBody(size: 13.5, color: color, height: 1.3))),
+          ]),
+        ),
+      ),
     );
   }
 }
 
+/// Fila de chips para filtros (`.chips`): scroll horizontal sin recortar la
+/// sombra de los chips.
 class PaSegmented extends StatelessWidget {
-  const PaSegmented(
-      {required this.labels,
-      required this.selected,
-      required this.onSelect,
-      super.key});
+  const PaSegmented({
+    required this.labels,
+    required this.selected,
+    required this.onSelect,
+    super.key,
+  });
   final List<String> labels;
   final int selected;
   final ValueChanged<int> onSelect;
 
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 14),
-        child: Wrap(spacing: 8, runSpacing: 8, children: [
-          for (var i = 0; i < labels.length; i++)
-            ChoiceChip(
-              label: Text(labels[i]),
-              selected: selected == i,
-              onSelected: (_) => onSelect(i),
-            ),
+  Widget build(BuildContext context) => SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        clipBehavior: Clip.none,
+        padding: const EdgeInsets.only(top: 4, bottom: 14),
+        child: Row(children: [
+          for (var i = 0; i < labels.length; i++) ...[
+            if (i > 0) const SizedBox(width: 8),
+            NeuChip(labels[i],
+                selected: selected == i, onTap: () => onSelect(i)),
+          ],
         ]),
       );
 }
 
+/// `label` del formulario: 12/500 gris, mayúsculas, 12 px arriba y 6 abajo.
 class PaFieldLabel extends StatelessWidget {
-  const PaFieldLabel(this.text, {super.key});
+  const PaFieldLabel(this.text, {this.first = false, super.key});
   final String text;
+  final bool first;
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(top: 14, bottom: 6),
+        padding: EdgeInsets.only(top: first ? 0 : 12, bottom: 6),
         child: Text(text.toUpperCase(),
-            style: const TextStyle(
-                color: paMuted,
-                fontSize: 11.5,
-                fontWeight: FontWeight.w800,
-                letterSpacing: .6)),
+            style: neuBody(
+                size: 12, weight: FontWeight.w500, color: Neu.muted)),
       );
 }
 
-InputDecoration paInput([String? hint]) => InputDecoration(
-      hintText: hint,
-      filled: true,
-      fillColor: const Color(0xFFF3F5FA),
-      border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-    );
-
-class PaEstrellas extends StatelessWidget {
-  const PaEstrellas(
-      {required this.value, required this.onChanged, super.key});
+/// Calificación 1–5 como cinco chips que se reparten el ancho (rúbrica).
+class PaScoreRow extends StatelessWidget {
+  const PaScoreRow({required this.value, required this.onChanged, super.key});
   final int value;
   final ValueChanged<int> onChanged;
 
   @override
-  Widget build(BuildContext context) => Row(children: [
-        for (var i = 1; i <= 5; i++)
-          IconButton(
-            visualDensity: VisualDensity.compact,
-            tooltip: '$i',
-            onPressed: () => onChanged(i),
-            icon: Icon(
-                i <= value ? Icons.star_rounded : Icons.star_outline_rounded,
-                color: const Color(0xFFF5A623)),
-          ),
-      ]);
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: Row(children: [
+          for (var v = 1; v <= 5; v++) ...[
+            if (v > 1) const SizedBox(width: 6),
+            Expanded(
+              child: NeuChip('$v',
+                  center: true,
+                  selected: value == v,
+                  onTap: () => onChanged(v)),
+            ),
+          ],
+        ]),
+      );
+}
+
+/// `.sr`: fila con ícono de acento (17 px) y texto 13 gris.
+class PaLine extends StatelessWidget {
+  const PaLine(this.icon, this.child, {super.key});
+  final IconData icon;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(top: 5),
+        child: Row(children: [
+          Icon(icon, size: 17, color: NeuPalette.of(context).c),
+          const SizedBox(width: 9),
+          Expanded(child: child),
+        ]),
+      );
+}
+
+/// Texto auxiliar `small` gris.
+class PaHint extends StatelessWidget {
+  const PaHint(this.text, {super.key});
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(top: 2),
+        child: Text(text, style: neuBody(size: 13.3, color: Neu.muted, height: 1.3)),
+      );
 }

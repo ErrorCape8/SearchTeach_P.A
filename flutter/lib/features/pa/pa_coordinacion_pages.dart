@@ -1,10 +1,16 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'pa_store.dart';
 import 'pa_widgets.dart';
 
-/// Cronograma de tutorías colectivas con su tutor líder, apoyos y aula.
+int _porSemestre(PaColectiva a, PaColectiva b) => a.semestre != b.semestre
+    ? a.semestre.compareTo(b.semestre)
+    : a.seccion.compareTo(b.seccion);
+
+/// `clid`: cronograma de tutorías colectivas con su líder, apoyos y aula.
 class PaLideresPage extends ConsumerStatefulWidget {
   const PaLideresPage({super.key});
 
@@ -19,17 +25,11 @@ class _PaLideresPageState extends ConsumerState<PaLideresPage> {
   Widget build(BuildContext context) {
     final todas = ref.watch(paStoreProvider).colectivas;
     final carreras = todas.map((c) => c.carrera).toSet().toList();
-    final sinLider = todas.where((c) => c.lider.isEmpty).length;
 
     return PaScaffold(
       title: 'Tutores líderes',
       subtitle: 'Cronograma de tutorías colectivas',
       children: [
-        PaKpiRow([
-          ('${todas.length - sinLider}/${todas.length}', 'Con líder'),
-          ('$sinLider', 'Sin líder'),
-          ('${carreras.length}', 'Programas'),
-        ]),
         PaSegmented(
           labels: const ['Tabla', 'Lista'],
           selected: _vista,
@@ -53,72 +53,165 @@ class _PaLideresPageState extends ConsumerState<PaLideresPage> {
 void _abrirAsignacion(BuildContext context, PaColectiva c) =>
     paPush(context, PaAsignacionPage(colId: c.id));
 
+/// `.ctb`: cabecera con el color oscuro del rol, celdas blancas centradas y
+/// la columna SEM combinada por semestre (`rowspan`). Ancho mínimo 660 px con
+/// desplazamiento horizontal.
 class _Tabla extends StatelessWidget {
   const _Tabla(this.lista);
   final List<PaColectiva> lista;
 
+  static const _heads = [
+    'SEM',
+    'SEC',
+    'DOCENTE',
+    'DÍA · HORARIO',
+    'AULA',
+    'DOCENTES DE APOYO',
+  ];
+  static const _flex = [9.0, 7.0, 30.0, 22.0, 10.0, 22.0]; // suma 100
+
   @override
-  Widget build(BuildContext context) => PaCard(
-        padding: EdgeInsets.zero,
-        child: SingleChildScrollView(
+  Widget build(BuildContext context) {
+    final p = NeuPalette.of(context);
+    final filas = [...lista]..sort(_porSemestre);
+    final grupos = <int, List<PaColectiva>>{};
+    for (final c in filas) {
+      grupos.putIfAbsent(c.semestre, () => []).add(c);
+    }
+
+    return PaCard(
+      padding: EdgeInsets.zero,
+      clip: true,
+      child: LayoutBuilder(builder: (context, box) {
+        final w = math.max(660.0, box.maxWidth);
+        final cw = [for (final f in _flex) w * f / 100];
+        return SingleChildScrollView(
           scrollDirection: Axis.horizontal,
-          child: DataTable(
-            showCheckboxColumn: false,
-            headingTextStyle: const TextStyle(
-                color: paMuted, fontSize: 12, fontWeight: FontWeight.w800),
-            columns: const [
-              DataColumn(label: Text('SEM')),
-              DataColumn(label: Text('SEC')),
-              DataColumn(label: Text('MATERIA')),
-              DataColumn(label: Text('FECHA Y HORA')),
-              DataColumn(label: Text('AULA')),
-              DataColumn(label: Text('LÍDER')),
-              DataColumn(label: Text('APOYO')),
-            ],
-            rows: [
-              for (final c in lista)
-                DataRow(
-                  onSelectChanged: (_) => _abrirAsignacion(context, c),
-                  cells: [
-                    DataCell(Text(c.semestreRomano)),
-                    DataCell(Text('${c.seccion}')),
-                    DataCell(Text(c.materia,
-                        style: const TextStyle(fontWeight: FontWeight.w700))),
-                    DataCell(Text(c.cuando)),
-                    DataCell(Text(c.aula)),
-                    DataCell(c.lider.isEmpty
-                        ? const PaTag('Sin líder', tone: PaTone.warn)
-                        : Text(c.lider)),
-                    DataCell(Text(c.apoyo.isEmpty ? '—' : c.apoyo.join(', '))),
-                  ],
+          child: SizedBox(
+            width: w,
+            child: Column(children: [
+              // thead
+              Container(
+                color: p.d,
+                child: Row(children: [
+                  for (var i = 0; i < _heads.length; i++)
+                    SizedBox(
+                      width: cw[i],
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 10),
+                        child: Text(_heads[i],
+                            textAlign: TextAlign.center,
+                            style: neuBody(
+                                size: 10.5,
+                                weight: FontWeight.w600,
+                                color: Colors.white,
+                                letterSpacing: .6)),
+                      ),
+                    ),
+                ]),
+              ),
+              // tbody
+              for (final g in grupos.entries)
+                IntrinsicHeight(
+                  child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _celda(
+                            cw[0],
+                            Text(paRomanos[g.key.clamp(0, 10)],
+                                style: neuPoppins(
+                                    size: 12.5, weight: FontWeight.w700))),
+                        SizedBox(
+                          width: w - cw[0],
+                          child: Column(children: [
+                            for (final c in g.value) _fila(context, c, cw),
+                          ]),
+                        ),
+                      ]),
                 ),
-            ],
+            ]),
           ),
+        );
+      }),
+    );
+  }
+
+  Widget _fila(BuildContext context, PaColectiva c, List<double> cw) {
+    final sub = neuBody(size: 10.5, color: Neu.muted);
+    final partes = c.cuando.split(' · ');
+    final dia = partes.first;
+    final hora = partes.length > 1 ? partes.last : '';
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => _abrirAsignacion(context, c),
+      child: IntrinsicHeight(
+        child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          _celda(cw[1], Text('${c.seccion}', style: _celdaTxt)),
+          _celda(
+            cw[2],
+            Column(mainAxisSize: MainAxisSize.min, children: [
+              if (c.lider.isNotEmpty) ...[
+                Text(c.lider,
+                    textAlign: TextAlign.center,
+                    style: _celdaTxt.copyWith(fontWeight: FontWeight.w700)),
+                Text('(LÍDER)', style: sub),
+              ] else
+                const PaTag('Sin líder', tone: PaTone.warn),
+              Text(c.materia, textAlign: TextAlign.center, style: sub),
+            ]),
+          ),
+          _celda(cw[3],
+              Text('$dia\n$hora', textAlign: TextAlign.center, style: _celdaTxt)),
+          _celda(cw[4], Text(c.aula, textAlign: TextAlign.center, style: _celdaTxt)),
+          _celda(
+              cw[5],
+              Text(c.apoyo.isEmpty ? 'N. A' : c.apoyo.join('\n'),
+                  textAlign: TextAlign.center, style: _celdaTxt)),
+        ]),
+      ),
+    );
+  }
+
+  static final _celdaTxt = neuBody(size: 12.5, height: 1.35);
+
+  static Widget _celda(double w, Widget child) => Container(
+        width: w,
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+        alignment: Alignment.center,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          border: Border(top: BorderSide(color: Neu.tableLine)),
         ),
+        child: child,
       );
 }
 
+/// `cList`: una fila por materia con tag Asignado / Pendiente.
 class _Lista extends StatelessWidget {
   const _Lista(this.lista);
   final List<PaColectiva> lista;
 
   @override
-  Widget build(BuildContext context) => PaRowList([
-        for (final c in lista)
-          PaRow(
-            icon: Icons.groups_2_outlined,
-            title: c.materia,
-            subtitle:
-                'Sem ${c.semestreRomano} · Sec ${c.seccion} · ${c.cuando}\n${c.lider.isEmpty ? 'Sin líder' : 'Líder: ${c.lider}'}${c.apoyo.isEmpty ? '' : '\nApoyo: ${c.apoyo.join(', ')}'}',
-            trailing: c.lider.isEmpty
-                ? const PaTag('Sin líder', tone: PaTone.warn)
-                : PaTag(c.aulaLabel, tone: PaTone.ok),
-            onTap: () => _abrirAsignacion(context, c),
-          ),
-      ]);
+  Widget build(BuildContext context) {
+    final filas = [...lista]..sort(_porSemestre);
+    return PaRowList([
+      for (final c in filas)
+        PaRow(
+          icon: Icons.groups_2_outlined,
+          title: c.materia,
+          subtitle:
+              'Sem ${c.semestreRomano} · Sec ${c.seccion} · ${c.lider.isNotEmpty ? 'Líder: ${c.lider} · ${c.apoyo.length} de apoyo' : 'Sin líder asignado'}',
+          trailing: c.lider.isNotEmpty
+              ? const PaTag('Asignado', tone: PaTone.ok)
+              : const PaTag('Pendiente', tone: PaTone.warn),
+          onTap: () => _abrirAsignacion(context, c),
+        ),
+    ]);
+  }
 }
 
-/// Asigna líder, docentes de apoyo y aula a una tutoría colectiva.
+/// `clid1`: asigna líder, docentes de apoyo y aula a una tutoría colectiva.
 class PaAsignacionPage extends ConsumerStatefulWidget {
   const PaAsignacionPage({required this.colId, super.key});
   final int colId;
@@ -151,21 +244,15 @@ class _PaAsignacionPageState extends ConsumerState<PaAsignacionPage> {
 
     return PaScaffold(
       title: c.materia,
-      subtitle:
-          '${c.carrera} · Sem ${c.semestreRomano} · Sec ${c.seccion}',
+      subtitle: '${c.carrera} · Sem ${c.semestreRomano} · Sec ${c.seccion}',
       children: [
         PaCard(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const PaFieldLabel('Tutor líder'),
-            DropdownButtonFormField<String>(
-              initialValue: _lider.isEmpty ? null : _lider,
-              isExpanded: true,
-              hint: const Text('Elige un docente'),
-              decoration: paInput(),
-              items: [
-                for (final n in opciones)
-                  DropdownMenuItem(value: n, child: Text(n)),
-              ],
+            const PaFieldLabel('Tutor líder', first: true),
+            NeuDropdown<String>(
+              items: opciones,
+              value: _lider.isEmpty ? null : _lider,
+              hint: 'Elige un docente',
               onChanged: (v) => setState(() {
                 _lider = v ?? '';
                 _apoyo.remove(_lider);
@@ -173,50 +260,29 @@ class _PaAsignacionPageState extends ConsumerState<PaAsignacionPage> {
             ),
             const PaFieldLabel('Docentes de apoyo del líder'),
             if (_lider.isEmpty)
-              const Text('Primero elige al líder.',
-                  style: TextStyle(color: paMuted, fontSize: 13))
+              const PaHint('Primero elige al líder.')
             else
-              Wrap(spacing: 8, runSpacing: 8, children: [
+              NeuChipWrap([
                 for (final n in opciones.where((n) => n != _lider))
-                  FilterChip(
-                    label: Text(n),
-                    selected: _apoyo.contains(n),
-                    onSelected: (on) => setState(() {
-                      if (on) {
-                        _apoyo.add(n);
-                      } else {
-                        _apoyo.remove(n);
-                      }
-                    }),
-                  ),
+                  NeuChip(n,
+                      selected: _apoyo.contains(n),
+                      onTap: () => setState(() {
+                            if (!_apoyo.remove(n)) _apoyo.add(n);
+                          })),
               ]),
             const PaFieldLabel('Aula'),
-            DropdownButtonFormField<String>(
-              initialValue: _aula,
-              isExpanded: true,
-              decoration: paInput(),
-              items: [
-                for (final a in {...paAulas, _aula})
-                  DropdownMenuItem(value: a, child: Text(a)),
-              ],
+            NeuDropdown<String>(
+              items: <String>{...paAulas, _aula}.toList(),
+              value: _aula,
               onChanged: (v) => setState(() => _aula = v ?? _aula),
             ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: () {
-                  ref.read(paStoreProvider.notifier).asignar(
-                      widget.colId,
-                      _lider,
-                      opciones.where(_apoyo.contains).toList(),
-                      _aula);
-                  paToast(context, 'Asignación guardada');
-                  Navigator.of(context).pop();
-                },
-                child: const Text('Guardar asignación'),
-              ),
-            ),
+            const SizedBox(height: 14),
+            NeuButton('Guardar asignación', onPressed: () {
+              ref.read(paStoreProvider.notifier).asignar(widget.colId, _lider,
+                  opciones.where(_apoyo.contains).toList(), _aula);
+              paToast(context, 'Asignación guardada');
+              Navigator.of(context).pop();
+            }),
           ]),
         ),
       ],
@@ -224,7 +290,7 @@ class _PaAsignacionPageState extends ConsumerState<PaAsignacionPage> {
   }
 }
 
-/// Reportes consolidados enviados por los docentes líderes.
+/// `crep`: reportes consolidados enviados por los docentes líderes.
 class PaReportesPage extends ConsumerWidget {
   const PaReportesPage({super.key});
 
@@ -254,6 +320,7 @@ class PaReportesPage extends ConsumerWidget {
   }
 }
 
+/// `crepd`.
 class PaReporteDetallePage extends ConsumerStatefulWidget {
   const PaReporteDetallePage({required this.reporte, super.key});
   final PaReporte reporte;
@@ -306,21 +373,17 @@ class _PaReporteDetallePageState extends ConsumerState<PaReporteDetallePage> {
             ),
         ]),
         const PaSection('Rúbricas de apoyo'),
-        r.rubricas.isEmpty
-            ? const PaEmpty('Sin rúbricas.')
-            : PaRowList([
-                for (final x in r.rubricas)
-                  PaRow(
-                    icon: Icons.description_outlined,
-                    title: x.estudiante,
-                    subtitle:
-                        'Evaluó: ${x.por}${x.obs.isEmpty ? '' : ' · ${x.obs}'}',
-                    trailing: PaTag('${x.promedio.toStringAsFixed(1)} / 5'),
-                  ),
-              ]),
-        Text(
-            'Líder: ${r.por} · Apoyo: ${c.apoyo.isEmpty ? '—' : c.apoyo.join(', ')}',
-            style: const TextStyle(color: paMuted, fontSize: 12.5)),
+        PaRowList([
+          for (final x in r.rubricas)
+            PaRow(
+              icon: Icons.description_outlined,
+              title: x.estudiante,
+              subtitle: 'Evaluó: ${x.por}${x.obs.isEmpty ? '' : ' · ${x.obs}'}',
+              trailing: PaTag('${x.promedio.toStringAsFixed(1)} / 5'),
+            ),
+        ], empty: 'Sin rúbricas.'),
+        PaHint(
+            'Líder: ${r.por} · Apoyo: ${c.apoyo.isEmpty ? '—' : c.apoyo.join(', ')}'),
       ],
     );
   }
