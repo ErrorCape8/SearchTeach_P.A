@@ -77,7 +77,3 @@ SearchTeach tiene cuatro roles de acceso institucional. Las cuentas académicas 
 - Registro con verificación de correo institucional y recuperación de contraseña mediante código, con envío de correo configurado en el backend.
 - Administración de usuarios, estado de acceso, certificaciones docentes y asignaturas según los permisos del rol.
 
-
-## Estado del proyecto
-
-SearchTeach continúa en desarrollo. Algunas funciones dependen de servicios externos configurados por el entorno, y los resultados del modelo predictivo de asistencia son demostrativos mientras se utilicen datos sintéticos.

@@ -11,6 +11,8 @@ import '../../core/widgets/role_toast.dart';
 import '../tutorias/proyecto_aula_chat_page.dart';
 import '../tutorias/tutoria_chat_page.dart';
 import 'student_dashboard_models.dart';
+import '../pa/pa_estudiante_pages.dart';
+import '../pa/pa_widgets.dart';
 
 part 'student_dashboard_home.dart';
 part 'student_dashboard_home_widgets.dart';

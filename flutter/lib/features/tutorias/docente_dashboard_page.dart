@@ -17,6 +17,8 @@ import 'docente_proyectos_aula_page.dart';
 import 'docente_lider_proyectos_page.dart';
 import 'docente_perfil_page.dart';
 import 'docente_solicitudes_page.dart';
+import '../pa/pa_docente_pages.dart';
+import '../pa/pa_widgets.dart';
 import 'livekit_room_page.dart';
 import 'presencial_tutoria_page.dart';
 import 'tutoria_chat_page.dart';
@@ -1430,6 +1432,10 @@ class _TeacherQuickLinks extends StatelessWidget {
               label: 'Proyectos colectivos',
               icon: Icons.groups_outlined,
               onTap: () => onOpen(3)),
+          _TeacherQuickLink(
+              label: 'Rúbricas y reporte',
+              icon: Icons.fact_check_outlined,
+              onTap: () => paPush(context, const PaColectivasDocentePage())),
           _TeacherQuickLink(
               label: 'Líder PA',
               icon: Icons.fact_check_outlined,

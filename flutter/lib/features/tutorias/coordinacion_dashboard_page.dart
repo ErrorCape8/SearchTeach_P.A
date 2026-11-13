@@ -15,6 +15,8 @@ import '../auth/auth_repository.dart';
 import '../notifications/notifications_page.dart';
 import 'coordinacion_horarios_page.dart';
 import 'coordinacion_solicitudes_page.dart';
+import '../pa/pa_coordinacion_pages.dart';
+import '../pa/pa_widgets.dart';
 
 const _wine = Color(0xFFA9154F);
 const _wineDark = Color(0xFF86123F);
@@ -494,6 +496,24 @@ class _HomeView extends StatelessWidget {
             subtitle: 'Revisa solicitudes enviadas por los docentes.',
             badge: 'Abrir',
             onTap: () => onOpen(3),
+          ),
+        ]),
+        const SizedBox(height: 24),
+        const Text('Tutorías colectivas',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+        const SizedBox(height: 10),
+        _CardList(children: [
+          _RecordRow(
+            icon: Icons.groups_2_outlined,
+            title: 'Tutores líderes',
+            subtitle: 'Cronograma, líder, apoyos y aula por materia',
+            onTap: () => paPush(context, const PaLideresPage()),
+          ),
+          _RecordRow(
+            icon: Icons.inbox_outlined,
+            title: 'Reportes de líderes',
+            subtitle: 'Asistencia y rúbricas consolidadas',
+            onTap: () => paPush(context, const PaReportesPage()),
           ),
         ]),
       ],
