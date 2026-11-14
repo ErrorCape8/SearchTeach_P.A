@@ -9,9 +9,9 @@ import java.util.HashSet;
 import java.util.Set;
 
 import com.pa.searchteach.common.exception.NotFoundException;
-import com.pa.searchteach.tutorias.dto.DocenteCoordinacion;
-import com.pa.searchteach.tutorias.dto.HorarioTutorSolicitud;
-import com.pa.searchteach.tutorias.dto.TutorDisponible;
+import com.pa.searchteach.tutorias.dto.horarios.DocenteCoordinacion;
+import com.pa.searchteach.tutorias.dto.horarios.HorarioTutorSolicitud;
+import com.pa.searchteach.tutorias.dto.horarios.TutorDisponible;
 import com.pa.searchteach.tutorias.model.HorarioTutor;
 import com.pa.searchteach.tutorias.model.CatalogoMateriasTecnologia;
 import com.pa.searchteach.tutorias.model.MateriaHorario;
@@ -58,7 +58,7 @@ public class HorariosTutoresService {
 
 	public List<TutorDisponible> listarDisponibles(String estudianteId) {
 		User estudiante = usuarios.findById(estudianteId)
-				.orElseThrow(() -> new NotFoundException("No se encontrÃ³ el perfil del estudiante."));
+				.orElseThrow(() -> new NotFoundException("No se encontró el perfil del estudiante."));
 		String tecnologiaEstudiante = valor(estudiante.getCarrera());
 		int semestreEstudiante = estudiante.getSemestre();
 		if (tecnologiaEstudiante.isBlank() || semestreEstudiante < 1 || semestreEstudiante > 6) return List.of();
@@ -127,7 +127,7 @@ public class HorariosTutoresService {
 		}
 
 		User estudiante = usuarios.findById(estudianteId)
-				.orElseThrow(() -> new NotFoundException("No se encontrÃ³ el estudiante seleccionado."));
+				.orElseThrow(() -> new NotFoundException("No se encontró el estudiante seleccionado."));
 		String carrera = valor(estudiante.getCarrera());
 		if (horario.semestre() != estudiante.getSemestre()) {
 			throw new ResponseStatusException(HttpStatus.CONFLICT,
@@ -141,27 +141,7 @@ public class HorariosTutoresService {
 								.equals(CatalogoMateriasTecnologia.normalizar(carrera))));
 		if (!disponible) {
 			throw new ResponseStatusException(HttpStatus.CONFLICT,
-					"La materia no estÃ¡ disponible para la tecnologÃ­a del estudiante.");
-		}
-	}
-
-	public void validarMateriaParaTecnologia(
-			String docenteId, String tecnologia, int semestre, String materia) {
-		HorarioTutor horario = horarios.findByDocenteId(docenteId)
-				.orElseThrow(() -> new NotFoundException("El docente seleccionado no tiene horarios disponibles."));
-		if (horario.semestre() != semestre) {
-			throw new ResponseStatusException(HttpStatus.CONFLICT,
-					"El semestre no coincide con el horario del docente.");
-		}
-		boolean disponible = materiasCompartidas(horario).stream()
-				.filter(item -> CatalogoMateriasTecnologia.normalizar(item.nombre())
-						.equals(CatalogoMateriasTecnologia.normalizar(materia)))
-				.anyMatch(item -> item.carreras().stream()
-						.anyMatch(c -> CatalogoMateriasTecnologia.normalizar(c)
-								.equals(CatalogoMateriasTecnologia.normalizar(tecnologia))));
-		if (!disponible) {
-			throw new ResponseStatusException(HttpStatus.CONFLICT,
-					"El docente no tiene asignada esa materia para la tecnología seleccionada.");
+					"La materia no está disponible para la tecnología del estudiante.");
 		}
 	}
 
@@ -282,13 +262,6 @@ public class HorariosTutoresService {
 							: new MateriaHorario(materia.nombre(), carreras);
 				})
 				.toList();
-	}
-
-	private List<String> carrerasDe(HorarioTutor horario) {
-		List<String> carreras = new ArrayList<>();
-		carreras.add(horario.carrera());
-		horario.materias().forEach(materia -> carreras.addAll(materia.carreras()));
-		return carreras.stream().distinct().toList();
 	}
 
 	private User obtenerDocente(String docenteId) {

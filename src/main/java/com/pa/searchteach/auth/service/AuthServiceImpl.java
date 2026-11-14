@@ -17,7 +17,6 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
@@ -35,31 +34,6 @@ public class AuthServiceImpl implements AuthService {
 	private final AuthAttemptLimiter attemptLimiter;
 	private final RegistrationEmailVerificationService emailVerificationService;
 
-	public AuthServiceImpl(
-			UserRepository userRepository,
-			RepositorioLiderPrograma repositorioLiderPrograma,
-			CoordinatorRepository coordinatorRepository,
-			MongoTemplate mongoTemplate,
-			PasswordEncoder passwordEncoder,
-			JwtService jwtService,
-			AuthAttemptLimiter attemptLimiter) {
-		this(userRepository, repositorioLiderPrograma, coordinatorRepository, null, mongoTemplate, passwordEncoder, jwtService, attemptLimiter);
-	}
-
-	public AuthServiceImpl(
-			UserRepository userRepository,
-			RepositorioLiderPrograma repositorioLiderPrograma,
-			CoordinatorRepository coordinatorRepository,
-			ItAdminRepository itAdminRepository,
-			MongoTemplate mongoTemplate,
-			PasswordEncoder passwordEncoder,
-			JwtService jwtService,
-			AuthAttemptLimiter attemptLimiter) {
-		this(userRepository, repositorioLiderPrograma, coordinatorRepository, itAdminRepository, mongoTemplate,
-				passwordEncoder, jwtService, attemptLimiter, null);
-	}
-
-	@Autowired
 	public AuthServiceImpl(
 			UserRepository userRepository,
 			RepositorioLiderPrograma repositorioLiderPrograma,
@@ -85,17 +59,12 @@ public class AuthServiceImpl implements AuthService {
 	public AuthResponse register(String identifier, String password, String clientIp) {
 		attemptLimiter.assertAllowed(identifier, clientIp);
 		validatePasswordLength(password);
-		if (emailVerificationService == null) {
-			throw new IllegalStateException("El servicio de verificación de correo no está configurado.");
-		}
 		boolean institutionalUser = userRepository.existsById(identifier);
 		if (institutionalUser) {
 			emailVerificationService.requireVerified(identifier);
 		}
 
-		ItAdmin itAdmin = itAdminRepository != null
-				? itAdminRepository.findById(identifier).orElse(null)
-				: null;
+		ItAdmin itAdmin = itAdminRepository.findById(identifier).orElse(null);
 		LiderPrograma liderPrograma = itAdmin == null
 				? repositorioLiderPrograma.findById(identifier).orElse(null)
 				: null;
@@ -146,24 +115,19 @@ public class AuthServiceImpl implements AuthService {
 		if (institutionalUser) {
 			emailVerificationService.consume(identifier);
 		}
-		return issueToken(identifier, roleFor(itAdmin, liderPrograma, legacyCoordinator));
+		return issueToken(identifier, roleFor(itAdmin, liderPrograma, legacyCoordinator),
+				jwtService.getExpirationSeconds());
 	}
 
 	@Override
 	public void verifyRegistration(String identifier, String email, String clientIp) {
 		attemptLimiter.assertAllowed(identifier, clientIp);
-		if (emailVerificationService == null) {
-			throw new IllegalStateException("El servicio de verificación de correo no está configurado.");
-		}
 		emailVerificationService.sendCode(identifier, email);
 	}
 
 	@Override
 	public void verifyRegistrationCode(String identifier, String code, String clientIp) {
 		attemptLimiter.assertAllowed(identifier, clientIp);
-		if (emailVerificationService == null) {
-			throw new IllegalStateException("El servicio de verificación de correo no está configurado.");
-		}
 		try {
 			emailVerificationService.verifyCode(identifier, code);
 			attemptLimiter.recordSuccess(identifier);
@@ -177,18 +141,12 @@ public class AuthServiceImpl implements AuthService {
 	@Override
 	public void requestPasswordReset(String identifier, String email, String clientIp) {
 		attemptLimiter.assertAllowed(identifier, clientIp);
-		if (emailVerificationService == null) {
-			throw new IllegalStateException("El servicio de verificación de correo no está configurado.");
-		}
 		emailVerificationService.sendPasswordResetCode(identifier, email);
 	}
 
 	@Override
 	public void verifyPasswordResetCode(String identifier, String code, String clientIp) {
 		attemptLimiter.assertAllowed(identifier, clientIp);
-		if (emailVerificationService == null) {
-			throw new IllegalStateException("El servicio de verificación de correo no está configurado.");
-		}
 		try {
 			emailVerificationService.verifyPasswordResetCode(identifier, code);
 			attemptLimiter.recordSuccess(identifier);
@@ -202,9 +160,6 @@ public class AuthServiceImpl implements AuthService {
 	public void resetPassword(String identifier, String password, String clientIp) {
 		attemptLimiter.assertAllowed(identifier, clientIp);
 		validatePasswordLength(password);
-		if (emailVerificationService == null) {
-			throw new IllegalStateException("El servicio de verificación de correo no está configurado.");
-		}
 		emailVerificationService.requirePasswordResetVerified(identifier);
 		long modified = mongoTemplate.updateFirst(
 				Query.query(Criteria.where("_id").is(identifier)
@@ -220,18 +175,11 @@ public class AuthServiceImpl implements AuthService {
 	}
 
 	@Override
-	public AuthResponse login(String identifier, String password, String clientIp) {
-		return login(identifier, password, clientIp, false);
-	}
-
-	@Override
 	public AuthResponse login(String identifier, String password, String clientIp, boolean rememberMe) {
 		attemptLimiter.assertAllowed(identifier, clientIp);
 		validatePasswordLength(password);
 
-		ItAdmin itAdmin = itAdminRepository != null
-				? itAdminRepository.findById(identifier).orElse(null)
-				: null;
+		ItAdmin itAdmin = itAdminRepository.findById(identifier).orElse(null);
 		LiderPrograma liderPrograma = itAdmin == null
 				? repositorioLiderPrograma.findById(identifier).orElse(null)
 				: null;
@@ -279,11 +227,6 @@ public class AuthServiceImpl implements AuthService {
 			throw new AuthException(HttpStatus.BAD_REQUEST,
 					"La contraseña no puede superar 72 bytes en UTF-8.", true);
 		}
-	}
-
-	private AuthResponse issueToken(String identifier, Role role) {
-		return new AuthResponse(jwtService.createToken(identifier, role), "Bearer",
-				jwtService.getExpirationSeconds());
 	}
 
 	private AuthResponse issueToken(String identifier, Role role, long expiresInSeconds) {

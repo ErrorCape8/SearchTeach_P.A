@@ -42,7 +42,7 @@ public record ProyectoAula(
 		}
 		if (estudianteIds.size() > 4 || estudianteIds.stream().anyMatch(id -> id == null || id.isBlank())
 				|| estudianteIds.stream().distinct().count() != estudianteIds.size()) {
-			throw new IllegalArgumentException("La inscripciÃ³n admite hasta cuatro estudiantes distintos.");
+			throw new IllegalArgumentException("La inscripción admite hasta cuatro estudiantes distintos.");
 		}
 	}
 

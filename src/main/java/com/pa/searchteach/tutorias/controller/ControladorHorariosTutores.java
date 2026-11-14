@@ -2,8 +2,8 @@ package com.pa.searchteach.tutorias.controller;
 
 import java.util.List;
 
-import com.pa.searchteach.tutorias.dto.DocenteCoordinacion;
-import com.pa.searchteach.tutorias.dto.HorarioTutorSolicitud;
+import com.pa.searchteach.tutorias.dto.horarios.DocenteCoordinacion;
+import com.pa.searchteach.tutorias.dto.horarios.HorarioTutorSolicitud;
 import com.pa.searchteach.tutorias.model.MateriaHorario;
 import com.pa.searchteach.tutorias.model.HorarioTutor;
 import com.pa.searchteach.tutorias.service.HorariosTutoresService;

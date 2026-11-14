@@ -3,75 +3,74 @@ package com.pa.searchteach.dashboard.service;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+import java.util.Set;
 import java.util.TreeMap;
+import java.util.stream.Collectors;
+import java.util.stream.LongStream;
 
 import com.pa.searchteach.dashboard.dto.AttendanceTrainingData;
 import com.pa.searchteach.dashboard.dto.DashboardSummary;
-import com.pa.searchteach.dashboard.dto.PronosticoDemanda;
 import com.pa.searchteach.dashboard.dto.SubjectAttendancePrediction;
 import com.pa.searchteach.dashboard.dto.SubjectTutoringSummary;
 import com.pa.searchteach.dashboard.dto.WeeklyAttendancePrediction;
 import com.pa.searchteach.dashboard.dto.WeeklyTutoringCount;
-import com.pa.searchteach.tutorias.model.EstadoTutoria;
-import com.pa.searchteach.tutorias.model.Tutoria;
-import org.bson.Document;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.aggregation.Aggregation;
-import org.springframework.data.mongodb.core.aggregation.AggregationOperation;
-import org.springframework.data.mongodb.core.query.Criteria;
-import org.springframework.data.mongodb.core.query.Query;
+import com.pa.searchteach.tutorias.model.AsistenciaEstudiante;
+import com.pa.searchteach.tutorias.model.ModalidadTutoria;
+import com.pa.searchteach.tutorias.model.SesionTutoria;
+import com.pa.searchteach.tutorias.repository.SesionTutoriaRepositorio;
 import org.springframework.stereotype.Service;
 
+/**
+ * Estadísticas del dashboard de dirección.
+ *
+ * <p>Cada inscripción de un estudiante en una sesión cuenta como una "tutoría":
+ * es la misma unidad con la que se entrenó el modelo de asistencia.
+ */
 @Service
 public class DirectorDashboardService {
 
 	private static final int HISTORY_WEEKS = 10;
-	private static final double UMBRAL_TENDENCIA_ESTABLE = 0.10;
-	private static final Logger LOGGER = LoggerFactory.getLogger(DirectorDashboardService.class);
-	private final MongoTemplate mongoTemplate;
+	private static final String ESTADO_PROGRAMADA = "PROGRAMADA";
+	private static final String ESTADO_FINALIZADA = "FINALIZADA";
+	private final SesionTutoriaRepositorio sesionesRepositorio;
 	private final AsistenciaLogisticService asistenciaLogisticService;
-	private final PronosticoReptreeService pronosticoReptreeService;
 
 	public DirectorDashboardService(
-			MongoTemplate mongoTemplate,
-			AsistenciaLogisticService asistenciaLogisticService,
-			PronosticoReptreeService pronosticoReptreeService) {
-		this.mongoTemplate = mongoTemplate;
+			SesionTutoriaRepositorio sesionesRepositorio,
+			AsistenciaLogisticService asistenciaLogisticService) {
+		this.sesionesRepositorio = sesionesRepositorio;
 		this.asistenciaLogisticService = asistenciaLogisticService;
-		this.pronosticoReptreeService = pronosticoReptreeService;
 	}
 
 	public DashboardSummary obtenerResumen() {
-		long total = mongoTemplate.count(new Query(), Tutoria.class);
-		long realizadas = contarPorEstado(EstadoTutoria.REALIZADA);
-		long programadas = contarPorEstado(EstadoTutoria.PROGRAMADA);
-		long asistieron = contarAsistencia(true);
-		long noAsistieron = contarAsistencia(false);
+		List<Inscripcion> inscripciones = listarInscripciones();
+		long realizadas = inscripciones.stream().filter(Inscripcion::finalizada).count();
+		long programadas = inscripciones.stream().filter(Inscripcion::programada).count();
+		long asistieron = inscripciones.stream()
+				.filter(inscripcion -> inscripcion.finalizada() && Boolean.TRUE.equals(inscripcion.asistio()))
+				.count();
+		long noAsistieron = inscripciones.stream()
+				.filter(inscripcion -> inscripcion.finalizada() && Boolean.FALSE.equals(inscripcion.asistio()))
+				.count();
 		long asistenciasRegistradas = asistieron + noAsistieron;
 		Double tasaAsistencia = asistenciasRegistradas == 0
 				? null
 				: asistieron * 100.0 / asistenciasRegistradas;
 		long sinEtiqueta = realizadas - asistenciasRegistradas;
-		AttendanceForecast attendanceForecast = obtenerPrediccionesAsistencia();
-		Map<String, PronosticoDemanda> demandForecasts = obtenerPronosticosPorMateria();
+		AttendanceForecast attendanceForecast = obtenerPrediccionesAsistencia(inscripciones);
 
 		return new DashboardSummary(
-				total,
+				inscripciones.size(),
 				realizadas,
 				programadas,
 				tasaAsistencia,
-				obtenerHistorialSemanal(),
-				obtenerResumenPorMateria(demandForecasts),
+				obtenerHistorialSemanal(inscripciones),
+				obtenerResumenPorMateria(inscripciones),
 				new AttendanceTrainingData(
 						asistenciasRegistradas, asistieron, noAsistieron, sinEtiqueta),
 				asistenciaLogisticService.isAvailable(),
@@ -80,32 +79,48 @@ public class DirectorDashboardService {
 				attendanceForecast.notEvaluable());
 	}
 
-	private AttendanceForecast obtenerPrediccionesAsistencia() {
-		if (!asistenciaLogisticService.isAvailable()) {
-			long notEvaluable = mongoTemplate.count(
-					Query.query(Criteria.where("estado").is(EstadoTutoria.PROGRAMADA)
-							.and("fechaInicio").gt(LocalDateTime.now())),
-					Tutoria.class);
-			return new AttendanceForecast(List.of(), List.of(), notEvaluable);
+	private List<Inscripcion> listarInscripciones() {
+		List<Inscripcion> inscripciones = new ArrayList<>();
+		for (SesionTutoria sesion : sesionesRepositorio.findAll()) {
+			Map<String, Boolean> asistencias = new HashMap<>();
+			for (AsistenciaEstudiante asistencia : sesion.asistencias()) {
+				asistencias.put(asistencia.estudianteId(), asistencia.asistio());
+			}
+			for (String estudianteId : sesion.estudianteIds()) {
+				inscripciones.add(new Inscripcion(
+						sesion.materia(),
+						sesion.modalidad(),
+						sesion.fechaInicio(),
+						sesion.estadoClase(),
+						estudianteId,
+						asistencias.get(estudianteId)));
+			}
 		}
+		return inscripciones;
+	}
+
+	private AttendanceForecast obtenerPrediccionesAsistencia(List<Inscripcion> inscripciones) {
 		LocalDateTime now = LocalDateTime.now();
-		List<Tutoria> tutoriasProgramadas = mongoTemplate.find(
-				Query.query(Criteria.where("estado").is(EstadoTutoria.PROGRAMADA)
-						.and("fechaInicio").gt(now)),
-				Tutoria.class);
+		List<Inscripcion> proximas = inscripciones.stream()
+				.filter(Inscripcion::programada)
+				.filter(inscripcion -> inscripcion.fechaInicio() != null && inscripcion.fechaInicio().isAfter(now))
+				.toList();
+		if (!asistenciaLogisticService.isAvailable()) {
+			return new AttendanceForecast(List.of(), List.of(), proximas.size());
+		}
 		Map<String, PredictionAccumulator> predictions = new TreeMap<>();
 		Map<LocalDate, PredictionAccumulator> predictionsByWeek = new TreeMap<>();
 		long notEvaluable = 0;
-		for (Tutoria tutoria : tutoriasProgramadas) {
-			var prediction = asistenciaLogisticService.predecir(tutoria);
+		for (Inscripcion inscripcion : proximas) {
+			var prediction = asistenciaLogisticService.predecir(
+					inscripcion.materia(), inscripcion.modalidad(), inscripcion.fechaInicio());
 			if (prediction.isEmpty()) {
 				notEvaluable++;
 				continue;
 			}
-			PredictionAccumulator accumulator = predictions.computeIfAbsent(
-					tutoria.getMateria(), ignored -> new PredictionAccumulator());
-			accumulator.add(prediction.get());
-			LocalDate week = tutoria.getFechaInicio().toLocalDate().with(DayOfWeek.MONDAY);
+			predictions.computeIfAbsent(inscripcion.materia(), ignored -> new PredictionAccumulator())
+					.add(prediction.get());
+			LocalDate week = inscripcion.fechaInicio().toLocalDate().with(DayOfWeek.MONDAY);
 			predictionsByWeek.computeIfAbsent(week, ignored -> new PredictionAccumulator())
 					.add(prediction.get());
 		}
@@ -118,238 +133,44 @@ public class DirectorDashboardService {
 		return new AttendanceForecast(bySubject, byWeek, notEvaluable);
 	}
 
-	private List<SubjectTutoringSummary> obtenerResumenPorMateria(
-			Map<String, PronosticoDemanda> pronosticos) {
-		AggregationOperation match = context -> new Document(
-				"$match",
-				new Document("materia", new Document("$type", "string").append("$ne", "")));
-		AggregationOperation group = context -> new Document(
-				"$group",
-				new Document("_id", "$materia")
-						.append("totalTutorias", new Document("$sum", 1))
-						.append("estudiantes", new Document("$addToSet", "$estudianteId"))
-						.append("tutoriasRealizadas", new Document(
-								"$sum",
-								new Document("$cond", List.of(
-										new Document("$eq", List.of("$estado", EstadoTutoria.REALIZADA.name())),
-										1,
-										0))))
-						.append("asistenciasRegistradas", new Document(
-								"$sum",
-								new Document("$cond", List.of(
-										new Document("$in", List.of("$asistio", List.of(true, false))),
-										1,
-										0))))
-						.append("asistenciasConfirmadas", new Document(
-								"$sum",
-								new Document("$cond", List.of(
-										new Document("$eq", List.of("$asistio", true)),
-										1,
-										0)))));
-		AggregationOperation project = context -> new Document(
-				"$project",
-				new Document("_id", 0)
-						.append("materia", "$_id")
-						.append("totalTutorias", 1)
-						.append("tutoriasRealizadas", 1)
-						.append("estudiantesInscritos", new Document(
-								"$size",
-								new Document("$filter",
-										new Document("input", "$estudiantes")
-												.append("as", "estudiante")
-												.append("cond", new Document(
-														"$and",
-														List.of(
-																new Document("$ne", Arrays.asList("$$estudiante", null)),
-																new Document("$ne", List.of("$$estudiante", ""))))))))
-						.append("asistenciasConfirmadas", 1)
-						.append("asistenciasRegistradas", 1));
-		Aggregation aggregation = Aggregation.newAggregation(
-				match,
-				group,
-				project,
-				Aggregation.sort(org.springframework.data.domain.Sort.by("materia")));
-		List<SubjectAttendanceCount> results = mongoTemplate
-				.aggregate(aggregation, Tutoria.class, SubjectAttendanceCount.class)
-				.getMappedResults();
-		return results.stream()
-				.map(result -> new SubjectTutoringSummary(
-						result.materia(),
-						result.totalTutorias(),
-						result.tutoriasRealizadas(),
-						result.estudiantesInscritos(),
-						result.asistenciasConfirmadas(),
-						result.asistenciasRegistradas(),
-						result.asistenciasRegistradas() == 0
-								? null
-								: result.asistenciasConfirmadas() * 100.0 / result.asistenciasRegistradas(),
-						pronosticos.get(result.materia())))
+	private List<SubjectTutoringSummary> obtenerResumenPorMateria(List<Inscripcion> inscripciones) {
+		Map<String, List<Inscripcion>> porMateria = inscripciones.stream()
+				.filter(inscripcion -> tieneMateria(inscripcion.materia()))
+				.collect(Collectors.groupingBy(Inscripcion::materia, TreeMap::new, Collectors.toList()));
+		return porMateria.entrySet().stream()
+				.map(entry -> {
+					List<Inscripcion> items = entry.getValue();
+					Set<String> estudiantes = new HashSet<>();
+					items.forEach(item -> estudiantes.add(item.estudianteId()));
+					long registradas = items.stream().filter(item -> item.asistio() != null).count();
+					long confirmadas = items.stream().filter(item -> Boolean.TRUE.equals(item.asistio())).count();
+					return new SubjectTutoringSummary(
+							entry.getKey(),
+							items.size(),
+							items.stream().filter(Inscripcion::finalizada).count(),
+							estudiantes.size(),
+							confirmadas,
+							registradas,
+							registradas == 0 ? null : confirmadas * 100.0 / registradas);
+				})
 				.toList();
 	}
 
-	private Map<String, PronosticoDemanda> obtenerPronosticosPorMateria() {
-		LocalDate currentWeek = LocalDate.now().with(DayOfWeek.MONDAY);
-		LocalDate firstWeek = currentWeek.minusWeeks(HISTORY_WEEKS);
-		ZoneId zone = ZoneId.systemDefault();
-		LocalDateTime from = firstWeek.atStartOfDay();
-		LocalDateTime until = currentWeek.atStartOfDay();
-
-		AggregationOperation match = context -> new Document(
-				"$match",
-				new Document("materia", new Document("$type", "string").append("$ne", ""))
-						.append("fechaInicio", new Document("$gte", asDate(from, zone))
-								.append("$lt", asDate(until, zone))));
-		AggregationOperation project = context -> new Document(
-				"$project",
-				new Document("materia", 1)
-						.append("day", new Document(
-								"$dateToString",
-								new Document("format", "%Y-%m-%d")
-										.append("date", "$fechaInicio")
-										.append("timezone", zone.getId()))));
-		AggregationOperation group = context -> new Document(
-				"$group",
-				new Document("_id", new Document("materia", "$materia").append("day", "$day"))
-						.append("total", new Document("$sum", 1)));
-		Aggregation aggregation = Aggregation.newAggregation(match, project, group);
-		List<Document> dailyCounts = mongoTemplate
-				.aggregate(aggregation, Tutoria.class, Document.class)
-				.getMappedResults();
-
-		Map<String, Map<LocalDate, Long>> countsBySubject = new HashMap<>();
-		for (Document dailyCount : dailyCounts) {
-			Document key = dailyCount.get("_id", Document.class);
-			LocalDate day = LocalDate.parse(key.getString("day"));
-			LocalDate week = day.with(DayOfWeek.MONDAY);
-			countsBySubject.computeIfAbsent(key.getString("materia"), ignored -> new TreeMap<>())
-					.merge(week, dailyCount.get("total", Number.class).longValue(), Long::sum);
-		}
-
-		Map<String, PronosticoDemanda> forecasts = new HashMap<>();
-		countsBySubject.forEach((subject, counts) -> {
-			LocalDate firstActiveWeek = counts.keySet().iterator().next();
-			long weekCount = java.time.temporal.ChronoUnit.WEEKS.between(firstActiveWeek, currentWeek);
-			List<WeeklyTutoringCount> history = java.util.stream.LongStream.range(0, weekCount)
-					.mapToObj(offset -> {
-						LocalDate week = firstActiveWeek.plusWeeks(offset);
-						return new WeeklyTutoringCount(week, counts.getOrDefault(week, 0L));
-					})
-					.toList();
-			if (history.size() >= 4 && history.size() <= HISTORY_WEEKS) {
-				pronosticarMateria(subject, history, currentWeek)
-						.ifPresent(forecast -> forecasts.put(subject, forecast));
-			}
-		});
-		return forecasts;
-	}
-
-	Optional<PronosticoDemanda> pronosticarMateria(
-			String materia,
-			List<WeeklyTutoringCount> historial,
-			LocalDate primeraSemanaPronosticada) {
-		try {
-			Optional<List<Long>> predicciones = pronosticoReptreeService.pronosticar(
-					materia, historial, primeraSemanaPronosticada);
-			if (predicciones.isPresent()) {
-				return Optional.of(crearPronosticoReptree(
-						historial, predicciones.get(), primeraSemanaPronosticada));
-			}
-		} catch (Exception exception) {
-			LOGGER.warn("Falló REPTree para {}; no se mostrará pronóstico.", materia, exception);
-		}
-		return Optional.empty();
-	}
-
-	private PronosticoDemanda crearPronosticoReptree(
-			List<WeeklyTutoringCount> historial,
-			List<Long> predicciones,
-			LocalDate primeraSemanaPronosticada) {
-		long estimadoProximaSemana = predicciones.getFirst();
-		long estimadoProximasCuatroSemanas = 0;
-		List<WeeklyTutoringCount> prediccionesSemanales = new ArrayList<>(predicciones.size());
-		for (int index = 0; index < predicciones.size(); index++) {
-			Long prediccion = predicciones.get(index);
-			if (prediccion == null) {
-				throw new IllegalStateException("REPTree devolvió una predicción vacía.");
-			}
-			estimadoProximasCuatroSemanas += prediccion;
-			prediccionesSemanales.add(new WeeklyTutoringCount(
-					primeraSemanaPronosticada.plusWeeks(index), prediccion));
-		}
-		long solicitudesRecientes = 0;
-		for (int index = historial.size() - 4; index < historial.size(); index++) {
-			solicitudesRecientes += historial.get(index).total();
-		}
-		double promedioReciente = solicitudesRecientes / 4.0;
-		double cambio = estimadoProximaSemana - promedioReciente;
-		double umbralEstable = Math.max(1, promedioReciente * UMBRAL_TENDENCIA_ESTABLE);
-		String tendencia = cambio > umbralEstable ? "SUBE"
-				: cambio < -umbralEstable ? "BAJA" : "ESTABLE";
-
-		return new PronosticoDemanda(
-				List.copyOf(historial),
-				List.copyOf(prediccionesSemanales),
-				estimadoProximaSemana,
-				estimadoProximaSemana,
-				estimadoProximaSemana,
-				estimadoProximasCuatroSemanas,
-				estimadoProximasCuatroSemanas,
-				estimadoProximasCuatroSemanas,
-				tendencia,
-				"SUBE".equals(tendencia),
-				"REPTREE");
-	}
-
-	private long contarPorEstado(EstadoTutoria estado) {
-		return mongoTemplate.count(
-				Query.query(Criteria.where("estado").is(estado)), Tutoria.class);
-	}
-
-	private long contarAsistencia(boolean asistio) {
-		Criteria criteria = Criteria.where("estado").is(EstadoTutoria.REALIZADA)
-				.and("asistio").is(asistio);
-		return mongoTemplate.count(Query.query(criteria), Tutoria.class);
-	}
-
-	private List<WeeklyTutoringCount> obtenerHistorialSemanal() {
+	private List<WeeklyTutoringCount> obtenerHistorialSemanal(List<Inscripcion> inscripciones) {
 		LocalDate currentWeek = LocalDate.now().with(DayOfWeek.MONDAY);
 		LocalDate firstWeek = currentWeek.minusWeeks(HISTORY_WEEKS - 1);
-		ZoneId zone = ZoneId.systemDefault();
-		LocalDateTime from = firstWeek.atStartOfDay();
-		LocalDateTime until = currentWeek.plusWeeks(1).atStartOfDay();
-
-		AggregationOperation match = context -> new Document(
-				"$match",
-				new Document("fechaInicio", new Document("$gte", asDate(from, zone))
-						.append("$lt", asDate(until, zone))));
-		AggregationOperation projectDay = context -> new Document(
-				"$project",
-				new Document("day", new Document(
-						"$dateToString",
-						new Document("format", "%Y-%m-%d")
-								.append("date", "$fechaInicio")
-								.append("timezone", zone.getId()))));
-		AggregationOperation groupByDay = context -> new Document(
-				"$group",
-				new Document("_id", "$day").append("total", new Document("$sum", 1)));
-
-		Aggregation aggregation = Aggregation.newAggregation(
-				match,
-				projectDay,
-				groupByDay,
-				Aggregation.sort(org.springframework.data.domain.Sort.by("_id")));
-		List<DailyTutoringCount> dailyCounts = mongoTemplate
-				.aggregate(aggregation, Tutoria.class, DailyTutoringCount.class)
-				.getMappedResults();
 
 		Map<LocalDate, Long> countsByWeek = new HashMap<>();
-		for (DailyTutoringCount dailyCount : dailyCounts) {
-			LocalDate day = LocalDate.parse(dailyCount.id());
-			LocalDate week = day.with(DayOfWeek.MONDAY);
-			countsByWeek.put(week, countsByWeek.getOrDefault(week, 0L) + dailyCount.total());
+		for (Inscripcion inscripcion : inscripciones) {
+			if (inscripcion.fechaInicio() == null) {
+				continue;
+			}
+			LocalDate week = inscripcion.fechaInicio().toLocalDate().with(DayOfWeek.MONDAY);
+			if (!week.isBefore(firstWeek) && !week.isAfter(currentWeek)) {
+				countsByWeek.merge(week, 1L, Long::sum);
+			}
 		}
-
-		return java.util.stream.LongStream.range(0, HISTORY_WEEKS)
+		return LongStream.range(0, HISTORY_WEEKS)
 				.mapToObj(offset -> {
 					LocalDate week = firstWeek.plusWeeks(offset);
 					return new WeeklyTutoringCount(week, countsByWeek.getOrDefault(week, 0L));
@@ -357,20 +178,25 @@ public class DirectorDashboardService {
 				.toList();
 	}
 
-	private java.util.Date asDate(LocalDateTime dateTime, ZoneId zone) {
-		return java.util.Date.from(dateTime.atZone(zone).toInstant());
+	private static boolean tieneMateria(String materia) {
+		return materia != null && !materia.isBlank();
 	}
 
-	private record DailyTutoringCount(@Id String id, long total) {
-	}
-
-	private record SubjectAttendanceCount(
+	private record Inscripcion(
 			String materia,
-			long totalTutorias,
-			long tutoriasRealizadas,
-			long estudiantesInscritos,
-			long asistenciasConfirmadas,
-			long asistenciasRegistradas) {
+			ModalidadTutoria modalidad,
+			LocalDateTime fechaInicio,
+			String estado,
+			String estudianteId,
+			Boolean asistio) {
+
+		private boolean finalizada() {
+			return ESTADO_FINALIZADA.equals(estado);
+		}
+
+		private boolean programada() {
+			return ESTADO_PROGRAMADA.equals(estado);
+		}
 	}
 
 	private record AttendanceForecast(

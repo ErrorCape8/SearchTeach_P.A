@@ -1,0 +1,18 @@
+package com.pa.searchteach.tutorias.dto.horarios;
+
+import java.util.List;
+import com.pa.searchteach.tutorias.model.MateriaHorario;
+
+public record TutorDisponible(
+		String docenteId,
+		String nombre,
+		String carrera,
+		int semestre,
+		String dia,
+		String horaInicio,
+		String horaFin,
+		String modalidad,
+		String ubicacion,
+		List<String> carreras,
+		List<MateriaHorario> materias) {
+}

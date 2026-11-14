@@ -17,7 +17,7 @@
 
 SearchTeach reúne en una sola plataforma la solicitud y programación de tutorías, las sesiones colectivas y los proyectos de aula. Los estudiantes encuentran apoyo académico; los docentes acompañan sesiones y proyectos; coordinación organiza horarios y grupos; y dirección consulta indicadores institucionales.
 
-La aplicación está construida con Flutter y un backend REST en Java con Spring Boot. MongoDB conserva usuarios, tutorías y proyectos. Redis apoya funciones de tiempo real. Las sesiones virtuales e híbridas pueden usar LiveKit; las notificaciones push usan Firebase Cloud Messaging cuando está configurado.
+La aplicación está construida con Flutter y un backend REST en Java con Spring Boot. MongoDB conserva usuarios, tutorías y proyectos. Redis apoya funciones de tiempo real. Las sesiones virtuales e híbridas usan LiveKit; las notificaciones push usan Firebase Cloud Messaging .
 
 ## Roles y funciones
 
@@ -32,7 +32,7 @@ SearchTeach tiene cuatro roles de acceso institucional. Las cuentas académicas 
 
 ### Perfiles académicos
 
-- **Estudiante:** busca docentes y horarios disponibles; solicita tutorías; se inscribe o retira de sesiones grupales; participa en sesiones virtuales o híbridas; crea o se une a proyectos de aula; consulta sesiones, historial, asistencia, reuniones y avisos.
+- **Estudiante:** busca docentes y horarios disponibles; se inscribe o retira de sesiones grupales; participa en sesiones virtuales o híbridas; crea o se une a proyectos de aula; consulta sesiones, historial, asistencia, reuniones y avisos.
 - **Docente:** administra su perfil académico, títulos, materias y certificaciones; atiende tutorías individuales y colectivas; registra asistencia; consulta sus sesiones y proyectos; comparte chat y videollamadas cuando la sesión lo permite.
 - **Docente y estudiante:** una cuenta cuyo perfil incluya ambos roles conserva el acceso estudiantil y puede cambiar a las funciones docentes desde el perfil. No necesita cuentas separadas para cada función.
 - **Líder de proyecto de aula (Líder PA):** función adicional para docentes designados como líderes en una cohorte colectiva. Revisa avances, coordina reuniones y participa en confirmaciones de sesiones o cierre de proyectos. No es un quinto rol de autenticación independiente.
@@ -63,12 +63,6 @@ SearchTeach tiene cuatro roles de acceso institucional. Las cuentas académicas 
 - El chat en sala se intercambia en vivo. El historial de chat de LiveKit no se conserva después de terminar la sala.
 - Las credenciales administrativas de LiveKit pertenecen únicamente al backend.
 
-### Indicadores y modelos predictivos
-
-- **Pronóstico de asistencia:** dirección consulta la predicción de asistencia por materia para tutorías futuras compatibles con las categorías del modelo Weka Logistic entrenado desde `src/main/resources/models/asistencia.arff`.
-- **Calidad y actividad:** el panel resume tutorías registradas, realizadas y programadas, tasa de asistencia, actividad semanal y datos agregados por materia.
-- **Tendencia de proyectos:** los informes de avance permiten observar tendencias y estimaciones de progreso a partir de las valoraciones registradas.
-- **Límites de interpretación:** el modelo de asistencia está entrenado con datos sintéticos de demostración; sus predicciones no son una estimación validada de asistencia real. Las tendencias de progreso describen los informes y no prueban que la tutoría haya causado un cambio.
 
 ### Notificaciones y cuentas
 

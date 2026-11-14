@@ -4,6 +4,8 @@ import '../../core/widgets/role_toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api_client.dart';
+import '../pa/pa_widgets.dart' show paPush;
+import 'informe_general_pages.dart';
 import 'proyecto_aula_chat_page.dart';
 
 final teacherLeaderProjectsProvider =
@@ -83,12 +85,17 @@ class DocenteLiderProyectosPage extends ConsumerWidget {
                   'Revisa los reportes del tutor de apoyo y confirma o devuelve las solicitudes de cierre.'),
               const SizedBox(height: 14),
               for (final group in assignedGroups)
-                _LeaderAssignmentCard(assignment: group),
+                _LeaderAssignmentCard(
+                  assignment: group,
+                  onSent: () => ref.invalidate(teacherLeaderAssignmentsProvider),
+                ),
               for (final row in projects)
                 _LeaderProjectCard(
                   row: row,
-                  onChanged: () =>
-                      ref.invalidate(teacherLeaderProjectsProvider),
+                  onChanged: () {
+                    ref.invalidate(teacherLeaderProjectsProvider);
+                    ref.invalidate(teacherLeaderAssignmentsProvider);
+                  },
                 ),
             ],
           );
@@ -98,9 +105,10 @@ class DocenteLiderProyectosPage extends ConsumerWidget {
 }
 
 class _LeaderAssignmentCard extends StatelessWidget {
-  const _LeaderAssignmentCard({required this.assignment});
+  const _LeaderAssignmentCard({required this.assignment, required this.onSent});
 
   final Map<String, dynamic> assignment;
+  final VoidCallback onSent;
 
   @override
   Widget build(BuildContext context) {
@@ -111,6 +119,10 @@ class _LeaderAssignmentCard extends StatelessWidget {
         .where((name) => name.isNotEmpty)
         .toList(growable: false);
     final projects = assignment['proyectos'] as List? ?? const [];
+    final allFinished = projects.isNotEmpty &&
+        projects.whereType<Map<String, dynamic>>().every(
+            (project) => project['estadoCierre']?.toString() == 'FINALIZADO');
+    final reportSent = assignment['informeGeneralEnviado'] == true;
     final semester = assignment['semestre'] is num
         ? (assignment['semestre'] as num).toInt()
         : '—';
@@ -134,6 +146,27 @@ class _LeaderAssignmentCard extends StatelessWidget {
               'Docentes de apoyo: ${supports.isEmpty ? 'Sin asignaciones' : supports.join(', ')}',
             ),
             Text('${projects.length} proyectos de aula asignados'),
+            if (allFinished) ...[
+              const SizedBox(height: 10),
+              if (!reportSent)
+                const Text(
+                  'Todos los reportes fueron aceptados. Falta tu informe general para coordinación.',
+                ),
+              const SizedBox(height: 6),
+              FilledButton.icon(
+                onPressed: () => paPush(
+                  context,
+                  InformeGeneralLiderPage(
+                    assignment: assignment,
+                    onSent: onSent,
+                  ),
+                ),
+                icon: Icon(reportSent ? Icons.task_alt : Icons.edit_note),
+                label: Text(reportSent
+                    ? 'Ver informe general enviado'
+                    : 'Redactar informe general'),
+              ),
+            ],
           ],
         ),
       ),

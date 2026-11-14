@@ -35,11 +35,9 @@ public class GlobalExceptionHandler {
 			case "password" -> "La contraseña debe tener entre 8 y 72 caracteres.";
 			case "email" -> "Escribe un correo electrónico válido.";
 			case "code" -> "El código debe tener seis dígitos.";
-			case "studentId" -> "El identificador del estudiante es obligatorio.";
-			case "teacherId" -> "El identificador del docente es obligatorio.";
-			case "startDate" -> "La fecha de inicio es obligatoria.";
-			case "endDate" -> "La fecha de finalización es obligatoria.";
-			case "status" -> "El estado de la tutoría es obligatorio.";
+			case "nuevaContrasena" -> "La nueva contraseña debe tener entre 8 y 72 caracteres.";
+			case "confirmarContrasena" -> "Confirma la nueva contraseña.";
+			case "telefono" -> "Escribe un teléfono válido: de 7 a 30 caracteres entre dígitos, +, espacios, guiones o paréntesis.";
 			default -> "La solicitud contiene un campo obligatorio inválido.";
 		};
 		return ResponseEntity.badRequest().body(new ApiError(message, true, 0));

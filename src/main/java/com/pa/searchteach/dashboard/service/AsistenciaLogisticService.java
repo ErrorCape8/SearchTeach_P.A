@@ -1,7 +1,6 @@
 package com.pa.searchteach.dashboard.service;
 
 import java.text.Normalizer;
-import java.time.DayOfWeek;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -9,7 +8,7 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
-import com.pa.searchteach.tutorias.model.Tutoria;
+import com.pa.searchteach.tutorias.model.ModalidadTutoria;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,19 +64,18 @@ public class AsistenciaLogisticService {
 		return model != null;
 	}
 
-	public Optional<Prediction> predecir(Tutoria tutoria) {
+	public Optional<Prediction> predecir(String materiaTutoria, ModalidadTutoria modalidadTutoria, LocalDateTime fechaInicio) {
 		Logistic currentModel = model;
 		if (currentModel == null) {
 			return Optional.empty();
 		}
-		if (tutoria.getMateria() == null || tutoria.getModalidad() == null
-				|| tutoria.getFechaInicio() == null) {
+		if (materiaTutoria == null || modalidadTutoria == null || fechaInicio == null) {
 			return Optional.empty();
 		}
 
-		String materia = encontrarCategoria(tutoria.getMateria(), MATERIAS).orElse(null);
-		String modalidad = encontrarCategoria(tutoria.getModalidad().name(), MODALIDADES).orElse(null);
-		String dia = encontrarCategoria(nombreDia(tutoria.getFechaInicio()), DIAS).orElse(null);
+		String materia = encontrarCategoria(materiaTutoria, MATERIAS).orElse(null);
+		String modalidad = encontrarCategoria(modalidadTutoria.name(), MODALIDADES).orElse(null);
+		String dia = encontrarCategoria(nombreDia(fechaInicio), DIAS).orElse(null);
 		if (materia == null || modalidad == null || dia == null) {
 			return Optional.empty();
 		}
@@ -88,7 +86,7 @@ public class AsistenciaLogisticService {
 		instance.setValue(0, materia);
 		instance.setValue(1, modalidad);
 		instance.setValue(2, dia);
-		instance.setValue(3, tutoria.getFechaInicio().getHour());
+		instance.setValue(3, fechaInicio.getHour());
 		instance.setMissing(CLASS_INDEX);
 
 		double[] distribution;
@@ -97,7 +95,7 @@ public class AsistenciaLogisticService {
 				distribution = currentModel.distributionForInstance(instance);
 			}
 		} catch (Exception exception) {
-			throw new IllegalStateException("No se pudo clasificar una tutoría con el modelo de asistencia.", exception);
+			throw new IllegalStateException("No se pudo clasificar una inscripción con el modelo de asistencia.", exception);
 		}
 		int attendanceClassIndex = RESULTADOS_ASISTENCIA.indexOf(CLASE_ASISTENCIA);
 		if (attendanceClassIndex < 0 || distribution.length <= attendanceClassIndex

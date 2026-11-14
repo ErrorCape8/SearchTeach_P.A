@@ -8,7 +8,7 @@ import '../../core/widgets/role_toast.dart';
 import '../auth/auth_repository.dart';
 import '../notifications/notifications_page.dart';
 import '../../core/career_catalog.dart';
-import '../pa/pa_coordinacion_pages.dart';
+import 'informe_general_pages.dart';
 import '../pa/pa_widgets.dart';
 
 class CoordinacionTutoriasPage extends ConsumerStatefulWidget {
@@ -543,10 +543,9 @@ class _CoordinacionTutoriasPageState
           borderRadius: BorderRadius.circular(20),
           onTap: () => paPush(
             context,
-            PaReporteLiderPage(
-              carrera: '${_createdTutorias[index]['tecnologia'] ?? ''}',
-              semestre:
-                  int.tryParse('${_createdTutorias[index]['semestre'] ?? ''}'),
+            InformeGeneralCoordinacionPage(
+              tutoriaId: '${_createdTutorias[index]['id'] ?? ''}',
+              grupo: _createdTutorias[index],
             ),
           ),
           child: Padding(

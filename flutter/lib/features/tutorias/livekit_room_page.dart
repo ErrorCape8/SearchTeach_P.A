@@ -66,6 +66,7 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
   dynamic _listener;
   bool _connecting = true;
   bool _connected = false;
+  bool _waitingForTeacher = false;
   bool _microphoneEnabled = true;
   bool _cameraEnabled = true;
   bool _showChat = false;
@@ -78,6 +79,7 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
   Timer? _endTimer;
   Timer? _chatTimer;
   Timer? _roomStatusTimer;
+  Timer? _waitingRoomTimer;
   String? _error;
   String? _mediaWarning;
 
@@ -393,6 +395,13 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
             () => _mediaWarning = warnings.isEmpty ? null : warnings.join(' '));
       }
     } on DioException catch (error) {
+      if (error.response?.statusCode == 409 &&
+          widget.studentMode &&
+          !widget.isProjectMeeting &&
+          !widget.isIndividualTutoring) {
+        await _enterWaitingRoom();
+        return;
+      }
       final data = error.response?.data;
       final message = data is Map && data['message'] is String
           ? data['message'] as String
@@ -410,6 +419,55 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
           _connecting = false;
         });
       }
+    }
+  }
+
+  Future<void> _enterWaitingRoom() async {
+    try {
+      await ref.read(dioProvider).post<void>(
+            '/api/tutorias/grupales/${Uri.encodeComponent(widget.sessionId)}/sala-espera',
+          );
+    } on DioException {
+      // Mantiene la espera activa aunque falle el aviso puntual.
+    }
+    if (!mounted) return;
+    setState(() {
+      _waitingForTeacher = true;
+      _connecting = false;
+      _error = null;
+    });
+    _waitingRoomTimer?.cancel();
+    _waitingRoomTimer = Timer.periodic(
+      const Duration(seconds: 3),
+      (_) => _pollTeacherStart(),
+    );
+  }
+
+  Future<void> _pollTeacherStart() async {
+    if (!_waitingForTeacher || !mounted) return;
+    try {
+      final response = await ref.read(dioProvider).get<Map<String, dynamic>>(
+            '/api/tutorias/grupales/${Uri.encodeComponent(widget.sessionId)}',
+          );
+      final state = response.data?['estadoClase']?.toString();
+      if (!mounted) return;
+      if (state == 'EN_CURSO') {
+        _waitingRoomTimer?.cancel();
+        setState(() {
+          _waitingForTeacher = false;
+          _connecting = true;
+        });
+        await _connect();
+      } else if (state == 'FINALIZADA') {
+        _waitingRoomTimer?.cancel();
+        setState(() {
+          _waitingForTeacher = false;
+          _ended = true;
+          _showChat = true;
+        });
+      }
+    } on DioException {
+      // Reintenta en el siguiente ciclo.
     }
   }
 
@@ -614,6 +672,7 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
     _endTimer?.cancel();
     _chatTimer?.cancel();
     _roomStatusTimer?.cancel();
+    _waitingRoomTimer?.cancel();
     _message.dispose();
     unawaited(_closeRoom());
     super.dispose();
@@ -674,6 +733,56 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
               ),
               _historyControls(),
             ],
+          ),
+        ),
+        wide: wide,
+      );
+    }
+    if (_waitingForTeacher) {
+      return _withRoleNavigation(
+        Scaffold(
+          backgroundColor: _sharedRoomBackground,
+          appBar: AppBar(
+            backgroundColor: _roomAccent,
+            foregroundColor: Colors.white,
+            title: Text(widget.subject),
+          ),
+          body: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const CircularProgressIndicator(color: Colors.white),
+                  const SizedBox(height: 18),
+                  const Text(
+                    'Estás en la sala de espera',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Ya notificamos al docente. Entrarás automáticamente a la videollamada en cuanto inicie la tutoría.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.white70, fontSize: 13),
+                  ),
+                  const SizedBox(height: 20),
+                  OutlinedButton.icon(
+                    onPressed: () => Navigator.of(context).maybePop(),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      side: const BorderSide(color: Colors.white38),
+                    ),
+                    icon: const Icon(Icons.arrow_back),
+                    label: const Text('Salir de la espera'),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
         wide: wide,

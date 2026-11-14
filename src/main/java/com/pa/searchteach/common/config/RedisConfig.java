@@ -1,6 +1,6 @@
 package com.pa.searchteach.common.config;
 
-import com.pa.searchteach.tutorias.service.ProyectoAulaChatRedisService;
+import com.pa.searchteach.tutorias.service.colectivas.ProyectoAulaChatRedisService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;

@@ -1,25 +1,25 @@
 package com.pa.searchteach.dashboard.service;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
 
 import com.pa.searchteach.tutorias.model.ModalidadTutoria;
-import com.pa.searchteach.tutorias.model.Tutoria;
 import org.junit.jupiter.api.Test;
 
 class AsistenciaLogisticServiceTest {
 
+	private static final LocalDateTime LUNES_2_PM = LocalDateTime.of(2026, 11, 9, 14, 0);
+
 	@Test
-	void cargaElModeloYPrediceUnaProbabilidadValida() throws Exception {
+	void cargaElModeloYPrediceUnaProbabilidadValida() {
 		AsistenciaLogisticService service = new AsistenciaLogisticService();
 		service.cargarModelo();
 
 		assertTrue(service.isAvailable());
 		Optional<AsistenciaLogisticService.Prediction> prediction = service.predecir(
-				tutoria(ModalidadTutoria.PRESENCIAL, "Bases de Datos"));
+				"Bases de Datos", ModalidadTutoria.PRESENCIAL, LUNES_2_PM);
 
 		assertTrue(prediction.isPresent());
 		assertTrue(prediction.get().probabilidadAsistencia() >= 0);
@@ -27,19 +27,11 @@ class AsistenciaLogisticServiceTest {
 	}
 
 	@Test
-	void omiteCategoriasQueElModeloNoConoce() throws Exception {
+	void omiteCategoriasQueElModeloNoConoce() {
 		AsistenciaLogisticService service = new AsistenciaLogisticService();
 		service.cargarModelo();
 
-		assertTrue(service.predecir(tutoria(ModalidadTutoria.HIBRIDA, "Bases de Datos")).isEmpty());
-		assertTrue(service.predecir(tutoria(ModalidadTutoria.VIRTUAL, "Materia desconocida")).isEmpty());
-	}
-
-	private static Tutoria tutoria(ModalidadTutoria modalidad, String materia) {
-		Tutoria tutoria = new Tutoria();
-		tutoria.setMateria(materia);
-		tutoria.setModalidad(modalidad);
-		tutoria.setFechaInicio(LocalDateTime.of(2026, 11, 9, 14, 0));
-		return tutoria;
+		assertTrue(service.predecir("Bases de Datos", ModalidadTutoria.HIBRIDA, LUNES_2_PM).isEmpty());
+		assertTrue(service.predecir("Materia desconocida", ModalidadTutoria.VIRTUAL, LUNES_2_PM).isEmpty());
 	}
 }

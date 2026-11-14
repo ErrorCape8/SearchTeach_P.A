@@ -13,6 +13,7 @@ import '../../core/neu/neu.dart';
 import '../auth/auth_repository.dart';
 import 'coordinacion_horarios_page.dart';
 import 'coordinacion_solicitudes_page.dart';
+import 'informe_general_pages.dart';
 import '../pa/pa_coordinacion_pages.dart';
 import '../pa/pa_store.dart';
 import '../pa/pa_widgets.dart';
@@ -243,7 +244,7 @@ class _CoordinacionDashboardPageState
         2 => PaLideresPage(leading: _profileButton()),
         3 => const CoordinacionSolicitudesPage(),
         4 => _ProfileView(profile: _profile, onRefresh: _load),
-        _ => PaReportesPage(leading: _profileButton()),
+        _ => InformesGeneralesPage(leading: _profileButton()),
       };
 }
 
@@ -382,8 +383,8 @@ class _HomeView extends ConsumerWidget {
     final st = ref.watch(paStoreProvider);
     final sinLider = st.colectivas.where((c) => c.lider.isEmpty).toList();
     final conLider = st.colectivas.length - sinLider.length;
-    final reportes = st.reportesDeLider; // solo los del docente líder
-    final nuevos = reportes.where((r) => !r.visto).length;
+    final informesRecibidos =
+        ref.watch(informesGeneralesProvider).valueOrNull?.length ?? 0;
     return ListView(
       padding: EdgeInsets.fromLTRB(
           18, 4, 18, 32 + MediaQuery.paddingOf(context).bottom),
@@ -391,7 +392,7 @@ class _HomeView extends ConsumerWidget {
         PaKpiRow([
           ('${teachers.length}', 'Tutores activos'),
           ('$conLider/${st.colectivas.length}', 'Con líder'),
-          ('$nuevos', 'Reportes nuevos'),
+          ('$informesRecibidos', 'Informes recibidos'),
         ]),
         PaSection('Por asignar', action: 'Ver todo', onAction: () => onOpen(2)),
         PaRowList([
@@ -405,20 +406,9 @@ class _HomeView extends ConsumerWidget {
               onTap: () => paPush(context, PaAsignacionPage(colId: c.id)),
             ),
         ], empty: 'Todas las tutorías tienen líder.'),
-        PaSection('Reportes recientes',
+        PaSection('Informes recientes',
             action: 'Ver todo', onAction: () => onOpen(5)),
-        PaRowList([
-          for (final r in reportes.take(3))
-            PaRow(
-              icon: Icons.inbox_outlined,
-              title: st.colectiva(r.colId).materia,
-              subtitle: 'Líder ${r.por} · ${r.fecha}',
-              trailing: PaTag(r.visto ? 'Revisado' : 'Nuevo',
-                  tone: r.visto ? PaTone.ok : PaTone.warn),
-              onTap: () =>
-                  paPush(context, PaReporteDetallePage(reporte: r)),
-            ),
-        ], empty: 'Aún no hay reportes de líderes.'),
+        const InformesGeneralesLista(limit: 3),
       ],
     );
   }

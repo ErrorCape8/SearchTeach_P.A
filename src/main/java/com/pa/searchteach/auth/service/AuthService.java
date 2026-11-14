@@ -16,7 +16,5 @@ public interface AuthService {
 
 	void resetPassword(String identifier, String password, String clientIp);
 
-	AuthResponse login(String identifier, String password, String clientIp);
-
 	AuthResponse login(String identifier, String password, String clientIp, boolean rememberMe);
 }

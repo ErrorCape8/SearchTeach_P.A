@@ -210,7 +210,7 @@ public record SesionTutoria(
 	public SesionTutoria inscribir(String estudianteId, String tecnologiaEstudiante) {
 		if (estudianteIds.contains(estudianteId)) return this;
 		if (estudianteIds.size() >= 5) {
-			throw new IllegalArgumentException("La sesiÃ³n ya alcanzÃ³ su cupo de cinco estudiantes.");
+			throw new IllegalArgumentException("La sesión ya alcanzó su cupo de cinco estudiantes.");
 		}
 		List<String> nuevosEstudiantes = java.util.stream.Stream
 				.concat(estudianteIds.stream(), java.util.stream.Stream.of(estudianteId)).toList();

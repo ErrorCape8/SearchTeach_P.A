@@ -42,6 +42,16 @@ public class BrevoEmailService {
 				"Tu código para restablecer la contraseña de SearchTeach es ");
 	}
 
+	public void sendPasswordChangeCode(String recipient, String code) {
+		sendCode(recipient, code, "Código para cambiar tu contraseña de SearchTeach",
+				"Tu código para cambiar la contraseña de tu perfil en SearchTeach es ");
+	}
+
+	public void sendPhoneChangeCode(String recipient, String code) {
+		sendCode(recipient, code, "Código para actualizar tu teléfono en SearchTeach",
+				"Tu código para agregar o cambiar el teléfono de tu perfil en SearchTeach es ");
+	}
+
 	private void sendCode(String recipient, String code, String subject, String messagePrefix) {
 		if (apiKey.isBlank() || senderEmail.isBlank()) {
 			throw new AuthException(HttpStatus.SERVICE_UNAVAILABLE,

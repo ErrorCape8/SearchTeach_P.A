@@ -30,10 +30,6 @@ public class JwtService {
 		this.expirationSeconds = expirationSeconds;
 	}
 
-	public String createToken(String identifier, Role role) {
-		return createToken(identifier, role, expirationSeconds);
-	}
-
 	public String createToken(String identifier, Role role, long durationSeconds) {
 		Instant issuedAt = Instant.now();
 		return Jwts.builder()

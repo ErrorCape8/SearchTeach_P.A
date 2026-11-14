@@ -1311,8 +1311,8 @@ class _GroupChatAndCallCard extends StatelessWidget {
         start.year == now.year &&
         start.month == now.month &&
         start.day == now.day;
-    final canJoin = isToday &&
-        session.state == 'EN_CURSO' &&
+    final canEnterRoomOrWaiting = isToday &&
+        session.state != 'FINALIZADA' &&
         (end == null || end.isAfter(now));
 
     return Card(
@@ -1334,7 +1334,7 @@ class _GroupChatAndCallCard extends StatelessWidget {
           Wrap(spacing: 8, runSpacing: 8, children: [
             if (session.modality.toUpperCase() != 'PRESENCIAL')
               FilledButton.icon(
-                onPressed: canJoin
+                onPressed: canEnterRoomOrWaiting
                     ? () => Navigator.of(context).push(MaterialPageRoute(
                           builder: (_) => LiveKitRoomPage(
                             sessionId: session.id,
@@ -1350,15 +1350,16 @@ class _GroupChatAndCallCard extends StatelessWidget {
                     : null,
                 icon: const Icon(Icons.video_call_outlined),
                 label: Text(
-                  canJoin
+                  session.state == 'EN_CURSO' && canEnterRoomOrWaiting
                       ? 'Entrar a la sala'
                       : !isToday
                           ? start != null && start.isBefore(now)
                               ? 'Sesión no disponible hoy'
                               : 'Disponible el ${_longDate(start!)}'
-                          : session.state == 'EN_CURSO'
+                          : session.state == 'FINALIZADA' ||
+                                  (end != null && !end.isAfter(now))
                               ? 'Sesión finalizada'
-                              : 'Esperando al docente',
+                              : 'Entrar a sala de espera',
                 ),
               ),
             OutlinedButton.icon(
