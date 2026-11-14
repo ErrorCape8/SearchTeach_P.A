@@ -119,19 +119,6 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
             onTap: () => _goToSection('proyectos'),
           ),
           _MenuTile(
-            icon: Icons.history_outlined,
-            title: 'Historial de clases',
-            subtitle: 'Las clases que ya has tenido.',
-            onTap: () => _goToSection('historial'),
-          ),
-          _MenuTile(
-            icon: Icons.play_circle_outline,
-            title: 'Unirse a clase',
-            subtitle: 'Mira tus tutorías programadas y entra a la de hoy.',
-            primary: true,
-            onTap: () => _goToSection('chats-videoconferencias'),
-          ),
-          _MenuTile(
             icon: Icons.assignment_outlined,
             title: 'Seguimiento de mi proyecto',
             subtitle:
@@ -1416,48 +1403,80 @@ class _MenuTile extends StatelessWidget {
   final bool primary;
 
   @override
-  Widget build(BuildContext context) => Card(
-        margin: const EdgeInsets.only(bottom: 9),
-        color: primary ? _blue : Colors.white,
-        elevation: 2,
-        shadowColor: const Color(0x12141E3C),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        child: ListTile(
-          onTap: onTap,
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-          leading: Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: primary
-                  ? Colors.white.withValues(alpha: .18)
-                  : const Color(0xFFE7F1FC),
-              borderRadius: BorderRadius.circular(14),
+  Widget build(BuildContext context) => Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          color: primary ? _blue : Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x0A17324F),
+              blurRadius: 8,
+              offset: Offset(0, 3),
             ),
-            child: Icon(icon, color: primary ? Colors.white : _blue),
-          ),
-          title: Text(
-            title,
-            style: TextStyle(
-              color: primary ? Colors.white : _navy,
-              fontWeight: FontWeight.w700,
-              fontSize: 14,
-            ),
-          ),
-          subtitle: Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Text(
-              subtitle,
-              style: TextStyle(
-                color: primary ? Colors.white.withValues(alpha: .86) : _muted,
-                fontSize: 11,
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(24),
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(24),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 17),
+              child: Row(
+                children: [
+                  Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      color: primary
+                          ? Colors.white.withValues(alpha: .18)
+                          : const Color(0xFFE7F1FC),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Icon(
+                      icon,
+                      color: primary ? Colors.white : _blue,
+                      size: 29,
+                    ),
+                  ),
+                  const SizedBox(width: 18),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: TextStyle(
+                            color: primary ? Colors.white : _navy,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 17,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          subtitle,
+                          style: TextStyle(
+                            color: primary
+                                ? Colors.white.withValues(alpha: .88)
+                                : const Color(0xFF647895),
+                            fontSize: 13,
+                            height: 1.3,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(
+                    Icons.chevron_right,
+                    color: primary ? Colors.white : const Color(0xFFB3BAC7),
+                    size: 27,
+                  ),
+                ],
               ),
             ),
-          ),
-          trailing: Icon(
-            Icons.chevron_right,
-            color: primary ? Colors.white : const Color(0xFFB3BAC7),
           ),
         ),
       );

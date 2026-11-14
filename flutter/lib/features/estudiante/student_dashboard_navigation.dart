@@ -30,7 +30,7 @@ class _StudentHeader extends StatelessWidget {
         ? 'Hola, ${profile.name.trim().split(' ').first}'
         : tab == 1
             ? switch (section) {
-                'tutores' => 'Tutorías colectivas',
+                'tutores' => 'Buscar tutorías',
                 'publicadas' => 'Sesiones disponibles',
                 'proyectos' => 'Proyecto de aula',
                 'seguimiento-proyecto' => 'Seguimiento de mi proyecto',
@@ -108,15 +108,19 @@ class _StudentHeader extends StatelessWidget {
                       color: Colors.white, size: 16),
                 )
               else
-                CircleAvatar(
-                  radius: 13,
-                  backgroundColor: Colors.white.withValues(alpha: .18),
-                  child: Text(
-                    initials,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
+                InkWell(
+                  onTap: onProfile,
+                  customBorder: const CircleBorder(),
+                  child: CircleAvatar(
+                    radius: 13,
+                    backgroundColor: Colors.white.withValues(alpha: .18),
+                    child: Text(
+                      initials,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                 ),
@@ -232,8 +236,8 @@ class _StudentSidebar extends StatelessWidget {
   static const _items = [
     (Icons.home_outlined, 'Inicio'),
     (Icons.event_note_outlined, 'Tutorías'),
-    (Icons.person_outline, 'Perfil'),
-    (Icons.notifications_none_outlined, 'Avisos'),
+    (Icons.history_outlined, 'Historial'),
+    (Icons.play_circle_outline, 'Unirse a clase'),
   ];
 
   @override
@@ -328,13 +332,13 @@ class _StudentSidebar extends StatelessWidget {
                 child: Container(
                   decoration: BoxDecoration(
                     color:
-                        tab == 2 ? const Color(0xFFDCEEFF) : Colors.transparent,
+                        tab == 4 ? const Color(0xFFDCEEFF) : Colors.transparent,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
                     children: [
                       InkWell(
-                        onTap: () => onSelect(2),
+                        onTap: () => onSelect(4),
                         borderRadius: BorderRadius.circular(20),
                         child: CircleAvatar(
                           radius: 16,
@@ -351,7 +355,7 @@ class _StudentSidebar extends StatelessWidget {
                       const SizedBox(width: 5),
                       Expanded(
                         child: InkWell(
-                          onTap: () => onSelect(2),
+                          onTap: () => onSelect(4),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [

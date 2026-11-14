@@ -8,8 +8,9 @@ import '../../../core/widgets/role_toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api_client.dart';
 import '../../../core/career_catalog.dart';
+import '../../../core/neu/neu.dart';
+import '../../pa/pa_widgets.dart';
 import '../admin_controller.dart';
-import '../models/admin_user.dart';
 
 class AdminUsuariosView extends ConsumerStatefulWidget {
   const AdminUsuariosView({super.key});
@@ -209,129 +210,6 @@ class _AdminUsuariosViewState extends ConsumerState<AdminUsuariosView> {
     );
   }
 
-  Widget _searchField() => Container(
-        height: 48,
-        decoration: BoxDecoration(
-          color: const Color(0xFFF1F4F9),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        alignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: TextField(
-          controller: _searchController,
-          textInputAction: TextInputAction.search,
-          onChanged: (value) =>
-              ref.read(adminControllerProvider.notifier).setSearchQuery(value),
-          decoration: InputDecoration(
-            hintText: 'Buscar por nombre, correo o ID',
-            hintStyle: const TextStyle(
-              color: Color(0xFF8C95A6),
-              fontSize: 14,
-              fontWeight: FontWeight.w400,
-            ),
-            prefixIcon: const Icon(
-              Icons.search_rounded,
-              color: Color(0xFF8C95A6),
-            ),
-            suffixIcon: _searchController.text.isEmpty
-                ? null
-                : IconButton(
-                    tooltip: 'Limpiar búsqueda',
-                    onPressed: () {
-                      _searchController.clear();
-                      ref
-                          .read(adminControllerProvider.notifier)
-                          .setSearchQuery('');
-                      setState(() {});
-                    },
-                    icon: const Icon(Icons.close_rounded),
-                  ),
-            border: InputBorder.none,
-            isDense: true,
-          ),
-          style: const TextStyle(fontSize: 14, color: Color(0xFF1E293B)),
-        ),
-      );
-
-  Widget _searchActions(AdminState state) => Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          GestureDetector(
-            onTap: () => setState(() => _showFilters = !_showFilters),
-            child: Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: state.filter != 'Todos'
-                      ? const Color(0xFFEA580C)
-                      : const Color(0xFFE5E7EB),
-                  width: 1.2,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.03),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: const Icon(
-                Icons.filter_alt_outlined,
-                color: Color(0xFFEA580C),
-                size: 24,
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Tooltip(
-            message: 'Actualizar lista de usuarios',
-            child: IconButton(
-              onPressed: state.isLoadingUsers
-                  ? null
-                  : () =>
-                      ref.read(adminControllerProvider.notifier).loadUsers(),
-              icon: state.isLoadingUsers
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.refresh_rounded),
-              style: _toolbarButtonStyle(),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Tooltip(
-            message:
-                'Importa CSV o XLSX. Columnas: id,nombre,correo,telefono,rol,estado,carrera,semestre; semestre requerido para estudiantes',
-            child: IconButton(
-              onPressed: _importingUsers ? null : _importUsers,
-              icon: _importingUsers
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.upload_file_outlined),
-              style: _toolbarButtonStyle(),
-            ),
-          ),
-        ],
-      );
-
-  ButtonStyle _toolbarButtonStyle() => IconButton.styleFrom(
-        foregroundColor: const Color(0xFFEA580C),
-        backgroundColor: Colors.white,
-        minimumSize: const Size(48, 48),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: Color(0xFFE5E7EB), width: 1.2),
-        ),
-      );
-
   @override
   void dispose() {
     _searchController.dispose();
@@ -341,336 +219,146 @@ class _AdminUsuariosViewState extends ConsumerState<AdminUsuariosView> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(adminControllerProvider);
+    final notifier = ref.read(adminControllerProvider.notifier);
     final users = state.filteredUsers;
     final pageCount = (users.length / _pageSize).ceil();
     final page = pageCount == 0 ? 0 : state.usersPage.clamp(0, pageCount - 1);
-    final firstUserIndex = page * _pageSize;
-    final pageUsers = users.skip(firstUserIndex).take(_pageSize).toList();
+    final first = page * _pageSize;
+    final pageUsers = users.skip(first).take(_pageSize).toList();
+    const filters = [
+      'Todos',
+      'Activo',
+      'Revocado',
+      'Estudiante',
+      'Docente',
+      'Coordinador',
+      'Líder de programas',
+    ];
+
+    Widget list() {
+      if (state.isLoadingUsers) {
+        return const Center(
+            child: CircularProgressIndicator(color: Color(0xFFEA580C)));
+      }
+      if (state.usersError != null) {
+        return ListView(padding: const EdgeInsets.all(18), children: [
+          PaInfo(state.usersError!, tone: PaTone.error),
+          NeuButton('Reintentar',
+              kind: NeuButtonKind.alt,
+              icon: Icons.refresh_rounded,
+              onPressed: notifier.loadUsers),
+        ]);
+      }
+      return ListView(
+        padding: EdgeInsets.fromLTRB(
+            18, 4, 18, 32 + MediaQuery.paddingOf(context).bottom),
+        children: [
+          PaRowList([
+            for (final user in pageUsers)
+              PaRow(
+                icon: Icons.person_outline_rounded,
+                title: user.nombre,
+                subtitle: user.rol,
+                trailing: PaTag(
+                  user.isRevocado
+                      ? 'Revocado'
+                      : user.isActivo
+                          ? 'Activo'
+                          : user.estado,
+                  tone: user.isRevocado
+                      ? PaTone.error
+                      : user.isActivo
+                          ? PaTone.ok
+                          : PaTone.warn,
+                ),
+                onTap: () => notifier.selectUser(user),
+              ),
+          ], empty: 'No hay usuarios que coincidan con la búsqueda.'),
+          if (users.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
+              child: Row(children: [
+                Expanded(
+                  child: Text('${first + 1}–${first + pageUsers.length} de ${users.length}',
+                      style: neuBody(size: 13, color: Neu.muted)),
+                ),
+                NeuCircleButton(
+                  icon: Icons.chevron_left_rounded,
+                  size: 38,
+                  tooltip: 'Página anterior',
+                  onTap: page > 0 ? () => notifier.setUsersPage(page - 1) : null,
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  child: Text('${page + 1} de $pageCount',
+                      style: neuBody(size: 13, weight: FontWeight.w700)),
+                ),
+                NeuCircleButton(
+                  icon: Icons.chevron_right_rounded,
+                  size: 38,
+                  tooltip: 'Página siguiente',
+                  onTap: page + 1 < pageCount
+                      ? () => notifier.setUsersPage(page + 1)
+                      : null,
+                ),
+              ]),
+            ),
+        ],
+      );
+    }
 
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 18, 16, 12),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final search = _searchField();
-              final actions = _searchActions(state);
-              if (constraints.maxWidth < 560) {
-                return Column(
-                  children: [
-                    search,
-                    const SizedBox(height: 8),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: actions,
-                    ),
-                  ],
-                );
-              }
-              return Row(
-                children: [
-                  Expanded(child: search),
-                  const SizedBox(width: 12),
-                  actions,
-                ],
-              );
-            },
-          ),
+          padding: const EdgeInsets.fromLTRB(18, 4, 18, 12),
+          child: Row(children: [
+            Expanded(
+              child: NeuField(
+                controller: _searchController,
+                hint: 'Buscar por nombre',
+                onChanged: notifier.setSearchQuery,
+              ),
+            ),
+            const SizedBox(width: 12),
+            NeuCircleButton(
+              icon: Icons.filter_alt_outlined,
+              size: 48,
+              tooltip: 'Filtros',
+              onTap: () => setState(() => _showFilters = !_showFilters),
+            ),
+          ]),
         ),
         if (_showFilters)
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Wrap(
-                spacing: 6,
-                runSpacing: 4,
-                children: [
-                  for (final option in const [
-                    'Todos',
-                    'Activo',
-                    'Revocado',
-                    'Estudiante',
-                    'Docente',
-                    'Coordinador',
-                    'Líder de programas',
-                  ])
-                    ChoiceChip(
-                      label: Text(option),
+            padding: const EdgeInsets.fromLTRB(18, 0, 18, 6),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              NeuChipWrap([
+                for (final option in filters)
+                  NeuChip(option,
                       selected: state.filter == option,
-                      selectedColor: const Color(0xFFFFE6D1),
-                      labelStyle: TextStyle(
-                        color: state.filter == option
-                            ? const Color(0xFFB45309)
-                            : const Color(0xFF475569),
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      onSelected: (_) => ref
-                          .read(adminControllerProvider.notifier)
-                          .setFilter(option),
-                    ),
-                ],
-              ),
-            ),
+                      onTap: () => notifier.setFilter(option)),
+              ]),
+              const SizedBox(height: 12),
+              Row(children: [
+                NeuButton('Actualizar',
+                    kind: NeuButtonKind.alt,
+                    small: true,
+                    expand: false,
+                    icon: Icons.refresh_rounded,
+                    onPressed: state.isLoadingUsers ? null : notifier.loadUsers),
+                const SizedBox(width: 10),
+                NeuButton('Importar CSV / XLSX',
+                    kind: NeuButtonKind.alt,
+                    small: true,
+                    expand: false,
+                    icon: Icons.upload_file_outlined,
+                    onPressed: _importingUsers ? null : _importUsers),
+              ]),
+              const SizedBox(height: 8),
+            ]),
           ),
-        Expanded(
-          child: state.isLoadingUsers
-              ? const Center(child: CircularProgressIndicator())
-              : state.usersError != null
-                  ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              state.usersError!,
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 12),
-                            OutlinedButton.icon(
-                              onPressed: () => ref
-                                  .read(adminControllerProvider.notifier)
-                                  .loadUsers(),
-                              icon: const Icon(Icons.refresh),
-                              label: const Text('Reintentar'),
-                            ),
-                          ],
-                        ),
-                      ),
-                    )
-                  : users.isEmpty
-                      ? const Center(
-                          child: Text(
-                            'No hay usuarios que coincidan con la búsqueda.',
-                            style: TextStyle(
-                                color: Color(0xFF8C95A6), fontSize: 14),
-                          ),
-                        )
-                      : Column(
-                          children: [
-                            Expanded(
-                              child: ListView.separated(
-                                padding:
-                                    const EdgeInsets.fromLTRB(16, 6, 16, 12),
-                                itemCount: pageUsers.length,
-                                separatorBuilder: (_, __) => const Divider(
-                                  height: 1,
-                                  thickness: 1,
-                                  color: Color(0xFFF1F5F9),
-                                ),
-                                itemBuilder: (context, index) {
-                                  final user = pageUsers[index];
-                                  return _UserListTile(
-                                    user: user,
-                                    onTap: () => ref
-                                        .read(adminControllerProvider.notifier)
-                                        .selectUser(user),
-                                    onEdit: () {
-                                      final controller = ref
-                                          .read(adminControllerProvider.notifier);
-                                      controller.selectUser(user);
-                                      controller.editSelectedUser();
-                                    },
-                                  );
-                                },
-                              ),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    '${firstUserIndex + 1}–${firstUserIndex + pageUsers.length} de ${users.length}',
-                                    style: const TextStyle(
-                                      color: Color(0xFF64748B),
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                  Row(
-                                    children: [
-                                      IconButton(
-                                        tooltip: 'Página anterior',
-                                        onPressed: page > 0
-                                            ? () => ref
-                                                .read(adminControllerProvider
-                                                    .notifier)
-                                                .setUsersPage(page - 1)
-                                            : null,
-                                        icon: const Icon(Icons.chevron_left),
-                                      ),
-                                      Text('${page + 1} de $pageCount'),
-                                      IconButton(
-                                        tooltip: 'Página siguiente',
-                                        onPressed: page + 1 < pageCount
-                                            ? () => ref
-                                                .read(adminControllerProvider
-                                                    .notifier)
-                                                .setUsersPage(page + 1)
-                                            : null,
-                                        icon: const Icon(Icons.chevron_right),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-        ),
+        Expanded(child: list()),
       ],
-    );
-  }
-}
-
-class _UserListTile extends StatelessWidget {
-  const _UserListTile({
-    required this.user,
-    required this.onTap,
-    required this.onEdit,
-  });
-
-  final AdminUser user;
-  final VoidCallback onTap;
-  final VoidCallback onEdit;
-
-  @override
-  Widget build(BuildContext context) {
-    final isActivo = user.isActivo;
-    final isRevocado = user.isRevocado;
-    final stateLabel = isActivo
-        ? 'Activo'
-        : isRevocado
-            ? 'Revocado'
-            : 'Sin estado';
-    final stateColor = isActivo
-        ? const Color(0xFF16A34A)
-        : isRevocado
-            ? const Color(0xFFDC2626)
-            : const Color(0xFF64748B);
-    final stateBackground = isActivo
-        ? const Color(0xFFDCFCE7)
-        : isRevocado
-            ? const Color(0xFFFEE2E2)
-            : const Color(0xFFE2E8F0);
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
-        child: Row(
-          children: [
-            // Avatar con icono de persona
-            Container(
-              width: 44,
-              height: 44,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: Color(0xFFFFF1E6),
-              ),
-              alignment: Alignment.center,
-              child: const Icon(
-                Icons.person_outline_rounded,
-                color: Color(0xFFEA580C),
-                size: 24,
-              ),
-            ),
-            const SizedBox(width: 14),
-
-            // Nombre y Rol
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    user.nombre.isEmpty ? 'Sin nombre registrado' : user.nombre,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF1E293B),
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    user.rol.isEmpty ? 'Sin rol registrado' : user.rol,
-                    style: const TextStyle(
-                      fontSize: 12.5,
-                      color: Color(0xFF64748B),
-                    ),
-                  ),
-                  if (user.carrera.isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      user.carrera,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 11.5,
-                        color: Color(0xFF8C95A6),
-                      ),
-                    ),
-                  ],
-                  if (user.rol.toLowerCase().contains('estudiante') &&
-                      user.semestre > 0) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      'Semestre ${user.semestre}',
-                      style: const TextStyle(
-                        fontSize: 11.5,
-                        color: Color(0xFF8C95A6),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-
-            // Badges de acceso y activación reportados por el servidor.
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: stateBackground,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Text(
-                    stateLabel,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: stateColor,
-                    ),
-                  ),
-                ),
-                if (!user.hasPassword) ...[
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Sin contraseña',
-                    style: TextStyle(
-                      color: Color(0xFFB45309),
-                      fontSize: 9,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-            IconButton(
-              tooltip: 'Editar usuario',
-              onPressed: onEdit,
-              icon: const Icon(Icons.edit_outlined),
-              color: const Color(0xFFEA580C),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

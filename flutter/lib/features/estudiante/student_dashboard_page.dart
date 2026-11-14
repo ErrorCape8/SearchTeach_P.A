@@ -97,7 +97,7 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage>
                 children: [
                   if (wide)
                     _StudentSidebar(
-                      tab: _tab,
+                      tab: _tab == 2 ? 4 : _tab == 3 ? 5 : _navigationIndex,
                       profile: value.profile,
                       onSelect: _selectTab,
                       onLogout: _logout,
@@ -114,8 +114,8 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage>
                             ref.invalidate(studentDashboardProvider);
                             ref.invalidate(studentGroupSessionsProvider);
                           },
-                          onProfile: () => _selectTab(2),
-                          onNotifications: () => _selectTab(3),
+                          onProfile: () => _selectTab(4),
+                          onNotifications: () => _selectTab(5),
                           onBack: () => _openTutorSection('menu'),
                         ),
                         Expanded(
@@ -198,7 +198,7 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage>
                 data: (_) => SlidingPillNavigationBar(
                   selectedColor: _blue,
                   indicatorColor: const Color(0xFFDCEEFF),
-                  selectedIndex: _tab.clamp(0, 3),
+                  selectedIndex: _navigationIndex,
                   onDestinationSelected: _selectTab,
                   destinations: const [
                     SlidingPillDestination(
@@ -210,13 +210,13 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage>
                         selectedIcon: Icons.event_note,
                         label: 'Tutorías'),
                     SlidingPillDestination(
-                        icon: Icons.person_outline,
-                        selectedIcon: Icons.person,
-                        label: 'Perfil'),
+                        icon: Icons.history_outlined,
+                        selectedIcon: Icons.history,
+                        label: 'Historial'),
                     SlidingPillDestination(
-                        icon: Icons.notifications_none_outlined,
-                        selectedIcon: Icons.notifications,
-                        label: 'Avisos'),
+                        icon: Icons.play_circle_outline,
+                        selectedIcon: Icons.play_circle,
+                        label: 'Unirse a clase'),
                   ],
                 ),
               ),
@@ -224,11 +224,31 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage>
     );
   }
 
-  void _selectTab(int tab) => setState(() {
-        _tab = tab;
-        _focusTutoring = tab == 1 ? 'menu' : null;
-        _focusRequest++;
-      });
+  int get _navigationIndex {
+    if (_tab == 0) return 0;
+    if (_tab == 1) {
+      if (_focusTutoring == 'historial') return 2;
+      if (_focusTutoring == 'chats-videoconferencias') return 3;
+      return 1;
+    }
+    return 0;
+  }
+
+  void _selectTab(int tab) {
+    if (tab == 2) {
+      _openTutorSection('historial');
+      return;
+    }
+    if (tab == 3) {
+      _openTutorSection('chats-videoconferencias');
+      return;
+    }
+    setState(() {
+      _tab = tab == 4 ? 2 : tab == 5 ? 3 : tab;
+      _focusTutoring = _tab == 1 ? 'menu' : null;
+      _focusRequest++;
+    });
+  }
 
   void _openTutorSection(String section) => setState(() {
         _focusTutoring = section;
@@ -260,7 +280,7 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage>
         context: context,
         builder: (dialogContext) => StatefulBuilder(
             builder: (context, setDialogState) => AlertDialog(
-                  title: const Text('Inscribirse en tutoría grupal'),
+                  title: const Text('Inscribirse en tutoría'),
                   content: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 420),
                     child: Column(
@@ -317,7 +337,7 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage>
         start: date,
       );
       ref.invalidate(studentGroupSessionsProvider);
-      _showMessage('Te inscribiste en la sesión grupal.');
+      _showMessage('Te inscribiste en la sesión.');
     } on DioException catch (error) {
       _showMessage(_apiMessage(error));
     } on FormatException catch (error) {
@@ -576,7 +596,7 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage>
         modality: session.modality,
       );
       ref.invalidate(studentGroupSessionsProvider);
-      _showMessage('Te inscribiste en la tutoría grupal.');
+      _showMessage('Te inscribiste en la tutoría.');
     } on DioException catch (error) {
       _showMessage(_apiMessage(error));
     } on FormatException catch (error) {

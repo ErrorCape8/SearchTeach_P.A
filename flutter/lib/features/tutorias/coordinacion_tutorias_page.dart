@@ -8,6 +8,8 @@ import '../../core/widgets/role_toast.dart';
 import '../auth/auth_repository.dart';
 import '../notifications/notifications_page.dart';
 import '../../core/career_catalog.dart';
+import '../pa/pa_coordinacion_pages.dart';
+import '../pa/pa_widgets.dart';
 
 class CoordinacionTutoriasPage extends ConsumerStatefulWidget {
   const CoordinacionTutoriasPage({super.key});
@@ -537,7 +539,17 @@ class _CoordinacionTutoriasPageState
       itemCount: _createdTutorias.length,
       separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (context, index) => Card(
-        child: Padding(
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () => paPush(
+            context,
+            PaReporteLiderPage(
+              carrera: '${_createdTutorias[index]['tecnologia'] ?? ''}',
+              semestre:
+                  int.tryParse('${_createdTutorias[index]['semestre'] ?? ''}'),
+            ),
+          ),
+          child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -587,6 +599,7 @@ class _CoordinacionTutoriasPageState
               ),
             ],
           ),
+        ),
         ),
       ),
     );

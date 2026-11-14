@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api_client.dart';
+import '../pa/pa_widgets.dart';
+import 'director_widgets.dart';
 
 final proyectosAulaProvider =
     FutureProvider.autoDispose<List<_TutoriaColectivaVista>>((ref) async {
@@ -25,107 +27,72 @@ final proyectosAulaProvider =
   }).toList(growable: false);
 });
 
+/// Proyectos de aula (solo lectura) con el estilo neumórfico.
 class ProyectosAulaPage extends ConsumerWidget {
   const ProyectosAulaPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) => ref
-      .watch(proyectosAulaProvider)
-      .when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Text(
-              'No se pudieron cargar los proyectos: $error',
-              textAlign: TextAlign.center,
-            ),
-          ),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(proyectosAulaProvider);
+    final List<Widget> children = async.when(
+      loading: () => const [
+        Padding(
+          padding: EdgeInsets.only(top: 60),
+          child: Center(child: CircularProgressIndicator()),
         ),
-        data: (groups) => RefreshIndicator(
-          onRefresh: () => ref.refresh(proyectosAulaProvider.future),
-          child: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              const Text(
-                'Proyectos de aula',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
-              ),
-              const SizedBox(height: 4),
-              const Text('Estado actual de los proyectos inscritos.'),
-              const SizedBox(height: 16),
-              if (groups.isEmpty)
-                const Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(16),
-                    child:
-                        Text('Todavía no se han creado tutorías colectivas.'),
-                  ),
-                )
-              else
-                for (final group in groups) ...[
-                  if (group.proyectos.isEmpty)
-                    Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Text(
-                          '${group.tecnologia} · semestre ${group.semestre}: '
-                          'sin proyectos inscritos todavía.',
-                        ),
-                      ),
-                    )
-                  else
-                    for (final project in group.proyectos)
-                      _ProyectoCard(project: project),
-                ],
-            ],
-          ),
-        ),
-      );
+      ],
+      error: (error, _) => [
+        PaInfo('No se pudieron cargar los proyectos: $error',
+            tone: PaTone.error, icon: Icons.error_outline_rounded),
+        NeuButton('Reintentar',
+            expand: false,
+            small: true,
+            onPressed: () => ref.invalidate(proyectosAulaProvider)),
+      ],
+      data: (groups) {
+        final projects = [for (final g in groups) ...g.proyectos];
+        if (projects.isEmpty) {
+          return const [
+            PaCard(
+                child: PaEmpty(
+                    'Todavía no hay proyectos de aula inscritos en las tutorías colectivas.')),
+          ];
+        }
+        return [
+          PaRowList([
+            for (final project in projects) _ProyectoRow(project: project),
+          ]),
+        ];
+      },
+    );
+
+    return PaScaffold(
+      title: 'Proyectos de aula',
+      subtitle: 'Estado de los proyectos inscritos',
+      children: children,
+    );
+  }
 }
 
-class _ProyectoCard extends StatelessWidget {
-  const _ProyectoCard({required this.project});
+class _ProyectoRow extends StatelessWidget {
+  const _ProyectoRow({required this.project});
 
   final _ProyectoAulaVista project;
 
   @override
   Widget build(BuildContext context) {
-    final closed = project.estado == 'FINALIZADO';
-    final pending = project.estado == 'PENDIENTE_CONFIRMACION';
-    final label = closed
-        ? 'Finalizado'
-        : pending
-            ? 'Pendiente de confirmación'
-            : 'En curso';
-    final color = closed
-        ? Colors.blueGrey
-        : pending
-            ? Colors.orange.shade700
-            : Colors.green.shade700;
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(project.nombre,
-                style: const TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 4),
-            Text('${project.tecnologia} · semestre ${project.semestre}'),
-            Text('Tutor responsable: ${project.docenteResponsableId}'),
-            Text('Estudiantes inscritos: ${project.estudiantes}'),
-            const SizedBox(height: 8),
-            Text(label,
-                style: TextStyle(color: color, fontWeight: FontWeight.w700)),
-            if (project.descripcion.isNotEmpty) ...[
-              const SizedBox(height: 6),
-              Text(project.descripcion),
-            ],
-          ],
-        ),
-      ),
+    final (label, tone) = switch (project.estado) {
+      'FINALIZADO' => ('Finalizado', PaTone.quiet),
+      'PENDIENTE_CONFIRMACION' => ('Pendiente', PaTone.warn),
+      _ => ('En curso', PaTone.ok),
+    };
+    return DirRow(
+      icon: Icons.groups_outlined,
+      title: project.nombre,
+      subtitle:
+          '${project.tecnologia} · semestre ${project.semestre} · ${project.estudiantes} estudiantes\n'
+          'Tutor: ${project.docenteResponsableId}',
+      trailing: PaTag(label, tone: tone),
     );
   }
 }

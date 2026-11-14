@@ -9,20 +9,15 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/api_client.dart';
 import '../../core/tutoring_updates.dart';
 import '../../core/widgets/brand_logo.dart';
-import '../../core/widgets/role_summary_banner.dart';
-import '../../core/widgets/sliding_pill_navigation_bar.dart';
+import '../../core/neu/neu.dart';
 import '../auth/auth_repository.dart';
-import '../notifications/notifications_page.dart';
 import 'coordinacion_horarios_page.dart';
 import 'coordinacion_solicitudes_page.dart';
 import '../pa/pa_coordinacion_pages.dart';
+import '../pa/pa_store.dart';
 import '../pa/pa_widgets.dart';
 
 const _wine = Color(0xFFA9154F);
-const _wineDark = Color(0xFF86123F);
-const _pink = Color(0xFFFCE7EF);
-const _canvas = Color(0xFFF5F7FB);
-const _muted = Color(0xFF758093);
 
 class CoordinacionDashboardPage extends ConsumerStatefulWidget {
   const CoordinacionDashboardPage({super.key});
@@ -111,31 +106,96 @@ class _CoordinacionDashboardPageState
         'Reportes de tutorías',
       ][_tab];
 
+  // Perfil no es una pestaña del menú: se abre desde el avatar / bloque de usuario.
+  static const _navTabs = [0, 1, 2, 5];
+
+  String get _name {
+    final n = (_profile['nombre'] as String?)?.trim();
+    return n != null && n.isNotEmpty ? n : 'Coordinación';
+  }
+
+  void _select(int index) {
+    setState(() => _tab = index);
+    if (index == 0) _load();
+  }
+
+  Future<void> _logout() async {
+    await ref.read(authRepositoryProvider).logout();
+    if (mounted) context.go('/login');
+  }
+
+  /// Avatar con las iniciales: abre el perfil (función del bloque de usuario).
+  Widget _profileButton() => Semantics(
+        button: true,
+        label: 'Abrir perfil',
+        child: GestureDetector(
+          onTap: () => _select(4),
+          child: SizedBox(
+            width: 46,
+            height: 46,
+            child: NeuSurface(
+              radius: 46,
+              shadows: Neu.raiseS,
+              child: Center(
+                child: Text(_initials(_name),
+                    style: neuPoppins(
+                        size: 15, weight: FontWeight.w700, color: _wine)),
+              ),
+            ),
+          ),
+        ),
+      );
+
+  Widget _header(bool wide) {
+    final home = _tab == 0;
+    final program =
+        (_profile['programa'] ?? _profile['carrera'] ?? '').toString().trim();
+    return NeuHeader(
+      title: home ? 'Hola, ${_name.split(RegExp(r'\s+')).first}' : _title(),
+      subtitle: home
+          ? (program.isEmpty ? 'Coordinador' : 'Coordinador · $program')
+          : (_tab == 4 ? 'Coordinador' : null),
+      leading: _profileButton(),
+      actions: [
+        if (wide)
+          NeuButton('Actualizar',
+              onPressed: _load,
+              kind: NeuButtonKind.alt,
+              small: true,
+              icon: Icons.refresh_rounded,
+              expand: false)
+        else
+          NeuCircleButton(
+              icon: Icons.refresh_rounded,
+              tooltip: 'Actualizar',
+              onTap: _load),
+        NeuCircleButton(
+          icon: Icons.notifications_none_rounded,
+          tooltip: 'Notificaciones',
+          onTap: () => context.push('/notificaciones', extra: _wine),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     ref.listen(tutoringUpdatesProvider, (_, next) {
       if (next.hasValue && mounted) _load();
     });
     final wide = MediaQuery.sizeOf(context).width >= 760;
+    // Horarios, Líderes y Reportes traen su propia cabecera neumórfica.
+    final ownHeader = _tab == 1 || _tab == 2 || _tab == 5;
+    final needsData = _tab == 0 || _tab == 4;
     final content = Column(
       children: [
-        if (_tab != 1)
-          _Header(
-            title: _title(),
-            name: _profile['nombre'] as String?,
-            onProfile: () => setState(() => _tab = 4),
-          ),
+        if (!ownHeader) _header(wide),
         Expanded(
-          child: _loading
+          child: needsData && _loading
               ? const Center(child: CircularProgressIndicator(color: _wine))
-              : _error != null
+              : needsData && _error != null
                   ? _LoadFailure(message: _error!, onRetry: _load)
-                  : ClipRRect(
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(28),
-                      ),
-                      child: _content(),
-                    ),
+                  : _content(),
         ),
       ],
     );
@@ -147,18 +207,15 @@ class _CoordinacionDashboardPageState
         ).copyWith(primary: _wine),
       ),
       child: Scaffold(
-        backgroundColor: _canvas,
+        backgroundColor: Neu.bg,
         body: wide
             ? Row(
                 children: [
-                  _Navigation(
+                  _Sidebar(
                     index: _tab,
-                    wide: true,
-                    name: _profile['nombre'] as String? ?? 'Coordinador',
-                    onSelect: (index) {
-                      setState(() => _tab = index);
-                      if (index == 0) _load();
-                    },
+                    name: _name,
+                    onSelect: _select,
+                    onLogout: _logout,
                   ),
                   Expanded(child: content),
                 ],
@@ -166,113 +223,28 @@ class _CoordinacionDashboardPageState
             : content,
         bottomNavigationBar: wide
             ? null
-            : _Navigation(
-                index: _tab,
-                wide: false,
-                name: _profile['nombre'] as String? ?? 'Coordinador',
-                onSelect: (index) {
-                  setState(() => _tab = index);
-                  if (index == 0) _load();
-                },
+            : NeuBottomBar(
+                items: const [
+                  NeuNavItem(Icons.home_outlined, 'Inicio'),
+                  NeuNavItem(Icons.calendar_month_outlined, 'Horarios'),
+                  NeuNavItem(Icons.groups_outlined, 'Líderes'),
+                  NeuNavItem(Icons.inbox_outlined, 'Reportes'),
+                ],
+                index: _navTabs.indexOf(_tab),
+                onSelect: (i) => _select(_navTabs[i]),
               ),
       ),
     );
   }
 
   Widget _content() => switch (_tab) {
-        0 => _HomeView(
-            teachers: _teachers,
-            schedules: _schedules,
-            groups: _groups,
-            publishedSessions: _publishedSessions,
-            onOpen: (tab) => setState(() => _tab = tab),
-          ),
+        0 => _HomeView(teachers: _teachers, onOpen: _select),
         1 => const CoordinacionHorariosPage(),
-        2 => _LeadersView(teachers: _teachers, groups: _groups),
+        2 => PaLideresPage(leading: _profileButton()),
         3 => const CoordinacionSolicitudesPage(),
         4 => _ProfileView(profile: _profile, onRefresh: _load),
-        _ => const _FeedbackReportsView(),
+        _ => PaReportesPage(leading: _profileButton()),
       };
-}
-
-class _Header extends StatelessWidget {
-  const _Header({required this.title, this.name, required this.onProfile});
-  final String title;
-  final String? name;
-  final VoidCallback onProfile;
-
-  @override
-  Widget build(BuildContext context) {
-    final isHome = title == 'Inicio';
-    final display =
-        name?.trim().isNotEmpty == true ? name!.trim() : 'Coordinación';
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.fromLTRB(
-          20, MediaQuery.paddingOf(context).top + 12, 20, 38),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [_wine, _wineDark],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
-      ),
-      child: Row(children: [
-        Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.white70, width: 2),
-          ),
-          alignment: Alignment.center,
-          child: Text(_initials(display),
-              style: const TextStyle(
-                  color: Colors.white, fontWeight: FontWeight.w800)),
-        ),
-        const SizedBox(width: 14),
-        Expanded(
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(isHome ? 'Hola, $display' : title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800)),
-            Text(isHome ? 'Coordinador' : display,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                    color: Colors.white.withValues(alpha: .82), fontSize: 13)),
-          ]),
-        ),
-        IconButton(
-          tooltip: 'Mi perfil',
-          onPressed: onProfile,
-          icon: CircleAvatar(
-            radius: 14,
-            backgroundColor: Colors.white,
-            child: Text(_initials(display),
-                style: const TextStyle(
-                    color: _wineDark,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800)),
-          ),
-        ),
-        const NotificationBellButton(accentColor: _wine),
-        IconButton(
-          tooltip: 'Actualizar datos',
-          onPressed: () => context
-              .findAncestorStateOfType<_CoordinacionDashboardPageState>()
-              ?._load(),
-          icon: const Icon(Icons.refresh_rounded, color: Colors.white),
-        ),
-      ]),
-    );
-  }
 }
 
 String _initials(String value) {
@@ -285,291 +257,168 @@ String _initials(String value) {
   return words.take(2).map((word) => word[0].toUpperCase()).join();
 }
 
-class _Navigation extends StatelessWidget {
-  const _Navigation(
-      {required this.index,
-      required this.wide,
-      required this.name,
-      required this.onSelect});
+/// Barra lateral (tablet / escritorio). Sin «Perfil»: se abre desde el bloque
+/// de usuario del pie, que además trae el botón de cerrar sesión.
+class _Sidebar extends StatelessWidget {
+  const _Sidebar({
+    required this.index,
+    required this.name,
+    required this.onSelect,
+    required this.onLogout,
+  });
   final int index;
-  final bool wide;
   final String name;
   final ValueChanged<int> onSelect;
+  final VoidCallback onLogout;
+
   static const _items = [
-    (Icons.home_outlined, Icons.home_rounded, 'Inicio'),
-    (Icons.calendar_month_outlined, Icons.calendar_month_rounded, 'Horarios'),
-    (Icons.groups_outlined, Icons.groups_rounded, 'Líderes'),
-    (Icons.assessment_outlined, Icons.assessment_rounded, 'Reportes'),
-    (Icons.person_outline_rounded, Icons.person_rounded, 'Perfil'),
+    (Icons.home_outlined, 'Inicio', 0),
+    (Icons.calendar_month_outlined, 'Horarios', 1),
+    (Icons.groups_outlined, 'Líderes', 2),
+    (Icons.inbox_outlined, 'Reportes', 5),
   ];
-  static const _tabIndexes = [0, 1, 2, 5, 4];
 
   @override
   Widget build(BuildContext context) {
-    if (wide) {
-      return Container(
-        width: 190,
-        color: Colors.white,
-        child: Column(children: [
-          const SizedBox(height: 14),
-          const SizedBox(
-            height: 64,
-            width: 150,
-            child: BrandLogo(
-              width: 150,
+    return Container(
+      width: 250,
+      decoration: const BoxDecoration(
+        color: Neu.bg,
+        boxShadow: [
+          BoxShadow(
+              color: Neu.shadowDark, offset: Offset(4, 0), blurRadius: 12),
+        ],
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 18, 14, 14),
+          child: Column(children: [
+            const SizedBox(
               height: 64,
-              accentColor: _wine,
+              width: 170,
+              child: BrandLogo(width: 170, height: 64, accentColor: _wine),
             ),
-          ),
-          const SizedBox(height: 8),
-          const Text('COORDINACIÓN',
-              style: TextStyle(
-                  color: _muted,
-                  fontSize: 10,
-                  letterSpacing: .7,
-                  fontWeight: FontWeight.w600)),
-          const Divider(color: Color(0xFFE8EBF1), indent: 12, endIndent: 12),
-          Expanded(
-              child: NavigationRail(
-            backgroundColor: Colors.white,
-            selectedIndex: !_tabIndexes.contains(index)
-                ? null
-                : _tabIndexes.indexOf(index),
-            onDestinationSelected: (position) =>
-                onSelect(_tabIndexes[position]),
-            labelType: NavigationRailLabelType.all,
-            indicatorColor: _pink,
-            selectedIconTheme: const IconThemeData(color: _wine),
-            unselectedIconTheme: const IconThemeData(color: _muted),
-            selectedLabelTextStyle:
-                const TextStyle(color: _wine, fontWeight: FontWeight.w700),
-            unselectedLabelTextStyle: const TextStyle(
-              color: _muted,
-            ),
-            destinations: [
-              for (var i = 0; i < _items.length; i++)
-                NavigationRailDestination(
-                  icon: Icon(_items[i].$1),
-                  selectedIcon: Icon(_items[i].$2),
-                  label: Text(_items[i].$3),
+            const SizedBox(height: 22),
+            for (final item in _items)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: NeuSurface(
+                  radius: 16,
+                  shadows: const [],
+                  sunken: index == item.$3,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+                  onTap: () => onSelect(item.$3),
+                  child: Row(children: [
+                    Icon(item.$1,
+                        size: 22,
+                        color: index == item.$3 ? _wine : Neu.navIdle),
+                    const SizedBox(width: 12),
+                    Text(item.$2,
+                        style: neuBody(
+                            size: 15,
+                            weight: FontWeight.w700,
+                            color: index == item.$3 ? _wine : Neu.muted)),
+                  ]),
                 ),
-            ],
-          )),
-          const Divider(color: Color(0xFFE8EBF1), indent: 10, endIndent: 10),
-          InkWell(
-            onTap: () => onSelect(4),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(10, 8, 8, 14),
+              ),
+            const Spacer(),
+            NeuSurface(
+              radius: 16,
+              shadows: const [],
+              sunken: index == 4,
+              padding: const EdgeInsets.all(10),
+              onTap: () => onSelect(4),
               child: Row(children: [
-                CircleAvatar(
-                  radius: 14,
-                  backgroundColor: _pink,
-                  child: Text(_initials(name),
-                      style: const TextStyle(
-                          color: _wine,
-                          fontSize: 9,
-                          fontWeight: FontWeight.w800)),
+                SizedBox(
+                  width: 40,
+                  height: 40,
+                  child: NeuSurface(
+                    radius: 40,
+                    shadows: Neu.raiseS,
+                    child: Center(
+                      child: Text(_initials(name),
+                          style: neuBody(
+                              size: 13,
+                              weight: FontWeight.w700,
+                              color: Neu.muted)),
+                    ),
+                  ),
                 ),
-                const SizedBox(width: 7),
+                const SizedBox(width: 10),
                 Expanded(
-                    child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                      Text(name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              color: Color(0xFF1B1E22),
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700)),
-                      const Text('Coordinador',
-                          style: TextStyle(color: _muted, fontSize: 9)),
-                    ])),
-                const Icon(Icons.chevron_right, color: _muted, size: 16),
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: neuBody(size: 14, weight: FontWeight.w700)),
+                        Text('Coordinador',
+                            style: neuBody(size: 12, color: Neu.muted)),
+                      ]),
+                ),
+                IconButton(
+                  tooltip: 'Cerrar sesión',
+                  onPressed: onLogout,
+                  icon: const Icon(Icons.logout_rounded, color: Neu.muted),
+                ),
               ]),
             ),
-          ),
-        ]),
-      );
-    }
-    final selectedPosition = _tabIndexes.indexOf(index);
-    return SlidingPillNavigationBar(
-      selectedIndex: selectedPosition < 0 ? 0 : selectedPosition,
-      selectedColor: _wine,
-      indicatorColor: _pink,
-      onDestinationSelected: (position) => onSelect(_tabIndexes[position]),
-      destinations: [
-        for (final item in _items)
-          SlidingPillDestination(
-            icon: item.$1,
-            selectedIcon: item.$2,
-            label: item.$3,
-          ),
-      ],
+          ]),
+        ),
+      ),
     );
   }
 }
 
-class _HomeView extends StatelessWidget {
-  const _HomeView(
-      {required this.teachers,
-      required this.schedules,
-      required this.groups,
-      required this.publishedSessions,
-      required this.onOpen});
-  final List<Map<String, dynamic>> teachers,
-      schedules,
-      groups,
-      publishedSessions;
+class _HomeView extends ConsumerWidget {
+  const _HomeView({required this.teachers, required this.onOpen});
+  final List<Map<String, dynamic>> teachers;
   final ValueChanged<int> onOpen;
 
   @override
-  Widget build(BuildContext context) {
-    final scheduledIds = schedules
-        .map((row) => row['docenteId'])
-        .followedBy(publishedSessions.map((session) => session['docenteId']))
-        .toSet();
-    final unscheduled = teachers
-        .where((teacher) => !scheduledIds.contains(teacher['id']))
-        .toList();
-    final assignedLeaders =
-        groups.where((group) => group['docenteLiderId'] is String).length;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final st = ref.watch(paStoreProvider);
+    final sinLider = st.colectivas.where((c) => c.lider.isEmpty).toList();
+    final conLider = st.colectivas.length - sinLider.length;
+    final reportes = st.reportesDeLider; // solo los del docente líder
+    final nuevos = reportes.where((r) => !r.visto).length;
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
+      padding: EdgeInsets.fromLTRB(
+          18, 4, 18, 32 + MediaQuery.paddingOf(context).bottom),
       children: [
-        RoleSummaryBanner(
-          title: 'Panel de coordinación',
-          subtitle: unscheduled.isEmpty
-              ? 'Los horarios y grupos de tutoría están al día.'
-              : 'Hay ${unscheduled.length} tutores que requieren horario.',
-          metric: 'Grupos con líder',
-          value: '$assignedLeaders/${groups.length}',
-          accentColor: _wine,
-          darkColor: _wineDark,
-          icon: Icons.calendar_month_outlined,
-        ),
-        const SizedBox(height: 16),
-        Row(children: [
-          Expanded(
-              child: _Metric(
-                  value: '${teachers.length}', label: 'Tutores activos')),
-          const SizedBox(width: 10),
-          Expanded(
-              child: _Metric(
-                  value: '$assignedLeaders/${groups.length}',
-                  label: 'Con líder')),
-          const SizedBox(width: 10),
-          Expanded(
-              child: _Metric(value: '${groups.length}', label: 'Grupos PA')),
+        PaKpiRow([
+          ('${teachers.length}', 'Tutores activos'),
+          ('$conLider/${st.colectivas.length}', 'Con líder'),
+          ('$nuevos', 'Reportes nuevos'),
         ]),
-        const SizedBox(height: 24),
-        _SectionTitle(
-            title: 'Por asignar',
-            action: 'Ver horarios',
-            onTap: () => onOpen(1)),
-        const SizedBox(height: 10),
-        if (unscheduled.isEmpty)
-          const _EmptyCard(
-              message: 'Todos los tutores tienen un horario registrado.')
-        else
-          _CardList(children: [
-            for (final teacher in unscheduled.take(4))
-              _RecordRow(
-                icon: Icons.groups_2_outlined,
-                title: _text(teacher['nombre'], 'Tutor'),
-                subtitle: 'ID ${_text(teacher['id'], '—')}',
-                badge: 'Sin horario',
-                onTap: () => onOpen(1),
-              ),
-          ]),
-        const SizedBox(height: 24),
-        _SectionTitle(
-          title: 'Solicitudes docentes',
-          action: 'Revisar',
-          onTap: () => onOpen(3),
-        ),
-        const SizedBox(height: 10),
-        _CardList(children: [
-          _RecordRow(
-            icon: Icons.inbox_outlined,
-            title: 'Cambios de horario',
-            subtitle: 'Revisa solicitudes enviadas por los docentes.',
-            badge: 'Abrir',
-            onTap: () => onOpen(3),
-          ),
-        ]),
-        const SizedBox(height: 24),
-        const Text('Tutorías colectivas',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-        const SizedBox(height: 10),
-        _CardList(children: [
-          _RecordRow(
-            icon: Icons.groups_2_outlined,
-            title: 'Tutores líderes',
-            subtitle: 'Cronograma, líder, apoyos y aula por materia',
-            onTap: () => paPush(context, const PaLideresPage()),
-          ),
-          _RecordRow(
-            icon: Icons.inbox_outlined,
-            title: 'Reportes de líderes',
-            subtitle: 'Asistencia y rúbricas consolidadas',
-            onTap: () => paPush(context, const PaReportesPage()),
-          ),
-        ]),
-      ],
-    );
-  }
-}
-
-class _LeadersView extends StatelessWidget {
-  const _LeadersView({required this.teachers, required this.groups});
-  final List<Map<String, dynamic>> teachers, groups;
-
-  @override
-  Widget build(BuildContext context) {
-    final names = {
-      for (final teacher in teachers) teacher['id']: teacher['nombre']
-    };
-    final projects = <Map<String, dynamic>>[];
-    for (final group in groups) {
-      final items = group['proyectos'];
-      if (items is List) {
-        for (final item in items.whereType<Map<String, dynamic>>()) {
-          projects.add({
-            ...item,
-            '_leaderId': group['docenteLiderId'],
-            '_supportId': item['docenteResponsableId'],
-          });
-        }
-      }
-    }
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
-      children: [
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-              color: _pink, borderRadius: BorderRadius.circular(18)),
-          child: const Text(
-              'Proyectos y responsables de tutorías colectivas guardados en el sistema.',
-              style: TextStyle(color: _wineDark, height: 1.35)),
-        ),
-        const SizedBox(height: 18),
-        if (projects.isEmpty)
-          const _EmptyCard(
-              message: 'No hay proyectos de tutoría colectiva registrados.')
-        else
-          for (final project in projects)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _RecordRow(
-                icon: Icons.groups_2_outlined,
-                title: _text(project['nombre'], 'Proyecto'),
-                subtitle:
-                    'Semestre ${_text(project['semestre'], '—')} · Líder: ${_text(names[project['_leaderId']], 'No registrado')} · Apoyo: ${_text(names[project['_supportId']], 'No registrado')}',
-                badge: 'Asignado',
-              ),
+        PaSection('Por asignar', action: 'Ver todo', onAction: () => onOpen(2)),
+        PaRowList([
+          for (final c in sinLider)
+            PaRow(
+              icon: Icons.groups_2_outlined,
+              title: c.materia,
+              subtitle:
+                  '${c.carrera} · Sem ${c.semestreRomano} · Sec ${c.seccion}',
+              trailing: const PaTag('Sin líder', tone: PaTone.warn),
+              onTap: () => paPush(context, PaAsignacionPage(colId: c.id)),
             ),
+        ], empty: 'Todas las tutorías tienen líder.'),
+        PaSection('Reportes recientes',
+            action: 'Ver todo', onAction: () => onOpen(5)),
+        PaRowList([
+          for (final r in reportes.take(3))
+            PaRow(
+              icon: Icons.inbox_outlined,
+              title: st.colectiva(r.colId).materia,
+              subtitle: 'Líder ${r.por} · ${r.fecha}',
+              trailing: PaTag(r.visto ? 'Revisado' : 'Nuevo',
+                  tone: r.visto ? PaTone.ok : PaTone.warn),
+              onTap: () =>
+                  paPush(context, PaReporteDetallePage(reporte: r)),
+            ),
+        ], empty: 'Aún no hay reportes de líderes.'),
       ],
     );
   }
@@ -582,70 +431,57 @@ class _ProfileView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    Widget row(IconData icon, String title, String value) =>
-        _RecordRow(icon: icon, title: title, subtitle: value);
+    PaRow locked(String title, String value) =>
+        PaRow(icon: Icons.lock_outline_rounded, title: title, subtitle: value);
+    final programa =
+        _text(profile['programa'] ?? profile['carrera'], 'No registrado');
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
+      padding: EdgeInsets.fromLTRB(
+          18, 4, 18, 32 + MediaQuery.paddingOf(context).bottom),
       children: [
-        const Text('Datos de la cuenta',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-        const SizedBox(height: 10),
-        _CardList(children: [
-          _RecordRow(
+        const PaSection('Datos que puedes editar'),
+        PaRowList([
+          PaRow(
             icon: Icons.phone_outlined,
-            title: 'Teléfono',
-            subtitle: _text(profile['telefono'], 'No registrado'),
+            title: _text(profile['telefono'], 'No registrado'),
+            subtitle: 'Teléfono',
+            onTap: () => _editPhone(context, ref),
           ),
         ]),
-        const SizedBox(height: 20),
-        const Text('Seguridad',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-        const SizedBox(height: 10),
-        _CardList(children: [
-          _RecordRow(
+        const PaSection('Seguridad'),
+        PaRowList([
+          PaRow(
             icon: Icons.lock_outline_rounded,
-            title: 'Contraseña',
-            subtitle: 'Solicita el restablecimiento al administrador.',
+            title: 'Cambiar contraseña',
+            subtitle: 'Mínimo 8 caracteres.',
+            onTap: () => _editPassword(context, ref),
           ),
         ]),
-        const SizedBox(height: 20),
-        const Text('Datos institucionales',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-        const SizedBox(height: 10),
-        _CardList(children: [
-          _RecordRow(
-            icon: Icons.email_outlined,
-            title: 'Correo',
-            subtitle: _text(profile['correo'], 'No registrado'),
-          ),
-          row(Icons.lock_outline, 'Documento',
-              _text(profile['id'], 'No registrado')),
-          row(Icons.lock_outline, 'Programa', 'No registrado'),
-          row(Icons.lock_outline, 'Rol', _text(profile['rol'], 'Coordinador')),
+        const PaSection('Datos institucionales'),
+        PaRowList([
+          locked('Correo', _text(profile['correo'], 'No registrado')),
+          locked('Documento', _text(profile['id'], 'No registrado')),
+          locked('Programa', programa),
+          locked('Rol', _text(profile['rol'], 'Coordinador')),
         ]),
-        const SizedBox(height: 10),
-        const Text(
-            'El perfil institucional muestra únicamente los campos disponibles en la cuenta.',
-            style: TextStyle(color: _muted, fontSize: 12)),
-        const SizedBox(height: 20),
-        SizedBox(
-          height: 50,
-          child: FilledButton(
-            style: FilledButton.styleFrom(
-                backgroundColor: _pink, foregroundColor: _wineDark),
-            onPressed: () async {
-              await ref.read(authRepositoryProvider).logout();
-              if (context.mounted) context.go('/login');
-            },
-            child: const Text('Cerrar sesión',
-                style: TextStyle(fontWeight: FontWeight.w800)),
-          ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 0, 4, 18),
+          child: Text('Estos datos los gestiona TI.',
+              style: neuBody(size: 12.5, color: Neu.muted)),
+        ),
+        NeuButton(
+          'Cerrar sesión',
+          kind: NeuButtonKind.danger,
+          icon: Icons.logout_rounded,
+          onPressed: () async {
+            await ref.read(authRepositoryProvider).logout();
+            if (context.mounted) context.go('/login');
+          },
         ),
       ],
     );
   }
 
-  // ignore: unused_element
   Future<void> _editPhone(BuildContext context, WidgetRef ref) async {
     final scaffoldMessenger = ScaffoldMessenger.maybeOf(context);
     final controller =
@@ -688,7 +524,6 @@ class _ProfileView extends ConsumerWidget {
     }
   }
 
-  // ignore: unused_element
   Future<void> _editPassword(BuildContext context, WidgetRef ref) async {
     final scaffoldMessenger = ScaffoldMessenger.maybeOf(context);
     final current = TextEditingController();
@@ -837,148 +672,6 @@ class _FeedbackReportsViewState extends ConsumerState<_FeedbackReportsView> {
       ],
     );
   }
-}
-
-class _Metric extends StatelessWidget {
-  const _Metric({required this.value, required this.label});
-  final String value, label;
-  @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 16),
-        decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                  color: Colors.black.withValues(alpha: .05),
-                  blurRadius: 12,
-                  offset: const Offset(0, 3))
-            ]),
-        child: Column(children: [
-          Text(value,
-              style: const TextStyle(
-                  color: _wine, fontSize: 21, fontWeight: FontWeight.w900)),
-          const SizedBox(height: 3),
-          Text(label,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: _muted, fontSize: 10.5)),
-        ]),
-      );
-}
-
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(
-      {required this.title, required this.action, required this.onTap});
-  final String title, action;
-  final VoidCallback onTap;
-  @override
-  Widget build(BuildContext context) => Row(children: [
-        Expanded(
-            child: Text(title,
-                style: const TextStyle(
-                    fontSize: 16, fontWeight: FontWeight.w800))),
-        TextButton(
-            onPressed: onTap,
-            child: Text(action,
-                style: const TextStyle(
-                    color: _wine, fontWeight: FontWeight.w700))),
-      ]);
-}
-
-class _CardList extends StatelessWidget {
-  const _CardList({required this.children});
-  final List<Widget> children;
-  @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(22),
-            boxShadow: [
-              BoxShadow(
-                  color: Colors.black.withValues(alpha: .05),
-                  blurRadius: 14,
-                  offset: const Offset(0, 3))
-            ]),
-        child: Column(children: [
-          for (var i = 0; i < children.length; i++) ...[
-            if (i > 0) const Divider(height: 1, color: Color(0xFFEDF0F5)),
-            children[i]
-          ]
-        ]),
-      );
-}
-
-class _RecordRow extends StatelessWidget {
-  const _RecordRow(
-      {required this.icon,
-      required this.title,
-      required this.subtitle,
-      this.badge,
-      this.onTap});
-  final IconData icon;
-  final String title, subtitle;
-  final String? badge;
-  final VoidCallback? onTap;
-  @override
-  Widget build(BuildContext context) => InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 13),
-          child: Row(children: [
-            Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                    color: _pink, borderRadius: BorderRadius.circular(13)),
-                child: Icon(icon, color: _wine, size: 21)),
-            const SizedBox(width: 12),
-            Expanded(
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                  Text(title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          fontSize: 14, fontWeight: FontWeight.w800)),
-                  const SizedBox(height: 3),
-                  Text(subtitle,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: _muted, fontSize: 11.5)),
-                ])),
-            if (badge != null) ...[
-              const SizedBox(width: 8),
-              Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-                  decoration: BoxDecoration(
-                      color: const Color(0xFFFFF1DC),
-                      borderRadius: BorderRadius.circular(20)),
-                  child: Text(badge!,
-                      style: const TextStyle(
-                          color: Color(0xFFAA6A13),
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w700))),
-            ],
-            if (onTap != null)
-              const Icon(Icons.chevron_right_rounded, color: Color(0xFFA4ADBB)),
-          ]),
-        ),
-      );
-}
-
-class _EmptyCard extends StatelessWidget {
-  const _EmptyCard({required this.message});
-  final String message;
-  @override
-  Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-          color: Colors.white, borderRadius: BorderRadius.circular(20)),
-      child: Text(message,
-          textAlign: TextAlign.center, style: const TextStyle(color: _muted)));
 }
 
 class _LoadFailure extends StatelessWidget {

@@ -161,6 +161,13 @@ class PaState {
 
   PaColectiva colectiva(int id) => colectivas.firstWhere((c) => c.id == id);
 
+  /// Reportes enviados por el docente LÍDER de cada colectiva. Los de los
+  /// docentes de apoyo no se listan: la coordinación solo recibe el del líder.
+  List<PaReporte> get reportesDeLider => reportes.where((r) {
+        final i = colectivas.indexWhere((c) => c.id == r.colId);
+        return i >= 0 && paMismoNombre(r.por, colectivas[i].lider);
+      }).toList();
+
   List<String> get nombresDocentes {
     final set = <String>{};
     for (final c in colectivas) {
@@ -280,18 +287,18 @@ PaState _seed() => PaState(
           rubricas: [
             PaRubrica(
                 colId: 2,
-                por: 'Laura Martínez',
+                por: 'Sofía Rojas',
                 estudiante: 'Camilo Andres',
                 puntajes: [4, 4, 5, 4],
                 obs: 'Falta documentar el modelo.'),
             PaRubrica(
                 colId: 2,
-                por: 'Laura Martínez',
+                por: 'Sofía Rojas',
                 estudiante: 'Daniela Castro',
                 puntajes: [4, 4, 4, 4],
                 obs: ''),
           ],
-          visto: false,
+          visto: true,
         ),
       ],
     );

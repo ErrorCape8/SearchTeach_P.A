@@ -157,23 +157,6 @@ class StudentHomeView extends StatelessWidget {
                   ),
                 ),
         ),
-        const SizedBox(height: 14),
-        Card(
-          margin: EdgeInsets.zero,
-          child: ListTile(
-            onTap: () => paPush(context, const PaCronogramaPage(), accent: _blue),
-            leading: const Icon(Icons.event_note_outlined, color: _blue),
-            title: const Text(
-              'Tutorías colectivas',
-              style: TextStyle(color: _navy, fontWeight: FontWeight.w700),
-            ),
-            subtitle: const Text(
-              'Cronograma de tu programa: fechas, aulas y tutores',
-              style: TextStyle(color: _muted, fontSize: 12),
-            ),
-            trailing: const Icon(Icons.chevron_right_rounded, color: _muted),
-          ),
-        ),
       ],
     );
   }

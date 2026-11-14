@@ -77,12 +77,17 @@ class PaScaffold extends StatelessWidget {
     required this.subtitle,
     required this.children,
     this.actions = const [],
+    this.leading,
     super.key,
   });
   final String title;
   final String subtitle;
   final List<Widget> children;
   final List<Widget> actions;
+
+  /// Si se indica, reemplaza el botón «Volver» (p. ej. el avatar de perfil
+  /// cuando la pantalla es una pestaña del panel y no una vista apilada).
+  final Widget? leading;
 
   @override
   Widget build(BuildContext context) {
@@ -95,11 +100,12 @@ class PaScaffold extends StatelessWidget {
           NeuHeader(
             title: title,
             subtitle: subtitle,
-            leading: NeuCircleButton(
-              icon: Icons.chevron_left_rounded,
-              tooltip: 'Volver',
-              onTap: () => Navigator.of(context).maybePop(),
-            ),
+            leading: leading ??
+                NeuCircleButton(
+                  icon: Icons.chevron_left_rounded,
+                  tooltip: 'Volver',
+                  onTap: () => Navigator.of(context).maybePop(),
+                ),
             actions: [...actions, const NeuHeaderLogo()],
           ),
           Expanded(

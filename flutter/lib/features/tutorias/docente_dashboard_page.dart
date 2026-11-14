@@ -25,7 +25,7 @@ import 'tutoria_chat_page.dart';
 import 'tutoria_historial_page.dart';
 
 const _teacherGreen = Color(0xFF16834A);
-const _teacherCanvas = Color(0xFFF5F7FB);
+const _teacherCanvas = Color(0xFFE3E8F0);
 const _teacherNavy = Color(0xFF18352A);
 
 final _teacherSessionsProvider =
@@ -50,6 +50,7 @@ class DocenteDashboardPage extends ConsumerStatefulWidget {
 class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
     with WidgetsBindingObserver {
   int _tab = 0;
+  bool _sessionsCalendar = false;
 
   @override
   void initState() {
@@ -162,34 +163,24 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
                     label: 'Inicio',
                   ),
                   const SlidingPillDestination(
-                    icon: Icons.inbox_outlined,
-                    selectedIcon: Icons.inbox_rounded,
-                    label: 'Solicitudes',
+                    icon: Icons.videocam_outlined,
+                    selectedIcon: Icons.videocam_rounded,
+                    label: 'Empezar',
                   ),
                   const SlidingPillDestination(
-                    icon: Icons.event_note_outlined,
-                    selectedIcon: Icons.event_note_rounded,
-                    label: 'Tutorías',
+                    icon: Icons.calendar_month_outlined,
+                    selectedIcon: Icons.calendar_month_rounded,
+                    label: 'Mis sesiones',
                   ),
                   const SlidingPillDestination(
-                    icon: Icons.groups_outlined,
-                    selectedIcon: Icons.groups_rounded,
-                    label: 'Colectivas',
+                    icon: Icons.menu_book_outlined,
+                    selectedIcon: Icons.menu_book_rounded,
+                    label: 'Tutoría',
                   ),
                   const SlidingPillDestination(
                     icon: Icons.star_outline_rounded,
                     selectedIcon: Icons.star_rounded,
                     label: 'Líder PA',
-                  ),
-                  const SlidingPillDestination(
-                    icon: Icons.person_outline_rounded,
-                    selectedIcon: Icons.person_rounded,
-                    label: 'Perfil',
-                  ),
-                  const SlidingPillDestination(
-                    icon: Icons.notifications_none_rounded,
-                    selectedIcon: Icons.notifications_rounded,
-                    label: 'Avisos',
                   ),
                 ],
               ),
@@ -199,9 +190,9 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
 
   static const _teacherTabNames = {
     0: 'Inicio',
-    1: 'Tutorías',
-    2: 'Iniciar tutoría',
-    3: 'Colectivas',
+    1: 'Tutoría',
+    2: 'Empezar tutoría',
+    3: 'Mis sesiones',
     4: 'Líder de proyecto de aula',
     5: 'Avisos',
     6: 'Historial',
@@ -212,7 +203,7 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
   String get _headerTitle =>
       _tab == 0 ? 'Panel docente' : _teacherTabNames[_tab] ?? 'Panel docente';
 
-  List<int> get _navigationTabs => [0, 8, 1, 3, 4, 7, 5];
+  List<int> get _navigationTabs => [0, 2, 3, 1, 4];
 
   static String _initials(String value) {
     final parts = value.trim().split(RegExp(r'\s+')).where((part) => part.isNotEmpty);
@@ -254,12 +245,10 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
             const SizedBox(height: 10),
             for (final item in const [
             (0, Icons.home_outlined, 'Inicio'),
-            (8, Icons.inbox_outlined, 'Solicitudes'),
-            (1, Icons.event_note_outlined, 'Tutorías'),
-            (3, Icons.groups_outlined, 'Colectivas'),
-            (4, Icons.fact_check_outlined, 'Líder PA'),
-            (7, Icons.person_outline_rounded, 'Perfil'),
-            (5, Icons.notifications_none_outlined, 'Avisos'),
+            (2, Icons.videocam_outlined, 'Empezar'),
+            (3, Icons.calendar_month_outlined, 'Mis sesiones'),
+            (1, Icons.menu_book_outlined, 'Tutoría'),
+            (4, Icons.star_outline_rounded, 'Líder PA'),
             ])
             Padding(
               padding:
@@ -285,7 +274,10 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
               padding: EdgeInsets.symmetric(horizontal: 16),
               child: Divider(height: 1, color: Color(0xFFE3ECE5)),
             ),
-            Padding(
+            InkWell(
+              onTap: () => setState(() => _tab = 7),
+              borderRadius: BorderRadius.circular(14),
+              child: Padding(
               padding: const EdgeInsets.fromLTRB(18, 14, 18, 18),
               child: Row(children: [
                 CircleAvatar(
@@ -312,7 +304,7 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
                     ]),
                 ),
               ]),
-            ),
+            )),
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
               child: OutlinedButton.icon(
@@ -370,7 +362,9 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
                     _SessionView.history => session.state == 'FINALIZADA',
                     _SessionView.scheduled ||
                     _SessionView.start =>
-                      session.state != 'FINALIZADA',
+                      session.state != 'FINALIZADA' &&
+                          session.start != null &&
+                          _isSameDay(session.start!, DateTime.now()),
                   })
               .toList()
             ..sort((a, b) => (a.start ?? DateTime(9999))
@@ -391,21 +385,50 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
           }
           return sessions.isEmpty
               ? const Center(
-                  child: Text('No tienes tutorías grupales asignadas.'))
+                  child: Text('No tienes tutorías programadas para hoy.'))
               : ListView(
                   padding: const EdgeInsets.all(20),
                   children: [
-                    Text(
-                        switch (view) {
-                          _SessionView.scheduled => 'Mis tutorías',
-                          _SessionView.start => 'Empezar tutorías',
-                          _SessionView.history => 'Historial'
-                        },
-                        style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: _teacherNavy)),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            switch (view) {
+                              _SessionView.scheduled => 'Mis sesiones',
+                              _SessionView.start => 'Tutorías de hoy',
+                              _SessionView.history => 'Historial'
+                            },
+                            style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: _teacherNavy,
+                            ),
+                          ),
+                        ),
+                        if (view == _SessionView.scheduled)
+                          SegmentedButton<bool>(
+                            segments: const [
+                              ButtonSegment(value: false, icon: Icon(Icons.view_list), label: Text('Lista')),
+                              ButtonSegment(value: true, icon: Icon(Icons.calendar_month), label: Text('Calendario')),
+                            ],
+                            selected: {_sessionsCalendar},
+                            showSelectedIcon: false,
+                            onSelectionChanged: (value) => setState(
+                              () => _sessionsCalendar = value.first,
+                            ),
+                          ),
+                      ],
+                    ),
                     const SizedBox(height: 10),
+                    if (view == _SessionView.scheduled && _sessionsCalendar)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 14),
+                        child: _TeacherCalendarPanel(
+                          sessions: sessions,
+                          onOpenSessions: () => setState(() => _sessionsCalendar = false),
+                        ),
+                      ),
+                    if (view != _SessionView.scheduled || !_sessionsCalendar)
                     for (final session in sessions)
                       Card(
                         elevation: 0,
@@ -845,13 +868,19 @@ class _TeacherHeader extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Row(
                 children: [
-                  CircleAvatar(
-                    radius: 21,
-                    backgroundColor: Colors.white.withValues(alpha: .16),
-                    foregroundColor: Colors.white,
-                    child: Text(
-                      _DocenteDashboardPageState._initials(name),
-                      style: const TextStyle(fontWeight: FontWeight.w800),
+                  InkWell(
+                    onTap: () => context.findAncestorStateOfType<_DocenteDashboardPageState>()?.setState(() {
+                      context.findAncestorStateOfType<_DocenteDashboardPageState>()?._tab = 7;
+                    }),
+                    borderRadius: BorderRadius.circular(30),
+                    child: CircleAvatar(
+                      radius: 21,
+                      backgroundColor: Colors.white.withValues(alpha: .16),
+                      foregroundColor: Colors.white,
+                      child: Text(
+                        _DocenteDashboardPageState._initials(name),
+                        style: const TextStyle(fontWeight: FontWeight.w800),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),

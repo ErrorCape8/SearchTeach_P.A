@@ -6,6 +6,8 @@ import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/api_client.dart';
+import '../../../core/neu/neu.dart';
+import '../../pa/pa_widgets.dart';
 import '../admin_controller.dart';
 
 class AdminCertificacionesView extends ConsumerStatefulWidget {
@@ -77,9 +79,10 @@ class _AdminCertificacionesViewState
     }
   }
 
-  Future<void> _review(_Certification certification, String status) async {
+  Future<void> _review(_Certification certification, String status,
+      {bool confirm = true}) async {
     final approved = status == 'APROBADA';
-    final confirmed = await showDialog<bool>(
+    final confirmed = !confirm ? true : await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title:
@@ -163,6 +166,33 @@ class _AdminCertificacionesViewState
     }
   }
 
+  /// «Ver PDF y revisar»: abre el soporte y luego pide la decisión.
+  Future<void> _openAndReview(_Certification certification) async {
+    await _openPdf(certification);
+    if (!mounted || certification.estado.toUpperCase() != 'PENDIENTE') return;
+    final status = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Revisar certificación'),
+        content: const Text('¿Qué decides sobre esta certificación?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cerrar')),
+          OutlinedButton(
+              onPressed: () => Navigator.pop(dialogContext, 'RECHAZADA'),
+              child: const Text('Rechazar')),
+          FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, 'APROBADA'),
+              child: const Text('Aceptar')),
+        ],
+      ),
+    );
+    if (status != null && mounted) {
+      await _review(certification, status, confirm: false);
+    }
+  }
+
   void _showMessage(String message, {bool isError = false}) {
     RoleToast.showSnackBar(
       context,
@@ -184,134 +214,59 @@ class _AdminCertificacionesViewState
 
   @override
   Widget build(BuildContext context) {
+    // Al actualizar desde la cabecera se recarga también esta lista.
+    ref.listen(adminPendingCertificationsProvider, (_, __) {
+      if (mounted) _load();
+    });
     final users = ref.watch(adminControllerProvider).users;
+    const keys = ['PENDIENTE', 'APROBADA', 'RECHAZADA'];
+    const names = ['Pendientes', 'Aceptados', 'Rechazados'];
+    int count(String k) =>
+        _items.where((i) => i.estado.toUpperCase() == k).length;
+    final selected = keys.indexOf(_selectedStatus);
     final filtered = _items
         .where((item) => item.estado.toUpperCase() == _selectedStatus)
         .toList(growable: false);
-    final statusLabels = const {
-      'PENDIENTE': 'Pendientes',
-      'APROBADA': 'Aceptadas',
-      'RECHAZADA': 'Rechazadas',
-    };
 
-    return Column(
+    return ListView(
+      padding: EdgeInsets.fromLTRB(
+          18, 4, 18, 32 + MediaQuery.paddingOf(context).bottom),
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(18, 18, 14, 8),
-          child: Row(
-            children: [
-              const Expanded(
-                child: Text(
-                  'Certificaciones docentes',
-                  style: TextStyle(
-                    color: Color(0xFF1E293B),
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-              IconButton(
-                tooltip: 'Actualizar solicitudes',
-                onPressed: _loading ? null : _load,
-                icon: const Icon(Icons.refresh),
-                color: const Color(0xFFEA7408),
-              ),
-            ],
-          ),
+        PaSegmented(
+          labels: [for (var i = 0; i < 3; i++) '${names[i]} (${count(keys[i])})'],
+          selected: selected,
+          onSelect: (i) => setState(() => _selectedStatus = keys[i]),
         ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 18),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Wrap(
-              spacing: 8,
-              children: [
-                for (final entry in statusLabels.entries)
-                  ChoiceChip(
-                    label: Text(
-                      '${entry.value} (${_items.where((item) => item.estado.toUpperCase() == entry.key).length})',
-                    ),
-                    selected: _selectedStatus == entry.key,
-                    selectedColor: const Color(0xFFFFE6D1),
-                    labelStyle: TextStyle(
-                      color: _selectedStatus == entry.key
-                          ? const Color(0xFFB45309)
-                          : const Color(0xFF475569),
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                    ),
-                    onSelected: (_) =>
-                        setState(() => _selectedStatus = entry.key),
-                  ),
-              ],
-            ),
-          ),
-        ),
-        if (_loading) const LinearProgressIndicator(),
-        if (_error != null)
-          Expanded(
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.error_outline, color: Color(0xFFB91C1C)),
-                    const SizedBox(height: 8),
-                    Text(_error!, textAlign: TextAlign.center),
-                    const SizedBox(height: 12),
-                    OutlinedButton.icon(
-                      onPressed: _load,
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Reintentar'),
-                    ),
-                  ],
-                ),
-              ),
+        if (_error != null) ...[
+          PaInfo(_error!, tone: PaTone.error),
+          NeuButton('Reintentar',
+              kind: NeuButtonKind.alt,
+              icon: Icons.refresh_rounded,
+              onPressed: _load),
+        ] else if (_loading && _items.isEmpty)
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.all(36),
+              child: CircularProgressIndicator(color: Color(0xFFEA580C)),
             ),
           )
+        else if (filtered.isEmpty)
+          PaEmpty(_loading
+              ? 'Cargando solicitudes…'
+              : 'No hay ${names[selected].toLowerCase()} por mostrar.')
         else
-          Expanded(
-            child: _loading && _items.isEmpty
-                ? const Center(child: CircularProgressIndicator())
-                : filtered.isEmpty
-                    ? Center(
-                        child: Text(
-                          _loading
-                              ? 'Cargando solicitudes…'
-                              : 'No hay ${statusLabels[_selectedStatus]?.toLowerCase()} por mostrar.',
-                          style: const TextStyle(color: Color(0xFF64748B)),
-                        ),
-                      )
-                    : ListView.separated(
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
-                        itemCount: filtered.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 8),
-                        itemBuilder: (context, index) {
-                          final item = filtered[index];
-                          final teacherName = users
-                                  .where((user) => user.id == item.docenteId)
-                                  .map((user) => user.nombre)
-                                  .firstOrNull ??
-                              item.docenteId;
-                          final isPending =
-                              item.estado.toUpperCase() == 'PENDIENTE';
-                          return _CertificationCard(
-                            certification: item,
-                            teacherName: teacherName,
-                            isReviewing: _reviewingIds.contains(item.id),
-                            isOpeningPdf: _openingPdfIds.contains(item.id),
-                            onOpenPdf: () => _openPdf(item),
-                            onApprove: isPending
-                                ? () => _review(item, 'APROBADA')
-                                : null,
-                            onReject: isPending
-                                ? () => _review(item, 'RECHAZADA')
-                                : null,
-                          );
-                        },
-                      ),
-          ),
+          for (final item in filtered)
+            _CertificationCard(
+              certification: item,
+              teacherName: users
+                      .where((user) => user.id == item.docenteId)
+                      .map((user) => user.nombre)
+                      .firstOrNull ??
+                  item.docenteId,
+              isBusy: _reviewingIds.contains(item.id) ||
+                  _openingPdfIds.contains(item.id),
+              onOpen: () => _openAndReview(item),
+            ),
       ],
     );
   }
@@ -365,131 +320,61 @@ class _CertificationCard extends StatelessWidget {
   const _CertificationCard({
     required this.certification,
     required this.teacherName,
-    required this.isReviewing,
-    required this.isOpeningPdf,
-    required this.onOpenPdf,
-    required this.onApprove,
-    required this.onReject,
+    required this.isBusy,
+    required this.onOpen,
   });
 
   final _Certification certification;
   final String teacherName;
-  final bool isReviewing;
-  final bool isOpeningPdf;
-  final VoidCallback onOpenPdf;
-  final VoidCallback? onApprove;
-  final VoidCallback? onReject;
+  final bool isBusy;
+  final VoidCallback onOpen;
 
   @override
   Widget build(BuildContext context) {
-    final stateColor = switch (certification.estado.toUpperCase()) {
-      'APROBADA' => const Color(0xFF15803D),
-      'RECHAZADA' => const Color(0xFFB91C1C),
-      _ => const Color(0xFFB45309),
+    final estado = certification.estado.toUpperCase();
+    final pending = estado == 'PENDIENTE';
+    final (label, tone) = switch (estado) {
+      'APROBADA' => ('Aceptada', PaTone.ok),
+      'RECHAZADA' => ('Rechazada', PaTone.error),
+      _ => ('Pendiente', PaTone.warn),
     };
-    return Card(
-      elevation: 0,
-      color: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: Color(0xFFE7EAF0)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    certification.dondeLaDio,
-                    style: const TextStyle(
-                      color: Color(0xFF1E293B),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: stateColor.withValues(alpha: .1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    certification.estado,
-                    style: TextStyle(
-                      color: stateColor,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 5),
-            Text(
-              'Docente: $teacherName',
-              style: const TextStyle(
-                color: Color(0xFF475569),
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 3),
-            Text(
-              '${certification.lugar} · ${certification.duracion}'
-              '${certification.creadaEn.isEmpty ? '' : ' · ${certification.creadaEn}'}',
-              style: const TextStyle(
-                color: Color(0xFF64748B),
-                fontSize: 10,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              alignment: WrapAlignment.end,
-              spacing: 6,
-              runSpacing: 6,
-              children: [
-                OutlinedButton.icon(
-                  onPressed: isOpeningPdf ? null : onOpenPdf,
-                  icon: isOpeningPdf
-                      ? const SizedBox(
-                          width: 14,
-                          height: 14,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.picture_as_pdf_outlined, size: 15),
-                  label: Text(isOpeningPdf ? 'Abriendo…' : 'Ver PDF'),
-                ),
-                if (onApprove != null)
-                  FilledButton.tonalIcon(
-                    onPressed: isReviewing ? null : onApprove,
-                    icon: const Icon(Icons.check, size: 15),
-                    label: const Text('Aceptar'),
-                  ),
-                if (onReject != null)
-                  TextButton.icon(
-                    onPressed: isReviewing ? null : onReject,
-                    icon: const Icon(Icons.close, size: 15),
-                    label: const Text('Rechazar'),
-                    style: TextButton.styleFrom(
-                      foregroundColor: const Color(0xFFB91C1C),
-                    ),
-                  ),
-                if (isReviewing)
-                  const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-              ],
-            ),
-          ],
+    final detalle = [
+      'Certificado de tutorías dictadas',
+      if (certification.dondeLaDio.isNotEmpty) certification.dondeLaDio,
+      if (certification.lugar.isNotEmpty) certification.lugar,
+    ].join(' · ');
+    Widget field(String title, String value) => Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: const BoxDecoration(
+              border: Border(top: BorderSide(color: Neu.line))),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(title.toUpperCase(),
+                style: neuBody(size: 11, color: Neu.muted, letterSpacing: .4)),
+            const SizedBox(height: 2),
+            Text(value, style: neuBody(size: 15, weight: FontWeight.w700)),
+          ]),
+        );
+    return PaCard(
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Expanded(
+              child: Text(teacherName,
+                  style: neuPoppins(size: 16, weight: FontWeight.w700))),
+          PaTag(label, tone: tone),
+        ]),
+        const SizedBox(height: 4),
+        Text(detalle, style: neuBody(size: 14, color: Neu.muted, height: 1.35)),
+        const SizedBox(height: 8),
+        field('Horas de tutoría dictadas', certification.duracion),
+        field('Archivo subido por el docente', certification.nombreArchivo),
+        const SizedBox(height: 10),
+        NeuButton(
+          pending ? 'Ver PDF y revisar' : 'Ver PDF',
+          icon: Icons.description_outlined,
+          onPressed: isBusy ? null : onOpen,
         ),
-      ),
+      ]),
     );
   }
 }

@@ -16,8 +16,8 @@ class _TutorCard extends StatelessWidget {
           contentPadding:
               const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           leading: Container(
-            width: 42,
-            height: 42,
+            width: 54,
+            height: 54,
             decoration: BoxDecoration(
               color: const Color(0xFFE7F1FC),
               borderRadius: BorderRadius.circular(12),
@@ -70,8 +70,16 @@ class _TutoringCard extends StatelessWidget {
   final VoidCallback? onOpenHistory;
 
   @override
-  Widget build(BuildContext context) => Card(
+  Widget build(BuildContext context) {
+    final isVirtual = tutoring.modality.toUpperCase() != 'PRESENCIAL';
+    final modalityColor =
+        isVirtual ? const Color(0xFF1769AA) : const Color(0xFF16805D);
+    return Card(
         margin: const EdgeInsets.only(bottom: 12),
+        color: Colors.white,
+        elevation: 1,
+        shadowColor: const Color(0x10141E3C),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         child: Padding(
           padding: const EdgeInsets.all(18),
           child: Column(
@@ -87,6 +95,35 @@ class _TutoringCard extends StatelessWidget {
                 ),
                 _StatusPill(text: _statusLabel(tutoring.status)),
               ]),
+              const SizedBox(height: 9),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: modalityColor.withValues(alpha: .09),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      isVirtual
+                          ? Icons.videocam_outlined
+                          : Icons.location_on_outlined,
+                      size: 15,
+                      color: modalityColor,
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      _modalityLabel(tutoring.modality),
+                      style: TextStyle(
+                        color: modalityColor,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               const SizedBox(height: 10),
               Text(
                 tutoring.start == null
@@ -100,8 +137,6 @@ class _TutoringCard extends StatelessWidget {
                 Text('Docente: $teacherName',
                     style: const TextStyle(color: _muted)),
               if (teacherName.isNotEmpty) const SizedBox(height: 5),
-              Text('Modalidad: ${_modalityLabel(tutoring.modality)}',
-                  style: const TextStyle(color: _muted)),
               if (onJoinRoom != null) ...[
                 const SizedBox(height: 12),
                 FilledButton.icon(
@@ -137,6 +172,7 @@ class _TutoringCard extends StatelessWidget {
           ),
         ),
       );
+  }
 }
 
 class _GroupSessionCard extends StatelessWidget {

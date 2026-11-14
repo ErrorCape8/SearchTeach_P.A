@@ -12,7 +12,10 @@ int _porSemestre(PaColectiva a, PaColectiva b) => a.semestre != b.semestre
 
 /// `clid`: cronograma de tutorías colectivas con su líder, apoyos y aula.
 class PaLideresPage extends ConsumerStatefulWidget {
-  const PaLideresPage({super.key});
+  const PaLideresPage({this.leading, super.key});
+
+  /// Avatar de perfil cuando la página es una pestaña del panel.
+  final Widget? leading;
 
   @override
   ConsumerState<PaLideresPage> createState() => _PaLideresPageState();
@@ -29,6 +32,7 @@ class _PaLideresPageState extends ConsumerState<PaLideresPage> {
     return PaScaffold(
       title: 'Tutores líderes',
       subtitle: 'Cronograma de tutorías colectivas',
+      leading: widget.leading,
       children: [
         PaSegmented(
           labels: const ['Tabla', 'Lista'],
@@ -292,20 +296,23 @@ class _PaAsignacionPageState extends ConsumerState<PaAsignacionPage> {
 
 /// `crep`: reportes consolidados enviados por los docentes líderes.
 class PaReportesPage extends ConsumerWidget {
-  const PaReportesPage({super.key});
+  const PaReportesPage({this.leading, super.key});
+  final Widget? leading;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final st = ref.watch(paStoreProvider);
+    final reportes = st.reportesDeLider; // solo lo que envía el docente líder
     return PaScaffold(
       title: 'Reportes',
       subtitle: 'Enviados por docentes líderes',
+      leading: leading,
       children: [
-        if (st.reportes.isEmpty)
+        if (reportes.isEmpty)
           const PaEmpty('Aún no hay reportes.')
         else
           PaRowList([
-            for (final r in st.reportes)
+            for (final r in reportes)
               PaRow(
                 icon: Icons.inbox_outlined,
                 title: st.colectiva(r.colId).materia,
@@ -346,16 +353,18 @@ class _PaReporteDetallePageState extends ConsumerState<PaReporteDetallePage> {
   Widget build(BuildContext context) {
     final r = widget.reporte;
     final c = ref.read(paStoreProvider).colectiva(r.colId);
+    // Solo el reporte del líder: su asistencia y sus propias rúbricas.
+    final propias = r.rubricas.where((x) => paMismoNombre(x.por, r.por)).toList();
     final presentes = r.asistencia.values.where((v) => v).length;
-    final promedios = r.rubricas.map((x) => x.promedio).toList();
+    final promedios = propias.map((x) => x.promedio).toList();
 
     return PaScaffold(
       title: c.materia,
-      subtitle: 'Reporte consolidado · ${r.fecha}',
+      subtitle: 'Reporte del docente líder · ${r.fecha}',
       children: [
         PaKpiRow([
           ('$presentes/${r.asistencia.length}', 'Asistentes'),
-          ('${r.rubricas.length}', 'Rúbricas'),
+          ('${propias.length}', 'Rúbricas'),
           (
             promedios.isEmpty ? '—' : paPromedio(promedios).toStringAsFixed(1),
             'Promedio'
@@ -372,19 +381,48 @@ class _PaReporteDetallePageState extends ConsumerState<PaReporteDetallePage> {
                   tone: e.value ? PaTone.ok : PaTone.error),
             ),
         ]),
-        const PaSection('Rúbricas de apoyo'),
+        const PaSection('Rúbricas del líder'),
         PaRowList([
-          for (final x in r.rubricas)
+          for (final x in propias)
             PaRow(
               icon: Icons.description_outlined,
               title: x.estudiante,
-              subtitle: 'Evaluó: ${x.por}${x.obs.isEmpty ? '' : ' · ${x.obs}'}',
+              subtitle: x.obs.isEmpty ? 'Evaluó: ${x.por}' : x.obs,
               trailing: PaTag('${x.promedio.toStringAsFixed(1)} / 5'),
             ),
         ], empty: 'Sin rúbricas.'),
-        PaHint(
-            'Líder: ${r.por} · Apoyo: ${c.apoyo.isEmpty ? '—' : c.apoyo.join(', ')}'),
+        PaHint('Reporte enviado por el líder ${r.por}.'),
       ],
+    );
+  }
+}
+
+bool _mismaCarrera(String a, String b) {
+  final x = paNorm(a), y = paNorm(b);
+  if (x.isEmpty || y.isEmpty) return false;
+  return x == y || x.contains(y) || y.contains(x);
+}
+
+/// Al tocar un proyecto: abre únicamente el reporte de su docente líder.
+/// Si el líder todavía no lo envió, muestra un aviso vacío.
+class PaReporteLiderPage extends ConsumerWidget {
+  const PaReporteLiderPage({required this.carrera, this.semestre, super.key});
+  final String carrera;
+  final int? semestre;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final st = ref.watch(paStoreProvider);
+    final propios = st.reportesDeLider.where((r) {
+      final c = st.colectiva(r.colId);
+      return (semestre == null || c.semestre == semestre) &&
+          _mismaCarrera(c.carrera, carrera);
+    }).toList();
+    if (propios.isNotEmpty) return PaReporteDetallePage(reporte: propios.first);
+    return PaScaffold(
+      title: 'Reporte del líder',
+      subtitle: carrera,
+      children: const [PaEmpty('El docente líder aún no ha enviado su reporte.')],
     );
   }
 }

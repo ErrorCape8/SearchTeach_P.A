@@ -3,6 +3,8 @@ import '../../../core/widgets/role_toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../auth/auth_repository.dart';
+import '../../../core/neu/neu.dart';
+import '../../pa/pa_widgets.dart';
 import '../admin_controller.dart';
 
 class AdminPerfilView extends ConsumerWidget {
@@ -85,321 +87,68 @@ class AdminPerfilView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(adminControllerProvider);
     final profile = state.adminProfile;
-    String showValue(String? value) {
+    String show(String? value) {
       if (value == null) return 'Cargando…';
-      return value.isEmpty ? 'No registrado' : value;
+      return value.isEmpty ? '—' : value;
     }
 
+    PaRow locked(String title, String? value) => PaRow(
+        icon: Icons.lock_outline_rounded, title: title, subtitle: show(value));
+
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
+      padding: EdgeInsets.fromLTRB(
+          18, 4, 18, 32 + MediaQuery.paddingOf(context).bottom),
       children: [
-        if (state.profileError != null)
-          Container(
-            padding: const EdgeInsets.all(12),
-            margin: const EdgeInsets.only(bottom: 16),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFEE2E2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(state.profileError!),
-                TextButton.icon(
-                  onPressed: () =>
-                      ref.read(adminControllerProvider.notifier).loadProfile(),
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Reintentar'),
-                ),
-              ],
-            ),
+        if (state.profileError != null) ...[
+          PaInfo(state.profileError!, tone: PaTone.error),
+          NeuButton('Reintentar',
+              kind: NeuButtonKind.alt,
+              icon: Icons.refresh_rounded,
+              onPressed: () =>
+                  ref.read(adminControllerProvider.notifier).loadProfile()),
+        ],
+        const PaSection('Datos que puedes editar'),
+        PaRowList([
+          PaRow(
+            icon: Icons.phone_outlined,
+            title: show(profile?.telefono),
+            subtitle: 'Teléfono',
+            onTap: state.isLoadingProfile || profile == null
+                ? null
+                : () => _showEditPhoneDialog(context, ref, profile.telefono),
           ),
-        // Datos que puedes editar
-        const Text(
-          'Datos que puedes editar',
-          style: TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w800,
-            color: Color(0xFF1E293B),
+        ]),
+        const PaSection('Seguridad'),
+        PaRowList([
+          PaRow(
+            icon: Icons.lock_outline_rounded,
+            title: 'Cambiar contraseña',
+            subtitle: 'Mínimo 8 caracteres.',
+            onTap: () => context.push('/forgot-password'),
           ),
+        ]),
+        const PaSection('Datos institucionales'),
+        PaRowList([
+          locked('Correo', profile?.correo),
+          locked('Documento', profile?.documento),
+          locked('Programa', profile?.programa),
+          locked('Rol', profile?.rol),
+        ]),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 0, 4, 18),
+          child: Text('Estos datos los gestiona TI.',
+              style: neuBody(size: 12.5, color: Neu.muted)),
         ),
-        const SizedBox(height: 10),
-        InkWell(
-          onTap: state.isLoadingProfile || profile == null
-              ? null
-              : () => _showEditPhoneDialog(context, ref, profile.telefono),
-          borderRadius: BorderRadius.circular(18),
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.02),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFF1E6),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
-                    Icons.phone_outlined,
-                    color: Color(0xFFEA580C),
-                    size: 22,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        showValue(profile?.telefono),
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF1E293B),
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      const Text(
-                        'Teléfono',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF64748B),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const Icon(
-                  Icons.chevron_right_rounded,
-                  color: Color(0xFF94A3B8),
-                  size: 24,
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 22),
-
-        // Seguridad
-        const Text(
-          'Seguridad',
-          style: TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w800,
-            color: Color(0xFF1E293B),
-          ),
-        ),
-        const SizedBox(height: 10),
-        InkWell(
-          onTap: () => context.push('/forgot-password'),
-          borderRadius: BorderRadius.circular(18),
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.02),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFF1E6),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
-                    Icons.lock_outline_rounded,
-                    color: Color(0xFFEA580C),
-                    size: 22,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Cambiar contraseña',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF1E293B),
-                        ),
-                      ),
-                      SizedBox(height: 2),
-                      Text(
-                        'Solicita un enlace seguro de recuperación.',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF64748B),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(
-                  Icons.chevron_right_rounded,
-                  color: const Color(0xFF94A3B8),
-                  size: 24,
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 22),
-
-        // Datos de la cuenta
-        const Text(
-          'Datos de la cuenta',
-          style: TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w800,
-            color: Color(0xFF1E293B),
-          ),
-        ),
-        const SizedBox(height: 10),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.02),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Column(
-            children: [
-              _buildInstitutionalRow(
-                icon: Icons.email_outlined,
-                title: 'Correo',
-                value: showValue(profile?.correo),
-              ),
-              const Divider(height: 18, color: Color(0xFFF1F5F9)),
-              _buildInstitutionalRow(
-                icon: Icons.admin_panel_settings_outlined,
-                title: 'Rol',
-                value: showValue(profile?.rol),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 26),
-
-        // Botón Cerrar sesión
-        SizedBox(
-          width: double.infinity,
-          height: 48,
-          child: ElevatedButton(
-            onPressed: () async {
-              await ref.read(authRepositoryProvider).logout();
-              if (context.mounted) {
-                context.go('/login');
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFEE2E2),
-              foregroundColor: const Color(0xFF991B1B),
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-            ),
-            child: const Text(
-              'Cerrar sesión',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
+        NeuButton(
+          'Cerrar sesión',
+          kind: NeuButtonKind.danger,
+          icon: Icons.logout_rounded,
+          onPressed: () async {
+            await ref.read(authRepositoryProvider).logout();
+            if (context.mounted) context.go('/login');
+          },
         ),
       ],
-    );
-  }
-
-  Widget _buildInstitutionalRow({
-    required IconData icon,
-    required String title,
-    required String value,
-    VoidCallback? onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Row(
-          children: [
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFF1E6),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(
-                icon,
-                color: Color(0xFFEA580C),
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 14.5,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF1E293B),
-                    ),
-                  ),
-                  const SizedBox(height: 1),
-                  Text(
-                    value,
-                    style: const TextStyle(
-                      fontSize: 12.5,
-                      color: Color(0xFF64748B),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (onTap != null)
-              const Icon(Icons.edit_outlined,
-                  color: Color(0xFFEA580C), size: 19),
-          ],
-        ),
-      ),
     );
   }
 }
