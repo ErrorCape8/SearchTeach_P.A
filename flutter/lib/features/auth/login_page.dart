@@ -124,9 +124,21 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         _loginAccent,
       ),
       child: Scaffold(
-        backgroundColor: Neu.bg,
-        body: SafeArea(
-          child: Center(
+        // Enhanced background with radial gradient
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: RadialGradient(
+              center: Alignment(0.0, -0.5),
+              radius: 1.2,
+              colors: [
+                Neu.bg.withOpacity(0.9),
+                Neu.bg.withOpacity(0.7),
+                Neu.bg.withOpacity(0.5),
+              ],
+            ),
+          ),
+          child: SafeArea(
+            child: Center(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
               child: ConstrainedBox(
@@ -138,15 +150,28 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Image.asset(
-                          'assets/images/logo_login.png',
-                          width: 48,
-                          height: 48,
-                          fit: BoxFit.contain,
-                          errorBuilder: (_, __, ___) => const Icon(
-                            Icons.school_rounded,
-                            size: 40,
-                            color: _loginAccent,
+                        Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: _loginAccent.withOpacity(0.4),
+                                blurRadius: 16,
+                                spreadRadius: 2,
+                              ),
+                            ],
+                          ),
+                          child: Image.asset(
+                            'assets/images/logo_login.png',
+                            width: 56,
+                            height: 56,
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) => const Icon(
+                              Icons.school_rounded,
+                              size: 48,
+                              color: _loginAccent,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -159,16 +184,16 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                   TextSpan(
                                     text: 'Search',
                                     style: neuPoppins(
-                                      size: 24,
-                                      weight: FontWeight.w700,
+                                      size: 28,
+                                      weight: FontWeight.w800,
                                       color: Neu.heading,
                                     ),
                                   ),
                                   TextSpan(
                                     text: 'Teach',
                                     style: neuPoppins(
-                                      size: 24,
-                                      weight: FontWeight.w700,
+                                      size: 28,
+                                      weight: FontWeight.w800,
                                       color: _loginAccent,
                                     ),
                                   ),

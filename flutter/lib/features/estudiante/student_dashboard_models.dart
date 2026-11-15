@@ -392,36 +392,52 @@ class StudentProjectSession {
 
 final studentProjectFollowupProvider =
     FutureProvider.autoDispose<List<StudentProjectFollowup>>((ref) async {
-  final response = await ref.read(dioProvider).get<List<dynamic>>(
-        '/api/estudiante/tutorias-colectivas/seguimiento',
-      );
-  return (response.data ?? const [])
-      .whereType<Map<String, dynamic>>()
-      .map(StudentProjectFollowup.fromJson)
-      .toList();
+  try {
+    final response = await ref.read(dioProvider).get<List<dynamic>>(
+          '/api/estudiante/tutorias-colectivas/seguimiento',
+        );
+    return (response.data ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .map(StudentProjectFollowup.fromJson)
+        .toList();
+  } on DioException catch (e) {
+    if ((e.response?.statusCode ?? 0) == 404) return const [];
+    rethrow;
+  }
 });
 
 final studentDashboardProvider =
     FutureProvider.autoDispose<StudentDashboardData>((ref) async {
   final dio = ref.read(dioProvider);
-  final profileRequest = dio.get<Map<String, dynamic>>('/api/usuarios/perfil');
-  final tutorsRequest = dio.get<List<dynamic>>('/api/tutorias/disponibles');
-  final tutoringsRequest = dio.get<List<dynamic>>('/api/tutorias');
-  final projectsRequest =
-      dio.get<List<dynamic>>('/api/estudiante/tutorias-colectivas/espacios');
-  await Future.wait<Object>([
-    profileRequest,
-    tutorsRequest,
-    tutoringsRequest,
-    projectsRequest,
-  ]);
-  final profileJson = (await profileRequest).data;
+
+  // Helper: retorna lista vacía si el endpoint da 404 (datos aún no disponibles)
+  Future<List<dynamic>> safeList(String path) async {
+    try {
+      final r = await dio.get<List<dynamic>>(path);
+      return r.data ?? const [];
+    } on DioException catch (e) {
+      if ((e.response?.statusCode ?? 0) == 404) return const [];
+      rethrow;
+    }
+  }
+
+  // El perfil es obligatorio; cualquier otro error en él sí es fatal.
+  final profileJson =
+      (await dio.get<Map<String, dynamic>>('/api/usuarios/perfil')).data;
   if (profileJson == null) {
     throw const FormatException('El servidor devolvió un perfil vacío.');
   }
-  final tutorsJson = (await tutorsRequest).data ?? const [];
-  final tutoringsJson = (await tutoringsRequest).data ?? const [];
-  final projectsJson = (await projectsRequest).data ?? const [];
+
+  final results = await Future.wait<List<dynamic>>([
+    safeList('/api/tutorias/disponibles'),
+    safeList('/api/tutorias'),
+    safeList('/api/estudiante/tutorias-colectivas/espacios'),
+  ]);
+
+  final tutorsJson = results[0];
+  final tutoringsJson = results[1];
+  final projectsJson = results[2];
+
   final profile = StudentProfile.fromJson(profileJson);
   final tutors = tutorsJson
       .whereType<Map<String, dynamic>>()
@@ -467,15 +483,23 @@ final studentDashboardProvider =
 final studentGroupSessionsProvider =
     FutureProvider.autoDispose<StudentGroupSessionsData>((ref) async {
   final dio = ref.read(dioProvider);
-  final enrolledRequest = dio.get<List<dynamic>>('/api/tutorias/grupales');
-  final availableRequest =
-      dio.get<List<dynamic>>('/api/tutorias/grupales/disponibles');
-  final results = await Future.wait<Response<List<dynamic>>>([
-    enrolledRequest,
-    availableRequest,
+
+  Future<List<dynamic>> safeList(String path) async {
+    try {
+      final r = await dio.get<List<dynamic>>(path);
+      return r.data ?? const [];
+    } on DioException catch (e) {
+      if ((e.response?.statusCode ?? 0) == 404) return const [];
+      rethrow;
+    }
+  }
+
+  final results = await Future.wait<List<dynamic>>([
+    safeList('/api/tutorias/grupales'),
+    safeList('/api/tutorias/grupales/disponibles'),
   ]);
-  final enrolled = results[0].data ?? const <dynamic>[];
-  final available = results[1].data ?? const <dynamic>[];
+  final enrolled = results[0];
+  final available = results[1];
   return StudentGroupSessionsData(
     enrolled: enrolled
         .whereType<Map<String, dynamic>>()

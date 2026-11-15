@@ -513,3 +513,22 @@ final paDocentesProvider = FutureProvider.autoDispose<List<String>>((ref) async 
     return seed;
   }
 });
+
+/// Mapa id → nombre para resolver IDs numéricos que llegan del API.
+final paDocenteMapProvider =
+    FutureProvider.autoDispose<Map<String, String>>((ref) async {
+  try {
+    final r = await ref
+        .read(dioProvider)
+        .get<List<dynamic>>('/api/coordinacion/docentes');
+    return {
+      for (final e in (r.data ?? const <dynamic>[])
+          .whereType<Map<String, dynamic>>())
+        if ((e['id'] ?? e['_id'] ?? '').toString().isNotEmpty &&
+            (e['nombre'] ?? '').toString().isNotEmpty)
+          (e['id'] ?? e['_id']).toString(): (e['nombre']).toString(),
+    };
+  } on DioException {
+    return const {};
+  }
+});

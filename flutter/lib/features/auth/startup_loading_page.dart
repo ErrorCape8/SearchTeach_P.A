@@ -30,22 +30,39 @@ class _StartupLoadingPageState extends State<StartupLoadingPage> {
     'Preparando tu espacio y tutorías',
   ];
 
-  int _step = 0;
-  Timer? _timer;
+    double _progress = 0.0;
+    final List<String> _messages = [
+      'Cargando tutorías…',
+      'Preparando todo…',
+      'Casi listo…',
+    ];
+    int _msgIndex = 0;
+    Timer? _progressTimer;
 
-  @override
-  void initState() {
-    super.initState();
-    _timer = Timer.periodic(const Duration(seconds: 3), (_) {
-      if (mounted) setState(() => _step = (_step + 1) % _steps.length);
-    });
-  }
+    @override
+    void initState() {
+      super.initState();
+      // Increment progress smoothly, update message at thresholds
+      _progressTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
+        if (!mounted) return;
+        setState(() {
+          _progress = (_progress + 0.07).clamp(0.0, 1.0);
+          // Change message when progress passes 33% and 66%
+          if (_progress > 0.33 && _msgIndex == 0) _msgIndex = 1;
+          if (_progress > 0.66 && _msgIndex == 1) _msgIndex = 2;
+        });
+        if (_progress >= 1.0) {
+          _progressTimer?.cancel();
+        }
+      });
+    }
 
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
+    @override
+    void dispose() {
+      _progressTimer?.cancel();
+      super.dispose();
+    }
+
 
   @override
   Widget build(BuildContext context) {
@@ -79,20 +96,26 @@ class _StartupLoadingPageState extends State<StartupLoadingPage> {
                   ),
                   const SizedBox(height: 24),
                   if (error == null) ...[
-                    // Linear progress bar simulating fast start to 75%
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 8),
-                      child: NeuLinearProgressBar(
-                        color: _brandBlue,
-                        height: 12,
+                    // Linear progress bar showing actual progress
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: LinearProgressIndicator(
+                          value: _progress,
+                          minHeight: 12,
+                          backgroundColor: Neu.muted.withOpacity(0.2),
+                          valueColor: const AlwaysStoppedAnimation<Color>(_brandBlue),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 16),
+                    // Message that changes as progress advances
                     AnimatedSwitcher(
                       duration: const Duration(milliseconds: 250),
                       child: Text(
-                        _steps[_step],
-                        key: ValueKey(_step),
+                        _messages[_msgIndex],
+                        key: ValueKey<int>(_msgIndex),
                         textAlign: TextAlign.center,
                         style: neuBody(
                           size: 13.5,
