@@ -24,45 +24,37 @@ class StartupLoadingPage extends StatefulWidget {
 
 class _StartupLoadingPageState extends State<StartupLoadingPage> {
   static const _brandBlue = Color(0xFF1E3FA8);
-  static const _steps = [
-    'Conectando con SearchTeach',
-    'Verificando credenciales',
-    'Preparando tu espacio y tutorías',
+
+  double _progress = 0.0;
+  final List<String> _messages = [
+    'Cargando tutorías…',
+    'Preparando todo…',
+    'Casi listo…',
   ];
+  int _msgIndex = 0;
+  Timer? _progressTimer;
 
-    double _progress = 0.0;
-    final List<String> _messages = [
-      'Cargando tutorías…',
-      'Preparando todo…',
-      'Casi listo…',
-    ];
-    int _msgIndex = 0;
-    Timer? _progressTimer;
-
-    @override
-    void initState() {
-      super.initState();
-      // Increment progress smoothly, update message at thresholds
-      _progressTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
-        if (!mounted) return;
-        setState(() {
-          _progress = (_progress + 0.07).clamp(0.0, 1.0);
-          // Change message when progress passes 33% and 66%
-          if (_progress > 0.33 && _msgIndex == 0) _msgIndex = 1;
-          if (_progress > 0.66 && _msgIndex == 1) _msgIndex = 2;
-        });
-        if (_progress >= 1.0) {
-          _progressTimer?.cancel();
-        }
+  @override
+  void initState() {
+    super.initState();
+    _progressTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
+      if (!mounted) return;
+      setState(() {
+        _progress = (_progress + 0.07).clamp(0.0, 1.0);
+        if (_progress > 0.33 && _msgIndex == 0) _msgIndex = 1;
+        if (_progress > 0.66 && _msgIndex == 1) _msgIndex = 2;
       });
-    }
+      if (_progress >= 1.0) {
+        _progressTimer?.cancel();
+      }
+    });
+  }
 
-    @override
-    void dispose() {
-      _progressTimer?.cancel();
-      super.dispose();
-    }
-
+  @override
+  void dispose() {
+    _progressTimer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -83,7 +75,8 @@ class _StartupLoadingPageState extends State<StartupLoadingPage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const BrandLogo(width: 140, height: 86, accentColor: _brandBlue),
+                  const BrandLogo(
+                      width: 140, height: 86, accentColor: _brandBlue),
                   const SizedBox(height: 18),
                   Text(
                     'Preparando SearchTeach',
@@ -96,7 +89,6 @@ class _StartupLoadingPageState extends State<StartupLoadingPage> {
                   ),
                   const SizedBox(height: 24),
                   if (error == null) ...[
-                    // Linear progress bar showing actual progress
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 8),
                       child: ClipRRect(
@@ -105,12 +97,12 @@ class _StartupLoadingPageState extends State<StartupLoadingPage> {
                           value: _progress,
                           minHeight: 12,
                           backgroundColor: Neu.muted.withOpacity(0.2),
-                          valueColor: const AlwaysStoppedAnimation<Color>(_brandBlue),
+                          valueColor:
+                              const AlwaysStoppedAnimation<Color>(_brandBlue),
                         ),
                       ),
                     ),
                     const SizedBox(height: 16),
-                    // Message that changes as progress advances
                     AnimatedSwitcher(
                       duration: const Duration(milliseconds: 250),
                       child: Text(
@@ -162,8 +154,6 @@ class _StartupLoadingPageState extends State<StartupLoadingPage> {
   }
 }
 
-/// Barra lineal de carga neumórfica que avanza con rapidez hasta el 75%
-/// para brindar la sensación de carga inmediata, y luego continúa gradualmente.
 class NeuLinearProgressBar extends StatefulWidget {
   const NeuLinearProgressBar({
     this.initialTarget = 0.75,
@@ -196,14 +186,14 @@ class _NeuLinearProgressBarState extends State<NeuLinearProgressBar>
       vsync: this,
       duration: widget.initialDuration,
     );
-    _fastAnimation = Tween<double>(begin: 0.0, end: widget.initialTarget).animate(
+    _fastAnimation =
+        Tween<double>(begin: 0.0, end: widget.initialTarget).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
     )..addListener(() {
-        if (mounted) setState(() => _currentProgress = _fastAnimation.value);
-      });
+            if (mounted) setState(() => _currentProgress = _fastAnimation.value);
+          });
 
     _controller.forward().then((_) {
-      // Una vez alcanzado el 75%, avanza sutilmente simulando carga real
       _slowTimer = Timer.periodic(const Duration(milliseconds: 300), (_) {
         if (!mounted) return;
         if (_currentProgress < 0.95) {

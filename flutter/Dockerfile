@@ -1,4 +1,4 @@
-FROM ghcr.io/cirruslabs/flutter:stable AS build
+FROM ghcr.io/cirruslabs/flutter:3.27.4 AS build
 
 ARG API_BASE_URL=http://localhost:8081
 ARG FIREBASE_API_KEY=
@@ -8,6 +8,7 @@ ARG FIREBASE_PROJECT_ID=
 ARG FIREBASE_AUTH_DOMAIN=
 ARG FIREBASE_STORAGE_BUCKET=
 ARG FIREBASE_WEB_VAPID_KEY=
+
 WORKDIR /workspace
 COPY flutter/pubspec.yaml ./
 COPY flutter/ ./

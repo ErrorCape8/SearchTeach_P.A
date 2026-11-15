@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api_client.dart';
+import '../pa/pa_widgets.dart';
 
 class TutoriaHistorialPage extends ConsumerStatefulWidget {
   const TutoriaHistorialPage({
@@ -101,149 +102,244 @@ class _TutoriaHistorialPageState extends ConsumerState<TutoriaHistorialPage> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        backgroundColor: const Color(0xFFF4F7F5),
-        appBar: AppBar(
-          title: const Text('Historial de tutoría'),
-          actions: [
-            IconButton(
-              tooltip: 'Actualizar historial',
-              onPressed: _loading ? null : _loadHistory,
-              icon: const Icon(Icons.refresh),
-            ),
-          ],
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+
+    return PaScaffold(
+      title: 'Historial de tutoría',
+      subtitle: widget.subject,
+      actions: [
+        NeuCircleButton(
+          size: 40,
+          icon: Icons.refresh_rounded,
+          tooltip: 'Actualizar historial',
+          onTap: _loading ? null : _loadHistory,
         ),
-        body: _loading
-            ? const Center(child: CircularProgressIndicator())
-            : _error != null
-                ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(_error!, textAlign: TextAlign.center),
-                          const SizedBox(height: 12),
-                          OutlinedButton.icon(
-                            onPressed: _loadHistory,
-                            icon: const Icon(Icons.refresh),
-                            label: const Text('Reintentar'),
-                          ),
-                        ],
+      ],
+      children: [
+        if (_loading)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 60),
+            child: Center(child: CircularProgressIndicator()),
+          )
+        else if (_error != null)
+          PaCard(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const NeuIconBox(Icons.error_outline_rounded, color: Neu.error),
+                const SizedBox(height: 12),
+                Text(
+                  _error!,
+                  textAlign: TextAlign.center,
+                  style: neuBody(size: 13, color: Neu.muted),
+                ),
+                const SizedBox(height: 16),
+                NeuButton(
+                  'Reintentar',
+                  kind: NeuButtonKind.alt,
+                  small: true,
+                  icon: Icons.refresh_rounded,
+                  expand: false,
+                  onPressed: _loadHistory,
+                ),
+              ],
+            ),
+          )
+        else ...[
+          _sessionHeaderCard(primary),
+          const SizedBox(height: 14),
+          _attendanceCard(primary),
+          if (!widget.isIndividual) ...[
+            const SizedBox(height: 20),
+            Padding(
+              padding: const EdgeInsets.only(left: 4, bottom: 8),
+              child: Text(
+                'Registro del chat',
+                style: neuPoppins(
+                  size: 17,
+                  weight: FontWeight.w700,
+                  color: Neu.heading,
+                ),
+              ),
+            ),
+            if (_messages.isEmpty)
+              PaCard(
+                padding: const EdgeInsets.all(20),
+                child: Center(
+                  child: Text(
+                    'No hay mensajes registrados.',
+                    style: neuBody(size: 13, color: Neu.muted),
+                  ),
+                ),
+              )
+            else
+              for (final message in _messages) ...[
+                _messageCard(message, primary),
+                const SizedBox(height: 10),
+              ],
+          ],
+        ],
+      ],
+    );
+  }
+
+  Widget _sessionHeaderCard(Color primary) {
+    final state = _session?['estadoClase']?.toString().toUpperCase();
+    final (statusLabel, statusTone) = switch (state) {
+      'FINALIZADA' => ('Finalizada', PaTone.ok),
+      'EN_CURSO' => ('En curso', PaTone.warn),
+      'PROGRAMADA' => ('Programada', PaTone.neutral),
+      final val when val != null && val.isNotEmpty => (val, PaTone.neutral),
+      _ => ('Estado no disponible', PaTone.quiet),
+    };
+
+    return PaCard(
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              NeuIconBox(
+                Icons.menu_book_rounded,
+                color: primary,
+                size: 44,
+                iconSize: 22,
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.subject,
+                      style: neuPoppins(
+                        size: 16,
+                        weight: FontWeight.w700,
+                        color: Neu.heading,
                       ),
                     ),
-                  )
-                : ListView(
-                    padding: const EdgeInsets.all(20),
-                    children: [
-                      Card(
-                        child: ListTile(
-                          leading: const CircleAvatar(
-                            child: Icon(Icons.menu_book_outlined),
-                          ),
-                          title: Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  widget.subject,
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.w700),
-                                ),
-                              ),
-                              _statusBadge(_session?['estadoClase']),
-                            ],
-                          ),
-                          subtitle: Text(
-                            '${_dateLabel(_session?['fechaInicio'])}\n'
-                            'Finalización: ${_dateLabel(_session?['fechaFin'])}',
-                          ),
-                          isThreeLine: true,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      _attendanceCard(),
-                      if (!widget.isIndividual) ...[
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Registro del chat',
-                          style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        if (_messages.isEmpty)
-                          const Card(
-                            child: Padding(
-                              padding: EdgeInsets.all(18),
-                              child: Text('No hay mensajes registrados.'),
-                            ),
-                          )
-                        else
-                          for (final message in _messages)
-                            Card(
-                              margin: const EdgeInsets.only(bottom: 8),
-                              child: ListTile(
-                                title: Text(
-                                  message['nombre']?.toString() ??
-                                      message['emisorId']?.toString() ??
-                                      'Participante',
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.w700),
-                                ),
-                                subtitle:
-                                    Text(message['texto']?.toString() ?? ''),
-                                trailing: Text(
-                                  _dateLabel(message['enviadoEn']),
-                                  style: Theme.of(context).textTheme.bodySmall,
-                                ),
-                              ),
-                            ),
-                      ],
-                    ],
-                  ),
-      );
-
-  Widget _statusBadge(Object? value) {
-    final status = switch (value?.toString().toUpperCase()) {
-      'FINALIZADA' => 'Finalizada',
-      'EN_CURSO' => 'En curso',
-      'PROGRAMADA' => 'Programada',
-      final status when status != null && status.isNotEmpty => status,
-      _ => 'Estado no disponible',
-    };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: const Color(0xFFE6F4EA),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Text(
-        status,
-        style: const TextStyle(
-          color: Color(0xFF18352A),
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-        ),
+                    const SizedBox(height: 4),
+                    Text(
+                      widget.isIndividual
+                          ? 'Tutoría individual'
+                          : 'Tutoría colectiva',
+                      style: neuBody(size: 12.5, color: Neu.muted),
+                    ),
+                  ],
+                ),
+              ),
+              PaTag(statusLabel, tone: statusTone),
+            ],
+          ),
+          const SizedBox(height: 16),
+          const Divider(height: 1, color: Neu.line),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              const Icon(Icons.schedule_rounded, size: 16, color: Neu.muted),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  'Inicio: ${_dateLabel(_session?['fechaInicio'])}',
+                  style: neuBody(size: 12.5, color: Neu.text),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              const Icon(Icons.flag_outlined, size: 16, color: Neu.muted),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  'Finalización: ${_dateLabel(_session?['fechaFin'])}',
+                  style: neuBody(size: 12.5, color: Neu.text),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
 
-  Widget _attendanceCard() {
+  Widget _attendanceCard(Color primary) {
     if (widget.isIndividual) {
       final attended = _session?['asistio'];
-      return Card(
-        child: ListTile(
-          leading: Icon(
-            attended == true ? Icons.check_circle : Icons.event_busy_outlined,
-            color: attended == true ? const Color(0xFF16834A) : Colors.blueGrey,
-          ),
-          title: Text(_session?['estudianteId']?.toString() ?? 'Estudiante'),
-          subtitle: Text(attended == true
-              ? 'Asistencia marcada: asistió'
-              : attended == false
-                  ? 'Asistencia marcada: no asistió'
-                  : 'Asistencia sin marcar'),
+      final studentId = _session?['estudianteId']?.toString() ?? 'Estudiante';
+      return PaCard(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                NeuIconBox(
+                  Icons.fact_check_outlined,
+                  color: primary,
+                  size: 40,
+                  iconSize: 20,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Asistencia registrada',
+                    style: neuPoppins(
+                      size: 15,
+                      weight: FontWeight.w700,
+                      color: Neu.heading,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Icon(
+                  attended == true
+                      ? Icons.check_circle_rounded
+                      : attended == false
+                          ? Icons.cancel_rounded
+                          : Icons.help_outline_rounded,
+                  color: attended == true
+                      ? Neu.okFg
+                      : attended == false
+                          ? Neu.errFg
+                          : Neu.muted,
+                  size: 22,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    studentId,
+                    style: neuPoppins(
+                      size: 14,
+                      weight: FontWeight.w600,
+                      color: Neu.heading,
+                    ),
+                  ),
+                ),
+                PaTag(
+                  attended == true
+                      ? 'Asistió'
+                      : attended == false
+                          ? 'No asistió'
+                          : 'Sin marcar',
+                  tone: attended == true
+                      ? PaTone.ok
+                      : attended == false
+                          ? PaTone.error
+                          : PaTone.neutral,
+                ),
+              ],
+            ),
+          ],
         ),
       );
     }
@@ -266,47 +362,149 @@ class _TutoriaHistorialPageState extends ConsumerState<TutoriaHistorialPage> {
     final studentIds = _session?['estudianteIds'] is List
         ? (_session!['estudianteIds'] as List).whereType<String>().toList()
         : names.keys.toList();
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Asistencia registrada',
-              style: TextStyle(fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 8),
-            if (studentIds.isEmpty)
-              const Text('No hay estudiantes registrados en esta tutoría.')
-            else
-              for (final id in studentIds)
-                ListTile(
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(
-                    marked[id] == true
-                        ? Icons.check_circle
-                        : marked[id] == false
-                            ? Icons.cancel
-                            : Icons.help_outline,
-                    color: marked[id] == true
-                        ? const Color(0xFF16834A)
-                        : marked[id] == false
-                            ? const Color(0xFFB3261E)
-                            : Colors.blueGrey,
-                  ),
-                  title: Text(names[id] ?? id),
-                  subtitle: Text(
-                    marked[id] == true
-                        ? 'Asistió'
-                        : marked[id] == false
-                            ? 'No asistió'
-                            : 'Sin marcar',
+
+    return PaCard(
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              NeuIconBox(
+                Icons.fact_check_outlined,
+                color: primary,
+                size: 40,
+                iconSize: 20,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Asistencia registrada',
+                  style: neuPoppins(
+                    size: 15,
+                    weight: FontWeight.w700,
+                    color: Neu.heading,
                   ),
                 ),
-          ],
-        ),
+              ),
+              PaTag(
+                '${studentIds.length} ${studentIds.length == 1 ? 'estudiante' : 'estudiantes'}',
+                tone: PaTone.neutral,
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          if (studentIds.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                'No hay estudiantes registrados en esta tutoría.',
+                style: neuBody(size: 13, color: Neu.muted),
+              ),
+            )
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: studentIds.length,
+              separatorBuilder: (_, __) =>
+                  const Divider(height: 14, color: Neu.line),
+              itemBuilder: (context, index) {
+                final id = studentIds[index];
+                final isAttended = marked[id];
+                return Row(
+                  children: [
+                    Icon(
+                      isAttended == true
+                          ? Icons.check_circle_rounded
+                          : isAttended == false
+                              ? Icons.cancel_rounded
+                              : Icons.help_outline_rounded,
+                      color: isAttended == true
+                          ? Neu.okFg
+                          : isAttended == false
+                              ? Neu.errFg
+                              : Neu.muted,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        names[id] ?? id,
+                        style: neuBody(
+                          size: 13.5,
+                          weight: FontWeight.w600,
+                          color: Neu.heading,
+                        ),
+                      ),
+                    ),
+                    PaTag(
+                      isAttended == true
+                          ? 'Asistió'
+                          : isAttended == false
+                              ? 'No asistió'
+                              : 'Sin marcar',
+                      tone: isAttended == true
+                          ? PaTone.ok
+                          : isAttended == false
+                              ? PaTone.error
+                              : PaTone.neutral,
+                    ),
+                  ],
+                );
+              },
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _messageCard(Map<String, dynamic> message, Color primary) {
+    final senderName = message['nombre']?.toString() ??
+        message['emisorId']?.toString() ??
+        'Participante';
+    final text = message['texto']?.toString() ?? '';
+    final timeStr = _dateLabel(message['enviadoEn']);
+
+    return PaCard(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              NeuIconBox(
+                Icons.person_rounded,
+                color: primary,
+                size: 28,
+                iconSize: 15,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  senderName,
+                  style: neuPoppins(
+                    size: 13.5,
+                    weight: FontWeight.w700,
+                    color: Neu.heading,
+                  ),
+                ),
+              ),
+              Text(
+                timeStr,
+                style: neuBody(size: 11, color: Neu.muted),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.only(left: 36),
+            child: Text(
+              text,
+              style: neuBody(size: 13, color: Neu.text, height: 1.35),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart';
 
 import '../../core/api_client.dart';
+import '../../core/neu/neu.dart';
 import '../../core/widgets/brand_logo.dart';
 
 class LiveKitRoomPage extends ConsumerStatefulWidget {
@@ -692,19 +693,30 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
         Scaffold(
           backgroundColor: _sharedRoomBackground,
           appBar: AppBar(
-            backgroundColor: _roomAccent,
+            backgroundColor: const Color(0xFF161922),
             foregroundColor: Colors.white,
+            elevation: 0,
+            shape: const Border(
+              bottom: BorderSide(color: Color(0xFF262B37), width: 1),
+            ),
             title: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(widget.subject),
+                Text(
+                  widget.subject,
+                  style: neuPoppins(
+                    size: 16,
+                    weight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
                 Text(
                   widget.isProjectMeeting
                       ? 'Reunión de proyecto finalizada'
                       : 'Historial de tutoría',
-                  style: const TextStyle(
+                  style: neuBody(
+                    size: 11,
                     color: Colors.white60,
-                    fontSize: 10,
                   ),
                 ),
               ],
@@ -743,42 +755,73 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
         Scaffold(
           backgroundColor: _sharedRoomBackground,
           appBar: AppBar(
-            backgroundColor: _roomAccent,
+            backgroundColor: const Color(0xFF161922),
             foregroundColor: Colors.white,
-            title: Text(widget.subject),
+            elevation: 0,
+            shape: const Border(
+              bottom: BorderSide(color: Color(0xFF262B37), width: 1),
+            ),
+            title: Text(
+              widget.subject,
+              style: neuPoppins(
+                size: 16,
+                weight: FontWeight.w700,
+                color: Colors.white,
+              ),
+            ),
           ),
           body: Center(
             child: Padding(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(28),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const CircularProgressIndicator(color: Colors.white),
-                  const SizedBox(height: 18),
-                  const Text(
+                  BrandLogo(
+                    width: 130,
+                    height: 80,
+                    accentColor: _roomAccent,
+                  ),
+                  const SizedBox(height: 24),
+                  CircularProgressIndicator(color: _roomAccent),
+                  const SizedBox(height: 20),
+                  Text(
                     'Estás en la sala de espera',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
+                    style: neuPoppins(
                       color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
+                      size: 20,
+                      weight: FontWeight.w700,
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
+                  Text(
                     'Ya notificamos al docente. Entrarás automáticamente a la videollamada en cuanto inicie la tutoría.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white70, fontSize: 13),
+                    style: neuBody(color: Colors.white70, size: 13.5),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 24),
                   OutlinedButton.icon(
                     onPressed: () => Navigator.of(context).maybePop(),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.white,
-                      side: const BorderSide(color: Colors.white38),
+                      side: const BorderSide(color: Color(0xFF383E4E)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 22,
+                        vertical: 12,
+                      ),
                     ),
                     icon: const Icon(Icons.arrow_back),
-                    label: const Text('Salir de la espera'),
+                    label: Text(
+                      'Salir de la espera',
+                      style: neuPoppins(
+                        size: 13.5,
+                        weight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -793,11 +836,34 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
         Scaffold(
           backgroundColor: _sharedRoomBackground,
           appBar: AppBar(
-            backgroundColor: _roomAccent,
+            backgroundColor: const Color(0xFF161922),
             foregroundColor: Colors.white,
-            title: Text(widget.subject),
+            elevation: 0,
+            shape: const Border(
+              bottom: BorderSide(color: Color(0xFF262B37), width: 1),
+            ),
+            title: Text(
+              widget.subject,
+              style: neuPoppins(
+                size: 16,
+                weight: FontWeight.w700,
+                color: Colors.white,
+              ),
+            ),
           ),
-          body: const Center(child: CircularProgressIndicator()),
+          body: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(color: _roomAccent),
+                const SizedBox(height: 16),
+                Text(
+                  'Conectando a la sala…',
+                  style: neuBody(size: 14, color: Colors.white70),
+                ),
+              ],
+            ),
+          ),
         ),
         wide: wide,
       );
@@ -807,9 +873,20 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
         Scaffold(
           backgroundColor: _sharedRoomBackground,
           appBar: AppBar(
-            backgroundColor: _roomAccent,
+            backgroundColor: const Color(0xFF161922),
             foregroundColor: Colors.white,
-            title: Text(widget.subject),
+            elevation: 0,
+            shape: const Border(
+              bottom: BorderSide(color: Color(0xFF262B37), width: 1),
+            ),
+            title: Text(
+              widget.subject,
+              style: neuPoppins(
+                size: 16,
+                weight: FontWeight.w700,
+                color: Colors.white,
+              ),
+            ),
           ),
           body: Center(
             child: Padding(
@@ -817,7 +894,7 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
               child: Text(
                 _error!,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white),
+                style: neuBody(color: Colors.white, size: 14),
               ),
             ),
           ),
@@ -829,33 +906,64 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
       Scaffold(
         backgroundColor: _sharedRoomBackground,
         appBar: AppBar(
-          backgroundColor: _roomAccent,
+          backgroundColor: const Color(0xFF161922),
           foregroundColor: Colors.white,
+          elevation: 0,
+          shape: const Border(
+            bottom: BorderSide(color: Color(0xFF262B37), width: 1),
+          ),
           title: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 widget.subject,
-                style: TextStyle(
-                  fontSize: widget.teacherMode ? 18 : 13,
-                  fontWeight: FontWeight.w700,
+                style: neuPoppins(
+                  size: 16,
+                  weight: FontWeight.w700,
+                  color: Colors.white,
                 ),
               ),
-              Text(
-                '${_room.remoteParticipants.length + (_connected ? 1 : 0)} participantes',
-                style: TextStyle(
-                  fontSize: widget.teacherMode ? 12 : 9,
-                  color: Colors.white70,
-                ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 7,
+                    height: 7,
+                    decoration: BoxDecoration(
+                      color: _roomAccent,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    '${_room.remoteParticipants.length + (_connected ? 1 : 0)} participantes',
+                    style: neuBody(
+                      size: 11.5,
+                      color: Colors.white70,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
           actions: [
             if (!widget.isIndividualTutoring)
-              IconButton(
-                tooltip: _showChat ? 'Ocultar chat' : 'Mostrar chat',
-                onPressed: () => setState(() => _showChat = !_showChat),
-                icon: Icon(_showChat ? Icons.chat : Icons.chat_outlined),
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: IconButton(
+                  tooltip: _showChat ? 'Ocultar chat' : 'Mostrar chat',
+                  style: IconButton.styleFrom(
+                    backgroundColor: _showChat
+                        ? _roomAccent.withOpacity(0.2)
+                        : Colors.transparent,
+                    foregroundColor:
+                        _showChat ? _roomAccent : Colors.white70,
+                  ),
+                  onPressed: () => setState(() => _showChat = !_showChat),
+                  icon: Icon(_showChat
+                      ? Icons.chat_rounded
+                      : Icons.chat_outlined),
+                ),
               ),
           ],
         ),
@@ -990,42 +1098,63 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
       );
 
   Widget _chatPanel() => Container(
-        color: Colors.white,
+        decoration: const BoxDecoration(
+          color: Color(0xFF161922),
+          border: Border(
+            left: BorderSide(color: Color(0xFF262B37), width: 1),
+          ),
+        ),
         child: Column(
           children: [
-            Row(
-              children: [
-                if (!widget.isIndividualTutoring)
-                  _chatTab(
-                    'Chat (${_messages.length})',
-                    !_showPeople,
-                    () => setState(() => _showPeople = false),
-                  ),
-                _chatTab(
-                  widget.isIndividualTutoring
-                      ? 'Asistencia'
-                      : widget.teacherMode
-                          ? 'Asistencia (${widget.students.length})'
-                          : 'Participantes (${widget.students.length + 1})',
-                  _showPeople,
-                  () => setState(() => _showPeople = true),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(10, 10, 10, 4),
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1E222D),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                if (_showPeople)
-                  IconButton(
-                    tooltip: 'Actualizar asistencia',
-                    visualDensity: VisualDensity.compact,
-                    onPressed: _attendanceLoading ? null : _loadAttendance,
-                    icon: _attendanceLoading
-                        ? const SizedBox.square(
-                            dimension: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.refresh, size: 18),
-                  ),
-              ],
+                child: Row(
+                  children: [
+                    if (!widget.isIndividualTutoring)
+                      _chatTab(
+                        'Chat (${_messages.length})',
+                        !_showPeople,
+                        () => setState(() => _showPeople = false),
+                      ),
+                    _chatTab(
+                      widget.isIndividualTutoring
+                          ? 'Asistencia'
+                          : widget.teacherMode
+                              ? 'Asistencia (${widget.students.length})'
+                              : 'Participantes (${widget.students.length + 1})',
+                      _showPeople,
+                      () => setState(() => _showPeople = true),
+                    ),
+                    if (_showPeople)
+                      IconButton(
+                        tooltip: 'Actualizar asistencia',
+                        visualDensity: VisualDensity.compact,
+                        onPressed: _attendanceLoading ? null : _loadAttendance,
+                        icon: _attendanceLoading
+                            ? const SizedBox.square(
+                                dimension: 16,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(Icons.refresh,
+                                size: 18, color: Colors.white70),
+                      ),
+                  ],
+                ),
+              ),
             ),
             if (_showPeople && _attendanceLoading) ...[
-              const LinearProgressIndicator(minHeight: 2),
+              LinearProgressIndicator(
+                minHeight: 2,
+                color: _roomAccent,
+                backgroundColor: Colors.white10,
+              ),
               if (_attendanceSlow)
                 const Padding(
                   padding: EdgeInsets.fromLTRB(12, 8, 12, 4),
@@ -1033,13 +1162,17 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
                     children: [
                       SizedBox.square(
                         dimension: 15,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white70,
+                        ),
                       ),
                       SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           'Conectando con el servidor; la primera carga puede tardar hasta un minuto.',
-                          style: TextStyle(fontSize: 11),
+                          style:
+                              TextStyle(fontSize: 11, color: Colors.white70),
                         ),
                       ),
                     ],
@@ -1048,24 +1181,26 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
             ],
             if (_showPeople && _attendanceError != null)
               Material(
-                color: const Color(0xFFFFF4E5),
+                color: const Color(0xFF382315),
                 child: Padding(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   child: Row(
                     children: [
                       const Icon(Icons.warning_amber_rounded,
-                          color: Color(0xFF9A5A00), size: 17),
+                          color: Color(0xFFFFA726), size: 17),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
                           _attendanceError!,
-                          style: const TextStyle(fontSize: 11),
+                          style: const TextStyle(
+                              fontSize: 11, color: Colors.white),
                         ),
                       ),
                       TextButton(
                         onPressed: _attendanceLoading ? null : _loadAttendance,
-                        child: const Text('Reintentar'),
+                        child: const Text('Reintentar',
+                            style: TextStyle(color: Color(0xFFFFA726))),
                       ),
                     ],
                   ),
@@ -1074,50 +1209,53 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
             if (_showPeople && widget.teacherMode)
               Container(
                 width: double.infinity,
-                color: const Color(0xFFE6F4EA),
+                color: _roomAccent.withOpacity(0.15),
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 child: Text(
                   'Presentes: ${_attendance.values.where((value) => value == true).length} | '
                   'Ausentes: ${_attendance.values.where((value) => value == false).length} | '
                   'Sin registro: ${widget.students.length - _attendance.length}',
-                  style: TextStyle(
+                  style: neuPoppins(
                     color: _roomAccent,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
+                    size: 11,
+                    weight: FontWeight.w700,
                   ),
                 ),
               ),
-            const Divider(height: 1),
+            const Divider(height: 1, color: Color(0xFF262B37)),
             Expanded(
               child: _showPeople
                   ? ListView(
-                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
                       children: [
                         if (widget.students.isEmpty &&
                             !widget.isIndividualTutoring)
-                          const ListTile(
-                            dense: true,
-                            leading: Icon(Icons.info_outline),
-                            title: Text(
+                          Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Text(
                               'Aún no hay estudiantes inscritos.',
-                              style: TextStyle(fontSize: 12),
+                              textAlign: TextAlign.center,
+                              style: neuBody(size: 12, color: Colors.white54),
                             ),
                           ),
                         ListTile(
                           dense: true,
                           leading: CircleAvatar(
-                            radius: widget.teacherMode ? 18 : 13,
+                            radius: widget.teacherMode ? 16 : 13,
+                            backgroundColor: _roomAccent.withOpacity(0.2),
                             child: Icon(
-                              Icons.person,
-                              size: widget.teacherMode ? 18 : 14,
+                              Icons.school_rounded,
+                              size: widget.teacherMode ? 16 : 13,
+                              color: _roomAccent,
                             ),
                           ),
                           title: Text(
                             widget.teacherMode ? 'Tú · Docente' : 'Tutor',
-                            style: TextStyle(
-                              fontSize: widget.teacherMode ? 13 : 10,
-                              fontWeight: FontWeight.w600,
+                            style: neuPoppins(
+                              size: widget.teacherMode ? 13 : 11,
+                              weight: FontWeight.w600,
+                              color: Colors.white,
                             ),
                           ),
                         ),
@@ -1125,18 +1263,20 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
                           ListTile(
                             dense: true,
                             leading: CircleAvatar(
-                              radius: widget.teacherMode ? 18 : 13,
-                              backgroundColor: const Color(0xFFE6EEFF),
+                              radius: widget.teacherMode ? 16 : 13,
+                              backgroundColor: const Color(0xFF252A36),
                               child: Icon(
-                                Icons.person_outline,
-                                size: widget.teacherMode ? 18 : 14,
-                                color: const Color(0xFF0D4FC4),
+                                Icons.person_outline_rounded,
+                                size: widget.teacherMode ? 16 : 13,
+                                color: Colors.white70,
                               ),
                             ),
                             title: Text(
                               _studentNames[student] ?? _studentLabel(student),
-                              style: TextStyle(
-                                fontSize: widget.teacherMode ? 13 : 10,
+                              style: neuPoppins(
+                                size: widget.teacherMode ? 13 : 11,
+                                weight: FontWeight.w500,
+                                color: Colors.white,
                               ),
                             ),
                             subtitle: widget.teacherMode || widget.ended
@@ -1148,11 +1288,13 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
                                             : widget.teacherMode && !_ended
                                                 ? 'Asistencia pendiente'
                                                 : 'Sin marcar',
-                                    style: TextStyle(
-                                      fontSize: widget.teacherMode ? 11 : 8,
+                                    style: neuBody(
+                                      size: widget.teacherMode ? 11 : 9,
                                       color: _attendance[student] == true
-                                          ? const Color(0xFF16834A)
-                                          : null,
+                                          ? Neu.okFg
+                                          : _attendance[student] == false
+                                              ? Neu.errFg
+                                              : Colors.white54,
                                     ),
                                   )
                                 : null,
@@ -1160,19 +1302,20 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
                                     !_ended &&
                                     !widget.isProjectMeeting
                                 ? Wrap(
-                                    spacing: 0,
+                                    spacing: 2,
                                     children: [
                                       IconButton(
                                         tooltip: 'Marcar presente',
                                         visualDensity: VisualDensity.compact,
                                         padding: EdgeInsets.zero,
                                         constraints: const BoxConstraints(
-                                            minWidth: 34, minHeight: 34),
+                                            minWidth: 32, minHeight: 32),
                                         onPressed: () =>
                                             _setAttendance(student, true),
                                         icon: const Icon(
-                                          Icons.check_circle_outline,
-                                          color: Color(0xFF16834A),
+                                          Icons.check_circle_rounded,
+                                          color: Neu.okFg,
+                                          size: 20,
                                         ),
                                       ),
                                       IconButton(
@@ -1180,12 +1323,13 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
                                         visualDensity: VisualDensity.compact,
                                         padding: EdgeInsets.zero,
                                         constraints: const BoxConstraints(
-                                            minWidth: 34, minHeight: 34),
+                                            minWidth: 32, minHeight: 32),
                                         onPressed: () =>
                                             _setAttendance(student, false),
                                         icon: const Icon(
-                                          Icons.cancel_outlined,
-                                          color: Color(0xFFB3261E),
+                                          Icons.cancel_rounded,
+                                          color: Neu.errFg,
+                                          size: 20,
                                         ),
                                       ),
                                     ],
@@ -1195,43 +1339,50 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
                       ],
                     )
                   : _messages.isEmpty
-                      ? const Center(
+                      ? Center(
                           child: Text(
                             'Aún no hay mensajes.',
-                            style: TextStyle(
-                              color: Colors.blueGrey,
-                              fontSize: 12,
+                            style: neuBody(
+                              color: Colors.white54,
+                              size: 13,
                             ),
                           ),
                         )
                       : ListView.builder(
-                          padding: const EdgeInsets.all(8),
+                          padding: const EdgeInsets.all(12),
                           itemCount: _messages.length,
                           itemBuilder: (context, index) {
                             final message = _messages[index];
                             return Padding(
-                              padding: const EdgeInsets.only(bottom: 7),
+                              padding: const EdgeInsets.only(bottom: 10),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
                                     message.sender,
-                                    style: TextStyle(
-                                      color: Colors.blueGrey,
-                                      fontSize: widget.teacherMode ? 11 : 7,
+                                    style: neuPoppins(
+                                      color: _roomAccent,
+                                      size: widget.teacherMode ? 11.5 : 9,
+                                      weight: FontWeight.w700,
                                     ),
                                   ),
                                   Container(
-                                    margin: const EdgeInsets.only(top: 2),
-                                    padding: const EdgeInsets.all(7),
+                                    margin: const EdgeInsets.only(top: 3),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 8),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFFEEF1F5),
-                                      borderRadius: BorderRadius.circular(8),
+                                      color: const Color(0xFF232733),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: const Color(0xFF2F3443),
+                                        width: 0.8,
+                                      ),
                                     ),
                                     child: Text(
                                       message.text,
-                                      style: TextStyle(
-                                        fontSize: widget.teacherMode ? 13 : 9,
+                                      style: neuBody(
+                                        size: widget.teacherMode ? 13 : 10,
+                                        color: Colors.white,
                                       ),
                                     ),
                                   ),
@@ -1243,21 +1394,21 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
             ),
             if (_ended)
               Padding(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(10),
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
                     'Chat guardado de la sesión. Solo lectura.',
-                    style: TextStyle(
-                      color: Colors.blueGrey,
-                      fontSize: widget.teacherMode ? 11 : 8,
+                    style: neuBody(
+                      color: Colors.white54,
+                      size: widget.teacherMode ? 11 : 9,
                     ),
                   ),
                 ),
               )
             else
               Padding(
-                padding: const EdgeInsets.all(7),
+                padding: const EdgeInsets.all(10),
                 child: Row(
                   children: [
                     Expanded(
@@ -1265,33 +1416,61 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
                         controller: _message,
                         maxLength: 500,
                         onSubmitted: (_) => _sendMessage(),
-                        style: TextStyle(
-                          fontSize: widget.teacherMode ? 13 : 9,
+                        style: neuBody(
+                          size: widget.teacherMode ? 13 : 10,
+                          color: Colors.white,
                         ),
                         decoration: InputDecoration(
-                          hintText: 'Envía un mensaje',
+                          hintText: 'Envía un mensaje…',
+                          hintStyle: neuBody(
+                            size: widget.teacherMode ? 13 : 10,
+                            color: Colors.white38,
+                          ),
                           counterText: '',
                           filled: true,
-                          fillColor: const Color(0xFFF0F2F6),
+                          fillColor: const Color(0xFF232733),
                           contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 8,
+                            horizontal: 14,
+                            vertical: 10,
                           ),
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide.none,
+                            borderRadius: BorderRadius.circular(20),
+                            borderSide: const BorderSide(
+                              color: Color(0xFF333847),
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            borderSide: const BorderSide(
+                              color: Color(0xFF333847),
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            borderSide: BorderSide(
+                              color: _roomAccent,
+                              width: 1.5,
+                            ),
                           ),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 4),
-                    IconButton.filled(
-                      onPressed: _sendMessage,
-                      icon: Icon(
-                        Icons.send,
-                        size: widget.teacherMode ? 18 : 13,
+                    const SizedBox(width: 8),
+                    Material(
+                      color: _roomAccent,
+                      shape: const CircleBorder(),
+                      child: InkWell(
+                        customBorder: const CircleBorder(),
+                        onTap: _sendMessage,
+                        child: Padding(
+                          padding: const EdgeInsets.all(10),
+                          child: Icon(
+                            Icons.send_rounded,
+                            size: widget.teacherMode ? 18 : 14,
+                            color: Colors.white,
+                          ),
+                        ),
                       ),
-                      visualDensity: VisualDensity.compact,
                     ),
                   ],
                 ),
@@ -1303,23 +1482,22 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
   Widget _chatTab(String label, bool selected, VoidCallback onTap) => Expanded(
         child: InkWell(
           onTap: onTap,
+          borderRadius: BorderRadius.circular(10),
           child: Container(
-            height: 32,
+            height: 36,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(
-                  color: selected ? _roomAccent : Colors.transparent,
-                  width: 2,
-                ),
-              ),
+              color: selected
+                  ? _roomAccent.withOpacity(0.18)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(10),
             ),
             child: Text(
               label,
-              style: TextStyle(
-                color: selected ? _roomAccent : Colors.blueGrey,
-                fontSize: widget.teacherMode ? 12 : 8,
-                fontWeight: selected ? FontWeight.w700 : FontWeight.normal,
+              style: neuPoppins(
+                color: selected ? _roomAccent : Colors.white60,
+                size: widget.teacherMode ? 12 : 9,
+                weight: selected ? FontWeight.w700 : FontWeight.w500,
               ),
             ),
           ),
@@ -1330,11 +1508,16 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
         top: false,
         child: Container(
           width: double.infinity,
-          color: _roomAccent,
-          padding: const EdgeInsets.symmetric(vertical: 5),
+          decoration: const BoxDecoration(
+            color: Color(0xFF161922),
+            border: Border(
+              top: BorderSide(color: Color(0xFF262B37), width: 1),
+            ),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Wrap(
             alignment: WrapAlignment.center,
-            spacing: 10,
+            spacing: 12,
             children: [
               if (!widget.isIndividualTutoring)
                 _CallControl(
@@ -1375,13 +1558,18 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
         top: false,
         child: Container(
           width: double.infinity,
-          color: _roomAccent,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: const BoxDecoration(
+            color: Color(0xFF161922),
+            border: Border(
+              top: BorderSide(color: Color(0xFF262B37), width: 1),
+            ),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Wrap(
             alignment: WrapAlignment.center,
             crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: 12,
-            runSpacing: 8,
+            spacing: 14,
+            runSpacing: 10,
             children: [
               if (widget.modality.toUpperCase() != 'PRESENCIAL')
                 _CallControl(
@@ -1767,35 +1955,80 @@ class _VideoTile extends StatelessWidget {
   final VideoTrack? track;
 
   @override
-  Widget build(BuildContext context) => Card(
-        color: const Color(0xFF292D35),
+  Widget build(BuildContext context) => Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFF1B1E26),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFF2C313E), width: 1.2),
+        ),
         clipBehavior: Clip.antiAlias,
-        child: Stack(fit: StackFit.expand, children: [
-          if (track != null)
-            VideoTrackRenderer(track!, fit: VideoViewFit.cover)
-          else
-            Center(
-                child: CircleAvatar(
-              radius: 38,
-              backgroundColor: const Color(0xFF414751),
-              child: Text(
-                  label.isEmpty ? '?' : label.substring(0, 1).toUpperCase(),
-                  style: const TextStyle(color: Colors.white, fontSize: 28)),
-            )),
-          Positioned(
-              left: 8,
-              bottom: 8,
-              child: DecoratedBox(
-                decoration: const BoxDecoration(
-                    color: Colors.black54,
-                    borderRadius: BorderRadius.all(Radius.circular(8))),
-                child: Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    child: Text(label,
-                        style: const TextStyle(color: Colors.white))),
-              )),
-        ]),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (track != null)
+              VideoTrackRenderer(track!, fit: VideoViewFit.cover)
+            else
+              Center(
+                child: Container(
+                  width: 72,
+                  height: 72,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF2D3342), Color(0xFF1E232E)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: const Color(0xFF3F4657),
+                      width: 1.5,
+                    ),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    label.isEmpty ? '?' : label.substring(0, 1).toUpperCase(),
+                    style: neuPoppins(
+                      color: Colors.white,
+                      size: 26,
+                      weight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            Positioned(
+              left: 10,
+              bottom: 10,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.65),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.white12, width: 0.8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.account_circle_outlined,
+                      size: 14,
+                      color: Colors.white70,
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      label,
+                      style: neuBody(
+                        size: 12,
+                        weight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       );
 }
 
@@ -1805,29 +2038,51 @@ class _WaitingParticipantTile extends StatelessWidget {
   final String message;
 
   @override
-  Widget build(BuildContext context) => Card(
-        color: const Color(0xFF292D35),
+  Widget build(BuildContext context) => Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFF1B1E26),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFF2C313E), width: 1.2),
+        ),
         child: Center(
-            child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Icon(Icons.people_outline, color: Colors.white70, size: 38),
-            const SizedBox(height: 10),
-            Text(message,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white70)),
-          ]),
-        )),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF252A36),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.people_outline_rounded,
+                    color: Colors.white70,
+                    size: 32,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: neuBody(size: 13, color: Colors.white70),
+                ),
+              ],
+            ),
+          ),
+        ),
       );
 }
 
 class _CallControl extends StatelessWidget {
-  const _CallControl(
-      {required this.icon,
-      required this.label,
-      required this.onPressed,
-      required this.active,
-      this.danger = false});
+  const _CallControl({
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+    required this.active,
+    this.danger = false,
+  });
   final IconData icon;
   final String label;
   final VoidCallback onPressed;
@@ -1835,27 +2090,43 @@ class _CallControl extends StatelessWidget {
   final bool danger;
 
   @override
-  Widget build(BuildContext context) => Tooltip(
-        message: label,
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          IconButton.filled(
-            onPressed: onPressed,
-            style: IconButton.styleFrom(
-              backgroundColor: danger
-                  ? const Color(0xFFB3261E)
-                  : active
-                      ? Theme.of(context).colorScheme.primary
-                      : const Color(0xFF292D35),
-              foregroundColor: Colors.white,
-              minimumSize: const Size(52, 52),
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final accent = theme.colorScheme.primary;
+    final bg = danger
+        ? const Color(0xFFDC3545)
+        : active
+            ? accent
+            : const Color(0xFF262B36);
+
+    return Tooltip(
+      message: label,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Material(
+            color: bg,
+            shape: const CircleBorder(),
+            elevation: active || danger ? 2 : 0,
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: onPressed,
+              child: SizedBox(
+                width: 50,
+                height: 50,
+                child: Icon(icon, color: Colors.white, size: 22),
+              ),
             ),
-            icon: Icon(icon),
           ),
-          const SizedBox(height: 3),
-          Text(label,
-              style: const TextStyle(color: Colors.white70, fontSize: 11)),
-        ]),
-      );
+          const SizedBox(height: 5),
+          Text(
+            label,
+            style: neuBody(size: 11, color: Colors.white70),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _RoomMessage {
