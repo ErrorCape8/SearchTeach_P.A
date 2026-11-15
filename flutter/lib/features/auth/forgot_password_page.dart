@@ -3,13 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/neu/neu.dart';
-import '../../core/role_theme.dart';
+import '../../core/widgets/auth_shell.dart';
 import '../../core/widgets/role_toast.dart';
-import '../pa/pa_widgets.dart';
 import 'auth_controller.dart';
-
-const _authAccent = Color(0xFF1E3FA8);
 
 class ForgotPasswordPage extends ConsumerStatefulWidget {
   const ForgotPasswordPage({super.key});
@@ -30,8 +26,6 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
   bool _codeVerified = false;
   bool _sendingCode = false;
   bool _verifyingCode = false;
-  bool _showPassword = false;
-  bool _showConfirmation = false;
   String? _validationError;
 
   @override
@@ -80,7 +74,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
         RoleToast.show(
           context,
           message: 'Tu código de verificación se envió a tu correo.',
-          roleColor: _authAccent,
+          roleColor: kAuthBlue,
         );
       }
     } finally {
@@ -154,177 +148,33 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
     final state = ref.watch(authControllerProvider);
     final error =
         _validationError ?? ref.read(authControllerProvider.notifier).errorMessage;
-    final theme = Theme.of(context);
 
-    return Theme(
-      data: withRoleAccent(
-        theme.copyWith(
-          colorScheme: theme.colorScheme.copyWith(primary: _authAccent),
-          scaffoldBackgroundColor: Neu.bg,
-        ),
-        _authAccent,
+    return AuthShell(
+      title: 'Recuperar contraseña',
+      subtitle: _step == 0
+          ? 'Ingresa tu identificación y correo institucional'
+          : _step == 1
+              ? 'Escribe el código de seis dígitos de tu correo'
+              : 'Crea una nueva contraseña segura',
+      footer: AuthFooterLine(
+        '¿Recordaste tu contraseña?',
+        'Inicia sesión aquí',
+        onTap: () {
+          ref.read(authControllerProvider.notifier).reset();
+          context.go('/login');
+        },
       ),
-      child: Scaffold(
-        body: Container(
-          decoration: BoxDecoration(
-            gradient: RadialGradient(
-              center: const Alignment(0.0, -0.5),
-              radius: 1.2,
-              colors: [
-                Neu.bg.withOpacity(0.9),
-                Neu.bg.withOpacity(0.7),
-                Neu.bg.withOpacity(0.5),
-              ],
-            ),
-          ),
-          child: SafeArea(
-            child: Center(
-              child: SingleChildScrollView(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 440),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: _authAccent.withOpacity(0.4),
-                                  blurRadius: 16,
-                                  spreadRadius: 2,
-                                ),
-                              ],
-                            ),
-                            child: Image.asset(
-                              'assets/images/logo_login.png',
-                              width: 56,
-                              height: 56,
-                              fit: BoxFit.contain,
-                              errorBuilder: (_, __, ___) => const Icon(
-                                Icons.school_rounded,
-                                size: 48,
-                                color: _authAccent,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text.rich(
-                                TextSpan(
-                                  children: [
-                                    TextSpan(
-                                      text: 'Search',
-                                      style: neuPoppins(
-                                        size: 28,
-                                        weight: FontWeight.w800,
-                                        color: Neu.heading,
-                                      ),
-                                    ),
-                                    TextSpan(
-                                      text: 'Teach',
-                                      style: neuPoppins(
-                                        size: 28,
-                                        weight: FontWeight.w800,
-                                        color: _authAccent,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Text(
-                                'Aprende y enseña, cuando y donde quieras.',
-                                style: neuBody(size: 11.5, color: Neu.muted),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 28),
-                      NeuSurface(
-                        radius: 26,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 24, vertical: 28),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Text(
-                              'Recuperar contraseña',
-                              textAlign: TextAlign.center,
-                              style: neuPoppins(
-                                size: 22,
-                                weight: FontWeight.w700,
-                                color: Neu.heading,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              _step == 0
-                                  ? 'Ingresa tu identificación y correo institucional'
-                                  : _step == 1
-                                      ? 'Escribe el código de seis dígitos de tu correo'
-                                      : 'Crea una nueva contraseña segura',
-                              textAlign: TextAlign.center,
-                              style: neuBody(size: 13, color: Neu.muted),
-                            ),
-                            const SizedBox(height: 20),
-                            if (error != null) ...[
-                              PaInfo(
-                                error,
-                                tone: PaTone.error,
-                                icon: Icons.error_outline_rounded,
-                              ),
-                              const SizedBox(height: 12),
-                            ],
-                            if (_step == 0)
-                              _stepIdentity(state.isLoading)
-                            else if (_step == 1)
-                              _stepCode(state.isLoading)
-                            else
-                              _stepNewPassword(state.isLoading),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text('¿Recordaste tu contraseña? ',
-                              style:
-                                  neuBody(size: 13.5, color: Neu.muted)),
-                          GestureDetector(
-                            onTap: () {
-                              ref
-                                  .read(authControllerProvider.notifier)
-                                  .reset();
-                              context.go('/login');
-                            },
-                            child: Text(
-                              'Inicia sesión aquí',
-                              style: neuBody(
-                                size: 13.5,
-                                weight: FontWeight.w700,
-                                color: _authAccent,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (error != null) AuthNotice(error),
+          if (_step == 0)
+            _stepIdentity(state.isLoading)
+          else if (_step == 1)
+            _stepCode(state.isLoading)
+          else
+            _stepNewPassword(state.isLoading),
+        ],
       ),
     );
   }
@@ -332,22 +182,25 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
   Widget _stepIdentity(bool loading) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const PaFieldLabel('Identificación', first: true),
-          NeuField(
+          const AuthLabel('Identificación', first: true),
+          AuthField(
             controller: _identifier,
             keyboardType: TextInputType.number,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             hint: 'Tu número de documento',
+            textInputAction: TextInputAction.next,
           ),
-          const SizedBox(height: 14),
-          const PaFieldLabel('Correo institucional'),
-          NeuField(
+          const AuthLabel('Correo institucional'),
+          AuthField(
             controller: _email,
             keyboardType: TextInputType.emailAddress,
             hint: 'nombre@institucion.edu.co',
+            textInputAction: TextInputAction.done,
+            autofillHints: const [AutofillHints.email],
+            onSubmitted: (_) => _sendCode(loading),
           ),
           const SizedBox(height: 22),
-          NeuButton(
+          AuthPrimaryButton(
             'Enviar código',
             icon: Icons.send_rounded,
             loading: loading || _sendingCode,
@@ -359,31 +212,31 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
   Widget _stepCode(bool loading) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const PaFieldLabel('Código de verificación', first: true),
-          NeuField(
+          const AuthLabel('Código de verificación', first: true),
+          AuthField(
             controller: _code,
             keyboardType: TextInputType.number,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             hint: '123456',
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _verifyCode(loading),
           ),
           const SizedBox(height: 22),
-          NeuButton(
+          AuthPrimaryButton(
             'Verificar código',
             icon: Icons.check_circle_outline_rounded,
             loading: loading || _verifyingCode,
             onPressed: () => _verifyCode(loading),
           ),
-          const SizedBox(height: 10),
-          NeuButton(
+          const SizedBox(height: 12),
+          AuthSecondaryButton(
             'Reenviar otro código',
-            kind: NeuButtonKind.alt,
             icon: Icons.refresh_rounded,
             onPressed: loading || _sendingCode ? null : () => _sendCode(false),
           ),
-          const SizedBox(height: 10),
-          NeuButton(
+          const SizedBox(height: 12),
+          AuthSecondaryButton(
             'Atrás',
-            kind: NeuButtonKind.alt,
             icon: Icons.arrow_back_rounded,
             onPressed: () => setState(() => _step = 0),
           ),
@@ -393,41 +246,23 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
   Widget _stepNewPassword(bool loading) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const PaFieldLabel('Nueva contraseña', first: true),
-          NeuField(
+          const AuthLabel('Nueva contraseña', first: true),
+          AuthField(
             controller: _password,
-            obscure: !_showPassword,
+            password: true,
             hint: 'Mínimo 8 caracteres',
-            suffix: IconButton(
-              onPressed: () =>
-                  setState(() => _showPassword = !_showPassword),
-              icon: Icon(
-                _showPassword
-                    ? Icons.visibility_outlined
-                    : Icons.visibility_off_outlined,
-                color: Neu.navIdle,
-              ),
-            ),
+            textInputAction: TextInputAction.next,
           ),
-          const SizedBox(height: 14),
-          const PaFieldLabel('Confirmar nueva contraseña'),
-          NeuField(
+          const AuthLabel('Confirmar nueva contraseña'),
+          AuthField(
             controller: _confirmation,
-            obscure: !_showConfirmation,
+            password: true,
             hint: 'Repite la nueva contraseña',
-            suffix: IconButton(
-              onPressed: () =>
-                  setState(() => _showConfirmation = !_showConfirmation),
-              icon: Icon(
-                _showConfirmation
-                    ? Icons.visibility_outlined
-                    : Icons.visibility_off_outlined,
-                color: Neu.navIdle,
-              ),
-            ),
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _resetPassword(loading),
           ),
           const SizedBox(height: 22),
-          NeuButton(
+          AuthPrimaryButton(
             'Guardar contraseña',
             icon: Icons.lock_reset_rounded,
             loading: loading,
