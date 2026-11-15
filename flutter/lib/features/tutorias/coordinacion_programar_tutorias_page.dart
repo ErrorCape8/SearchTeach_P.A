@@ -204,25 +204,28 @@ class _CoordinacionProgramarTutoriasPageState
     });
     try {
       final dio = ref.read(dioProvider);
+      String iso(DateTime d) =>
+          '${d.year.toString().padLeft(4, '0')}-'
+          '${d.month.toString().padLeft(2, '0')}-'
+          '${d.day.toString().padLeft(2, '0')}T'
+          '${d.hour.toString().padLeft(2, '0')}:'
+          '${d.minute.toString().padLeft(2, '0')}:00';
+
       final payload = {
-        'carrera': _technology,
+        'tecnologia': _technology,
         'semestre': _semester,
-        'tutorias': _slots
+        'bloques': _slots
             .map((slot) => {
                   'docenteId': slot.teacher.id,
                   'materia': slot.subject,
-                  'fecha':
-                      '${slot.start.year.toString().padLeft(4, '0')}-${slot.start.month.toString().padLeft(2, '0')}-${slot.start.day.toString().padLeft(2, '0')}',
-                  'horaInicio':
-                      '${slot.start.hour.toString().padLeft(2, '0')}:${slot.start.minute.toString().padLeft(2, '0')}',
-                  'horaFin':
-                      '${slot.end.hour.toString().padLeft(2, '0')}:${slot.end.minute.toString().padLeft(2, '0')}',
                   'modalidad': _apiModality(slot.modality),
-                  'lugarFisico': slot.location,
+                  'ubicacion': slot.location,
+                  'fechaInicio': iso(slot.start),
+                  'fechaFin': iso(slot.end),
                 })
             .toList(),
       };
-      await dio.post<void>('/api/coordinacion/programar-tutorias',
+      await dio.post<void>('/api/coordinacion/sesiones-grupales',
           data: payload);
       if (!mounted) return;
       RoleToast.show(
