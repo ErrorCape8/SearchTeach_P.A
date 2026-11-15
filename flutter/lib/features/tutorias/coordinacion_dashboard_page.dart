@@ -9,7 +9,6 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/api_client.dart';
 import '../../core/tutoring_updates.dart';
 import '../../core/widgets/brand_logo.dart';
-import '../../core/neu/neu.dart';
 import '../auth/auth_repository.dart';
 import 'coordinacion_horarios_page.dart';
 import 'coordinacion_solicitudes_page.dart';
@@ -35,8 +34,11 @@ class _CoordinacionDashboardPageState
   bool _loading = true;
   String? _error;
   List<Map<String, dynamic>> _teachers = [];
+  // ignore: unused_field
   List<Map<String, dynamic>> _schedules = [];
+  // ignore: unused_field
   List<Map<String, dynamic>> _publishedSessions = [];
+  // ignore: unused_field
   List<Map<String, dynamic>> _groups = [];
   Map<String, dynamic> _profile = {};
   @override

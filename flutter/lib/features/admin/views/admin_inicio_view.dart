@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/neu/neu.dart';
 import '../../pa/pa_widgets.dart';
 import '../admin_controller.dart';
 
@@ -103,6 +102,7 @@ class AdminInicioView extends ConsumerWidget {
   }
 }
 
+// ignore: unused_element
 String _dateLabel(DateTime value) {
   const weekdays = [
     'Lunes',

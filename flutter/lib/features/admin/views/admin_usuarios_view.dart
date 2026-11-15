@@ -8,7 +8,6 @@ import '../../../core/widgets/role_toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api_client.dart';
 import '../../../core/career_catalog.dart';
-import '../../../core/neu/neu.dart';
 import '../../pa/pa_widgets.dart';
 import '../admin_controller.dart';
 

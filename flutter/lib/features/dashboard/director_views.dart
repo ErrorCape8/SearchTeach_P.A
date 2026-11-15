@@ -306,12 +306,12 @@ class DirForecastView extends StatelessWidget {
   Widget _attendanceEntry() => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const PaSection('Asistencia'),
+          const PaSection('Datos históricos disponibles'),
           PaRowList([
             DirRow(
-              icon: Icons.query_stats_rounded,
-              title: 'Predicción de asistencia',
-              subtitle: 'Probabilidad estimada por materia',
+              icon: Icons.history_rounded,
+              title: 'Datos históricos disponibles',
+              subtitle: 'Historial y estimación de asistencia por materia',
               onTap: onOpenAttendance,
             ),
           ]),

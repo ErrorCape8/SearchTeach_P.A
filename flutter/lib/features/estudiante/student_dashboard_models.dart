@@ -303,6 +303,9 @@ class StudentProjectFollowup {
     required this.meetingAt,
     required this.invitationCode,
     required this.assignedTeacher,
+    this.closureReason = '',
+    this.closureReport = '',
+    this.meetingSessionId = '',
   });
   final String tutoringId;
   final String tutoringState;
@@ -312,6 +315,9 @@ class StudentProjectFollowup {
   final DateTime? meetingAt;
   final String invitationCode;
   final String assignedTeacher;
+  final String closureReason;
+  final String closureReport;
+  final String meetingSessionId;
   StudentProjectSession? get nextSession {
     final upcoming = sessions
         .where((session) => session.start?.isAfter(DateTime.now()) ?? false)
@@ -351,6 +357,9 @@ class StudentProjectFollowup {
       status: _string(projectJson['estadoCierre'], fallback: 'EN_CURSO'),
       meetingAt: _date(projectJson['fechaReunion']),
       invitationCode: _string(json['codigoInscripcion']),
+      closureReason: _string(projectJson['motivoCierre']),
+      closureReport: _string(projectJson['reporteCierre']),
+      meetingSessionId: _string(projectJson['reunionSesionId']),
       sessions: (json['sesiones'] is List ? json['sesiones'] as List : const [])
           .whereType<Map<String, dynamic>>()
           .map(StudentProjectSession.fromJson)

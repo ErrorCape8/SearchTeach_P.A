@@ -307,7 +307,88 @@ PaState _seed() => PaState(
 /// Para conectarlo al backend basta con reemplazar los métodos de [PaStore]
 /// por llamadas a la API y mantener la misma forma de [PaState].
 class PaStore extends StateNotifier<PaState> {
-  PaStore() : super(_seed());
+  PaStore([this._dio]) : super(_seed()) {
+    cargarDeApi();
+  }
+
+  final Dio? _dio;
+
+  Future<void> cargarDeApi() async {
+    final dio = _dio;
+    if (dio == null) return;
+    try {
+      final res = await dio.get<List<dynamic>>('/api/coordinacion/tutorias-colectivas');
+      final list = (res.data ?? const <dynamic>[])
+          .whereType<Map<String, dynamic>>()
+          .toList();
+
+      if (list.isNotEmpty) {
+        final loaded = <PaColectiva>[];
+        for (var i = 0; i < list.length; i++) {
+          final item = list[i];
+          final rawId = item['id']?.toString() ?? '$i';
+          final intId = int.tryParse(rawId.replaceAll(RegExp(r'\D'), '')) ?? i;
+          final sem = item['semestre'] is int ? item['semestre'] as int : 1;
+          final sec = item['seccion'] is int ? item['seccion'] as int : 1;
+          final tech = (item['tecnologia'] ?? item['carrera'] ?? 'Ing. de Sistemas').toString();
+          final leader = (item['docenteLiderId'] ?? item['lider'] ?? '').toString();
+          final rawApoyos = item['docentesApoyoIds'] ?? item['apoyo'];
+          final apoyos = (rawApoyos is List)
+              ? rawApoyos.map((e) => e.toString()).toList()
+              : <String>[];
+          final aula = (item['aula'] ?? 'Sala virtual').toString();
+          final cuando = (item['cuando'] ?? item['horario'] ?? 'Por programar').toString();
+          final materia = (item['materia'] ?? 'Proyecto de Aula $sem').toString();
+
+          loaded.add(PaColectiva(
+            id: intId,
+            materia: materia,
+            carrera: tech,
+            semestre: sem,
+            seccion: sec,
+            lider: leader,
+            apoyo: apoyos,
+            cuando: cuando,
+            aula: aula,
+          ));
+        }
+
+        if (loaded.isNotEmpty) {
+          state = state.copyWith(colectivas: loaded);
+        }
+      }
+    } catch (_) {
+      // Fallback seguro a los datos de _seed()
+    }
+
+    try {
+      final repRes = await dio.get<List<dynamic>>('/api/coordinacion/informes-generales');
+      final repList = (repRes.data ?? const <dynamic>[])
+          .whereType<Map<String, dynamic>>()
+          .toList();
+      if (repList.isNotEmpty) {
+        final loadedRep = <PaReporte>[];
+        for (final r in repList) {
+          final colId = int.tryParse((r['tutoriaId'] ?? '0').toString().replaceAll(RegExp(r'\D'), '')) ?? 0;
+          final por = (r['docenteId'] ?? r['por'] ?? 'Docente').toString();
+          final fecha = (r['creadoEn'] ?? r['fecha'] ?? 'Reciente').toString();
+          loadedRep.add(PaReporte(
+            colId: colId,
+            por: por,
+            fecha: fecha,
+            asistencia: const {},
+            rubricas: const [],
+            visto: r['visto'] == true,
+          ));
+        }
+        if (loadedRep.isNotEmpty) {
+          state = state.copyWith(reportes: [...loadedRep, ...state.reportes]);
+        }
+      }
+    } catch (_) {
+      // Fallback a los reportes de seed
+    }
+  }
 
   Map<String, bool> asistenciaDe(int colId) => state.asistencia[colId] ?? {};
 
@@ -361,7 +442,43 @@ class PaStore extends StateNotifier<PaState> {
 }
 
 final paStoreProvider =
-    StateNotifierProvider<PaStore, PaState>((ref) => PaStore());
+    StateNotifierProvider<PaStore, PaState>((ref) => PaStore(ref.watch(dioProvider)));
+
+final paAulasProvider = FutureProvider.autoDispose<List<String>>((ref) async {
+  try {
+    final dio = ref.read(dioProvider);
+    final r = await dio.get<List<dynamic>>('/api/coordinacion/horarios');
+    final aulas = (r.data ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .map((h) => (h['aula'] ?? '').toString())
+        .where((a) => a.isNotEmpty)
+        .toSet()
+        .toList();
+    return aulas.isEmpty ? paAulas : aulas;
+  } catch (_) {
+    return paAulas;
+  }
+});
+
+final paAlumnosProvider = FutureProvider.autoDispose<List<String>>((ref) async {
+  try {
+    final dio = ref.read(dioProvider);
+    final r = await dio.get<List<dynamic>>('/api/coordinacion/sesiones-grupales');
+    final alumnos = <String>{};
+    for (final s in (r.data ?? const []).whereType<Map<String, dynamic>>()) {
+      final list = s['estudiantes'] ?? s['estudianteNombres'];
+      if (list is List) {
+        for (final e in list) {
+          final n = e.toString().trim();
+          if (n.isNotEmpty) alumnos.add(n);
+        }
+      }
+    }
+    return alumnos.isEmpty ? paAlumnos : alumnos.toList();
+  } catch (_) {
+    return paAlumnos;
+  }
+});
 
 final paUsuarioProvider = FutureProvider.autoDispose<PaUsuario>((ref) async {
   try {

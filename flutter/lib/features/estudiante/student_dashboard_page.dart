@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/api_client.dart';
+import '../../core/neu/neu.dart';
 import '../../core/role_theme.dart';
 import '../../core/tutoring_updates.dart';
-import '../../core/widgets/brand_logo.dart';
 import '../../core/widgets/role_toast.dart';
-import '../../core/widgets/sliding_pill_navigation_bar.dart';
+import '../pa/pa_widgets.dart';
 import '../auth/auth_repository.dart';
 import '../notifications/notifications_page.dart';
 import 'student_dashboard_models.dart';
@@ -16,8 +16,8 @@ import 'student_dashboard_views.dart';
 part 'student_dashboard_navigation.dart';
 
 const _blue = Color(0xFF1769AA);
-const _navy = Color(0xFF17324F);
-const _canvas = Color(0xFFF5F7FB);
+const _navy = Neu.heading;
+const _canvas = Neu.bg;
 
 class StudentDashboardPage extends ConsumerStatefulWidget {
   const StudentDashboardPage({super.key});
@@ -195,28 +195,14 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage>
         bottomNavigationBar: wide
             ? null
             : data.whenOrNull(
-                data: (_) => SlidingPillNavigationBar(
-                  selectedColor: _blue,
-                  indicatorColor: const Color(0xFFDCEEFF),
-                  selectedIndex: _navigationIndex,
-                  onDestinationSelected: _selectTab,
-                  destinations: const [
-                    SlidingPillDestination(
-                        icon: Icons.home_outlined,
-                        selectedIcon: Icons.home,
-                        label: 'Inicio'),
-                    SlidingPillDestination(
-                        icon: Icons.event_note_outlined,
-                        selectedIcon: Icons.event_note,
-                        label: 'Tutorías'),
-                    SlidingPillDestination(
-                        icon: Icons.history_outlined,
-                        selectedIcon: Icons.history,
-                        label: 'Historial'),
-                    SlidingPillDestination(
-                        icon: Icons.play_circle_outline,
-                        selectedIcon: Icons.play_circle,
-                        label: 'Unirse a clase'),
+                data: (_) => NeuBottomBar(
+                  index: _navigationIndex,
+                  onSelect: _selectTab,
+                  items: const [
+                    NeuNavItem(Icons.home_rounded, 'Inicio'),
+                    NeuNavItem(Icons.event_note_rounded, 'Tutorías'),
+                    NeuNavItem(Icons.history_rounded, 'Historial'),
+                    NeuNavItem(Icons.play_circle_rounded, 'Unirse'),
                   ],
                 ),
               ),

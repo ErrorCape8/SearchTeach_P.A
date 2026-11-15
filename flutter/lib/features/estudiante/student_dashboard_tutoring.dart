@@ -1,3 +1,4 @@
+// ignore_for_file: unused_element, unused_element_parameter
 part of 'student_dashboard_views.dart';
 
 class StudentTutoringView extends ConsumerStatefulWidget {
@@ -171,11 +172,34 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
   Widget _projectFollowup() => ref.watch(studentProjectFollowupProvider).when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Center(
-            child: Padding(
-          padding: const EdgeInsets.all(24),
-          child:
-              Text('No se pudo cargar el seguimiento de tu proyecto: $error'),
-        )),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.error_outline_rounded, size: 36, color: Neu.error),
+                const SizedBox(height: 10),
+                Text(
+                  'No se pudo cargar el seguimiento de tu proyecto',
+                  style: neuPoppins(size: 15, weight: FontWeight.w600),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '$error',
+                  textAlign: TextAlign.center,
+                  style: neuBody(size: 13, color: Neu.muted),
+                ),
+                const SizedBox(height: 14),
+                NeuButton(
+                  'Reintentar',
+                  small: true,
+                  expand: false,
+                  onPressed: () => ref.invalidate(studentProjectFollowupProvider),
+                ),
+              ],
+            ),
+          ),
+        ),
         data: (projects) {
           final activeProjects = projects
               .where((item) => item.tutoringState != 'DISUELTA')
@@ -188,101 +212,201 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
                       'Cuando te inscribas, aquí verás el horario y los reportes de tu tutor.',
                 )
               : ListView(
-                  padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
+                  padding: const EdgeInsets.fromLTRB(18, 14, 18, 32),
                   children: [
                     for (final item in activeProjects)
-                      Card(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
+                      PaCard(
+                        padding: const EdgeInsets.all(18),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(item.project.name,
-                                    style: const TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w800,
-                                        color: _navy)),
-                                Text(
-                                  '${item.project.career} · Semestre ${item.project.semester} · '
-                                  'Docente asignado: ${item.assignedTeacher.isNotEmpty ? item.assignedTeacher : item.project.teacherId}',
-                                ),
-                                if (item.project.description.isNotEmpty)
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 6),
-                                    child: Text(
-                                      item.project.description,
-                                      style: const TextStyle(color: _muted),
-                                    ),
-                                  ),
-                                if (item.project.studentIds.isNotEmpty)
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 8),
-                                    child: Text(
-                                      'Integrantes (${item.project.studentIds.length}/4): '
-                                      '${item.project.studentIds.join(', ')}',
-                                      style: const TextStyle(color: _muted),
-                                    ),
-                                  ),
-                                if (item.invitationCode.isNotEmpty)
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 8),
-                                    child: SelectableText(
-                                      'Código para integrantes: ${item.invitationCode}',
-                                      style: const TextStyle(
-                                        color: _blue,
-                                        fontWeight: FontWeight.w700,
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        item.project.name,
+                                        style: neuPoppins(
+                                          size: 17,
+                                          weight: FontWeight.w700,
+                                        ),
                                       ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        '${item.project.career} · Semestre ${item.project.semester}',
+                                        style: neuBody(size: 12.5, color: Neu.muted),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                PaTag(
+                                  item.status == 'FINALIZADO'
+                                      ? 'Finalizado'
+                                      : item.status == 'PENDIENTE_CONFIRMACION'
+                                          ? 'Pendiente cierre'
+                                          : 'En curso',
+                                  tone: item.status == 'FINALIZADO'
+                                      ? PaTone.ok
+                                      : item.status == 'PENDIENTE_CONFIRMACION'
+                                          ? PaTone.warn
+                                          : PaTone.neutral,
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            PaInfo(
+                              'Docente asignado: ${item.assignedTeacher.isNotEmpty ? item.assignedTeacher : item.project.teacherId}',
+                              icon: Icons.person_outline_rounded,
+                            ),
+                            if (item.project.description.isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              Text(
+                                item.project.description,
+                                style: neuBody(size: 13, color: Neu.muted),
+                              ),
+                            ],
+                            if (item.project.studentIds.isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  const Icon(Icons.group_outlined, size: 16, color: Neu.muted),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      'Integrantes (${item.project.studentIds.length}/4): ${item.project.studentIds.join(', ')}',
+                                      style: neuBody(size: 12, color: Neu.muted),
                                     ),
                                   ),
-                                Text(item.status == 'FINALIZADO'
-                                    ? 'Proyecto finalizado por el docente líder.'
-                                    : item.status == 'PENDIENTE_CONFIRMACION'
-                                        ? 'El cierre del proyecto está pendiente de revisión del docente líder.'
-                                        : 'Proyecto en curso.'),
-                                if (item.meetingAt != null)
-                                  Text(
-                                    'Reunión de PA: ${_longDate(item.meetingAt!.toLocal())} · ${TimeOfDay.fromDateTime(item.meetingAt!.toLocal()).format(context)}',
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight.w600),
-                                  ),
-                                const SizedBox(height: 12),
-                                const Text('Horario e historial de sesiones',
-                                    style:
-                                        TextStyle(fontWeight: FontWeight.w700)),
-                                if (item.nextSession != null)
-                                  ListTile(
-                                    contentPadding: EdgeInsets.zero,
-                                    leading: const Icon(Icons.event_available,
-                                        color: _blue),
-                                    title: const Text('Próxima sesión',
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.w700)),
-                                    subtitle: Text(
-                                        '${_longDate(item.nextSession!.start!.toLocal())} · ${TimeOfDay.fromDateTime(item.nextSession!.start!.toLocal()).format(context)} – ${TimeOfDay.fromDateTime(item.nextSession!.end!.toLocal()).format(context)}'),
-                                  ),
-                                if (item.sessions.isEmpty)
-                                  const Padding(
-                                    padding: EdgeInsets.symmetric(vertical: 8),
-                                    child: Text(
-                                        'El tutor aún no ha registrado un horario.'),
-                                  ),
+                                ],
+                              ),
+                            ],
+                            if (item.invitationCode.isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              SelectableText(
+                                'Código de invitación: ${item.invitationCode}',
+                                style: neuBody(
+                                  size: 12.5,
+                                  weight: FontWeight.w700,
+                                  color: _blue,
+                                ),
+                              ),
+                            ],
+                            if (item.meetingAt != null) ...[
+                              const SizedBox(height: 14),
+                              NeuSunken(
+                                radius: 14,
+                                padding: const EdgeInsets.all(12),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        const Icon(Icons.videocam_rounded, size: 18, color: _blue),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          'Reunión programada con el tutor',
+                                          style: neuBody(
+                                            size: 13.5,
+                                            weight: FontWeight.w700,
+                                            color: _blue,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '${_longDate(item.meetingAt!.toLocal())} · ${TimeOfDay.fromDateTime(item.meetingAt!.toLocal()).format(context)}',
+                                      style: neuBody(size: 12.5),
+                                    ),
+                                    const SizedBox(height: 10),
+                                    NeuButton(
+                                      'Ingresar al chat / reunión',
+                                      icon: Icons.chat_bubble_outline_rounded,
+                                      small: true,
+                                      expand: false,
+                                      onPressed: () {
+                                        final sesId = item.meetingSessionId.isNotEmpty
+                                            ? item.meetingSessionId
+                                            : (item.sessions.isNotEmpty ? item.sessions.first.id : '0');
+                                        Navigator.of(context).push(MaterialPageRoute(
+                                          builder: (_) => ProyectoAulaChatPage(
+                                            tutoringId: item.tutoringId,
+                                            projectId: item.project.projectId,
+                                            sessionId: sesId,
+                                            title: item.project.name,
+                                            teacherMode: false,
+                                          ),
+                                        ));
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                            if (item.closureReport.isNotEmpty || item.closureReason.isNotEmpty) ...[
+                              const SizedBox(height: 12),
+                              NeuSunken(
+                                radius: 14,
+                                padding: const EdgeInsets.all(12),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Reporte de evaluación del tutor',
+                                      style: neuBody(size: 13, weight: FontWeight.w700),
+                                    ),
+                                    if (item.closureReason.isNotEmpty) ...[
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Estado: ${item.closureReason}',
+                                        style: neuBody(size: 12, color: Neu.muted),
+                                      ),
+                                    ],
+                                    if (item.closureReport.isNotEmpty) ...[
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        item.closureReport,
+                                        style: neuBody(size: 12.5),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: 14),
+                            const PaSection('Horario e historial de sesiones'),
+                            if (item.nextSession != null)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 8),
+                                child: PaInfo(
+                                  'Próxima sesión: ${_longDate(item.nextSession!.start!.toLocal())} · '
+                                  '${TimeOfDay.fromDateTime(item.nextSession!.start!.toLocal()).format(context)} – '
+                                  '${TimeOfDay.fromDateTime(item.nextSession!.end!.toLocal()).format(context)}',
+                                  icon: Icons.event_available_rounded,
+                                  tone: PaTone.ok,
+                                ),
+                              ),
+                            if (item.sessions.isEmpty)
+                              const PaEmpty('El tutor aún no ha registrado sesiones ni horarios.')
+                            else
+                              PaRowList([
                                 for (final session in item.sessions)
-                                  ListTile(
-                                    contentPadding: EdgeInsets.zero,
-                                    leading:
-                                        const Icon(Icons.event_note_outlined),
-                                    title: Text(session.start == null
+                                  PaRow(
+                                    icon: Icons.event_note_rounded,
+                                    title: session.start == null
                                         ? 'Fecha pendiente'
-                                        : _longDate(session.start!.toLocal())),
-                                    subtitle: Text(
-                                        '${session.start == null ? '' : TimeOfDay.fromDateTime(session.start!.toLocal()).format(context)} – ${session.end == null ? '' : TimeOfDay.fromDateTime(session.end!.toLocal()).format(context)}\n${session.notes}',
-                                        maxLines: 5,
-                                        overflow: TextOverflow.ellipsis),
-                                    isThreeLine: true,
+                                        : _longDate(session.start!.toLocal()),
+                                    subtitle: '${session.start == null ? '' : TimeOfDay.fromDateTime(session.start!.toLocal()).format(context)} – '
+                                        '${session.end == null ? '' : TimeOfDay.fromDateTime(session.end!.toLocal()).format(context)}\n'
+                                        '${session.notes.isEmpty ? 'Sin notas del tutor' : session.notes}',
+                                    trailing: const Icon(Icons.chat_bubble_outline_rounded,
+                                        size: 20, color: _blue),
                                     onTap: () async {
-                                      await Navigator.of(context)
-                                          .push(MaterialPageRoute(
+                                      await Navigator.of(context).push(MaterialPageRoute(
                                         builder: (_) => ProyectoAulaChatPage(
                                           tutoringId: item.tutoringId,
                                           projectId: item.project.projectId,
@@ -292,27 +416,26 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
                                         ),
                                       ));
                                       if (mounted) {
-                                        ref.invalidate(
-                                            studentProjectFollowupProvider);
+                                        ref.invalidate(studentProjectFollowupProvider);
                                       }
                                     },
                                   ),
-                                if (item.status == 'EN_CURSO' &&
-                                    item.tutoringState == 'ACTIVA')
-                                  Align(
-                                    alignment: Alignment.centerRight,
-                                    child: TextButton.icon(
-                                      onPressed: () =>
-                                          _leaveClassroomProject(item),
-                                      icon: const Icon(Icons.exit_to_app),
-                                      label:
-                                          const Text('Desistir del proyecto'),
-                                      style: TextButton.styleFrom(
-                                        foregroundColor: Colors.red.shade700,
-                                      ),
-                                    ),
-                                  ),
                               ]),
+                            if (item.status == 'EN_CURSO' && item.tutoringState == 'ACTIVA') ...[
+                              const SizedBox(height: 14),
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: TextButton.icon(
+                                  onPressed: () => _leaveClassroomProject(item),
+                                  icon: const Icon(Icons.exit_to_app, color: Neu.error),
+                                  label: Text(
+                                    'Desistir del proyecto',
+                                    style: neuBody(size: 13, color: Neu.error),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                       ),
                   ],

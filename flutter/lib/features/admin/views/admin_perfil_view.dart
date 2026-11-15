@@ -3,7 +3,6 @@ import '../../../core/widgets/role_toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../auth/auth_repository.dart';
-import '../../../core/neu/neu.dart';
 import '../../pa/pa_widgets.dart';
 import '../admin_controller.dart';
 

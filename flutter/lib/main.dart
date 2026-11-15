@@ -22,10 +22,21 @@ import 'core/app_error.dart';
 
 final _router = GoRouter(
   initialLocation: '/session',
-  errorBuilder: (context, state) => AppErrorPage(
-    error: state.error,
-    info: const AppErrorInfo(AppErrorKind.notFound),
-  ),
+  errorBuilder: (context, state) {
+    final error = state.error;
+    final errorStr = error?.toString().toLowerCase() ?? '';
+    final isRouteNotFound = errorStr.contains('no routes') ||
+        errorStr.contains('not found') ||
+        errorStr.contains('no route for location') ||
+        (error is GoException && errorStr.contains('location'));
+
+    return AppErrorPage(
+      error: error,
+      info: AppErrorInfo(
+        isRouteNotFound ? AppErrorKind.notFound : AppErrorKind.server,
+      ),
+    );
+  },
   routes: [
     GoRoute(path: '/session', builder: (_, __) => const SessionRestorePage()),
     GoRoute(path: '/login', builder: (_, __) => const LoginPage()),
@@ -81,7 +92,10 @@ final _router = GoRouter(
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeSessionPersistence();
-  ErrorWidget.builder = (details) => AppErrorPage(error: details.exception);
+  ErrorWidget.builder = (details) => AppErrorPage(
+        error: details.exception,
+        info: const AppErrorInfo(AppErrorKind.server),
+      );
   runApp(const ProviderScope(child: App()));
 }
 
@@ -103,7 +117,15 @@ class _AppState extends State<App> {
       _router.go('/login');
     });
     _appErrorSubscription = appErrorEvents.listen((info) {
-      if (_router.state.uri.path != '/error') {
+      // API 404s indicate missing resources, not missing page routes;
+      // individual screens handle resource errors inline with retry buttons.
+      if (info.kind == AppErrorKind.notFound) return;
+
+      // Do not replace screens that handle errors inline with the full error page.
+      final currentPath = _router.state.uri.path;
+      if (currentPath == '/docente' || currentPath == '/estudiante') return;
+
+      if (currentPath != '/error') {
         _router.go('/error', extra: info);
       }
     });

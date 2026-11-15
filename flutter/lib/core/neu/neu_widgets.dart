@@ -372,6 +372,7 @@ class NeuButton extends StatelessWidget {
     this.small = false,
     this.icon,
     this.expand = true,
+    this.loading = false,
     super.key,
   });
 
@@ -381,6 +382,7 @@ class NeuButton extends StatelessWidget {
   final bool small;
   final IconData? icon;
   final bool expand;
+  final bool loading;
 
   @override
   Widget build(BuildContext context) {
@@ -391,6 +393,7 @@ class NeuButton extends StatelessWidget {
       NeuButtonKind.alt => p.c,
       NeuButtonKind.danger => Neu.errFg,
     };
+    final effectiveOnPressed = loading ? null : onPressed;
     final surface = NeuSurface(
       radius: small ? 12 : 15,
       padding: small
@@ -398,25 +401,36 @@ class NeuButton extends StatelessWidget {
           : const EdgeInsets.all(14),
       gradient: primary ? p.gradient : null,
       shadows: Neu.raiseS,
-      onTap: onPressed,
-      child: Row(
-        mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          if (icon != null) ...[
-            Icon(icon, size: small ? 16 : 20, color: fg),
-            const SizedBox(width: 6),
-          ],
-          Flexible(
-            child: Text(label,
-                textAlign: TextAlign.center,
-                style: neuPoppins(size: small ? 12.5 : 14.5, color: fg)),
-          ),
-        ],
-      ),
+      onTap: effectiveOnPressed,
+      child: loading
+          ? Center(
+              child: SizedBox(
+                width: small ? 16 : 20,
+                height: small ? 16 : 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(fg),
+                ),
+              ),
+            )
+          : Row(
+              mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (icon != null) ...[
+                  Icon(icon, size: small ? 16 : 20, color: fg),
+                  const SizedBox(width: 6),
+                ],
+                Flexible(
+                  child: Text(label,
+                      textAlign: TextAlign.center,
+                      style: neuPoppins(size: small ? 12.5 : 14.5, color: fg)),
+                ),
+              ],
+            ),
     );
     return Opacity(
-      opacity: onPressed == null ? .5 : 1,
+      opacity: effectiveOnPressed == null ? .6 : 1,
       child: expand ? SizedBox(width: double.infinity, child: surface) : surface,
     );
   }
@@ -530,6 +544,8 @@ class NeuField extends StatefulWidget {
     this.maxLength,
     this.minLines,
     this.maxLines = 1,
+    this.suffix,
+    this.inputFormatters,
     super.key,
   });
 
@@ -543,6 +559,8 @@ class NeuField extends StatefulWidget {
   final int? maxLength;
   final int? minLines;
   final int maxLines;
+  final Widget? suffix;
+  final List<TextInputFormatter>? inputFormatters;
 
   @override
   State<NeuField> createState() => _NeuFieldState();
@@ -580,6 +598,7 @@ class _NeuFieldState extends State<NeuField> {
         enabled: widget.enabled,
         obscureText: widget.obscure,
         keyboardType: widget.keyboardType,
+        inputFormatters: widget.inputFormatters,
         maxLength: widget.maxLength,
         minLines: widget.minLines,
         maxLines: widget.obscure ? 1 : widget.maxLines,
@@ -600,6 +619,7 @@ class _NeuFieldState extends State<NeuField> {
           disabledBorder: InputBorder.none,
           errorBorder: InputBorder.none,
           focusedErrorBorder: InputBorder.none,
+          suffixIcon: widget.suffix,
           hintText: widget.hint,
           hintStyle: neuBody(
               size: 15,

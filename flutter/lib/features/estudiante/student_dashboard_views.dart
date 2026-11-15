@@ -8,6 +8,7 @@ import 'package:searchteach_mobile/features/tutorias/tutoria_historial_page.dart
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/api_client.dart';
 import '../../core/widgets/role_toast.dart';
+import '../pa/pa_widgets.dart';
 import '../tutorias/proyecto_aula_chat_page.dart';
 import '../tutorias/tutoria_chat_page.dart';
 import 'student_dashboard_models.dart';
@@ -18,6 +19,6 @@ part 'student_dashboard_tutoring.dart';
 part 'student_dashboard_tutoring_widgets.dart';
 
 const _blue = Color(0xFF1769AA);
-const _navy = Color(0xFF17324F);
-const _muted = Color(0xFF64748B);
-const _line = Color(0xFFE4EAF1);
+const _navy = Neu.heading;
+const _muted = Neu.muted;
+const _line = Neu.line;

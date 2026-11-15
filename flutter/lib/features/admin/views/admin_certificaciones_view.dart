@@ -6,7 +6,6 @@ import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/api_client.dart';
-import '../../../core/neu/neu.dart';
 import '../../pa/pa_widgets.dart';
 import '../admin_controller.dart';
 

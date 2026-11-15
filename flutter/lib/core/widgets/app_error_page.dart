@@ -78,15 +78,21 @@ class AppErrorPage extends StatelessWidget {
                     ),
                     const SizedBox(height: 24),
                     FilledButton.icon(
-                      onPressed: () => canRetry
-                          ? context.go('/session')
-                          : context.go('/login'),
-                      icon: const Icon(Icons.login_rounded),
+                      onPressed: () => info.kind == AppErrorKind.forbidden
+                          ? context.go('/login')
+                          : context.go('/session'),
+                      icon: Icon(canRetry
+                          ? Icons.refresh_rounded
+                          : info.kind == AppErrorKind.notFound
+                              ? Icons.home_rounded
+                              : Icons.login_rounded),
                       label: Text(canRetry
                           ? 'Reintentar'
-                          : 'Volver al inicio de sesión'),
+                          : info.kind == AppErrorKind.notFound
+                              ? 'Volver al inicio'
+                              : 'Volver al inicio de sesión'),
                     ),
-                    if (canRetry)
+                    if (info.kind != AppErrorKind.forbidden)
                       TextButton(
                         onPressed: () => context.go('/login'),
                         child: const Text('Ir al inicio de sesión'),

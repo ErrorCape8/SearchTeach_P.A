@@ -5,13 +5,18 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/api_client.dart';
 import '../../core/widgets/role_toast.dart';
+import '../pa/pa_widgets.dart';
 import 'coordinacion_horarios_models.dart';
 import 'coordinacion_horarios_form.dart';
 import 'coordinacion_horarios_widgets.dart';
 import '../../core/tutoring_updates.dart';
 
+const _wine = Color(0xFFA9154F);
+
 class CoordinacionHorariosPage extends ConsumerStatefulWidget {
-  const CoordinacionHorariosPage({super.key});
+  const CoordinacionHorariosPage({this.leading, super.key});
+
+  final Widget? leading;
 
   @override
   ConsumerState<CoordinacionHorariosPage> createState() =>
@@ -30,6 +35,7 @@ class _CoordinacionHorariosPageState
   int _section = 0;
   bool _loading = true;
   String? _error;
+
   @override
   void initState() {
     super.initState();
@@ -131,22 +137,40 @@ class _CoordinacionHorariosPageState
     final selected = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Programar tutoría'),
-        content: const Text('Selecciona el tipo de tutoría que deseas crear.'),
+        backgroundColor: Neu.bg,
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          'Programar tutoría',
+          style: neuPoppins(
+              size: 18, weight: FontWeight.w700, color: Neu.heading),
+        ),
+        content: Text(
+          'Selecciona el tipo de tutoría que deseas crear.',
+          style: neuBody(color: Neu.muted),
+        ),
         actions: [
-          TextButton(
+          NeuButton(
+            'Cerrar',
+            kind: NeuButtonKind.alt,
+            small: true,
+            expand: false,
             onPressed: () => Navigator.pop(dialogContext, null),
-            child: const Text('Cerrar'),
           ),
-          OutlinedButton.icon(
+          NeuButton(
+            'Tutorías de proyecto de aula',
+            kind: NeuButtonKind.alt,
+            icon: Icons.groups_outlined,
+            small: true,
+            expand: false,
             onPressed: () => Navigator.pop(dialogContext, true),
-            icon: const Icon(Icons.groups_outlined),
-            label: const Text('Tutorías de proyecto de aula'),
           ),
-          FilledButton.icon(
+          NeuButton(
+            'Tutorías retroalimentativas',
+            icon: Icons.rate_review_outlined,
+            small: true,
+            expand: false,
             onPressed: () => Navigator.pop(dialogContext, false),
-            icon: const Icon(Icons.rate_review_outlined),
-            label: const Text('Tutorías retroalimentativas'),
           ),
         ],
       ),
@@ -165,35 +189,51 @@ class _CoordinacionHorariosPageState
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
-          builder: (dialogContext, setDialogState) => AlertDialog(
-                title: const Text('Eliminar tutoría'),
-                content: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Para confirmar, escribe eliminar.'),
-                      const SizedBox(height: 12),
-                      TextField(
-                          controller: controller,
-                          autofocus: true,
-                          onChanged: (_) => setDialogState(() {}),
-                          decoration: const InputDecoration(
-                              labelText: 'Escribe eliminar')),
-                    ]),
-                actions: [
-                  TextButton(
-                      onPressed: () => Navigator.pop(dialogContext, false),
-                      child: const Text('Cancelar')),
-                  FilledButton(
-                    onPressed:
-                        controller.text.trim().toLowerCase() == 'eliminar'
-                            ? () => Navigator.pop(dialogContext, true)
-                            : null,
-                    style: FilledButton.styleFrom(backgroundColor: Colors.red),
-                    child: const Text('Eliminar'),
-                  ),
-                ],
-              )),
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          backgroundColor: Neu.bg,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text(
+            'Eliminar tutoría',
+            style: neuPoppins(
+                size: 18, weight: FontWeight.w700, color: Neu.heading),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Para confirmar, escribe eliminar.',
+                style: neuBody(color: Neu.muted),
+              ),
+              const SizedBox(height: 12),
+              NeuField(
+                controller: controller,
+                hint: 'Escribe eliminar',
+                onChanged: (_) => setDialogState(() {}),
+              ),
+            ],
+          ),
+          actions: [
+            NeuButton(
+              'Cancelar',
+              kind: NeuButtonKind.alt,
+              small: true,
+              expand: false,
+              onPressed: () => Navigator.pop(dialogContext, false),
+            ),
+            NeuButton(
+              'Eliminar',
+              kind: NeuButtonKind.danger,
+              small: true,
+              expand: false,
+              onPressed: controller.text.trim().toLowerCase() == 'eliminar'
+                  ? () => Navigator.pop(dialogContext, true)
+                  : null,
+            ),
+          ],
+        ),
+      ),
     );
     controller.dispose();
     if (confirmed != true || !mounted) return;
@@ -203,13 +243,13 @@ class _CoordinacionHorariosPageState
           .delete<void>('/api/coordinacion/sesiones-grupales/${session.id}');
       if (!mounted) return;
       RoleToast.show(context,
-          message: 'Tutoría eliminada.', roleColor: const Color(0xFFA9154F));
+          message: 'Tutoría eliminada.', roleColor: _wine);
       await _load();
     } on DioException catch (error) {
       if (mounted) {
         RoleToast.show(context,
             message: apiError(error, 'No se pudo eliminar la tutoría.'),
-            roleColor: const Color(0xFFA9154F));
+            roleColor: _wine);
       }
     }
   }
@@ -229,83 +269,121 @@ class _CoordinacionHorariosPageState
     final result = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
-          builder: (context, setDialogState) => AlertDialog(
-                title: const Text('Editar tutoría'),
-                content: SingleChildScrollView(
-                    child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  TextField(
-                      controller: subjectController,
-                      decoration: const InputDecoration(labelText: 'Materia')),
-                  const SizedBox(height: 12),
-                  OutlinedButton.icon(
-                    onPressed: () async {
-                      final picked = await showDatePicker(
-                          context: context,
-                          initialDate: start,
-                          firstDate: DateTime.now(),
-                          lastDate:
-                              DateTime.now().add(const Duration(days: 365)));
-                      if (picked != null) {
-                        setDialogState(() => start = DateTime(
-                            picked.year,
-                            picked.month,
-                            picked.day,
-                            start.hour,
-                            start.minute));
-                      }
-                    },
-                    icon: const Icon(Icons.calendar_month),
-                    label: Text(
-                        '${start.day.toString().padLeft(2, '0')}/${start.month.toString().padLeft(2, '0')}/${start.year}'),
+        builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: Neu.bg,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text(
+            'Editar tutoría',
+            style: neuPoppins(
+                size: 18, weight: FontWeight.w700, color: Neu.heading),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const PaFieldLabel('Materia', first: true),
+                NeuField(
+                  controller: subjectController,
+                  hint: 'Materia',
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: NeuButton(
+                        '${start.day.toString().padLeft(2, '0')}/${start.month.toString().padLeft(2, '0')}/${start.year}',
+                        icon: Icons.calendar_month,
+                        kind: NeuButtonKind.alt,
+                        small: true,
+                        onPressed: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: start,
+                            firstDate: DateTime.now(),
+                            lastDate:
+                                DateTime.now().add(const Duration(days: 365)),
+                          );
+                          if (picked != null) {
+                            setDialogState(() => start = DateTime(
+                                picked.year,
+                                picked.month,
+                                picked.day,
+                                start.hour,
+                                start.minute));
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: NeuButton(
+                        TimeOfDay.fromDateTime(start).format(context),
+                        icon: Icons.schedule,
+                        kind: NeuButtonKind.alt,
+                        small: true,
+                        onPressed: () async {
+                          final picked = await showTimePicker(
+                            context: context,
+                            initialTime: TimeOfDay.fromDateTime(start),
+                          );
+                          if (picked != null) {
+                            setDialogState(() => start = DateTime(
+                                start.year,
+                                start.month,
+                                start.day,
+                                picked.hour,
+                                picked.minute));
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                const PaFieldLabel('Modalidad'),
+                NeuDropdown<String>(
+                  items: const ['PRESENCIAL', 'VIRTUAL', 'HIBRIDA'],
+                  value: modality,
+                  labelOf: (v) => switch (v) {
+                    'PRESENCIAL' => 'Presencial',
+                    'VIRTUAL' => 'Virtual',
+                    'HIBRIDA' => 'Híbrida',
+                    _ => v,
+                  },
+                  onChanged: (value) {
+                    if (value != null) {
+                      setDialogState(() => modality = value);
+                    }
+                  },
+                ),
+                if (modality != 'VIRTUAL') ...[
+                  const PaFieldLabel('Lugar'),
+                  NeuField(
+                    controller: locationController,
+                    hint: 'Lugar',
                   ),
-                  OutlinedButton.icon(
-                    onPressed: () async {
-                      final picked = await showTimePicker(
-                          context: context,
-                          initialTime: TimeOfDay.fromDateTime(start));
-                      if (picked != null) {
-                        setDialogState(() => start = DateTime(
-                            start.year,
-                            start.month,
-                            start.day,
-                            picked.hour,
-                            picked.minute));
-                      }
-                    },
-                    icon: const Icon(Icons.schedule),
-                    label: Text(TimeOfDay.fromDateTime(start).format(context)),
-                  ),
-                  const SizedBox(height: 8),
-                  DropdownButtonFormField<String>(
-                      initialValue: modality,
-                      decoration: const InputDecoration(labelText: 'Modalidad'),
-                      items: const [
-                        DropdownMenuItem(
-                            value: 'PRESENCIAL', child: Text('Presencial')),
-                        DropdownMenuItem(
-                            value: 'VIRTUAL', child: Text('Virtual')),
-                        DropdownMenuItem(
-                            value: 'HIBRIDA', child: Text('Híbrida')),
-                      ],
-                      onChanged: (value) {
-                        if (value != null) {
-                          setDialogState(() => modality = value);
-                        }
-                      }),
-                  if (modality != 'VIRTUAL')
-                    TextField(
-                        controller: locationController,
-                        decoration: const InputDecoration(labelText: 'Lugar')),
-                ])),
-                actions: [
-                  TextButton(
-                      onPressed: () => Navigator.pop(dialogContext, false),
-                      child: const Text('Cancelar')),
-                  FilledButton(
-                      onPressed: () => Navigator.pop(dialogContext, true),
-                      child: const Text('Guardar')),
                 ],
-              )),
+              ],
+            ),
+          ),
+          actions: [
+            NeuButton(
+              'Cancelar',
+              kind: NeuButtonKind.alt,
+              small: true,
+              expand: false,
+              onPressed: () => Navigator.pop(dialogContext, false),
+            ),
+            NeuButton(
+              'Guardar',
+              small: true,
+              expand: false,
+              onPressed: () => Navigator.pop(dialogContext, true),
+            ),
+          ],
+        ),
+      ),
     );
     if (result != true || !mounted) {
       subjectController.dispose();
@@ -335,14 +413,14 @@ class _CoordinacionHorariosPageState
       if (mounted) {
         RoleToast.show(context,
             message: 'Tutoría actualizada.',
-            roleColor: const Color(0xFFA9154F));
+            roleColor: _wine);
         await _load();
       }
     } on DioException catch (error) {
       if (mounted) {
         RoleToast.show(context,
             message: apiError(error, 'No se pudo editar la tutoría.'),
-            roleColor: const Color(0xFFA9154F));
+            roleColor: _wine);
       }
     } finally {
       subjectController.dispose();
@@ -415,83 +493,93 @@ class _CoordinacionHorariosPageState
     ref.listen(tutoringUpdatesProvider, (_, next) {
       if (next.hasValue && mounted) _load();
     });
-    return Scaffold(
-      backgroundColor: const Color(0xFFF3F5FA),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFFA9154F),
-        foregroundColor: Colors.white,
-        elevation: 0,
-        title: const Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Horarios de tutores'),
-            Text(
-              'Asigna y administra su disponibilidad',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        heroTag: 'programar_tutorias',
-        onPressed: _chooseTutoringType,
-        backgroundColor: const Color(0xFFA9154F),
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.add),
-        label: const Text('Programar tutoría'),
-      ),
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1280),
-            child: _loading
-                ? const Center(child: CircularProgressIndicator())
-                : _error != null
-                    ? ScheduleLoadError(message: _error!, onRetry: _load)
-                    : Column(
-                        children: [
-                          ScheduleSectionSelector(
-                            selected: _section,
-                            withScheduleCount: _teachers
-                                .where(
-                                    (teacher) => _hasAvailability(teacher.id))
-                                .length,
-                            withoutScheduleCount: _teachers
-                                .where(
-                                    (teacher) => !_hasAvailability(teacher.id))
-                                .length,
-                            onChanged: (value) =>
-                                setState(() => _section = value),
-                          ),
-                          ScheduleFilters(
-                            searchController: _searchController,
-                            careers: _careers,
-                            career: _career,
-                            semester: _semester,
-                            onSearchChanged: (_) => setState(() {}),
-                            onCareerChanged: (value) =>
-                                setState(() => _career = value),
-                            onSemesterChanged: (value) =>
-                                setState(() => _semester = value),
-                            onRefresh: _load,
-                            refreshing: _loading,
-                          ),
-                          Expanded(
-                            child: _visibleTeachers.isEmpty
-                                ? const ScheduleEmptyResults()
-                                : TeacherScheduleGrid(
-                                    teachers: _visibleTeachers,
-                                    schedules: _scheduleByTeacher,
-                                    sessions: _sessionsByTeacher,
-                                    onEditSession: _editSession,
-                                    onDeleteSession: _deleteSession,
-                                    onEditSchedule: _editTeacherSchedule,
-                                  ),
-                          ),
-                        ],
-                      ),
+
+    final wide = MediaQuery.sizeOf(context).width >= 650;
+    final withCount = _teachers
+        .where((teacher) => _hasAvailability(teacher.id))
+        .length;
+    final withoutCount = _teachers
+        .where((teacher) => !_hasAvailability(teacher.id))
+        .length;
+
+    return ColoredBox(
+      color: Neu.bg,
+      child: Column(
+        children: [
+          NeuHeader(
+            title: 'Horarios de tutores',
+            subtitle: 'Asigna y administra su disponibilidad',
+            leading: widget.leading,
+            actions: [
+              if (wide)
+                NeuButton(
+                  'Programar tutoría',
+                  onPressed: _chooseTutoringType,
+                  icon: Icons.add,
+                  small: true,
+                  expand: false,
+                )
+              else
+                NeuCircleButton(
+                  icon: Icons.add,
+                  tooltip: 'Programar tutoría',
+                  onTap: _chooseTutoringType,
+                ),
+              const NeuHeaderLogo(),
+            ],
           ),
-        ),
+          Expanded(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1280),
+                child: _loading
+                    ? const Center(
+                        child: CircularProgressIndicator(
+                          color: _wine,
+                        ),
+                      )
+                    : _error != null
+                        ? ScheduleLoadError(message: _error!, onRetry: _load)
+                        : Column(
+                            children: [
+                              ScheduleSectionSelector(
+                                selected: _section,
+                                withScheduleCount: withCount,
+                                withoutScheduleCount: withoutCount,
+                                onChanged: (value) =>
+                                    setState(() => _section = value),
+                              ),
+                              ScheduleFilters(
+                                searchController: _searchController,
+                                careers: _careers,
+                                career: _career,
+                                semester: _semester,
+                                onSearchChanged: (_) => setState(() {}),
+                                onCareerChanged: (value) =>
+                                    setState(() => _career = value),
+                                onSemesterChanged: (value) =>
+                                    setState(() => _semester = value),
+                                onRefresh: _load,
+                                refreshing: _loading,
+                              ),
+                              Expanded(
+                                child: _visibleTeachers.isEmpty
+                                    ? const ScheduleEmptyResults()
+                                    : TeacherScheduleGrid(
+                                        teachers: _visibleTeachers,
+                                        schedules: _scheduleByTeacher,
+                                        sessions: _sessionsByTeacher,
+                                        onEditSession: _editSession,
+                                        onDeleteSession: _deleteSession,
+                                        onEditSchedule: _editTeacherSchedule,
+                                      ),
+                              ),
+                            ],
+                          ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

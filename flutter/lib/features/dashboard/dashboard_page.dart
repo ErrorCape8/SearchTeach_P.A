@@ -23,7 +23,6 @@ const _navItems = <(String, IconData)>[
   ('Tutorías', Icons.book_outlined),
   ('Calidad', Icons.star_border_rounded),
   ('Pronóstico', Icons.bar_chart_rounded),
-  ('Perfil', Icons.person_outline_rounded),
 ];
 
 const _subtitles = <String>[
@@ -31,7 +30,6 @@ const _subtitles = <String>[
   'Información por materia',
   'Calificaciones anónimas',
   'Demanda de tutorías',
-  '',
 ];
 
 String? _nonEmpty(Map<String, dynamic>? data, String key) {
@@ -128,7 +126,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
           bottomNavigationBar: MediaQuery.sizeOf(context).width >= 900
               ? null
               : NeuBottomBar(
-                  index: _tab,
+                  index: _tab >= _navItems.length ? -1 : _tab,
                   onSelect: _select,
                   items: [
                     for (final item in _navItems)
@@ -176,7 +174,8 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
           height: 46,
           child: NeuSurface(
             radius: 46,
-            shadows: Neu.raiseS,
+            shadows: _tab == _profileTab ? const [] : Neu.raiseS,
+            sunken: _tab == _profileTab,
             onTap: () => _select(_profileTab),
             child: Center(
               child: Text(initialsOf(fullName),
@@ -436,44 +435,53 @@ class _Sidebar extends StatelessWidget {
             const Spacer(),
             Padding(
               padding: const EdgeInsets.fromLTRB(0, 8, 0, 0),
-              child: Row(children: [
-                SizedBox(
-                  width: 42,
-                  height: 42,
-                  child: NeuSurface(
-                    radius: 42,
-                    shadows: Neu.raiseS,
-                    child: Center(
-                      child: Text(initials,
-                          style: neuPoppins(
-                              size: 13,
-                              weight: FontWeight.w700,
-                              color: Neu.muted)),
+              child: NeuSurface(
+                radius: 18,
+                shadows: selected == 4 ? const [] : Neu.raiseS,
+                sunken: selected == 4,
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                onTap: () => onSelect(4),
+                child: Row(children: [
+                  SizedBox(
+                    width: 40,
+                    height: 40,
+                    child: NeuSurface(
+                      radius: 40,
+                      shadows: Neu.raiseS,
+                      child: Center(
+                        child: Text(initials,
+                            style: neuPoppins(
+                                size: 13,
+                                weight: FontWeight.w700,
+                                color: selected == 4 ? _purple : Neu.muted)),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: neuPoppins(size: 13.5)),
-                        Text(role,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: neuBody(size: 12, color: Neu.muted)),
-                      ]),
-                ),
-                IconButton(
-                  tooltip: 'Cerrar sesión',
-                  onPressed: onLogout,
-                  icon: const Icon(Icons.logout_rounded,
-                      size: 22, color: Neu.muted),
-                ),
-              ]),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: neuPoppins(
+                                  size: 13.5,
+                                  color: selected == 4 ? _purple : Neu.text)),
+                          Text(role,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: neuBody(size: 12, color: Neu.muted)),
+                        ]),
+                  ),
+                  IconButton(
+                    tooltip: 'Cerrar sesión',
+                    onPressed: onLogout,
+                    icon: const Icon(Icons.logout_rounded,
+                        size: 20, color: Neu.muted),
+                  ),
+                ]),
+              ),
             ),
           ]),
         ),

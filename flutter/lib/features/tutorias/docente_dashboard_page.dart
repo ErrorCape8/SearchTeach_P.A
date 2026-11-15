@@ -1,3 +1,4 @@
+// ignore_for_file: unused_element, unused_element_parameter
 import 'dart:async';
 
 import 'package:dio/dio.dart';
@@ -10,7 +11,6 @@ import '../../core/role_theme.dart';
 import '../../core/tutoring_updates.dart';
 import '../../core/widgets/brand_logo.dart';
 import '../../core/widgets/role_toast.dart';
-import '../../core/widgets/sliding_pill_navigation_bar.dart';
 import '../auth/auth_repository.dart';
 import '../notifications/notifications_page.dart';
 import 'docente_proyectos_aula_page.dart';
@@ -25,8 +25,6 @@ import 'tutoria_chat_page.dart';
 import 'tutoria_historial_page.dart';
 
 const _teacherGreen = Color(0xFF16834A);
-const _teacherCanvas = Color(0xFFE3E8F0);
-const _teacherNavy = Color(0xFF18352A);
 
 final _teacherSessionsProvider =
     FutureProvider.autoDispose<List<_TeacherTutoringSession>>((ref) async {
@@ -72,122 +70,6 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    ref.listen(tutoringUpdatesProvider, (_, next) {
-      if (next.hasValue && mounted) ref.invalidate(_teacherSessionsProvider);
-    });
-    final wide = MediaQuery.sizeOf(context).width >= 850;
-    final profile = ref.watch(docenteProfileProvider).asData?.value;
-    final teacherName = profile?['nombre'] is String
-        ? profile!['nombre'] as String
-        : 'Docente';
-    final teacherCareer = profile?['carrera'] is String
-        ? profile!['carrera'] as String
-        : 'SearchTeach';
-    return Theme(
-      data: withRoleAccent(
-        Theme.of(context).copyWith(
-          colorScheme:
-              Theme.of(context).colorScheme.copyWith(primary: _teacherGreen),
-          scaffoldBackgroundColor: _teacherCanvas,
-        ),
-        _teacherGreen,
-      ),
-      child: Scaffold(
-        backgroundColor: _teacherCanvas,
-        body: Row(
-          children: [
-            if (wide) _desktopMenu(teacherName, teacherCareer),
-            Expanded(
-              child: Column(
-                children: [
-                  _TeacherHeader(
-                    title: _headerTitle,
-                    subtitle: _tab == 0
-                        ? teacherCareer
-                        : 'Docente · $teacherCareer',
-                    name: teacherName,
-                    onRefresh: () {
-                      ref.invalidate(_teacherSessionsProvider);
-                      ref.invalidate(docenteProfileProvider);
-                      ref.invalidate(notificationUnreadCountProvider);
-                    },
-                    onNotifications: () => setState(() => _tab = 5),
-                  ),
-                  Expanded(
-                    child: ClipRRect(
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(28),
-                      ),
-                      child: IndexedStack(
-                        index: _tab,
-                        children: [
-                          _home(teacherName),
-                          _sessions(),
-                          _startTutoring(),
-                          const DocenteProyectosAulaPage(),
-                          const DocenteLiderProyectosPage(),
-                          const NotificationsInbox(
-                            accentColor: _teacherGreen,
-                            htmlStyle: true,
-                          ),
-                          _history(),
-                          const DocentePerfilPage(),
-                          const DocenteSolicitudesPage(),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        bottomNavigationBar: wide
-            ? null
-            : SlidingPillNavigationBar(
-                selectedColor: _teacherGreen,
-                indicatorColor: const Color(0xFFE6F4EA),
-                selectedIndex: _navigationTabs.indexOf(_tab).clamp(
-                      0,
-                      _navigationTabs.length - 1,
-                    ),
-                onDestinationSelected: (position) => setState(
-                  () => _tab = _navigationTabs[position],
-                ),
-                destinations: [
-                  const SlidingPillDestination(
-                    icon: Icons.home_outlined,
-                    selectedIcon: Icons.home_rounded,
-                    label: 'Inicio',
-                  ),
-                  const SlidingPillDestination(
-                    icon: Icons.videocam_outlined,
-                    selectedIcon: Icons.videocam_rounded,
-                    label: 'Empezar',
-                  ),
-                  const SlidingPillDestination(
-                    icon: Icons.calendar_month_outlined,
-                    selectedIcon: Icons.calendar_month_rounded,
-                    label: 'Mis sesiones',
-                  ),
-                  const SlidingPillDestination(
-                    icon: Icons.menu_book_outlined,
-                    selectedIcon: Icons.menu_book_rounded,
-                    label: 'Tutoría',
-                  ),
-                  const SlidingPillDestination(
-                    icon: Icons.star_outline_rounded,
-                    selectedIcon: Icons.star_rounded,
-                    label: 'Líder PA',
-                  ),
-                ],
-              ),
-      ),
-    );
-  }
-
   static const _teacherTabNames = {
     0: 'Inicio',
     1: 'Tutoría',
@@ -203,128 +85,179 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
   String get _headerTitle =>
       _tab == 0 ? 'Panel docente' : _teacherTabNames[_tab] ?? 'Panel docente';
 
-  List<int> get _navigationTabs => [0, 2, 3, 1, 4];
+  static const _navigationTabs = [0, 2, 3, 1, 4];
 
   static String _initials(String value) {
-    final parts = value.trim().split(RegExp(r'\s+')).where((part) => part.isNotEmpty);
+    final parts =
+        value.trim().split(RegExp(r'\s+')).where((part) => part.isNotEmpty);
     if (parts.isEmpty) return 'D';
     return parts.take(2).map((part) => part[0].toUpperCase()).join();
   }
 
-  Widget _desktopMenu(String teacherName, String teacherCareer) => Material(
-        color: Colors.white,
-        child: SizedBox(
-          width: 198,
-          child: Column(children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(12, 14, 12, 16),
-              child: SizedBox(
-                height: 76,
-                child: BrandLogo(
-                  width: 158,
-                  height: 76,
-                  accentColor: _teacherGreen,
-                ),
+  Widget _profileButton(String teacherName) => Semantics(
+        button: true,
+        label: 'Abrir perfil',
+        child: GestureDetector(
+          onTap: () => setState(() => _tab = 7),
+          child: SizedBox(
+            width: 46,
+            height: 46,
+            child: NeuSurface(
+              radius: 46,
+              shadows: Neu.raiseS,
+              child: Center(
+                child: Text(_initials(teacherName),
+                    style: neuPoppins(
+                        size: 15,
+                        weight: FontWeight.w700,
+                        color: _teacherGreen)),
               ),
             ),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 22),
-              child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text('DOCENTE',
-                      style: TextStyle(
-                          color: Color(0xFF687A70),
-                          fontSize: 11,
-                          letterSpacing: 1.5,
-                          fontWeight: FontWeight.w700))),
-            ),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(16, 16, 16, 4),
-              child: Divider(height: 1, color: Color(0xFFE3ECE5)),
-            ),
-            const SizedBox(height: 10),
-            for (final item in const [
-            (0, Icons.home_outlined, 'Inicio'),
-            (2, Icons.videocam_outlined, 'Empezar'),
-            (3, Icons.calendar_month_outlined, 'Mis sesiones'),
-            (1, Icons.menu_book_outlined, 'Tutoría'),
-            (4, Icons.star_outline_rounded, 'Líder PA'),
-            ])
-            Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-              child: ListTile(
-                dense: true,
-                selected: _tab == item.$1,
-                selectedColor: _teacherNavy,
-                selectedTileColor: const Color(0xFFEAF5EE),
-                textColor: _teacherNavy,
-                iconColor: _teacherGreen,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                leading: Icon(item.$2, size: 20),
-                title: Text(item.$3,
-                    style: const TextStyle(
-                        fontSize: 13, fontWeight: FontWeight.w600)),
-                onTap: () => setState(() => _tab = item.$1),
-              ),
-            ),
-            const Spacer(),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              child: Divider(height: 1, color: Color(0xFFE3ECE5)),
-            ),
-            InkWell(
-              onTap: () => setState(() => _tab = 7),
-              borderRadius: BorderRadius.circular(14),
-              child: Padding(
-              padding: const EdgeInsets.fromLTRB(18, 14, 18, 18),
-              child: Row(children: [
-                CircleAvatar(
-                  backgroundColor: const Color(0xFFEAF5EE),
-                  foregroundColor: _teacherNavy,
-                  child: Text(_initials(teacherName)),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(teacherName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                              color: _teacherNavy,
-                              fontWeight: FontWeight.w700)),
-                      Text(teacherCareer,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                              color: Color(0xFF687A70), fontSize: 11)),
-                    ]),
-                ),
-              ]),
-            )),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
-              child: OutlinedButton.icon(
-                onPressed: _logout,
-                icon: const Icon(Icons.logout, size: 17),
-                label: const Text('Cerrar sesión'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: _teacherNavy,
-                  minimumSize: const Size.fromHeight(40),
-                ),
-              ),
-            ),
-          ]),
+          ),
         ),
       );
+
+  Widget _header(bool wide, String teacherName, String teacherCareer) {
+    final home = _tab == 0;
+    final unread = ref.watch(notificationUnreadCountProvider).valueOrNull ?? 0;
+    return NeuHeader(
+      title: home
+          ? 'Hola, ${teacherName.split(RegExp(r'\s+')).first}'
+          : _headerTitle,
+      subtitle: home
+          ? teacherCareer
+          : (_tab == 7 ? 'Docente' : 'Docente · $teacherCareer'),
+      leading: home
+          ? _profileButton(teacherName)
+          : NeuCircleButton(
+              icon: Icons.chevron_left_rounded,
+              tooltip: 'Volver al inicio',
+              onTap: () => setState(() => _tab = 0),
+            ),
+      actions: [
+        if (wide)
+          NeuButton(
+            'Actualizar',
+            onPressed: () {
+              ref.invalidate(_teacherSessionsProvider);
+              ref.invalidate(docenteProfileProvider);
+              ref.invalidate(notificationUnreadCountProvider);
+            },
+            kind: NeuButtonKind.alt,
+            small: true,
+            icon: Icons.refresh_rounded,
+            expand: false,
+          )
+        else
+          NeuCircleButton(
+            icon: Icons.refresh_rounded,
+            tooltip: 'Actualizar',
+            onTap: () {
+              ref.invalidate(_teacherSessionsProvider);
+              ref.invalidate(docenteProfileProvider);
+              ref.invalidate(notificationUnreadCountProvider);
+            },
+          ),
+        NeuCircleButton(
+          icon: Icons.notifications_none_rounded,
+          tooltip: 'Avisos',
+          badge: unread > 0 ? unread : null,
+          onTap: () => setState(() => _tab = 5),
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    ref.listen(tutoringUpdatesProvider, (_, next) {
+      if (next.hasValue && mounted) ref.invalidate(_teacherSessionsProvider);
+    });
+    final wide = MediaQuery.sizeOf(context).width >= 760;
+    final profile = ref.watch(docenteProfileProvider).asData?.value;
+    final teacherName = profile?['nombre'] is String
+        ? profile!['nombre'] as String
+        : 'Docente';
+    final teacherCareer = profile?['carrera'] is String
+        ? profile!['carrera'] as String
+        : 'SearchTeach';
+
+    final content = Column(
+      children: [
+        _header(wide, teacherName, teacherCareer),
+        Expanded(
+          child: _content(teacherName),
+        ),
+      ],
+    );
+
+    return Theme(
+      data: withRoleAccent(
+        Theme.of(context).copyWith(
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: _teacherGreen,
+            brightness: Theme.of(context).brightness,
+          ).copyWith(primary: _teacherGreen),
+          scaffoldBackgroundColor: Neu.bg,
+        ),
+        _teacherGreen,
+      ),
+      child: Scaffold(
+        backgroundColor: Neu.bg,
+        body: wide
+            ? Row(
+                children: [
+                  _TeacherSidebar(
+                    index: _tab,
+                    name: teacherName,
+                    career: teacherCareer,
+                    onSelect: (tab) => setState(() => _tab = tab),
+                    onLogout: _logout,
+                  ),
+                  Expanded(child: content),
+                ],
+              )
+            : content,
+        bottomNavigationBar: wide
+            ? null
+            : NeuBottomBar(
+                items: const [
+                  NeuNavItem(Icons.home_outlined, 'Inicio'),
+                  NeuNavItem(Icons.videocam_outlined, 'Empezar'),
+                  NeuNavItem(Icons.calendar_month_outlined, 'Mis sesiones'),
+                  NeuNavItem(Icons.menu_book_outlined, 'Tutoría'),
+                  NeuNavItem(Icons.star_outline_rounded, 'Líder PA'),
+                ],
+                index: _navigationTabs.indexOf(_tab),
+                onSelect: (position) => setState(
+                  () => _tab = _navigationTabs[position],
+                ),
+              ),
+      ),
+    );
+  }
+
+  Widget _content(String teacherName) => switch (_tab) {
+        0 => _home(teacherName),
+        1 => _sessions(),
+        2 => _startTutoring(),
+        3 => const DocenteProyectosAulaPage(),
+        4 => const DocenteLiderProyectosPage(),
+        5 => const NotificationsInbox(
+            accentColor: _teacherGreen,
+            htmlStyle: true,
+          ),
+        6 => _history(),
+        7 => const DocentePerfilPage(),
+        8 => const DocenteSolicitudesPage(),
+        _ => _home(teacherName),
+      };
 
   Widget _home(String name) => _TeacherHomeDashboard(
         name: name,
         onOpen: (tab) => setState(() => _tab = tab),
       );
+
   Widget _sessions() => _buildSessions(view: _SessionView.scheduled);
 
   Widget _startTutoring() => _buildSessions(view: _SessionView.start);
@@ -334,10 +267,9 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
   Widget _buildSessions({required _SessionView view}) => ref
       .watch(_teacherSessionsProvider)
       .when(
-        loading: () => view == _SessionView.history
-            ? _historyPage(
-                body: const Center(child: CircularProgressIndicator()))
-            : const Center(child: CircularProgressIndicator()),
+        loading: () => const Center(
+          child: CircularProgressIndicator(color: _teacherGreen),
+        ),
         error: (error, _) => view == _SessionView.history
             ? _historyPage(
                 body: _historyMessage(
@@ -346,15 +278,46 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
                 ),
               )
             : Center(
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  Text('No se pudieron cargar tus tutorías: $error'),
-                  const SizedBox(height: 12),
-                  OutlinedButton.icon(
-                    onPressed: () => ref.invalidate(_teacherSessionsProvider),
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Reintentar'),
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 460),
+                    child: PaCard(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const NeuIconBox(Icons.cloud_off_outlined,
+                              color: Neu.error),
+                          const SizedBox(height: 12),
+                          Text(
+                            'No se pudieron cargar tus tutorías.',
+                            style: neuPoppins(
+                                size: 15,
+                                weight: FontWeight.w700,
+                                color: Neu.heading),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            '$error',
+                            textAlign: TextAlign.center,
+                            style: neuBody(size: 13, color: Neu.muted),
+                          ),
+                          const SizedBox(height: 16),
+                          NeuButton(
+                            'Reintentar',
+                            onPressed: () =>
+                                ref.invalidate(_teacherSessionsProvider),
+                            kind: NeuButtonKind.alt,
+                            small: true,
+                            icon: Icons.refresh,
+                            expand: false,
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ]),
+                ),
               ),
         data: (allSessions) {
           final sessions = allSessions
@@ -369,25 +332,36 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
               .toList()
             ..sort((a, b) => (a.start ?? DateTime(9999))
                 .compareTo(b.start ?? DateTime(9999)));
+
           if (view == _SessionView.history) {
             return _historyPage(
               count: sessions.length,
               body: sessions.isEmpty
                   ? _historyMessage('Aún no tienes tutorías finalizadas.')
-                  : ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                  : ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
                       itemCount: sessions.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
                       itemBuilder: (context, index) =>
                           _historySessionCard(sessions[index]),
                     ),
             );
           }
+
           return sessions.isEmpty
-              ? const Center(
-                  child: Text('No tienes tutorías programadas para hoy.'))
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 460),
+                      child: const _TeacherEmptyCard(
+                        icon: Icons.event_available_outlined,
+                        message: 'No tienes tutorías programadas para hoy.',
+                      ),
+                    ),
+                  ),
+                )
               : ListView(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
                   children: [
                     Row(
                       children: [
@@ -398,210 +372,205 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
                               _SessionView.start => 'Tutorías de hoy',
                               _SessionView.history => 'Historial'
                             },
-                            style: const TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              color: _teacherNavy,
+                            style: neuPoppins(
+                              size: 20,
+                              weight: FontWeight.w700,
+                              color: Neu.heading,
                             ),
                           ),
                         ),
                         if (view == _SessionView.scheduled)
-                          SegmentedButton<bool>(
-                            segments: const [
-                              ButtonSegment(value: false, icon: Icon(Icons.view_list), label: Text('Lista')),
-                              ButtonSegment(value: true, icon: Icon(Icons.calendar_month), label: Text('Calendario')),
+                          NeuSegmented(
+                            labels: const ['Lista', 'Calendario'],
+                            icons: const [
+                              Icons.view_list_rounded,
+                              Icons.calendar_month_rounded,
                             ],
-                            selected: {_sessionsCalendar},
-                            showSelectedIcon: false,
-                            onSelectionChanged: (value) => setState(
-                              () => _sessionsCalendar = value.first,
+                            selected: _sessionsCalendar ? 1 : 0,
+                            onSelect: (value) => setState(
+                              () => _sessionsCalendar = value == 1,
                             ),
                           ),
                       ],
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 16),
                     if (view == _SessionView.scheduled && _sessionsCalendar)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 14),
                         child: _TeacherCalendarPanel(
                           sessions: sessions,
-                          onOpenSessions: () => setState(() => _sessionsCalendar = false),
+                          onOpenSessions: () =>
+                              setState(() => _sessionsCalendar = false),
                         ),
                       ),
                     if (view != _SessionView.scheduled || !_sessionsCalendar)
-                    for (final session in sessions)
-                      Card(
-                        elevation: 0,
-                        margin: const EdgeInsets.only(bottom: 12),
-                        color: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          side: const BorderSide(color: Color(0xFFE5ECE7)),
-                        ),
-                        child: Column(children: [
-                          ListTile(
-                            contentPadding: const EdgeInsets.all(16),
-                            leading: const CircleAvatar(
-                                backgroundColor: Color(0xFFE6F4EA),
-                                child: Icon(Icons.event_available,
-                                    color: _teacherGreen)),
-                            title: Text(session.subject,
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w700)),
-                            subtitle: Text(
-                                '${session.start == null ? 'Fecha no disponible' : _dateTimeLabel(session.start!)} · ${_modalityLabel(session.modality)} · Semestre ${session.semester} · ${session.technologies.join(', ')}${session.modality.toUpperCase() == 'VIRTUAL' || session.location.trim().isEmpty ? '' : '\nLugar: ${session.location}'}\n${session.students.isEmpty ? 'Publicada · sin inscritos' : 'Estudiantes inscritos: ${session.students.length}'}${session.state == 'FINALIZADA' ? '\nClase finalizada' : ''}'),
-                            isThreeLine: true,
-                            trailing: session.id.isNotEmpty &&
-                                    session.start != null &&
-                                    session.end != null &&
-                                    session.state != 'FINALIZADA'
-                                ? IconButton.filledTonal(
-                                    tooltip: 'Solicitar cambio de fecha',
-                                    onPressed: () =>
-                                        _requestDateChange(session),
-                                    icon: const Icon(
-                                        Icons.edit_calendar_outlined),
-                                  )
-                                : null,
-                          ),
-                          if (session.id.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                              child: Wrap(
-                                alignment: WrapAlignment.end,
-                                spacing: 8,
-                                children: [
-                                  if (view != _SessionView.start ||
-                                      session.modality.toUpperCase() !=
-                                          'PRESENCIAL')
-                                    OutlinedButton.icon(
-                                      onPressed: () => Navigator.of(context)
-                                          .push(MaterialPageRoute(
-                                        builder: (_) => TutoriaChatPage(
-                                            sessionId: session.id,
-                                            subject: session.subject,
-                                            readOnly:
-                                                view == _SessionView.history),
-                                      )),
-                                      icon: const Icon(Icons.forum_outlined),
-                                      label: const Text('Abrir chat'),
-                                    ),
-                                  if (view != _SessionView.scheduled ||
-                                      (session.start != null &&
-                                          _isSameDay(
-                                              session.start!, DateTime.now())))
-                                    FilledButton.icon(
-                                      onPressed: () async {
-                                        if (session.modality.toUpperCase() ==
-                                                'PRESENCIAL' &&
-                                            view != _SessionView.history) {
-                                          await Navigator.of(context).push(
-                                            MaterialPageRoute(
-                                              builder: (_) =>
-                                                  PresencialTutoriaPage(
-                                                sessionId: session.id,
-                                                subject: session.subject,
-                                              ),
-                                            ),
-                                          );
-                                        } else {
-                                          await Navigator.of(context)
-                                              .push(MaterialPageRoute(
-                                            builder: (_) => LiveKitRoomPage(
-                                                sessionId: session.id,
-                                                subject: session.subject,
-                                                modality: session.modality,
-                                                teacherMode: true,
-                                                students: session.students,
-                                                ended: view ==
-                                                    _SessionView.history,
-                                                endAt: session.end),
-                                          ));
-                                        }
-                                        if (mounted) {
-                                          ref.invalidate(
-                                              _teacherSessionsProvider);
-                                        }
-                                      },
-                                      icon: Icon(view == _SessionView.history
-                                          ? Icons.history
-                                          : session.modality.toUpperCase() ==
-                                                  'PRESENCIAL'
-                                              ? Icons.fact_check_outlined
-                                              : Icons.video_call_outlined),
-                                      label: Text(view == _SessionView.history
-                                          ? 'Ver historial'
-                                          : view == _SessionView.scheduled
-                                              ? 'Iniciar tutoría'
-                                              : session.modality.toUpperCase() ==
-                                                      'PRESENCIAL'
-                                              ? session.state == 'EN_CURSO'
-                                                  ? 'Tomar asistencia'
-                                                  : 'Habilitar clase presencial'
-                                              : 'Empezar tutoría'),
-                                    ),
-                                ],
-                              ),
-                            ),
-                        ]),
-                      ),
+                      for (final session in sessions)
+                        _buildSessionCard(context, session, view),
                   ],
                 );
         },
       );
 
+  Widget _buildSessionCard(BuildContext context,
+      _TeacherTutoringSession session, _SessionView view) {
+    return PaCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const NeuIconBox(Icons.event_available, color: _teacherGreen),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      session.subject,
+                      style: neuPoppins(
+                        size: 15,
+                        weight: FontWeight.w700,
+                        color: Neu.heading,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${session.start == null ? 'Fecha no disponible' : _dateTimeLabel(session.start!)} · ${_modalityLabel(session.modality)} · Semestre ${session.semester} · ${session.technologies.join(', ')}${session.modality.toUpperCase() == 'VIRTUAL' || session.location.trim().isEmpty ? '' : '\nLugar: ${session.location}'}\n${session.students.isEmpty ? 'Publicada · sin inscritos' : 'Estudiantes inscritos: ${session.students.length}'}${session.state == 'FINALIZADA' ? '\nClase finalizada' : ''}',
+                      style:
+                          neuBody(size: 13, color: Neu.muted, height: 1.35),
+                    ),
+                  ],
+                ),
+              ),
+              if (session.id.isNotEmpty &&
+                  session.start != null &&
+                  session.end != null &&
+                  session.state != 'FINALIZADA')
+                NeuCircleButton(
+                  size: 38,
+                  icon: Icons.edit_calendar_outlined,
+                  tooltip: 'Solicitar cambio de fecha',
+                  onTap: () => _requestDateChange(session),
+                ),
+            ],
+          ),
+          if (session.id.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Wrap(
+              alignment: WrapAlignment.end,
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                if (view != _SessionView.start ||
+                    session.modality.toUpperCase() != 'PRESENCIAL')
+                  NeuButton(
+                    'Abrir chat',
+                    kind: NeuButtonKind.alt,
+                    small: true,
+                    expand: false,
+                    icon: Icons.forum_outlined,
+                    onPressed: () =>
+                        Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => TutoriaChatPage(
+                        sessionId: session.id,
+                        subject: session.subject,
+                        readOnly: view == _SessionView.history,
+                      ),
+                    )),
+                  ),
+                if (view != _SessionView.scheduled ||
+                    (session.start != null &&
+                        _isSameDay(session.start!, DateTime.now())))
+                  NeuButton(
+                    view == _SessionView.history
+                        ? 'Ver historial'
+                        : view == _SessionView.scheduled
+                            ? 'Iniciar tutoría'
+                            : session.modality.toUpperCase() == 'PRESENCIAL'
+                                ? session.state == 'EN_CURSO'
+                                    ? 'Tomar asistencia'
+                                    : 'Habilitar clase presencial'
+                                : 'Empezar tutoría',
+                    icon: view == _SessionView.history
+                        ? Icons.history
+                        : session.modality.toUpperCase() == 'PRESENCIAL'
+                            ? Icons.fact_check_outlined
+                            : Icons.video_call_outlined,
+                    small: true,
+                    expand: false,
+                    onPressed: () async {
+                      if (session.modality.toUpperCase() == 'PRESENCIAL' &&
+                          view != _SessionView.history) {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => PresencialTutoriaPage(
+                              sessionId: session.id,
+                              subject: session.subject,
+                            ),
+                          ),
+                        );
+                      } else {
+                        await Navigator.of(context).push(MaterialPageRoute(
+                          builder: (_) => LiveKitRoomPage(
+                            sessionId: session.id,
+                            subject: session.subject,
+                            modality: session.modality,
+                            teacherMode: true,
+                            students: session.students,
+                            ended: view == _SessionView.history,
+                            endAt: session.end,
+                          ),
+                        ));
+                      }
+                      if (mounted) {
+                        ref.invalidate(_teacherSessionsProvider);
+                      }
+                    },
+                  ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _historyPage({required Widget body, int? count}) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 14),
             child: Row(
               children: [
-                Container(
-                  width: 46,
-                  height: 46,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE6F4EA),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: const Icon(Icons.history, color: _teacherGreen),
-                ),
+                const NeuIconBox(Icons.history,
+                    color: _teacherGreen, size: 44, iconSize: 22),
                 const SizedBox(width: 14),
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         'Historial de tutorías',
-                        style: TextStyle(
-                          color: _teacherNavy,
-                          fontSize: 23,
-                          fontWeight: FontWeight.w800,
+                        style: neuPoppins(
+                          color: Neu.heading,
+                          size: 19,
+                          weight: FontWeight.w700,
                         ),
                       ),
-                      SizedBox(height: 3),
+                      const SizedBox(height: 3),
                       Text(
                         'Consulta tus sesiones finalizadas, sus datos y chats.',
-                        style: TextStyle(color: Color(0xFF687A70)),
+                        style: neuBody(color: Neu.muted, size: 12.5),
                       ),
                     ],
                   ),
                 ),
                 if (count != null)
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE6F4EA),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      '$count ${count == 1 ? 'sesión' : 'sesiones'}',
-                      style: const TextStyle(
-                        color: _teacherNavy,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
+                  PaTag(
+                    '$count ${count == 1 ? 'sesión' : 'sesiones'}',
+                    tone: PaTone.neutral,
                   ),
               ],
             ),
@@ -613,153 +582,124 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
   Widget _historyMessage(String message, {VoidCallback? onRetry}) => Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: Container(
+          child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 460),
-            padding: const EdgeInsets.all(28),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(color: const Color(0xFFE3ECE5)),
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.history, color: _teacherGreen, size: 34),
-                const SizedBox(height: 12),
-                Text(
-                  message,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Color(0xFF53665B)),
-                ),
-                if (onRetry != null) ...[
+            child: PaCard(
+              padding: const EdgeInsets.all(28),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const NeuIconBox(Icons.history,
+                      color: _teacherGreen, size: 48, iconSize: 26),
                   const SizedBox(height: 14),
-                  OutlinedButton.icon(
-                    onPressed: onRetry,
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Reintentar'),
+                  Text(
+                    message,
+                    textAlign: TextAlign.center,
+                    style: neuBody(size: 14, color: Neu.muted),
                   ),
+                  if (onRetry != null) ...[
+                    const SizedBox(height: 16),
+                    NeuButton(
+                      'Reintentar',
+                      icon: Icons.refresh,
+                      kind: NeuButtonKind.alt,
+                      small: true,
+                      expand: false,
+                      onPressed: onRetry,
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),
       );
 
-  Widget _historySessionCard(_TeacherTutoringSession session) => Card(
-        elevation: 0,
-        margin: EdgeInsets.zero,
-        color: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: Color(0xFFE3ECE5)),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(18),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const CircleAvatar(
-                    backgroundColor: Color(0xFFE6F4EA),
-                    child: Icon(Icons.event_available, color: _teacherGreen),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      session.subject,
-                      style: const TextStyle(
-                        color: _teacherNavy,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 16,
-                      ),
+  Widget _historySessionCard(_TeacherTutoringSession session) => PaCard(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const NeuIconBox(Icons.event_available, color: _teacherGreen),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    session.subject,
+                    style: neuPoppins(
+                      color: Neu.heading,
+                      weight: FontWeight.w700,
+                      size: 15,
                     ),
-                  ),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE6F4EA),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Text(
-                      'Finalizada',
-                      style: TextStyle(
-                        color: _teacherNavy,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  _HistoryDetail(
-                    icon: Icons.calendar_month_outlined,
-                    label: session.start == null
-                        ? 'Fecha no disponible'
-                        : _dateTimeLabel(session.start!),
-                  ),
-                  _HistoryDetail(
-                    icon: Icons.school_outlined,
-                    label: 'Semestre ${session.semester}',
-                  ),
-                  _HistoryDetail(
-                    icon: Icons.meeting_room_outlined,
-                    label: _modalityLabel(session.modality),
-                  ),
-                  if (session.modality.toUpperCase() != 'VIRTUAL' &&
-                      session.location.trim().isNotEmpty)
-                    _HistoryDetail(
-                      icon: Icons.place_outlined,
-                      label: session.location,
-                    ),
-                  _HistoryDetail(
-                    icon: Icons.people_outline,
-                    label: '${session.students.length} estudiantes',
-                  ),
-                ],
-              ),
-              if (session.technologies.isNotEmpty) ...[
-                const SizedBox(height: 10),
-                Text(
-                  session.technologies.join(' · '),
-                  style: const TextStyle(color: Color(0xFF687A70)),
-                ),
-              ],
-              if (session.id.isNotEmpty) ...[
-                const SizedBox(height: 14),
-                const Divider(height: 1, color: Color(0xFFEAF0EB)),
-                const SizedBox(height: 10),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      FilledButton.tonalIcon(
-                        onPressed: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => TutoriaHistorialPage(
-                              sessionId: session.id,
-                              subject: session.subject,
-                              isIndividual: false,
-                            ),
-                          ),
-                        ),
-                        icon: const Icon(Icons.history),
-                        label: const Text('Ver historial'),
-                      ),
-                    ],
                   ),
                 ),
+                const PaTag('Finalizada', tone: PaTone.ok),
               ],
+            ),
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _HistoryDetail(
+                  icon: Icons.calendar_month_outlined,
+                  label: session.start == null
+                      ? 'Fecha no disponible'
+                      : _dateTimeLabel(session.start!),
+                ),
+                _HistoryDetail(
+                  icon: Icons.school_outlined,
+                  label: 'Semestre ${session.semester}',
+                ),
+                _HistoryDetail(
+                  icon: Icons.meeting_room_outlined,
+                  label: _modalityLabel(session.modality),
+                ),
+                if (session.modality.toUpperCase() != 'VIRTUAL' &&
+                    session.location.trim().isNotEmpty)
+                  _HistoryDetail(
+                    icon: Icons.place_outlined,
+                    label: session.location,
+                  ),
+                _HistoryDetail(
+                  icon: Icons.people_outline,
+                  label: '${session.students.length} estudiantes',
+                ),
+              ],
+            ),
+            if (session.technologies.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Text(
+                session.technologies.join(' · '),
+                style: neuBody(color: Neu.muted, size: 12),
+              ),
             ],
-          ),
+            if (session.id.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              const Divider(height: 1, color: Neu.line),
+              const SizedBox(height: 10),
+              Align(
+                alignment: Alignment.centerRight,
+                child: NeuButton(
+                  'Ver historial',
+                  icon: Icons.history,
+                  kind: NeuButtonKind.alt,
+                  small: true,
+                  expand: false,
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => TutoriaHistorialPage(
+                        sessionId: session.id,
+                        subject: session.subject,
+                        isIndividual: false,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
         ),
       );
 
@@ -771,7 +711,8 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
     }
     final draft = await showDialog<_DateChangeDraft>(
       context: context,
-      builder: (_) => _DateChangeDialog(start: originalStart, end: originalEnd),
+      builder: (_) =>
+          _DateChangeDialog(start: originalStart, end: originalEnd),
     );
     if (draft == null || !mounted) return;
     try {
@@ -805,30 +746,155 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
 
 enum _SessionView { scheduled, start, history }
 
+class _TeacherSidebar extends StatelessWidget {
+  const _TeacherSidebar({
+    required this.index,
+    required this.name,
+    required this.career,
+    required this.onSelect,
+    required this.onLogout,
+  });
+
+  final int index;
+  final String name;
+  final String career;
+  final ValueChanged<int> onSelect;
+  final VoidCallback onLogout;
+
+  static const _items = [
+    (Icons.home_outlined, 'Inicio', 0),
+    (Icons.videocam_outlined, 'Empezar', 2),
+    (Icons.calendar_month_outlined, 'Mis sesiones', 3),
+    (Icons.menu_book_outlined, 'Tutoría', 1),
+    (Icons.star_outline_rounded, 'Líder PA', 4),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 250,
+      decoration: const BoxDecoration(
+        color: Neu.bg,
+        boxShadow: [
+          BoxShadow(
+              color: Neu.shadowDark, offset: Offset(4, 0), blurRadius: 12),
+        ],
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 18, 14, 14),
+          child: Column(children: [
+            const SizedBox(
+              height: 64,
+              width: 170,
+              child: BrandLogo(
+                  width: 170, height: 64, accentColor: _teacherGreen),
+            ),
+            const SizedBox(height: 6),
+            Text('DOCENTE',
+                style: neuBody(
+                    size: 11,
+                    weight: FontWeight.w700,
+                    color: _teacherGreen,
+                    letterSpacing: 1.2)),
+            const SizedBox(height: 20),
+            for (final item in _items)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: NeuSurface(
+                  radius: 16,
+                  shadows: const [],
+                  sunken: index == item.$3,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+                  onTap: () => onSelect(item.$3),
+                  child: Row(children: [
+                    Icon(item.$1,
+                        size: 22,
+                        color: index == item.$3 ? _teacherGreen : Neu.navIdle),
+                    const SizedBox(width: 12),
+                    Text(item.$2,
+                        style: neuBody(
+                            size: 15,
+                            weight: FontWeight.w700,
+                            color:
+                                index == item.$3 ? _teacherGreen : Neu.muted)),
+                  ]),
+                ),
+              ),
+            const Spacer(),
+            NeuSurface(
+              radius: 16,
+              shadows: const [],
+              sunken: index == 7,
+              padding: const EdgeInsets.all(10),
+              onTap: () => onSelect(7),
+              child: Row(children: [
+                SizedBox(
+                  width: 40,
+                  height: 40,
+                  child: NeuSurface(
+                    radius: 40,
+                    shadows: Neu.raiseS,
+                    child: Center(
+                      child: Text(_DocenteDashboardPageState._initials(name),
+                          style: neuPoppins(
+                              size: 13,
+                              weight: FontWeight.w700,
+                              color: _teacherGreen)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: neuBody(size: 14, weight: FontWeight.w700)),
+                        Text(career,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: neuBody(size: 12, color: Neu.muted)),
+                      ]),
+                ),
+                IconButton(
+                  tooltip: 'Cerrar sesión',
+                  onPressed: onLogout,
+                  icon: const Icon(Icons.logout_rounded, color: Neu.muted),
+                ),
+              ]),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
 class _HistoryDetail extends StatelessWidget {
-  const _HistoryDetail({required this.icon, required this.label});
+  const _HistoryDetail({required this.icon, required this.label, super.key});
 
   final IconData icon;
   final String label;
 
   @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF3F8F4),
-          borderRadius: BorderRadius.circular(20),
-        ),
+  Widget build(BuildContext context) => NeuSunken(
+        radius: 14,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 15, color: _teacherGreen),
+            Icon(icon, size: 14, color: _teacherGreen),
             const SizedBox(width: 6),
             Text(
               label,
-              style: const TextStyle(
-                color: Color(0xFF53665B),
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
+              style: neuBody(
+                color: Neu.text,
+                size: 12,
+                weight: FontWeight.w600,
               ),
             ),
           ],
@@ -836,106 +902,8 @@ class _HistoryDetail extends StatelessWidget {
       );
 }
 
-class _TeacherHeader extends StatelessWidget {
-  const _TeacherHeader({
-    required this.title,
-    required this.subtitle,
-    required this.name,
-    required this.onRefresh,
-    required this.onNotifications,
-  });
-
-  final String title;
-  final String subtitle;
-  final String name;
-  final VoidCallback onRefresh;
-  final VoidCallback onNotifications;
-
-  @override
-  Widget build(BuildContext context) => Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF16834A), Color(0xFF18352A)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        child: SafeArea(
-          bottom: false,
-          child: SizedBox(
-            height: 78,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                children: [
-                  InkWell(
-                    onTap: () => context.findAncestorStateOfType<_DocenteDashboardPageState>()?.setState(() {
-                      context.findAncestorStateOfType<_DocenteDashboardPageState>()?._tab = 7;
-                    }),
-                    borderRadius: BorderRadius.circular(30),
-                    child: CircleAvatar(
-                      radius: 21,
-                      backgroundColor: Colors.white.withValues(alpha: .16),
-                      foregroundColor: Colors.white,
-                      child: Text(
-                        _DocenteDashboardPageState._initials(name),
-                        style: const TextStyle(fontWeight: FontWeight.w800),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 17,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          subtitle,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: .78),
-                            fontSize: 11,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: 'Actualizar',
-                    onPressed: onRefresh,
-                    color: Colors.white,
-                    icon: const Icon(Icons.refresh_rounded),
-                  ),
-                  IconButton(
-                    tooltip: 'Avisos',
-                    onPressed: onNotifications,
-                    color: Colors.white,
-                    icon: const NotificationUnreadIcon(
-                      icon: Icons.notifications_none_rounded,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-}
-
 class _TeacherHomeDashboard extends ConsumerWidget {
-  const _TeacherHomeDashboard({required this.onOpen, required this.name});
+  const _TeacherHomeDashboard({required this.onOpen, required this.name, super.key});
   final ValueChanged<int> onOpen;
   final String name;
 
@@ -983,6 +951,11 @@ class _TeacherHomeDashboard extends ConsumerWidget {
         .where((session) => session.start!.isAfter(now))
         .toList();
     final nextSession = upcoming.isEmpty ? null : upcoming.first;
+    final finishedCount =
+        sessions.where((s) => s.state == 'FINALIZADA').length;
+    final withStudentsCount =
+        sessions.where((s) => s.students.isNotEmpty).length;
+
     return Align(
       alignment: Alignment.topCenter,
       child: ConstrainedBox(
@@ -1003,27 +976,33 @@ class _TeacherHomeDashboard extends ConsumerWidget {
               children: [
                 Text(
                   '${weekdays[now.weekday - 1]}, ${now.day} de ${months[now.month - 1]} de ${now.year}',
-                  style: const TextStyle(
-                      color: Color(0xFF748078), fontSize: 13),
+                  style: neuBody(color: Neu.muted, size: 13),
                 ),
-                const SizedBox(height: 5),
+                const SizedBox(height: 4),
                 Text(
                   'Hola, $name',
-                  style: const TextStyle(
-                    color: _teacherNavy,
-                    fontSize: 26,
-                    fontWeight: FontWeight.w800,
+                  style: neuPoppins(
+                    color: Neu.heading,
+                    size: 24,
+                    weight: FontWeight.w700,
                   ),
                 ),
-                const SizedBox(height: 5),
+                const SizedBox(height: 4),
                 Text(
                   nextSession == null
                       ? 'Aquí tienes un resumen de tus tutorías y actividades.'
                       : 'Tu próxima tutoría es ${nextSession.subject} · ${_dateTimeLabel(nextSession.start!)}',
-                  style: const TextStyle(
-                      color: Color(0xFF748078), fontSize: 13),
+                  style: neuBody(color: Neu.muted, size: 13),
                 ),
-                const SizedBox(height: 22),
+                const SizedBox(height: 18),
+                PaKpiRow([
+                  ('${scheduled.length}', 'Programadas'),
+                  ('$finishedCount', 'Finalizadas'),
+                  ('$withStudentsCount', 'Con inscritos'),
+                ]),
+                const SizedBox(height: 6),
+                _TeacherQuickLinks(onOpen: onOpen),
+                const SizedBox(height: 18),
                 if (showCalendar)
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1039,13 +1018,19 @@ class _TeacherHomeDashboard extends ConsumerWidget {
                       ),
                     ],
                   )
-                else
+                else ...[
                   schedule,
+                  const SizedBox(height: 18),
+                  _TeacherCalendarPanel(
+                    sessions: scheduled,
+                    onOpenSessions: () => onOpen(1),
+                  ),
+                ],
               ],
             );
             return ListView(
               padding: EdgeInsets.fromLTRB(
-                  showCalendar ? 28 : 18, 24, showCalendar ? 28 : 18, 32),
+                  showCalendar ? 28 : 18, 20, showCalendar ? 28 : 18, 32),
               children: [content],
             );
           },
@@ -1063,6 +1048,7 @@ class _TeacherScheduleList extends StatelessWidget {
     required this.onRetry,
     required this.onOpenSessions,
     required this.onStart,
+    super.key,
   });
 
   final List<_TeacherTutoringSession> sessions;
@@ -1078,35 +1064,47 @@ class _TeacherScheduleList extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
                   'Tutorías programadas',
-                  style: TextStyle(
-                    color: _teacherNavy,
-                    fontSize: 19,
-                    fontWeight: FontWeight.w800,
+                  style: neuPoppins(
+                    color: Neu.heading,
+                    size: 18,
+                    weight: FontWeight.w700,
                   ),
                 ),
               ),
-              TextButton(
-                onPressed: onOpenSessions,
-                child: const Text('Ver todas'),
+              GestureDetector(
+                onTap: onOpenSessions,
+                child: Text(
+                  'Ver todas',
+                  style: neuBody(
+                    color: _teacherGreen,
+                    size: 13,
+                    weight: FontWeight.w700,
+                  ),
+                ),
               ),
             ],
           ),
+          const SizedBox(height: 12),
           if (loading)
             const Padding(
               padding: EdgeInsets.all(28),
-              child: Center(child: CircularProgressIndicator()),
+              child: Center(
+                  child: CircularProgressIndicator(color: _teacherGreen)),
             )
           else if (error)
             _TeacherEmptyCard(
               icon: Icons.cloud_off_outlined,
               message: 'No se pudieron cargar las tutorías.',
-              action: TextButton.icon(
+              action: NeuButton(
+                'Reintentar',
+                icon: Icons.refresh,
+                kind: NeuButtonKind.alt,
+                small: true,
+                expand: false,
                 onPressed: onRetry,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Reintentar'),
               ),
             )
           else if (sessions.isEmpty)
@@ -1116,13 +1114,10 @@ class _TeacherScheduleList extends StatelessWidget {
             )
           else
             for (final session in sessions.take(6))
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _TeacherScheduleCard(
-                  session: session,
-                  onOpen: onOpenSessions,
-                  onStart: onStart,
-                ),
+              _TeacherScheduleCard(
+                session: session,
+                onOpen: onOpenSessions,
+                onStart: onStart,
               ),
         ],
       );
@@ -1133,6 +1128,7 @@ class _TeacherScheduleCard extends StatelessWidget {
     required this.session,
     required this.onOpen,
     required this.onStart,
+    super.key,
   });
 
   final _TeacherTutoringSession session;
@@ -1144,101 +1140,96 @@ class _TeacherScheduleCard extends StatelessWidget {
     final start = session.start;
     final isToday = start != null && _isSameDay(start, DateTime.now());
     final isActive = session.state == 'EN_CURSO';
-    return Card(
-      elevation: 0,
-      margin: EdgeInsets.zero,
-      color: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: const BorderSide(color: Color(0xFFE5ECE7)),
-      ),
-      child: InkWell(
-        onTap: onOpen,
-        borderRadius: BorderRadius.circular(14),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 4,
-                height: 74,
-                decoration: BoxDecoration(
-                  color: isToday || isActive
-                      ? _teacherGreen
-                      : const Color(0xFFB7C7BC),
-                  borderRadius: BorderRadius.circular(4),
+    return PaCard(
+      onTap: onOpen,
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 4,
+            height: 74,
+            decoration: BoxDecoration(
+              color: isToday || isActive
+                  ? _teacherGreen
+                  : Neu.muted.withValues(alpha: .4),
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  session.subject,
+                  style: neuPoppins(
+                    color: Neu.heading,
+                    size: 15,
+                    weight: FontWeight.w700,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                const SizedBox(height: 7),
+                Wrap(
+                  spacing: 14,
+                  runSpacing: 7,
                   children: [
-                    Text(
-                      session.subject,
-                      style: const TextStyle(
-                        color: _teacherNavy,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                      ),
+                    _TeacherInlineDetail(
+                      icon: Icons.calendar_today_outlined,
+                      text: start == null
+                          ? 'Fecha pendiente'
+                          : _dateTimeLabel(start),
                     ),
-                    const SizedBox(height: 7),
-                    Wrap(
-                      spacing: 14,
-                      runSpacing: 7,
-                      children: [
-                        _TeacherInlineDetail(
-                          icon: Icons.calendar_today_outlined,
-                          text: start == null
-                              ? 'Fecha pendiente'
-                              : _dateTimeLabel(start),
-                        ),
-                        _TeacherInlineDetail(
-                          icon: Icons.people_outline,
-                          text: '${session.students.length} inscritos',
-                        ),
-                        _TeacherInlineDetail(
-                          icon: Icons.meeting_room_outlined,
-                          text: _modalityLabel(session.modality),
-                        ),
-                      ],
+                    _TeacherInlineDetail(
+                      icon: Icons.people_outline,
+                      text: '${session.students.length} inscritos',
                     ),
-                    if (session.location.trim().isNotEmpty &&
-                        session.modality.toUpperCase() != 'VIRTUAL') ...[
-                      const SizedBox(height: 7),
-                      _TeacherInlineDetail(
-                        icon: Icons.place_outlined,
-                        text: session.location,
-                      ),
-                    ],
-                    const SizedBox(height: 9),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        _TeacherStatusBadge(
-                          label: isActive
-                              ? 'En curso'
-                              : isToday
-                                  ? 'Hoy'
-                                  : 'Programada',
-                        ),
-                        if (isToday || isActive)
-                          FilledButton.tonalIcon(
-                            onPressed: onStart,
-                            icon: const Icon(Icons.play_arrow_rounded, size: 18),
-                            label: const Text('Iniciar tutoría'),
-                          ),
-                      ],
+                    _TeacherInlineDetail(
+                      icon: Icons.meeting_room_outlined,
+                      text: _modalityLabel(session.modality),
                     ),
                   ],
                 ),
-              ),
-            ],
+                if (session.location.trim().isNotEmpty &&
+                    session.modality.toUpperCase() != 'VIRTUAL') ...[
+                  const SizedBox(height: 7),
+                  _TeacherInlineDetail(
+                    icon: Icons.place_outlined,
+                    text: session.location,
+                  ),
+                ],
+                const SizedBox(height: 9),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    PaTag(
+                      isActive
+                          ? 'En curso'
+                          : isToday
+                              ? 'Hoy'
+                              : 'Programada',
+                      tone: isActive
+                          ? PaTone.ok
+                          : isToday
+                              ? PaTone.neutral
+                              : PaTone.quiet,
+                    ),
+                    if (isToday || isActive)
+                      NeuButton(
+                        'Iniciar tutoría',
+                        icon: Icons.play_arrow_rounded,
+                        small: true,
+                        expand: false,
+                        onPressed: onStart,
+                      ),
+                  ],
+                ),
+              ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -1248,6 +1239,7 @@ class _TeacherCalendarPanel extends StatelessWidget {
   const _TeacherCalendarPanel({
     required this.sessions,
     required this.onOpenSessions,
+    super.key,
   });
 
   final List<_TeacherTutoringSession> sessions;
@@ -1286,28 +1278,23 @@ class _TeacherCalendarPanel extends StatelessWidget {
             !session.start!.isBefore(DateTime(now.year, now.month, now.day)))
         .take(3)
         .toList();
-    return Container(
+    return NeuSurface(
+      radius: 20,
       padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE5ECE7)),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Text('Calendario',
-                    style: TextStyle(
-                        color: _teacherNavy,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w800)),
+                    style: neuPoppins(
+                        color: Neu.heading,
+                        size: 16,
+                        weight: FontWeight.w700)),
               ),
               Text('${monthNames[now.month - 1]} ${now.year}',
-                  style: const TextStyle(
-                      color: Color(0xFF687A70), fontSize: 12)),
+                  style: neuBody(color: Neu.muted, size: 12)),
             ],
           ),
           const SizedBox(height: 16),
@@ -1317,10 +1304,10 @@ class _TeacherCalendarPanel extends StatelessWidget {
                 Expanded(
                   child: Center(
                     child: Text(label,
-                        style: const TextStyle(
-                            color: Color(0xFF849087),
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700)),
+                        style: neuBody(
+                            color: Neu.muted,
+                            size: 11,
+                            weight: FontWeight.w700)),
                   ),
                 ),
             ],
@@ -1347,15 +1334,15 @@ class _TeacherCalendarPanel extends StatelessWidget {
               ),
             ),
           const SizedBox(height: 16),
-          const Divider(height: 1, color: Color(0xFFEAF0EB)),
+          const Divider(height: 1, color: Neu.line),
           const SizedBox(height: 14),
-          const Text('Próximas tutorías',
-              style: TextStyle(
-                  color: _teacherNavy, fontWeight: FontWeight.w800)),
+          Text('Próximas tutorías',
+              style: neuPoppins(
+                  color: Neu.heading, size: 14, weight: FontWeight.w700)),
           const SizedBox(height: 8),
           if (nextSessions.isEmpty)
-            const Text('No tienes próximas tutorías.',
-                style: TextStyle(color: Color(0xFF687A70), fontSize: 12))
+            Text('No tienes próximas tutorías.',
+                style: neuBody(color: Neu.muted, size: 12))
           else
             for (final session in nextSessions)
               Padding(
@@ -1374,20 +1361,28 @@ class _TeacherCalendarPanel extends StatelessWidget {
                         '${session.subject} · ${_dateTimeLabel(session.start!)}',
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                            color: _teacherNavy,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600),
+                        style: neuBody(
+                            color: Neu.text,
+                            size: 12,
+                            weight: FontWeight.w600),
                       ),
                     ),
                   ],
                 ),
               ),
+          const SizedBox(height: 4),
           Align(
             alignment: Alignment.centerRight,
-            child: TextButton(
-              onPressed: onOpenSessions,
-              child: const Text('Ver agenda'),
+            child: GestureDetector(
+              onTap: onOpenSessions,
+              child: Text(
+                'Ver agenda',
+                style: neuBody(
+                  color: _teacherGreen,
+                  size: 13,
+                  weight: FontWeight.w700,
+                ),
+              ),
             ),
           ),
         ],
@@ -1401,6 +1396,7 @@ class _TeacherCalendarDay extends StatelessWidget {
     required this.day,
     required this.isToday,
     required this.hasSession,
+    super.key,
   });
 
   final int? day;
@@ -1424,11 +1420,10 @@ class _TeacherCalendarDay extends StatelessWidget {
                     ),
                     child: Text(
                       '$day',
-                      style: TextStyle(
-                        color: isToday ? Colors.white : _teacherNavy,
-                        fontSize: 11,
-                        fontWeight:
-                            isToday ? FontWeight.w800 : FontWeight.w500,
+                      style: neuBody(
+                        color: isToday ? Colors.white : Neu.text,
+                        size: 11,
+                        weight: isToday ? FontWeight.w800 : FontWeight.w500,
                       ),
                     ),
                   ),
@@ -1445,7 +1440,7 @@ class _TeacherCalendarDay extends StatelessWidget {
 }
 
 class _TeacherQuickLinks extends StatelessWidget {
-  const _TeacherQuickLinks({required this.onOpen});
+  const _TeacherQuickLinks({required this.onOpen, super.key});
   final ValueChanged<int> onOpen;
 
   @override
@@ -1467,7 +1462,7 @@ class _TeacherQuickLinks extends StatelessWidget {
               onTap: () => paPush(context, const PaColectivasDocentePage())),
           _TeacherQuickLink(
               label: 'Líder PA',
-              icon: Icons.fact_check_outlined,
+              icon: Icons.star_outline_rounded,
               onTap: () => onOpen(4)),
           _TeacherQuickLink(
               label: 'Historial',
@@ -1482,6 +1477,7 @@ class _TeacherQuickLink extends StatelessWidget {
     required this.label,
     required this.icon,
     required this.onTap,
+    super.key,
   });
 
   final String label;
@@ -1489,20 +1485,18 @@ class _TeacherQuickLink extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => OutlinedButton.icon(
+  Widget build(BuildContext context) => NeuButton(
+        label,
+        icon: icon,
+        kind: NeuButtonKind.alt,
+        small: true,
+        expand: false,
         onPressed: onTap,
-        icon: Icon(icon, size: 18),
-        label: Text(label),
-        style: OutlinedButton.styleFrom(
-          foregroundColor: _teacherNavy,
-          side: const BorderSide(color: Color(0xFFDCE7DF)),
-          backgroundColor: Colors.white,
-        ),
       );
 }
 
 class _TeacherInlineDetail extends StatelessWidget {
-  const _TeacherInlineDetail({required this.icon, required this.text});
+  const _TeacherInlineDetail({required this.icon, required this.text, super.key});
   final IconData icon;
   final String text;
 
@@ -1510,33 +1504,12 @@ class _TeacherInlineDetail extends StatelessWidget {
   Widget build(BuildContext context) => Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: const Color(0xFF7C8B81)),
+          Icon(icon, size: 14, color: _teacherGreen),
           const SizedBox(width: 5),
           Text(text,
-              style: const TextStyle(
-                  color: Color(0xFF687A70), fontSize: 11)),
+              style: neuBody(
+                  color: Neu.muted, size: 11.5)),
         ],
-      );
-}
-
-class _TeacherStatusBadge extends StatelessWidget {
-  const _TeacherStatusBadge({required this.label});
-  final String label;
-
-  @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-        decoration: BoxDecoration(
-          color: const Color(0xFFEAF5EE),
-          borderRadius: BorderRadius.circular(18),
-        ),
-        child: Text(
-          label,
-          style: const TextStyle(
-              color: _teacherGreen,
-              fontSize: 11,
-              fontWeight: FontWeight.w700),
-        ),
       );
 }
 
@@ -1545,6 +1518,7 @@ class _TeacherEmptyCard extends StatelessWidget {
     required this.icon,
     required this.message,
     this.action,
+    super.key,
   });
 
   final IconData icon;
@@ -1552,22 +1526,17 @@ class _TeacherEmptyCard extends StatelessWidget {
   final Widget? action;
 
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) => PaCard(
         padding: const EdgeInsets.all(22),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFFE5ECE7)),
-        ),
         child: Column(
           children: [
-            Icon(icon, color: _teacherGreen, size: 30),
-            const SizedBox(height: 9),
+            NeuIconBox(icon, color: _teacherGreen, size: 44, iconSize: 24),
+            const SizedBox(height: 10),
             Text(message,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Color(0xFF687A70))),
+                style: neuBody(color: Neu.muted, size: 13.5)),
             if (action != null) ...[
-              const SizedBox(height: 7),
+              const SizedBox(height: 10),
               action!,
             ],
           ],
@@ -1633,7 +1602,7 @@ class _DateChangeDraft {
 }
 
 class _DateChangeDialog extends StatefulWidget {
-  const _DateChangeDialog({required this.start, required this.end});
+  const _DateChangeDialog({required this.start, required this.end, super.key});
   final DateTime start;
   final DateTime end;
 
@@ -1655,77 +1624,116 @@ class _DateChangeDialogState extends State<_DateChangeDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-        title: const Text('Solicitar cambio de fecha'),
+        backgroundColor: Neu.bg,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          'Solicitar cambio de fecha',
+          style: neuPoppins(
+              size: 18, weight: FontWeight.w700, color: Neu.heading),
+        ),
         content: SizedBox(
           width: 420,
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Text(
-                'La solicitud se enviará a coordinación para su aprobación.'),
-            const SizedBox(height: 14),
-            Row(children: [
-              Expanded(
-                  child: OutlinedButton.icon(
-                onPressed: () async {
-                  final picked = await showDatePicker(
-                    context: context,
-                    firstDate: DateTime.now(),
-                    lastDate: DateTime.now().add(const Duration(days: 365)),
-                    initialDate:
-                        _date.isBefore(DateTime.now()) ? DateTime.now() : _date,
-                  );
-                  if (picked != null) setState(() => _date = picked);
-                },
-                icon: const Icon(Icons.calendar_month_outlined),
-                label: Text(_dateLabel(_date)),
-              )),
-              const SizedBox(width: 8),
-              Expanded(
-                  child: OutlinedButton.icon(
-                onPressed: () async {
-                  final picked = await showTimePicker(
-                      context: context, initialTime: _time);
-                  if (picked != null) setState(() => _time = picked);
-                },
-                icon: const Icon(Icons.schedule),
-                label: Text(_time.format(context)),
-              )),
-            ]),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _reason,
-              maxLength: 1000,
-              minLines: 2,
-              maxLines: 4,
-              decoration: const InputDecoration(
-                  labelText: 'Motivo', border: OutlineInputBorder()),
-            ),
-            if (_error != null)
-              Text(_error!, style: const TextStyle(color: Colors.red)),
-          ]),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'La solicitud se enviará a coordinación para su aprobación.',
+                style: neuBody(size: 13, color: Neu.muted),
+              ),
+              const SizedBox(height: 14),
+              Row(children: [
+                Expanded(
+                  child: NeuButton(
+                    _dateLabel(_date),
+                    icon: Icons.calendar_month_outlined,
+                    kind: NeuButtonKind.alt,
+                    small: true,
+                    onPressed: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        firstDate: DateTime.now(),
+                        lastDate: DateTime.now().add(const Duration(days: 365)),
+                        initialDate: _date.isBefore(DateTime.now())
+                            ? DateTime.now()
+                            : _date,
+                      );
+                      if (picked != null) setState(() => _date = picked);
+                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: NeuButton(
+                    _time.format(context),
+                    icon: Icons.schedule,
+                    kind: NeuButtonKind.alt,
+                    small: true,
+                    onPressed: () async {
+                      final picked = await showTimePicker(
+                        context: context,
+                        initialTime: _time,
+                      );
+                      if (picked != null) setState(() => _time = picked);
+                    },
+                  ),
+                ),
+              ]),
+              const SizedBox(height: 14),
+              Text(
+                'MOTIVO',
+                style: neuBody(
+                    size: 11, weight: FontWeight.w700, color: Neu.muted),
+              ),
+              const SizedBox(height: 6),
+              NeuField(
+                controller: _reason,
+                hint: 'Explica el motivo del cambio...',
+                minLines: 3,
+                maxLines: 4,
+                maxLength: 1000,
+              ),
+              if (_error != null) ...[
+                const SizedBox(height: 8),
+                Text(_error!,
+                    style: neuBody(size: 12, color: Neu.error)),
+              ],
+            ],
+          ),
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancelar')),
-          FilledButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancelar',
+                style: neuBody(size: 14, color: Neu.muted)),
+          ),
+          NeuButton(
+            'Enviar solicitud',
+            small: true,
+            expand: false,
             onPressed: () {
-              final start = DateTime(
-                  _date.year, _date.month, _date.day, _time.hour, _time.minute);
+              final start = DateTime(_date.year, _date.month, _date.day,
+                  _time.hour, _time.minute);
               if (!start.isAfter(DateTime.now())) {
-                setState(() => _error = 'Selecciona una fecha y hora futura.');
+                setState(
+                    () => _error = 'Selecciona una fecha y hora futura.');
                 return;
               }
               if (_reason.text.trim().isEmpty) {
-                setState(() => _error = 'Escribe el motivo de la solicitud.');
+                setState(
+                    () => _error = 'Escribe el motivo de la solicitud.');
                 return;
               }
               final duration = widget.end.difference(widget.start);
               Navigator.pop(
-                  context,
-                  _DateChangeDraft(
-                      start, start.add(duration), _reason.text.trim()));
+                context,
+                _DateChangeDraft(
+                  start,
+                  start.add(duration),
+                  _reason.text.trim(),
+                ),
+              );
             },
-            child: const Text('Enviar solicitud'),
           ),
         ],
       );

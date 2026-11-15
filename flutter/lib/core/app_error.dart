@@ -1,9 +1,10 @@
 enum AppErrorKind { forbidden, notFound, server, connection }
 
 class AppErrorInfo {
-  const AppErrorInfo(this.kind);
+  const AppErrorInfo(this.kind, {this.message});
 
   final AppErrorKind kind;
+  final String? message;
 
   int get statusCode => switch (kind) {
         AppErrorKind.forbidden => 403,

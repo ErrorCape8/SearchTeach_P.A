@@ -58,164 +58,50 @@ class _StudentHeader extends StatelessWidget {
                 ? 'Estudiante'
                 : 'Notificaciones';
     final initials = _studentInitials(profile.name);
-    return Container(
-      height: 72,
-      padding: const EdgeInsets.symmetric(horizontal: 18),
-      clipBehavior: Clip.hardEdge,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFF1769AA), Color(0xFF164B83)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+    final showBack = tab == 1 && section != 'menu';
+
+    return NeuHeader(
+      title: title,
+      subtitle: subtitle,
+      leading: showBack
+          ? NeuCircleButton(
+              icon: Icons.chevron_left_rounded,
+              tooltip: 'Volver a Tutorías',
+              onTap: onBack,
+            )
+          : GestureDetector(
+              onTap: onProfile,
+              child: SizedBox(
+                width: 44,
+                height: 44,
+                child: NeuSurface(
+                  radius: 44,
+                  shadows: Neu.raiseS,
+                  child: Center(
+                    child: Text(
+                      initials,
+                      style: neuPoppins(
+                        size: 14,
+                        weight: FontWeight.w700,
+                        color: _blue,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+      actions: [
+        NeuCircleButton(
+          icon: Icons.refresh_rounded,
+          tooltip: 'Actualizar',
+          onTap: onRefresh,
         ),
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            top: -66,
-            right: -44,
-            child: Container(
-              width: 164,
-              height: 164,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                    color: Colors.white.withValues(alpha: .07), width: 12),
-              ),
-            ),
-          ),
-          Positioned(
-            top: -48,
-            right: -26,
-            child: Container(
-              width: 128,
-              height: 128,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                    color: Colors.white.withValues(alpha: .07), width: 12),
-              ),
-            ),
-          ),
-          Row(
-            children: [
-              if (tab == 1 && section != 'menu')
-                IconButton(
-                  tooltip: 'Volver a Tutorías',
-                  onPressed: onBack,
-                  visualDensity: VisualDensity.compact,
-                  icon: const Icon(Icons.arrow_back_ios_new,
-                      color: Colors.white, size: 16),
-                )
-              else
-                InkWell(
-                  onTap: onProfile,
-                  customBorder: const CircleBorder(),
-                  child: CircleAvatar(
-                    radius: 13,
-                    backgroundColor: Colors.white.withValues(alpha: .18),
-                    child: Text(
-                      initials,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ),
-              const SizedBox(width: 9),
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    Text(
-                      subtitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (tab <= 1 && showProfileShortcut)
-                IconButton(
-                  tooltip: 'Mi perfil',
-                  onPressed: onProfile,
-                  visualDensity: VisualDensity.compact,
-                  icon: CircleAvatar(
-                    radius: 14,
-                    backgroundColor: Colors.white.withValues(alpha: .18),
-                    child: Text(
-                      initials,
-                      style: const TextStyle(color: Colors.white, fontSize: 9),
-                    ),
-                  ),
-                ),
-              const SizedBox(width: 8),
-              Material(
-                color: Colors.white.withValues(alpha: .16),
-                borderRadius: BorderRadius.circular(22),
-                child: InkWell(
-                  onTap: onRefresh,
-                  borderRadius: BorderRadius.circular(22),
-                  child: Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.sync, color: Colors.white, size: 15),
-                        if (MediaQuery.sizeOf(context).width >= 600) ...[
-                          const SizedBox(width: 5),
-                          const Text(
-                            'Actualizar',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Material(
-                color: Colors.white.withValues(alpha: .16),
-                shape: const CircleBorder(),
-                child: IconButton(
-                  tooltip: 'Avisos',
-                  onPressed: onNotifications,
-                  visualDensity: VisualDensity.compact,
-                  constraints:
-                      const BoxConstraints.tightFor(width: 38, height: 38),
-                  icon: const NotificationUnreadIcon(
-                    icon: Icons.notifications_none_outlined,
-                  ),
-                  color: Colors.white,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+        NeuCircleButton(
+          icon: Icons.notifications_none_rounded,
+          tooltip: 'Avisos',
+          onTap: onNotifications,
+        ),
+      ],
     );
   }
 }
@@ -234,173 +120,22 @@ class _StudentSidebar extends StatelessWidget {
   final VoidCallback onLogout;
 
   static const _items = [
-    (Icons.home_outlined, 'Inicio'),
-    (Icons.event_note_outlined, 'Tutorías'),
-    (Icons.history_outlined, 'Historial'),
-    (Icons.play_circle_outline, 'Unirse a clase'),
+    (Icons.home_rounded, 'Inicio', 0),
+    (Icons.event_note_rounded, 'Tutorías', 1),
+    (Icons.history_rounded, 'Historial', 2),
+    (Icons.play_circle_rounded, 'Unirse a clase', 3),
   ];
 
   @override
-  Widget build(BuildContext context) => Material(
-        color: Colors.white,
-        child: SizedBox(
-          width: 190,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 12),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: SizedBox(
-                  height: 68,
-                  child: Transform.scale(
-                    scale: 1.06,
-                    child: const BrandLogo(
-                      width: 104,
-                      height: 64,
-                      accentColor: _blue,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 12),
-                child: Text(
-                  'ESTUDIANTE',
-                  style: TextStyle(
-                    color: _studentMuted,
-                    fontSize: 10,
-                    letterSpacing: .7,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 10),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 8),
-                child: Divider(height: 1, color: Color(0xFFE4EAF1)),
-              ),
-              const SizedBox(height: 5),
-              for (var index = 0; index < _items.length; index++)
-                Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  child: SizedBox(
-                    height: 42,
-                    child: Material(
-                      color: tab == index ? _blue : Colors.transparent,
-                      borderRadius: BorderRadius.circular(7),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(7),
-                        onTap: () => onSelect(index),
-                        child: Row(
-                          children: [
-                            const SizedBox(width: 7),
-                            Icon(
-                              _items[index].$1,
-                              size: 18,
-                              color:
-                                  tab == index ? Colors.white : _studentMuted,
-                            ),
-                            const SizedBox(width: 7),
-                            Expanded(
-                              child: Text(
-                                _items[index].$2,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color: tab == index ? Colors.white : _navy,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              const Spacer(),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 8),
-                child: Divider(height: 1, color: Color(0xFFE4EAF1)),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(8, 8, 5, 10),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color:
-                        tab == 4 ? const Color(0xFFDCEEFF) : Colors.transparent,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    children: [
-                      InkWell(
-                        onTap: () => onSelect(4),
-                        borderRadius: BorderRadius.circular(20),
-                        child: CircleAvatar(
-                          radius: 16,
-                          backgroundColor: const Color(0xFFDCEEFF),
-                          child: Text(
-                            _studentInitials(profile.name),
-                            style: const TextStyle(
-                              color: _blue,
-                              fontSize: 10,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 5),
-                      Expanded(
-                        child: InkWell(
-                          onTap: () => onSelect(4),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                profile.name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: _navy,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const Text(
-                                'Estudiante',
-                                style: TextStyle(
-                                  color: _studentMuted,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        tooltip: 'Cerrar sesión',
-                        onPressed: onLogout,
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints.tightFor(
-                          width: 32,
-                          height: 32,
-                        ),
-                        icon: const Icon(
-                          Icons.logout,
-                          color: _blue,
-                          size: 18,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+  Widget build(BuildContext context) => NeuSidebar(
+        items: _items,
+        selected: tab,
+        onSelect: onSelect,
+        name: profile.name,
+        userRole: profile.career.isNotEmpty ? profile.career : 'Estudiante',
+        roleLabel: 'ESTUDIANTE',
+        onLogout: onLogout,
+        onUserTap: () => onSelect(4),
       );
 }
 

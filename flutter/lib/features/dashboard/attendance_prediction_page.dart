@@ -4,7 +4,7 @@ import '../pa/pa_widgets.dart';
 import 'director_dashboard_provider.dart';
 import 'director_widgets.dart';
 
-/// Predicción de asistencia (modelo Weka) con el estilo neumórfico.
+/// Datos históricos disponibles y estimación de asistencia por materia.
 class AttendancePredictionPage extends StatelessWidget {
   const AttendancePredictionPage({required this.dashboard, super.key});
 
@@ -16,25 +16,38 @@ class AttendancePredictionPage extends StatelessWidget {
     final available = dashboard.modeloAsistenciaDisponible;
 
     return PaScaffold(
-      title: 'Predicción de asistencia',
-      subtitle: 'Probabilidad estimada por materia',
+      title: 'Datos históricos disponibles',
+      subtitle: 'Historial y estimación de asistencia por materia',
       children: [
+        const PaSection('Resumen histórico'),
+        PaKpiRow([
+          ('${training.asistencias}', 'Asistencias'),
+          ('${training.inasistencias}', 'Inasistencias'),
+          ('${training.registrosEtiquetados}', 'Total evaluados'),
+        ]),
+        const PaSection('Detalle de registros históricos'),
+        PaRowList([
+          _metric('Registros con resultado', training.registrosEtiquetados),
+          _metric('Asistencias confirmadas', training.asistencias),
+          _metric('Inasistencias registradas', training.inasistencias),
+          _metric('Realizadas sin asistencia registrada',
+              training.registrosSinEtiqueta),
+          _metric('Programadas sin evaluación',
+              dashboard.tutoriasProgramadasNoEvaluables),
+        ]),
+        const SizedBox(height: 12),
+        const PaSection('Estimación de asistencia por materia'),
         PaInfo(
           available
-              ? 'Modelo Weka Logistic cargado. Las predicciones se generaron con el modelo adjunto.'
-              : 'No se pudo cargar el modelo Weka. No hay predicciones disponibles.',
+              ? 'Estimación generada a partir de los datos históricos del programa.'
+              : 'No hay datos suficientes o el modelo no está disponible.',
           tone: available ? PaTone.ok : PaTone.error,
           icon: available
               ? Icons.check_circle_outline_rounded
               : Icons.error_outline_rounded,
         ),
-        const PaInfo(
-          'Este modelo se entrenó con datos sintéticos. Sus predicciones sirven para demostrar la integración, pero no son una estimación validada de la asistencia real.',
-          icon: Icons.info_outline_rounded,
-        ),
-        const PaSection('Asistencia estimada por materia'),
         if (!available)
-          const PaCard(child: PaEmpty('El modelo no está disponible.'))
+          const PaCard(child: PaEmpty('El modelo histórico no está disponible.'))
         else
           DirHBars(
             items: [
@@ -48,19 +61,9 @@ class AttendancePredictionPage extends StatelessWidget {
                 ),
             ],
             footer: dashboard.prediccionesAsistencia.isEmpty
-                ? 'No hay tutorías futuras compatibles con las categorías del modelo.'
-                : 'Probabilidad promedio de asistencia en las tutorías programadas.',
+                ? 'No hay tutorías futuras compatibles con los registros históricos.'
+                : 'Probabilidad promedio calculada para las tutorías programadas.',
           ),
-        const PaSection('Datos históricos disponibles'),
-        PaRowList([
-          _metric('Registros con resultado', training.registrosEtiquetados),
-          _metric('Asistencias', training.asistencias),
-          _metric('Inasistencias', training.inasistencias),
-          _metric('Realizadas sin asistencia registrada',
-              training.registrosSinEtiqueta),
-          _metric('Programadas sin predicción',
-              dashboard.tutoriasProgramadasNoEvaluables),
-        ]),
       ],
     );
   }

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../pa/pa_widgets.dart';
 import 'coordinacion_horarios_models.dart';
 
 const _brand = Color(0xFFA9154F);
-const _muted = Color(0xFF64748B);
 
 class ScheduleSectionSelector extends StatelessWidget {
   const ScheduleSectionSelector({
@@ -21,22 +21,17 @@ class ScheduleSectionSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 18, 20, 10),
-        child: SegmentedButton<int>(
-          segments: [
-            ButtonSegment(
-              value: 0,
-              icon: Icon(Icons.people_outline),
-              label: Text('Asignados ($withScheduleCount)'),
-            ),
-            ButtonSegment(
-              value: 1,
-              icon: const Icon(Icons.event_available_outlined),
-              label: Text('No asignados ($withoutScheduleCount)'),
-            ),
-          ],
-          selected: {selected},
-          onSelectionChanged: (selection) => onChanged(selection.first),
+        padding: const EdgeInsets.fromLTRB(20, 10, 20, 6),
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: PaSegmented(
+            labels: [
+              'Asignados ($withScheduleCount)',
+              'No asignados ($withoutScheduleCount)',
+            ],
+            selected: selected,
+            onSelect: onChanged,
+          ),
         ),
       );
 }
@@ -67,66 +62,41 @@ class ScheduleFilters extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 6, 20, 12),
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final search = TextField(
+            final search = NeuField(
               controller: searchController,
+              hint: 'Buscar tutor por nombre o ID',
               onChanged: onSearchChanged,
-              decoration: InputDecoration(
-                hintText: 'Buscar tutor por nombre o ID',
-                prefixIcon: const Icon(Icons.search),
-                filled: true,
-                fillColor: Colors.white,
-                border: _border(),
-                enabledBorder: _border(),
-              ),
             );
-            final careerFilter = DropdownButtonFormField<String>(
-              initialValue: career,
-              decoration: const InputDecoration(
-                labelText: 'Carrera',
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(),
-              ),
-              items: careers
-                  .map((value) =>
-                      DropdownMenuItem(value: value, child: Text(value)))
-                  .toList(),
-              onChanged: (value) {
-                if (value != null) onCareerChanged(value);
+            final careerFilter = NeuDropdown<String>(
+              items: careers,
+              value: career,
+              labelOf: (v) => v == 'Todas' ? 'Carrera: Todas' : v,
+              onChanged: (v) {
+                if (v != null) onCareerChanged(v);
               },
             );
-            final semesterFilter = DropdownButtonFormField<int?>(
-              initialValue: semester,
-              decoration: const InputDecoration(
-                labelText: 'Semestre',
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(),
-              ),
+            final semesterFilter = NeuDropdown<String>(
               items: [
-                const DropdownMenuItem<int?>(
-                  value: null,
-                  child: Text('Todos'),
-                ),
-                for (var item = 1; item <= 12; item++)
-                  DropdownMenuItem<int?>(value: item, child: Text('$item')),
+                'Todos',
+                for (var item = 1; item <= 12; item++) '$item',
               ],
-              onChanged: onSemesterChanged,
+              value: semester == null ? 'Todos' : '$semester',
+              labelOf: (v) => v == 'Todos' ? 'Semestre: Todos' : 'Semestre $v',
+              onChanged: (v) => onSemesterChanged(
+                  v == null || v == 'Todos' ? null : int.tryParse(v)),
             );
-            final refreshButton = OutlinedButton.icon(
+            final refreshButton = NeuButton(
+              'Actualizar',
               onPressed: refreshing ? null : onRefresh,
-              icon: refreshing
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.refresh),
-              label: const Text('Actualizar'),
+              kind: NeuButtonKind.alt,
+              small: true,
+              expand: false,
+              icon: Icons.refresh_rounded,
             );
+
             if (constraints.maxWidth < 650) {
               return Column(
                 children: [
@@ -136,19 +106,12 @@ class ScheduleFilters extends StatelessWidget {
                     children: [
                       Expanded(child: careerFilter),
                       const SizedBox(width: 10),
-                      SizedBox(width: 125, child: semesterFilter),
+                      SizedBox(width: 135, child: semesterFilter),
                       const SizedBox(width: 8),
-                      IconButton(
+                      NeuCircleButton(
+                        icon: Icons.refresh_rounded,
                         tooltip: 'Actualizar',
-                        onPressed: refreshing ? null : onRefresh,
-                        icon: refreshing
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : const Icon(Icons.refresh),
+                        onTap: refreshing ? null : onRefresh,
                       ),
                     ],
                   ),
@@ -168,11 +131,6 @@ class ScheduleFilters extends StatelessWidget {
             );
           },
         ),
-      );
-
-  OutlineInputBorder _border() => OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
       );
 }
 
@@ -208,7 +166,7 @@ class TeacherScheduleGrid extends StatelessWidget {
               crossAxisCount: columns,
               crossAxisSpacing: 14,
               mainAxisSpacing: 14,
-              mainAxisExtent: 290,
+              mainAxisExtent: 295,
             ),
             itemCount: teachers.length,
             itemBuilder: (context, index) {
@@ -248,86 +206,104 @@ class _TeacherCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final assigned = schedule != null;
     final hasAvailability = assigned || sessions.isNotEmpty;
-    return Card(
-      color: Colors.white,
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: const BorderSide(color: Color(0xFFE2E8F0)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    return NeuSurface(
+      radius: 20,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const NeuIconBox(
+                Icons.person_outline,
+                size: 44,
+                radius: 14,
+                iconSize: 22,
+                color: _brand,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      teacher.nombre.isEmpty ? 'Docente' : teacher.nombre,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: neuPoppins(
+                        size: 15,
+                        weight: FontWeight.w700,
+                        color: Neu.heading,
+                      ),
+                    ),
+                    Text(
+                      'ID ${teacher.id}',
+                      style: neuBody(color: Neu.muted, size: 12),
+                    ),
+                  ],
+                ),
+              ),
+              PaTag(
+                hasAvailability ? 'Asignado' : 'No asignado',
+                tone: hasAvailability ? PaTone.ok : PaTone.warn,
+              ),
+              const SizedBox(width: 4),
+              NeuCircleButton(
+                size: 36,
+                icon: Icons.edit_calendar_outlined,
+                tooltip: schedule == null ? 'Asignar horario' : 'Editar horario',
+                onTap: () => onEditSchedule(teacher, schedule),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Text(
+            assigned
+                ? '${schedule!.carrera} · Semestre ${schedule!.semestre} · ${schedule!.dia} ${schedule!.horaInicio}–${schedule!.horaFin}'
+                : sessions.isNotEmpty
+                    ? 'Tiene ${sessions.length} tutoría(s) publicada(s).'
+                    : 'Este docente aún no tiene tutorías asignadas.',
+            style: neuBody(color: Neu.muted, height: 1.4, size: 13),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const Spacer(),
+          for (final session in sessions.take(3)) ...[
+            const SizedBox(height: 4),
             Row(
               children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFCE7EF),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: const Icon(Icons.person_outline, color: _brand),
-                ),
-                const SizedBox(width: 12),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(teacher.nombre.isEmpty ? 'Docente' : teacher.nombre,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              fontWeight: FontWeight.w800,
-                              color: Color(0xFF1E293B))),
-                      Text('ID ${teacher.id}',
-                          style: const TextStyle(color: _muted, fontSize: 12)),
-                    ],
+                  child: Text(
+                    '${session.subject} · ${_sessionDateTime(session)}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: neuBody(color: Neu.muted, size: 12),
                   ),
                 ),
-                _ScheduleBadge(assigned: hasAvailability),
                 IconButton(
-                  tooltip:
-                      schedule == null ? 'Asignar horario' : 'Editar horario',
-                  onPressed: () => onEditSchedule(teacher, schedule),
-                  icon: const Icon(Icons.edit_calendar_outlined, color: _brand),
+                  tooltip: 'Editar tutoría',
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  constraints:
+                      const BoxConstraints(minWidth: 26, minHeight: 26),
+                  onPressed: () => onEditSession(session),
+                  icon: const Icon(Icons.edit_outlined,
+                      size: 16, color: Neu.muted),
+                ),
+                IconButton(
+                  tooltip: 'Eliminar tutoría',
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  constraints:
+                      const BoxConstraints(minWidth: 26, minHeight: 26),
+                  onPressed: () => onDeleteSession(session),
+                  icon: const Icon(Icons.delete_outline,
+                      size: 16, color: Neu.error),
                 ),
               ],
             ),
-            const SizedBox(height: 14),
-            Text(
-              assigned
-                  ? '${schedule!.carrera} · Semestre ${schedule!.semestre} · ${schedule!.dia} ${schedule!.horaInicio}–${schedule!.horaFin}'
-                  : sessions.isNotEmpty
-                      ? 'Tiene ${sessions.length} tutoría(s) publicada(s).'
-                      : 'Este docente aún no tiene tutorías asignadas.',
-              style: const TextStyle(color: _muted, height: 1.4),
-            ),
-            for (final session in sessions.take(3)) ...[
-              Text(
-                '${session.subject} · ${_sessionDateTime(session)}',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: _muted, fontSize: 12),
-              ),
-              Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-                IconButton(
-                    tooltip: 'Editar tutoría',
-                    visualDensity: VisualDensity.compact,
-                    onPressed: () => onEditSession(session),
-                    icon: const Icon(Icons.edit_outlined, size: 18)),
-                IconButton(
-                    tooltip: 'Eliminar tutoría',
-                    visualDensity: VisualDensity.compact,
-                    onPressed: () => onDeleteSession(session),
-                    icon: const Icon(Icons.delete_outline,
-                        color: Colors.red, size: 18)),
-              ]),
-            ],
           ],
-        ),
+        ],
       ),
     );
   }
@@ -345,29 +321,6 @@ class _TeacherCard extends StatelessWidget {
   }
 }
 
-class _ScheduleBadge extends StatelessWidget {
-  const _ScheduleBadge({required this.assigned});
-
-  final bool assigned;
-
-  @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-        decoration: BoxDecoration(
-          color: assigned ? const Color(0xFFDCFCE7) : const Color(0xFFFFF1E6),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Text(
-          assigned ? 'Asignado' : 'No asignado',
-          style: TextStyle(
-            color: assigned ? const Color(0xFF15803D) : const Color(0xFFC2410C),
-            fontWeight: FontWeight.w700,
-            fontSize: 11,
-          ),
-        ),
-      );
-}
-
 class ScheduleLoadError extends StatelessWidget {
   const ScheduleLoadError({
     required this.message,
@@ -382,17 +335,23 @@ class ScheduleLoadError extends StatelessWidget {
   Widget build(BuildContext context) => Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(message, textAlign: TextAlign.center),
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                onPressed: onRetry,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Reintentar'),
-              ),
-            ],
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                PaInfo(message, tone: PaTone.error, icon: Icons.error_outline),
+                const SizedBox(height: 14),
+                NeuButton(
+                  'Reintentar',
+                  onPressed: onRetry,
+                  kind: NeuButtonKind.alt,
+                  small: true,
+                  expand: false,
+                  icon: Icons.refresh_rounded,
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -402,14 +361,6 @@ class ScheduleEmptyResults extends StatelessWidget {
   const ScheduleEmptyResults({super.key});
 
   @override
-  Widget build(BuildContext context) => const Center(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Text(
-            'No hay tutores que coincidan con los filtros seleccionados.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: _muted),
-          ),
-        ),
-      );
+  Widget build(BuildContext context) =>
+      const PaEmpty('No hay tutores que coincidan con los filtros seleccionados.');
 }
