@@ -1,4 +1,3 @@
-import 'dart:js_interop';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
@@ -6,9 +5,9 @@ import 'package:flutter/material.dart';
 import '../../../core/widgets/role_toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
-import 'package:web/web.dart' as web;
 
 import '../../../core/api_client.dart';
+import '../../../core/pdf_opener.dart';
 import '../../pa/pa_widgets.dart';
 import '../admin_controller.dart';
 
@@ -143,15 +142,10 @@ class _AdminCertificacionesViewState
         );
       }
       if (!mounted) return;
-      final blob = web.Blob(
-        [Uint8List.fromList(bytes).toJS].toJS,
-        web.BlobPropertyBag(type: 'application/pdf'),
+      await openPdfBytes(
+        Uint8List.fromList(bytes),
+        'certificacion_${certification.id}',
       );
-      final blobUrl = web.URL.createObjectURL(blob);
-      web.window.open(blobUrl, '_blank');
-      Future.delayed(const Duration(seconds: 60), () {
-        web.URL.revokeObjectURL(blobUrl);
-      });
     } on DioException catch (error) {
       if (mounted) _showMessage(_apiError(error), isError: true);
     } on FormatException catch (error) {
