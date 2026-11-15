@@ -31,7 +31,7 @@ class _StudentHeader extends StatelessWidget {
         : tab == 1
             ? switch (section) {
                 'tutores' => 'Buscar tutorías',
-                'publicadas' => 'Sesiones disponibles',
+                'publicadas' => 'Tutorías retroalimentativas',
                 'proyectos' => 'Proyecto de aula',
                 'seguimiento-proyecto' => 'Seguimiento de mi proyecto',
                 'proyectos-historial' => 'Proyectos de aula',

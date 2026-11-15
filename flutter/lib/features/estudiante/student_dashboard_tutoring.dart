@@ -113,6 +113,12 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
             onTap: _openEnrolledSessions,
           ),
           _MenuTile(
+            icon: Icons.event_available_outlined,
+            title: 'Inscribirse a tutorías retroalimentativas',
+            subtitle: 'Consulta y reserva sesiones grupales publicadas.',
+            onTap: () => _goToSection('publicadas'),
+          ),
+          _MenuTile(
             icon: Icons.groups_outlined,
             title: 'Proyecto de aula',
             subtitle: 'Crea tu proyecto o únete con un código.',
@@ -138,6 +144,8 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
     switch (_section) {
       case 'menu':
         return _menu();
+      case 'publicadas':
+        return _publishedGroupSessions();
       case 'proyectos':
         return _projectSpaces();
       case 'seguimiento-proyecto':

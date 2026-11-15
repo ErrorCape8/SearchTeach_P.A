@@ -83,7 +83,7 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
   String get _headerTitle =>
       _tab == 0 ? 'Panel docente' : _teacherTabNames[_tab] ?? 'Panel docente';
 
-  static const _navigationTabs = [0, 2, 3, 1, 4, 6];
+  static const _navigationTabs = [0, 2, 3, 1, 4, 6, 7];
 
   static String _initials(String value) {
     final parts =
@@ -226,6 +226,7 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
                   NeuNavItem(Icons.menu_book_outlined, 'Tutoría'),
                   NeuNavItem(Icons.star_outline_rounded, 'Líder PA'),
                   NeuNavItem(Icons.history_outlined, 'Historial'),
+                  NeuNavItem(Icons.person_outline_rounded, 'Mi perfil'),
                 ],
                 index: _navigationTabs.indexOf(_tab),
                 onSelect: (position) => setState(
@@ -247,7 +248,7 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
             htmlStyle: true,
           ),
         6 => _history(),
-        7 => const DocentePerfilPage(),
+        7 => DocentePerfilPage(onLogout: _logout),
         8 => const DocenteSolicitudesPage(),
         _ => _home(teacherName),
       };
