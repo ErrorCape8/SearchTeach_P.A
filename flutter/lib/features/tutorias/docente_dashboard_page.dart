@@ -9,6 +9,7 @@ import '../../core/api_client.dart';
 import '../../core/role_theme.dart';
 import '../../core/tutoring_updates.dart';
 import '../../core/widgets/role_toast.dart';
+import '../../core/widgets/start_tutoring_card.dart';
 import '../auth/auth_repository.dart';
 import '../notifications/notifications_page.dart';
 import 'docente_proyectos_aula_page.dart';
@@ -71,7 +72,7 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
   static const _teacherTabNames = {
     0: 'Inicio',
     1: 'Tutoría',
-    2: 'Empezar tutoría',
+    2: 'Empezar tutorías',
     3: 'Mis sesiones',
     4: 'Líder de proyecto de aula',
     5: 'Avisos',
@@ -84,6 +85,14 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
       _tab == 0 ? 'Panel docente' : _teacherTabNames[_tab] ?? 'Panel docente';
 
   static const _navigationTabs = [0, 2, 3, 1, 4, 6, 7];
+
+  static String _formatHour(DateTime dt) {
+    final local = dt.toLocal();
+    final hour = local.hour % 12 == 0 ? 12 : local.hour % 12;
+    final minute = local.minute.toString().padLeft(2, '0');
+    final period = local.hour < 12 ? 'AM' : 'PM';
+    return '$hour:$minute $period';
+  }
 
   static String _initials(String value) {
     final parts =
@@ -124,8 +133,12 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
           : _headerTitle,
       subtitle: home
           ? teacherCareer
-          : (_tab == 7 ? 'Docente' : 'Docente · $teacherCareer'),
-      leading: home
+          : (_tab == 2
+              ? 'Tú abres la sala'
+              : _tab == 7
+                  ? 'Docente'
+                  : 'Docente · $teacherCareer'),
+      leading: home || _tab == 2
           ? _profileButton(teacherName)
           : NeuCircleButton(
               icon: Icons.chevron_left_rounded,
@@ -344,6 +357,81 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
                       itemBuilder: (context, index) =>
                           _historySessionCard(sessions[index]),
                     ),
+            );
+          }
+
+          if (view == _SessionView.start) {
+            return ListView(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+              children: [
+                NeuSurface(
+                  sunken: true,
+                  radius: 16,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  child: Text(
+                    'Solo puedes iniciar la tutoría de hoy. Al iniciar entras primero; los estudiantes aparecen en la sala a medida que se conectan.',
+                    style: neuBody(size: 13, color: Neu.heading, height: 1.4),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                if (sessions.isEmpty)
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 460),
+                        child: const _TeacherEmptyCard(
+                          icon: Icons.event_available_outlined,
+                          message: 'No tienes tutorías programadas para hoy.',
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  for (final session in sessions)
+                    StartTutoringCard(
+                      subject: session.subject,
+                      timeLabel: session.start == null
+                          ? 'Fecha no disponible'
+                          : 'Hoy · ${_formatHour(session.start!)}',
+                      modalityLabel: _modalityLabel(session.modality),
+                      attendeesLabel: '${session.students.length} inscritos',
+                      accentColor: _teacherGreen,
+                      buttonLabel: session.modality.toUpperCase() == 'PRESENCIAL'
+                          ? (session.state == 'EN_CURSO'
+                              ? 'Tomar asistencia'
+                              : 'Habilitar clase presencial')
+                          : 'Iniciar tutoría',
+                      onAction: () async {
+                        if (session.modality.toUpperCase() == 'PRESENCIAL') {
+                          await Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => PresencialTutoriaPage(
+                                sessionId: session.id,
+                                subject: session.subject,
+                              ),
+                            ),
+                          );
+                        } else {
+                          await Navigator.of(context).push(MaterialPageRoute(
+                            builder: (_) => LiveKitRoomPage(
+                              sessionId: session.id,
+                              subject: session.subject,
+                              modality: session.modality,
+                              teacherMode: true,
+                              students: session.students,
+                              ended: false,
+                              endAt: session.end,
+                            ),
+                          ));
+                        }
+                        if (mounted) {
+                          ref.invalidate(_teacherSessionsProvider);
+                        }
+                      },
+                    ),
+              ],
             );
           }
 

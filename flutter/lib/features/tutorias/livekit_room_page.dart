@@ -71,7 +71,7 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
   bool _microphoneEnabled = true;
   bool _cameraEnabled = true;
   bool _showChat = false;
-  bool _showPeople = false;
+  bool _showAttendance = false;
   bool _ended = false;
   bool _attendanceLoading = true;
   bool _attendanceSlow = false;
@@ -91,10 +91,8 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
   void initState() {
     super.initState();
     _ended = widget.ended;
-    _showPeople = widget.teacherMode;
-    _showChat = widget.isIndividualTutoring
-        ? widget.teacherMode
-        : widget.ended || widget.studentMode || widget.teacherMode;
+    _showAttendance = false;
+    _showChat = false;
     if (!widget.isIndividualTutoring) {
       _loadChatHistory();
       _chatTimer =
@@ -117,13 +115,8 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
         if (widget.teacherMode) {
           _finish('FINALIZACION_AUTOMATICA');
         } else if (mounted) {
-          setState(() {
-            _ended = true;
-            _showChat = true;
-          });
-          unawaited(Future.wait(
-              [_loadChatHistory(), _loadAttendance(), _loadStudentNames()]));
           _room.disconnect();
+          Navigator.of(context).pop('ended');
         }
       });
     }
@@ -246,14 +239,10 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
           : sessionState == 'FINALIZADA';
       if (!isFinished || !mounted) return;
       _roomStatusTimer?.cancel();
-      setState(() {
-        _ended = true;
-        _showChat = true;
-        _connected = false;
-      });
       await _room.disconnect();
-      await Future.wait(
-          [_loadChatHistory(), _loadAttendance(), _loadStudentNames()]);
+      if (!widget.teacherMode && mounted) {
+        Navigator.of(context).pop('ended');
+      }
     } on DioException {
       // The server-side timer or LiveKit room deletion can still end the call.
     }
@@ -330,16 +319,15 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
       });
       _listener.on<RoomDisconnectedEvent>((_) {
         if (!mounted) return;
+        if (!widget.teacherMode) {
+          _roomStatusTimer?.cancel();
+          Navigator.of(context).pop('ended');
+          return;
+        }
         setState(() {
           _connected = false;
           _connecting = false;
-          _ended = true;
-          _showChat = true;
         });
-        if (!widget.isProjectMeeting) {
-          unawaited(Future.wait(
-              [_loadChatHistory(), _loadAttendance(), _loadStudentNames()]));
-        }
       });
       _listener.on<TrackSubscribedEvent>((_) {
         if (mounted) setState(() {});
@@ -461,11 +449,9 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
         await _connect();
       } else if (state == 'FINALIZADA') {
         _waitingRoomTimer?.cancel();
-        setState(() {
-          _waitingForTeacher = false;
-          _ended = true;
-          _showChat = true;
-        });
+        if (mounted) {
+          Navigator.of(context).pop('ended');
+        }
       }
     } on DioException {
       // Reintenta en el siguiente ciclo.
@@ -602,27 +588,23 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
             'motivo': reason,
           },
         );
-        if (mounted) {
-          setState(() {
-            _ended = true;
-            _showChat = false;
-          });
-        }
         await _room.disconnect();
+        if (mounted) {
+          RoleToast.show(context,
+              message: 'Tutoría finalizada.', roleColor: _teacherRoomAccent);
+          Navigator.of(context).pop();
+        }
         return;
       }
       await ref.read(dioProvider).patch(
           '/api/tutorias/grupales/${widget.sessionId}/finalizar',
           data: {'motivo': reason});
-      if (mounted) {
-        setState(() {
-          _ended = true;
-          _showChat = true;
-        });
-        await Future.wait(
-            [_loadChatHistory(), _loadAttendance(), _loadStudentNames()]);
-      }
       await _room.disconnect();
+      if (mounted) {
+        RoleToast.show(context,
+            message: 'Tutoría finalizada.', roleColor: _teacherRoomAccent);
+        Navigator.of(context).pop();
+      }
     } on DioException catch (error) {
       if (mounted) {
         RoleToast.showSnackBar(
@@ -685,372 +667,275 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
     await _room.dispose();
   }
 
+  Widget _buildRoomHeader() => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: const BoxDecoration(
+          color: Neu.bg,
+          boxShadow: [
+            BoxShadow(
+              color: Neu.shadowDark,
+              offset: Offset(0, 2),
+              blurRadius: 8,
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Image.asset(
+              widget.teacherMode
+                  ? 'assets/images/logo_docente.png'
+                  : 'assets/images/logo_estudiante.png',
+              width: 36,
+              height: 36,
+              errorBuilder: (_, __, ___) => BrandLogo(
+                width: 36,
+                height: 36,
+                accentColor: _roomAccent,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    widget.subject,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: neuPoppins(
+                      size: 15,
+                      weight: FontWeight.w700,
+                      color: Neu.heading,
+                    ),
+                  ),
+                  Text(
+                    '${_room.remoteParticipants.length + (_connected ? 1 : 0)} participantes · ${widget.modality}',
+                    style: neuBody(size: 11, color: Neu.muted),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+
   @override
   Widget build(BuildContext context) {
     final wide = MediaQuery.sizeOf(context).width >= 900;
     if (_ended) {
-      return _withRoleNavigation(
-        Scaffold(
-          backgroundColor: _sharedRoomBackground,
-          appBar: AppBar(
-            backgroundColor: const Color(0xFF161922),
-            foregroundColor: Colors.white,
-            elevation: 0,
-            shape: const Border(
-              bottom: BorderSide(color: Color(0xFF262B37), width: 1),
-            ),
-            title: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.subject,
-                  style: neuPoppins(
-                    size: 16,
-                    weight: FontWeight.w700,
-                    color: Colors.white,
-                  ),
-                ),
-                Text(
-                  widget.isProjectMeeting
-                      ? 'Reunión de proyecto finalizada'
-                      : 'Historial de tutoría',
-                  style: neuBody(
-                    size: 11,
-                    color: Colors.white60,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          body: Column(
-            children: [
-              Expanded(
-                child: wide
-                    ? Row(
-                        children: [
-                          Expanded(child: _endedGallery()),
-                          if (!widget.isIndividualTutoring ||
-                              widget.teacherMode)
-                            SizedBox(width: 320, child: _chatPanel()),
-                        ],
-                      )
-                    : Column(
-                        children: [
-                          Expanded(child: _endedGallery()),
-                          if (!widget.isIndividualTutoring ||
-                              widget.teacherMode)
-                            SizedBox(height: 230, child: _chatPanel()),
-                        ],
-                      ),
-              ),
-              _historyControls(),
-            ],
-          ),
-        ),
-        wide: wide,
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) Navigator.of(context).maybePop('ended');
+      });
+      return const Scaffold(
+        backgroundColor: Neu.bg,
+        body: Center(child: CircularProgressIndicator()),
       );
     }
     if (_waitingForTeacher) {
-      return _withRoleNavigation(
-        Scaffold(
-          backgroundColor: _sharedRoomBackground,
-          appBar: AppBar(
-            backgroundColor: const Color(0xFF161922),
-            foregroundColor: Colors.white,
-            elevation: 0,
-            shape: const Border(
-              bottom: BorderSide(color: Color(0xFF262B37), width: 1),
-            ),
-            title: Text(
-              widget.subject,
-              style: neuPoppins(
-                size: 16,
-                weight: FontWeight.w700,
-                color: Colors.white,
-              ),
-            ),
-          ),
-          body: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(28),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  BrandLogo(
-                    width: 130,
-                    height: 80,
-                    accentColor: _roomAccent,
-                  ),
-                  const SizedBox(height: 24),
-                  CircularProgressIndicator(color: _roomAccent),
-                  const SizedBox(height: 20),
-                  Text(
-                    'Estás en la sala de espera',
-                    textAlign: TextAlign.center,
-                    style: neuPoppins(
-                      color: Colors.white,
-                      size: 20,
-                      weight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Ya notificamos al docente. Entrarás automáticamente a la videollamada en cuanto inicie la tutoría.',
-                    textAlign: TextAlign.center,
-                    style: neuBody(color: Colors.white70, size: 13.5),
-                  ),
-                  const SizedBox(height: 24),
-                  OutlinedButton.icon(
-                    onPressed: () => Navigator.of(context).maybePop(),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.white,
-                      side: const BorderSide(color: Color(0xFF383E4E)),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 22,
-                        vertical: 12,
-                      ),
-                    ),
-                    icon: const Icon(Icons.arrow_back),
-                    label: Text(
-                      'Salir de la espera',
-                      style: neuPoppins(
-                        size: 13.5,
-                        weight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-        wide: wide,
-      );
-    }
-    if (_connecting) {
-      return _withRoleNavigation(
-        Scaffold(
-          backgroundColor: _sharedRoomBackground,
-          appBar: AppBar(
-            backgroundColor: const Color(0xFF161922),
-            foregroundColor: Colors.white,
-            elevation: 0,
-            shape: const Border(
-              bottom: BorderSide(color: Color(0xFF262B37), width: 1),
-            ),
-            title: Text(
-              widget.subject,
-              style: neuPoppins(
-                size: 16,
-                weight: FontWeight.w700,
-                color: Colors.white,
-              ),
-            ),
-          ),
-          body: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(color: _roomAccent),
-                const SizedBox(height: 16),
-                Text(
-                  'Conectando a la sala…',
-                  style: neuBody(size: 14, color: Colors.white70),
-                ),
-              ],
-            ),
-          ),
-        ),
-        wide: wide,
-      );
-    }
-    if (_error != null) {
-      return _withRoleNavigation(
-        Scaffold(
-          backgroundColor: _sharedRoomBackground,
-          appBar: AppBar(
-            backgroundColor: const Color(0xFF161922),
-            foregroundColor: Colors.white,
-            elevation: 0,
-            shape: const Border(
-              bottom: BorderSide(color: Color(0xFF262B37), width: 1),
-            ),
-            title: Text(
-              widget.subject,
-              style: neuPoppins(
-                size: 16,
-                weight: FontWeight.w700,
-                color: Colors.white,
-              ),
-            ),
-          ),
-          body: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Text(
-                _error!,
-                textAlign: TextAlign.center,
-                style: neuBody(color: Colors.white, size: 14),
-              ),
-            ),
-          ),
-        ),
-        wide: wide,
-      );
-    }
-    return _withRoleNavigation(
-      Scaffold(
-        backgroundColor: _sharedRoomBackground,
-        appBar: AppBar(
-          backgroundColor: const Color(0xFF161922),
-          foregroundColor: Colors.white,
-          elevation: 0,
-          shape: const Border(
-            bottom: BorderSide(color: Color(0xFF262B37), width: 1),
-          ),
-          title: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      return Scaffold(
+        backgroundColor: Neu.bg,
+        body: SafeArea(
+          child: Column(
             children: [
-              Text(
-                widget.subject,
-                style: neuPoppins(
-                  size: 16,
-                  weight: FontWeight.w700,
-                  color: Colors.white,
-                ),
-              ),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 7,
-                    height: 7,
+              _buildRoomHeader(),
+              Expanded(
+                child: Center(
+                  child: Container(
+                    margin: const EdgeInsets.all(24),
+                    padding: const EdgeInsets.all(32),
+                    constraints: const BoxConstraints(maxWidth: 440),
                     decoration: BoxDecoration(
-                      color: _roomAccent,
-                      shape: BoxShape.circle,
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: Neu.raiseM,
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Image.asset(
+                          widget.teacherMode
+                              ? 'assets/images/logo_docente.png'
+                              : 'assets/images/logo_estudiante.png',
+                          width: 48,
+                          height: 48,
+                          errorBuilder: (_, __, ___) => BrandLogo(
+                            width: 48,
+                            height: 48,
+                            accentColor: _roomAccent,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        CircularProgressIndicator(color: _roomAccent),
+                        const SizedBox(height: 20),
+                        Text(
+                          'Estás en la sala de espera',
+                          textAlign: TextAlign.center,
+                          style: neuPoppins(
+                            color: Neu.heading,
+                            size: 18,
+                            weight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Ya notificamos al docente. Entrarás automáticamente a la videollamada en cuanto inicie la tutoría.',
+                          textAlign: TextAlign.center,
+                          style: neuBody(color: Neu.muted, size: 13),
+                        ),
+                        const SizedBox(height: 24),
+                        NeuButton(
+                          'Salir de la espera',
+                          icon: Icons.arrow_back_rounded,
+                          accentColor: _roomAccent,
+                          expand: false,
+                          onPressed: () => Navigator.of(context).maybePop(),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 6),
-                  Text(
-                    '${_room.remoteParticipants.length + (_connected ? 1 : 0)} participantes',
-                    style: neuBody(
-                      size: 11.5,
-                      color: Colors.white70,
-                    ),
-                  ),
-                ],
+                ),
               ),
             ],
           ),
-          actions: [
-            if (!widget.isIndividualTutoring)
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: IconButton(
-                  tooltip: _showChat ? 'Ocultar chat' : 'Mostrar chat',
-                  style: IconButton.styleFrom(
-                    backgroundColor: _showChat
-                        ? _roomAccent.withOpacity(0.2)
-                        : Colors.transparent,
-                    foregroundColor:
-                        _showChat ? _roomAccent : Colors.white70,
+        ),
+      );
+    }
+    if (_connecting) {
+      return Scaffold(
+        backgroundColor: Neu.bg,
+        body: SafeArea(
+          child: Column(
+            children: [
+              _buildRoomHeader(),
+              Expanded(
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircularProgressIndicator(color: _roomAccent),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Conectando a la sala…',
+                        style: neuBody(size: 14, color: Neu.muted),
+                      ),
+                    ],
                   ),
-                  onPressed: () => setState(() => _showChat = !_showChat),
-                  icon: Icon(_showChat
-                      ? Icons.chat_rounded
-                      : Icons.chat_outlined),
                 ),
               ),
-          ],
+            ],
+          ),
         ),
-        body: Column(
-          children: [
-            if (_mediaWarning != null)
-              MaterialBanner(
-                backgroundColor: const Color(0xFF3A2B18),
-                content: Text(
-                  _mediaWarning!,
-                  style: const TextStyle(color: Colors.white),
-                ),
-                leading: const Icon(
-                  Icons.warning_amber_rounded,
-                  color: Colors.amber,
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => setState(() => _mediaWarning = null),
-                    child: const Text('Entendido'),
+      );
+    }
+    if (_error != null) {
+      return Scaffold(
+        backgroundColor: Neu.bg,
+        body: SafeArea(
+          child: Column(
+            children: [
+              _buildRoomHeader(),
+              Expanded(
+                child: Center(
+                  child: Container(
+                    margin: const EdgeInsets.all(24),
+                    padding: const EdgeInsets.all(32),
+                    constraints: const BoxConstraints(maxWidth: 440),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: Neu.raiseM,
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.error_outline_rounded,
+                            color: Neu.errFg, size: 48),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No se pudo conectar',
+                          style: neuPoppins(
+                            size: 17,
+                            weight: FontWeight.w700,
+                            color: Neu.heading,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _error!,
+                          textAlign: TextAlign.center,
+                          style: neuBody(color: Neu.muted, size: 13),
+                        ),
+                        const SizedBox(height: 24),
+                        NeuButton(
+                          'Volver',
+                          icon: Icons.arrow_back_rounded,
+                          accentColor: _roomAccent,
+                          expand: false,
+                          onPressed: () => Navigator.of(context).maybePop(),
+                        ),
+                      ],
+                    ),
                   ),
-                ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    return Scaffold(
+      backgroundColor: Neu.bg,
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildRoomHeader(),
+            if (_mediaWarning != null)
+              Container(
+                color: const Color(0xFFFFF3CD),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  children: [
+                    const Icon(Icons.warning_amber_rounded,
+                        color: Colors.orange, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _mediaWarning!,
+                        style: const TextStyle(
+                            color: Color(0xFF856404), fontSize: 12),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 16),
+                      onPressed: () => setState(() => _mediaWarning = null),
+                    ),
+                  ],
+                ),
               ),
             Expanded(
               child: wide
                   ? Row(
                       children: [
-                        Expanded(flex: 4, child: _videoGallery()),
-                        if (_showChat)
-                          SizedBox(width: 320, child: _chatPanel()),
+                        Expanded(child: _videoGallery()),
+                        if (_showChat) _chatPanel(),
+                        if (_showAttendance) _attendancePanel(),
                       ],
                     )
                   : Column(
                       children: [
-                        Expanded(
-                          flex: _showChat ? 3 : 1,
-                          child: _videoGallery(),
-                        ),
+                        Expanded(child: _videoGallery()),
                         if (_showChat)
-                          SizedBox(height: 220, child: _chatPanel()),
+                          SizedBox(height: 240, child: _chatPanel()),
+                        if (_showAttendance)
+                          SizedBox(height: 240, child: _attendancePanel()),
                       ],
                     ),
             ),
             _callControls(),
           ],
         ),
-      ),
-      wide: wide,
-    );
-  }
-
-  Widget _withRoleNavigation(Widget page, {required bool wide}) {
-    if (widget.teacherMode && wide) {
-      return Scaffold(
-        body: Row(
-          children: [
-            _TeacherRoomSidebar(
-              historyMode: _ended,
-              onNavigate: (tab) {
-                final callback = widget.onNavigateToDashboard;
-                if (callback != null) {
-                  callback(switch (tab) {
-                    0 => 0,
-                    1 => 1,
-                    _ => 3,
-                  });
-                } else {
-                  Navigator.of(context).maybePop();
-                }
-              },
-            ),
-            Expanded(child: page),
-          ],
-        ),
-      );
-    }
-    if (!widget.studentMode || !wide) return page;
-    return Scaffold(
-      body: Row(
-        children: [
-          _StudentRoomSidebar(
-            studentName: widget.studentName,
-            historyMode: _ended,
-            onNavigate: () => Navigator.of(context).maybePop(),
-          ),
-          Expanded(child: page),
-        ],
       ),
     );
   }
@@ -1076,146 +961,196 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
         );
       });
 
-  Widget _endedGallery() => LayoutBuilder(
-        builder: (context, constraints) {
-          final columns = constraints.maxWidth > 560 ? 2 : 1;
-          return GridView.count(
-            padding: const EdgeInsets.all(8),
-            crossAxisCount: columns,
-            childAspectRatio: columns == 1 ? 1.6 : 1.45,
-            mainAxisSpacing: 6,
-            crossAxisSpacing: 6,
-            children: [
-              _VideoTile(label: 'Tutor', track: null),
-              for (final student in widget.students)
-                _VideoTile(
-                  label: _studentNames[student] ?? _studentLabel(student),
-                  track: null,
-                ),
-            ],
-          );
-        },
-      );
-
   Widget _chatPanel() => Container(
-        decoration: const BoxDecoration(
-          color: Color(0xFF161922),
-          border: Border(
-            left: BorderSide(color: Color(0xFF262B37), width: 1),
-          ),
+        width: 320,
+        margin: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: Neu.raiseM,
         ),
+        clipBehavior: Clip.antiAlias,
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(10, 10, 10, 4),
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1E222D),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: [
-                    if (!widget.isIndividualTutoring)
-                      _chatTab(
-                        'Chat (${_messages.length})',
-                        !_showPeople,
-                        () => setState(() => _showPeople = false),
-                      ),
-                    _chatTab(
-                      widget.isIndividualTutoring
-                          ? 'Asistencia'
-                          : widget.teacherMode
-                              ? 'Asistencia (${widget.students.length})'
-                              : 'Participantes (${widget.students.length + 1})',
-                      _showPeople,
-                      () => setState(() => _showPeople = true),
-                    ),
-                    if (_showPeople)
-                      IconButton(
-                        tooltip: 'Actualizar asistencia',
-                        visualDensity: VisualDensity.compact,
-                        onPressed: _attendanceLoading ? null : _loadAttendance,
-                        icon: _attendanceLoading
-                            ? const SizedBox.square(
-                                dimension: 16,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : const Icon(Icons.refresh,
-                                size: 18, color: Colors.white70),
-                      ),
-                  ],
-                ),
+              padding: const EdgeInsets.fromLTRB(16, 12, 10, 10),
+              child: Row(
+                children: [
+                  Icon(Icons.chat_bubble_outline_rounded,
+                      size: 18, color: _roomAccent),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Chat (${_messages.length})',
+                    style: neuPoppins(
+                        size: 14, weight: FontWeight.w700, color: Neu.heading),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded,
+                        size: 20, color: Neu.muted),
+                    tooltip: 'Cerrar chat',
+                    onPressed: () => setState(() => _showChat = false),
+                  ),
+                ],
               ),
             ),
-            if (_showPeople && _attendanceLoading) ...[
-              LinearProgressIndicator(
-                minHeight: 2,
-                color: _roomAccent,
-                backgroundColor: Colors.white10,
-              ),
-              if (_attendanceSlow)
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(12, 8, 12, 4),
-                  child: Row(
-                    children: [
-                      SizedBox.square(
-                        dimension: 15,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white70,
+            const Divider(height: 1, color: Neu.line),
+            Expanded(
+              child: _messages.isEmpty
+                  ? Center(
+                      child: Text(
+                        'Aún no hay mensajes.',
+                        style: neuBody(color: Neu.muted, size: 13),
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(12),
+                      itemCount: _messages.length,
+                      itemBuilder: (context, index) {
+                        final message = _messages[index];
+                        final isMe = message.sender == 'Tú';
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: Align(
+                            alignment: isMe
+                                ? Alignment.centerRight
+                                : Alignment.centerLeft,
+                            child: Column(
+                              crossAxisAlignment: isMe
+                                  ? CrossAxisAlignment.end
+                                  : CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  message.sender,
+                                  style: neuPoppins(
+                                    color: _roomAccent,
+                                    size: 11,
+                                    weight: FontWeight.w700,
+                                  ),
+                                ),
+                                Container(
+                                  margin: const EdgeInsets.only(top: 3),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: isMe
+                                        ? _roomAccent.withOpacity(0.12)
+                                        : const Color(0xFFF1F4F9),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: isMe
+                                          ? _roomAccent.withOpacity(0.3)
+                                          : const Color(0xFFE2E8F0),
+                                      width: 0.8,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    message.text,
+                                    style: neuBody(
+                                        size: 12.5, color: Neu.heading),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(10),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _message,
+                      maxLength: 500,
+                      onSubmitted: (_) => _sendMessage(),
+                      style: neuBody(size: 12.5, color: Neu.heading),
+                      decoration: InputDecoration(
+                        hintText: 'Envía un mensaje…',
+                        hintStyle: neuBody(size: 12.5, color: Neu.muted),
+                        counterText: '',
+                        filled: true,
+                        fillColor: const Color(0xFFF1F4F9),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 10),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(20),
+                          borderSide: BorderSide.none,
                         ),
                       ),
-                      SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Conectando con el servidor; la primera carga puede tardar hasta un minuto.',
-                          style:
-                              TextStyle(fontSize: 11, color: Colors.white70),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-            ],
-            if (_showPeople && _attendanceError != null)
-              Material(
-                color: const Color(0xFF382315),
-                child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.warning_amber_rounded,
-                          color: Color(0xFFFFA726), size: 17),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          _attendanceError!,
-                          style: const TextStyle(
-                              fontSize: 11, color: Colors.white),
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: _attendanceLoading ? null : _loadAttendance,
-                        child: const Text('Reintentar',
-                            style: TextStyle(color: Color(0xFFFFA726))),
-                      ),
-                    ],
+                  const SizedBox(width: 8),
+                  NeuCircleButton(
+                    size: 38,
+                    icon: Icons.send_rounded,
+                    tooltip: 'Enviar mensaje',
+                    onTap: _sendMessage,
                   ),
-                ),
+                ],
               ),
-            if (_showPeople && widget.teacherMode)
+            ),
+          ],
+        ),
+      );
+
+  Widget _attendancePanel() => Container(
+        width: 320,
+        margin: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: Neu.raiseM,
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 10, 10),
+              child: Row(
+                children: [
+                  Icon(Icons.people_outline_rounded,
+                      size: 18, color: _roomAccent),
+                  const SizedBox(width: 8),
+                  Text(
+                    widget.teacherMode
+                        ? 'Asistencia (${widget.students.length})'
+                        : 'Participantes (${widget.students.length + 1})',
+                    style: neuPoppins(
+                        size: 14, weight: FontWeight.w700, color: Neu.heading),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    tooltip: 'Actualizar asistencia',
+                    visualDensity: VisualDensity.compact,
+                    onPressed: _attendanceLoading ? null : _loadAttendance,
+                    icon: _attendanceLoading
+                        ? const SizedBox.square(
+                            dimension: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.refresh_rounded,
+                            size: 18, color: Neu.muted),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded,
+                        size: 20, color: Neu.muted),
+                    tooltip: 'Cerrar asistencia',
+                    onPressed: () => setState(() => _showAttendance = false),
+                  ),
+                ],
+              ),
+            ),
+            if (widget.teacherMode)
               Container(
                 width: double.infinity,
-                color: _roomAccent.withOpacity(0.15),
+                color: _roomAccent.withOpacity(0.08),
                 padding:
                     const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 child: Text(
-                  'Presentes: ${_attendance.values.where((value) => value == true).length} | '
-                  'Ausentes: ${_attendance.values.where((value) => value == false).length} | '
-                  'Sin registro: ${widget.students.length - _attendance.length}',
+                  'Presentes: ${_attendance.values.where((v) => v == true).length} | Ausentes: ${_attendance.values.where((v) => v == false).length}',
                   style: neuPoppins(
                     color: _roomAccent,
                     size: 11,
@@ -1223,396 +1158,243 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
                   ),
                 ),
               ),
-            const Divider(height: 1, color: Color(0xFF262B37)),
+            const Divider(height: 1, color: Neu.line),
             Expanded(
-              child: _showPeople
-                  ? ListView(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      children: [
-                        if (widget.students.isEmpty &&
-                            !widget.isIndividualTutoring)
-                          Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Text(
-                              'Aún no hay estudiantes inscritos.',
-                              textAlign: TextAlign.center,
-                              style: neuBody(size: 12, color: Colors.white54),
-                            ),
-                          ),
-                        ListTile(
-                          dense: true,
-                          leading: CircleAvatar(
-                            radius: widget.teacherMode ? 16 : 13,
-                            backgroundColor: _roomAccent.withOpacity(0.2),
-                            child: Icon(
-                              Icons.school_rounded,
-                              size: widget.teacherMode ? 16 : 13,
-                              color: _roomAccent,
-                            ),
-                          ),
-                          title: Text(
-                            widget.teacherMode ? 'Tú · Docente' : 'Tutor',
-                            style: neuPoppins(
-                              size: widget.teacherMode ? 13 : 11,
-                              weight: FontWeight.w600,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                        for (final student in widget.students)
-                          ListTile(
-                            dense: true,
-                            leading: CircleAvatar(
-                              radius: widget.teacherMode ? 16 : 13,
-                              backgroundColor: const Color(0xFF252A36),
-                              child: Icon(
-                                Icons.person_outline_rounded,
-                                size: widget.teacherMode ? 16 : 13,
-                                color: Colors.white70,
-                              ),
-                            ),
-                            title: Text(
-                              _studentNames[student] ?? _studentLabel(student),
-                              style: neuPoppins(
-                                size: widget.teacherMode ? 13 : 11,
-                                weight: FontWeight.w500,
-                                color: Colors.white,
-                              ),
-                            ),
-                            subtitle: widget.teacherMode || widget.ended
-                                ? Text(
-                                    _attendance[student] == true
-                                        ? 'Asistió'
-                                        : _attendance[student] == false
-                                            ? 'No asistió'
-                                            : widget.teacherMode && !_ended
-                                                ? 'Asistencia pendiente'
-                                                : 'Sin marcar',
-                                    style: neuBody(
-                                      size: widget.teacherMode ? 11 : 9,
-                                      color: _attendance[student] == true
-                                          ? Neu.okFg
-                                          : _attendance[student] == false
-                                              ? Neu.errFg
-                                              : Colors.white54,
-                                    ),
-                                  )
-                                : null,
-                            trailing: widget.teacherMode &&
-                                    !_ended &&
-                                    !widget.isProjectMeeting
-                                ? Wrap(
-                                    spacing: 2,
-                                    children: [
-                                      IconButton(
-                                        tooltip: 'Marcar presente',
-                                        visualDensity: VisualDensity.compact,
-                                        padding: EdgeInsets.zero,
-                                        constraints: const BoxConstraints(
-                                            minWidth: 32, minHeight: 32),
-                                        onPressed: () =>
-                                            _setAttendance(student, true),
-                                        icon: const Icon(
-                                          Icons.check_circle_rounded,
-                                          color: Neu.okFg,
-                                          size: 20,
-                                        ),
-                                      ),
-                                      IconButton(
-                                        tooltip: 'Marcar ausente',
-                                        visualDensity: VisualDensity.compact,
-                                        padding: EdgeInsets.zero,
-                                        constraints: const BoxConstraints(
-                                            minWidth: 32, minHeight: 32),
-                                        onPressed: () =>
-                                            _setAttendance(student, false),
-                                        icon: const Icon(
-                                          Icons.cancel_rounded,
-                                          color: Neu.errFg,
-                                          size: 20,
-                                        ),
-                                      ),
-                                    ],
-                                  )
-                                : null,
-                          ),
-                      ],
-                    )
-                  : _messages.isEmpty
-                      ? Center(
-                          child: Text(
-                            'Aún no hay mensajes.',
-                            style: neuBody(
-                              color: Colors.white54,
-                              size: 13,
-                            ),
-                          ),
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.all(12),
-                          itemCount: _messages.length,
-                          itemBuilder: (context, index) {
-                            final message = _messages[index];
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 10),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    message.sender,
-                                    style: neuPoppins(
-                                      color: _roomAccent,
-                                      size: widget.teacherMode ? 11.5 : 9,
-                                      weight: FontWeight.w700,
-                                    ),
-                                  ),
-                                  Container(
-                                    margin: const EdgeInsets.only(top: 3),
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 12, vertical: 8),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF232733),
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: const Color(0xFF2F3443),
-                                        width: 0.8,
-                                      ),
-                                    ),
-                                    child: Text(
-                                      message.text,
-                                      style: neuBody(
-                                        size: widget.teacherMode ? 13 : 10,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
-            ),
-            if (_ended)
-              Padding(
-                padding: const EdgeInsets.all(10),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'Chat guardado de la sesión. Solo lectura.',
-                    style: neuBody(
-                      color: Colors.white54,
-                      size: widget.teacherMode ? 11 : 9,
+              child: ListView(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                children: [
+                  ListTile(
+                    dense: true,
+                    leading: CircleAvatar(
+                      radius: 14,
+                      backgroundColor: _roomAccent.withOpacity(0.15),
+                      child: Icon(Icons.school_rounded,
+                          size: 15, color: _roomAccent),
+                    ),
+                    title: Text(
+                      widget.teacherMode ? 'Tú · Docente' : 'Tutor',
+                      style: neuPoppins(
+                          size: 12.5,
+                          weight: FontWeight.w600,
+                          color: Neu.heading),
                     ),
                   ),
-                ),
-              )
-            else
-              Padding(
-                padding: const EdgeInsets.all(10),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _message,
-                        maxLength: 500,
-                        onSubmitted: (_) => _sendMessage(),
-                        style: neuBody(
-                          size: widget.teacherMode ? 13 : 10,
-                          color: Colors.white,
-                        ),
-                        decoration: InputDecoration(
-                          hintText: 'Envía un mensaje…',
-                          hintStyle: neuBody(
-                            size: widget.teacherMode ? 13 : 10,
-                            color: Colors.white38,
-                          ),
-                          counterText: '',
-                          filled: true,
-                          fillColor: const Color(0xFF232733),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 10,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(20),
-                            borderSide: const BorderSide(
-                              color: Color(0xFF333847),
-                            ),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(20),
-                            borderSide: const BorderSide(
-                              color: Color(0xFF333847),
-                            ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(20),
-                            borderSide: BorderSide(
-                              color: _roomAccent,
-                              width: 1.5,
-                            ),
-                          ),
-                        ),
+                  for (final student in widget.students)
+                    ListTile(
+                      dense: true,
+                      leading: const CircleAvatar(
+                        radius: 14,
+                        backgroundColor: Color(0xFFE2E8F0),
+                        child: Icon(Icons.person_outline_rounded,
+                            size: 15, color: Neu.muted),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Material(
-                      color: _roomAccent,
-                      shape: const CircleBorder(),
-                      child: InkWell(
-                        customBorder: const CircleBorder(),
-                        onTap: _sendMessage,
-                        child: Padding(
-                          padding: const EdgeInsets.all(10),
-                          child: Icon(
-                            Icons.send_rounded,
-                            size: widget.teacherMode ? 18 : 14,
-                            color: Colors.white,
-                          ),
-                        ),
+                      title: Text(
+                        _studentNames[student] ?? _studentLabel(student),
+                        style: neuPoppins(
+                            size: 12.5,
+                            weight: FontWeight.w500,
+                            color: Neu.heading),
                       ),
+                      subtitle: widget.teacherMode
+                          ? Text(
+                              _attendance[student] == true
+                                  ? 'Asistió'
+                                  : _attendance[student] == false
+                                      ? 'No asistió'
+                                      : 'Sin registrar',
+                              style: neuBody(
+                                size: 11,
+                                color: _attendance[student] == true
+                                    ? Neu.okFg
+                                    : _attendance[student] == false
+                                        ? Neu.errFg
+                                        : Neu.muted,
+                              ),
+                            )
+                          : null,
+                      trailing: widget.teacherMode && !widget.isProjectMeeting
+                          ? Wrap(
+                              spacing: 2,
+                              children: [
+                                IconButton(
+                                  tooltip: 'Marcar presente',
+                                  visualDensity: VisualDensity.compact,
+                                  onPressed: () =>
+                                      _setAttendance(student, true),
+                                  icon: Icon(
+                                    Icons.check_circle_rounded,
+                                    color: _attendance[student] == true
+                                        ? Neu.okFg
+                                        : Colors.grey[400],
+                                    size: 22,
+                                  ),
+                                ),
+                                IconButton(
+                                  tooltip: 'Marcar ausente',
+                                  visualDensity: VisualDensity.compact,
+                                  onPressed: () =>
+                                      _setAttendance(student, false),
+                                  icon: Icon(
+                                    Icons.cancel_rounded,
+                                    color: _attendance[student] == false
+                                        ? Neu.errFg
+                                        : Colors.grey[400],
+                                    size: 22,
+                                  ),
+                                ),
+                              ],
+                            )
+                          : null,
                     ),
-                  ],
-                ),
+                ],
               ),
+            ),
           ],
         ),
       );
 
-  Widget _chatTab(String label, bool selected, VoidCallback onTap) => Expanded(
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(10),
-          child: Container(
-            height: 36,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: selected
-                  ? _roomAccent.withOpacity(0.18)
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(10),
+  Widget _callControls() => Container(
+        decoration: const BoxDecoration(
+          color: Neu.bg,
+          boxShadow: [
+            BoxShadow(
+              color: Neu.shadowDark,
+              offset: Offset(0, -2),
+              blurRadius: 8,
             ),
-            child: Text(
-              label,
-              style: neuPoppins(
-                color: selected ? _roomAccent : Colors.white60,
-                size: widget.teacherMode ? 12 : 9,
-                weight: selected ? FontWeight.w700 : FontWeight.w500,
-              ),
-            ),
-          ),
+          ],
         ),
-      );
-
-  Widget _historyControls() => SafeArea(
-        top: false,
-        child: Container(
-          width: double.infinity,
-          decoration: const BoxDecoration(
-            color: Color(0xFF161922),
-            border: Border(
-              top: BorderSide(color: Color(0xFF262B37), width: 1),
-            ),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Wrap(
-            alignment: WrapAlignment.center,
-            spacing: 12,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        child: SafeArea(
+          top: false,
+          child: Row(
             children: [
-              if (!widget.isIndividualTutoring)
-                _CallControl(
-                  icon: Icons.chat_outlined,
-                  label: 'Chat',
-                  onPressed: () {
-                    setState(() {
-                      _showChat = true;
-                      _showPeople = false;
-                    });
-                  },
-                  active: !_showPeople,
+              Tooltip(
+                message: 'Salir de la clase',
+                child: NeuSurface(
+                  radius: 44,
+                  shadows: Neu.raiseS,
+                  padding: const EdgeInsets.all(12),
+                  onTap: () => Navigator.of(context).maybePop(),
+                  child: const Icon(
+                    Icons.logout_rounded,
+                    size: 20,
+                    color: Neu.muted,
+                  ),
                 ),
-              _CallControl(
-                icon: Icons.people_outline,
-                label: widget.isIndividualTutoring ? 'Asistencia' : 'Personas',
-                onPressed: () {
-                  setState(() {
-                    _showChat = true;
-                    _showPeople = true;
-                  });
-                },
-                active: _showPeople,
               ),
-              _CallControl(
-                icon: Icons.call_end,
-                label: 'Salir',
-                onPressed: () => Navigator.of(context).maybePop(),
-                active: false,
-                danger: true,
+              const Spacer(),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (widget.modality.toUpperCase() != 'PRESENCIAL') ...[
+                    Tooltip(
+                      message: _microphoneEnabled
+                          ? 'Silenciar micrófono'
+                          : 'Activar micrófono',
+                      child: NeuSurface(
+                        radius: 44,
+                        sunken: !_microphoneEnabled,
+                        shadows: _microphoneEnabled ? Neu.raiseS : const [],
+                        padding: const EdgeInsets.all(12),
+                        onTap: _toggleMicrophone,
+                        child: Icon(
+                          _microphoneEnabled
+                              ? Icons.mic_rounded
+                              : Icons.mic_off_rounded,
+                          size: 20,
+                          color: _microphoneEnabled ? Neu.heading : Neu.errFg,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Tooltip(
+                      message: _cameraEnabled
+                          ? 'Apagar cámara'
+                          : 'Activar cámara',
+                      child: NeuSurface(
+                        radius: 44,
+                        sunken: !_cameraEnabled,
+                        shadows: _cameraEnabled ? Neu.raiseS : const [],
+                        padding: const EdgeInsets.all(12),
+                        onTap: _toggleCamera,
+                        child: Icon(
+                          _cameraEnabled
+                              ? Icons.videocam_rounded
+                              : Icons.videocam_off_rounded,
+                          size: 20,
+                          color: _cameraEnabled ? Neu.heading : Neu.errFg,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                  ],
+                  if (!widget.isIndividualTutoring) ...[
+                    Tooltip(
+                      message: _showChat ? 'Cerrar chat' : 'Abrir chat',
+                      child: NeuSurface(
+                        radius: 44,
+                        sunken: _showChat,
+                        shadows: _showChat ? const [] : Neu.raiseS,
+                        padding: const EdgeInsets.all(12),
+                        onTap: () => setState(() => _showChat = !_showChat),
+                        child: Icon(
+                          Icons.chat_bubble_outline_rounded,
+                          size: 20,
+                          color: _showChat ? _roomAccent : Neu.heading,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                  ],
+                  if (widget.teacherMode || !widget.isIndividualTutoring)
+                    Tooltip(
+                      message: widget.teacherMode
+                          ? (_showAttendance
+                              ? 'Cerrar asistencia'
+                              : 'Tomar asistencia')
+                          : (_showAttendance
+                              ? 'Cerrar participantes'
+                              : 'Ver participantes'),
+                      child: NeuSurface(
+                        radius: 44,
+                        sunken: _showAttendance,
+                        shadows: _showAttendance ? const [] : Neu.raiseS,
+                        padding: const EdgeInsets.all(12),
+                        onTap: () => setState(
+                            () => _showAttendance = !_showAttendance),
+                        child: Icon(
+                          Icons.people_outline_rounded,
+                          size: 20,
+                          color: _showAttendance ? _roomAccent : Neu.heading,
+                        ),
+                      ),
+                    ),
+                ],
               ),
-            ],
-          ),
-        ),
-      );
-
-  Widget _callControls() => SafeArea(
-        top: false,
-        child: Container(
-          width: double.infinity,
-          decoration: const BoxDecoration(
-            color: Color(0xFF161922),
-            border: Border(
-              top: BorderSide(color: Color(0xFF262B37), width: 1),
-            ),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Wrap(
-            alignment: WrapAlignment.center,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: 14,
-            runSpacing: 10,
-            children: [
-              if (widget.modality.toUpperCase() != 'PRESENCIAL')
-                _CallControl(
-                    icon: _microphoneEnabled ? Icons.mic : Icons.mic_off,
-                    label: _microphoneEnabled ? 'Silenciar' : 'Activar audio',
-                    onPressed: _toggleMicrophone,
-                    active: _microphoneEnabled),
-              if (widget.modality.toUpperCase() != 'PRESENCIAL')
-                _CallControl(
-                    icon: _cameraEnabled ? Icons.videocam : Icons.videocam_off,
-                    label: _cameraEnabled ? 'Apagar cámara' : 'Activar cámara',
-                    onPressed: _toggleCamera,
-                    active: _cameraEnabled),
-              if (!widget.isIndividualTutoring)
-                _CallControl(
-                    icon: Icons.chat_outlined,
-                    label: _showChat ? 'Cerrar chat' : 'Chat',
-                    onPressed: () => setState(() => _showChat = !_showChat),
-                    active: _showChat),
-              if (widget.teacherMode || !widget.isIndividualTutoring)
-                _CallControl(
-                    icon: Icons.people_outline,
-                    label: widget.teacherMode || widget.isIndividualTutoring
-                        ? 'Asistencia'
-                        : 'Participantes',
-                    onPressed: () => setState(() {
-                          _showChat = true;
-                          _showPeople = true;
-                        }),
-                    active: _showPeople),
+              const Spacer(),
               if (widget.teacherMode && !widget.isProjectMeeting)
-                _CallControl(
-                    icon: Icons.call_end,
-                    label: 'Finalizar tutoría',
-                    onPressed: _confirmFinish,
-                    active: false,
-                    danger: true),
-              _CallControl(
-                  icon: Icons.call_end,
-                  label: 'Salir',
-                  onPressed: () => Navigator.of(context).maybePop(),
-                  active: false,
-                  danger: true),
+                Tooltip(
+                  message: 'Finalizar clase',
+                  child: Material(
+                    color: const Color(0xFFFFECEC),
+                    shape: const CircleBorder(),
+                    child: InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: _confirmFinish,
+                      child: const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: Icon(
+                          Icons.power_settings_new_rounded,
+                          size: 20,
+                          color: Color(0xFFDC2626),
+                        ),
+                      ),
+                    ),
+                  ),
+                )
+              else
+                const SizedBox(width: 44),
             ],
           ),
         ),
@@ -1671,282 +1453,6 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
     );
     if (reason != null && mounted) await _finish(reason);
   }
-}
-
-class _TeacherRoomSidebar extends StatelessWidget {
-  const _TeacherRoomSidebar({
-    required this.historyMode,
-    required this.onNavigate,
-  });
-
-  final bool historyMode;
-  final ValueChanged<int> onNavigate;
-
-  static const _items = [
-    (Icons.home_outlined, 'Inicio'),
-    (Icons.calendar_month_outlined, 'Sesiones'),
-    (Icons.school_outlined, 'Proyectos de aula'),
-  ];
-
-  @override
-  Widget build(BuildContext context) => Material(
-        color: const Color(0xFF0E8A62),
-        child: SizedBox(
-          width: 196,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 18),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                child: const BrandLogo(
-                  width: 168,
-                  height: 72,
-                  accentColor: Color(0xFF16834A),
-                ),
-              ),
-              const SizedBox(height: 24),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20),
-                child: Text(
-                  'DOCENTE',
-                  style: TextStyle(
-                    color: Color(0xFFD4EEE2),
-                    fontSize: 10,
-                    letterSpacing: 1,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              for (var index = 0; index < _items.length; index++)
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 3,
-                  ),
-                  child: ListTile(
-                    dense: true,
-                    selected: index == 1,
-                    selectedTileColor: Colors.white.withValues(alpha: .16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(9),
-                    ),
-                    leading: Icon(
-                      _items[index].$1,
-                      color: Colors.white,
-                      size: 19,
-                    ),
-                    title: Text(
-                      _items[index].$2,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    onTap: () => onNavigate(index),
-                  ),
-                ),
-              const Spacer(),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 14),
-                child: Divider(color: Color(0x55FFFFFF)),
-              ),
-              ListTile(
-                leading: const CircleAvatar(
-                  radius: 16,
-                  backgroundColor: Colors.white,
-                  child: Icon(
-                    Icons.person_outline,
-                    color: Color(0xFF0E8A62),
-                    size: 19,
-                  ),
-                ),
-                title: const Text(
-                  'Volver a sesiones',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                onTap: () => onNavigate(1),
-              ),
-              if (historyMode)
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(20, 0, 20, 12),
-                  child: Text(
-                    'Historial de tutoría',
-                    style: TextStyle(color: Color(0xFFD4EEE2), fontSize: 10),
-                  ),
-                ),
-              const SizedBox(height: 10),
-            ],
-          ),
-        ),
-      );
-}
-
-class _StudentRoomSidebar extends StatelessWidget {
-  const _StudentRoomSidebar({
-    required this.studentName,
-    required this.historyMode,
-    required this.onNavigate,
-  });
-
-  final String studentName;
-  final bool historyMode;
-  final VoidCallback onNavigate;
-
-  static const _items = [
-    (Icons.home_outlined, 'Inicio'),
-    (Icons.desktop_windows_outlined, 'Tutores'),
-    (Icons.check_box_outline_blank, 'Mis tutorías'),
-    (Icons.history, 'Historial'),
-    (Icons.groups_outlined, 'Proyectos de aula'),
-  ];
-
-  @override
-  Widget build(BuildContext context) => Material(
-        color: const Color(0xFF0A3D91),
-        child: SizedBox(
-          width: 124,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 12),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: SizedBox(
-                  height: 68,
-                  child: Transform.scale(
-                    scale: 1.06,
-                    child: const BrandLogo(
-                      width: 104,
-                      height: 64,
-                      accentColor: Color(0xFF1769AA),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 12),
-                child: Text(
-                  'ESTUDIANTE',
-                  style: TextStyle(
-                    color: Color(0xFFB8C9E6),
-                    fontSize: 7,
-                    letterSpacing: .7,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 10),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 8),
-                child: Divider(height: 1, color: Color(0x334A77C0)),
-              ),
-              const SizedBox(height: 5),
-              for (var index = 0; index < _items.length; index++)
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 2,
-                  ),
-                  child: SizedBox(
-                    height: 27,
-                    child: Material(
-                      color: (historyMode ? index == 3 : index == 2)
-                          ? const Color(0xFF3B63AE)
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(7),
-                      child: InkWell(
-                        onTap: onNavigate,
-                        borderRadius: BorderRadius.circular(7),
-                        child: Row(
-                          children: [
-                            const SizedBox(width: 7),
-                            Icon(
-                              _items[index].$1,
-                              size: 13,
-                              color: Colors.white.withValues(alpha: .94),
-                            ),
-                            const SizedBox(width: 7),
-                            Expanded(
-                              child: Text(
-                                _items[index].$2,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 8,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              const Spacer(),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 8),
-                child: Divider(height: 1, color: Color(0x334A77C0)),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 10,
-                      backgroundColor: const Color(0xFF3B63AE),
-                      child: Text(
-                        studentName.isEmpty
-                            ? 'E'
-                            : studentName.trim()[0].toUpperCase(),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 7,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 5),
-                    Expanded(
-                      child: Text(
-                        studentName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 6,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: 'Volver',
-                      onPressed: onNavigate,
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints.tightFor(
-                        width: 18,
-                        height: 24,
-                      ),
-                      icon: const Icon(
-                        Icons.logout,
-                        color: Colors.white,
-                        size: 11,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
 }
 
 class _VideoTile extends StatelessWidget {
@@ -2073,60 +1579,6 @@ class _WaitingParticipantTile extends StatelessWidget {
           ),
         ),
       );
-}
-
-class _CallControl extends StatelessWidget {
-  const _CallControl({
-    required this.icon,
-    required this.label,
-    required this.onPressed,
-    required this.active,
-    this.danger = false,
-  });
-  final IconData icon;
-  final String label;
-  final VoidCallback onPressed;
-  final bool active;
-  final bool danger;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final accent = theme.colorScheme.primary;
-    final bg = danger
-        ? const Color(0xFFDC3545)
-        : active
-            ? accent
-            : const Color(0xFF262B36);
-
-    return Tooltip(
-      message: label,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Material(
-            color: bg,
-            shape: const CircleBorder(),
-            elevation: active || danger ? 2 : 0,
-            child: InkWell(
-              customBorder: const CircleBorder(),
-              onTap: onPressed,
-              child: SizedBox(
-                width: 50,
-                height: 50,
-                child: Icon(icon, color: Colors.white, size: 22),
-              ),
-            ),
-          ),
-          const SizedBox(height: 5),
-          Text(
-            label,
-            style: neuBody(size: 11, color: Colors.white70),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _RoomMessage {

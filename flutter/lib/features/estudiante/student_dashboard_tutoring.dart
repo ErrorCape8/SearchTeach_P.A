@@ -1180,6 +1180,7 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
   }
 
   Widget _groupChatsAndCalls() {
+    final now = DateTime.now();
     final groupSessions = widget.data.groupSessions
         .where((session) => session.state != 'FINALIZADA')
         .toList()
@@ -1193,65 +1194,147 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
         .toList()
       ..sort((a, b) =>
           (a.start ?? DateTime(9999)).compareTo(b.start ?? DateTime(9999)));
+
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 32),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
       children: [
-        ...[
-          if (groupSessions.isEmpty && virtualIndividual.isEmpty)
-            PaCard(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                children: [
-                  const NeuIconBox(Icons.videocam_outlined,
-                      color: _blue, size: 48, iconSize: 26),
-                  const SizedBox(height: 12),
-                  Text(
-                    'No tienes videollamadas activas',
-                    style: neuPoppins(
-                        size: 16, weight: FontWeight.w700, color: Neu.heading),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Cuando te inscribas en una tutoría grupal o individual virtual, podrás unirte a la videollamada y al chat desde aquí.',
-                    textAlign: TextAlign.center,
-                    style: neuBody(size: 13, color: Neu.muted),
-                  ),
-                ],
-              ),
-            )
-          else ...[
-            for (final session in groupSessions)
-              _GroupChatAndCallCard(
-                session: session,
-                studentName: widget.data.profile.name,
-              ),
-            for (final tutoring in virtualIndividual)
-              _TutoringCard(
-                tutoring: tutoring,
-                teacherName: widget.data.tutors
-                        .where((tutor) => tutor.teacherId == tutoring.teacherId)
-                        .map((tutor) => tutor.name)
-                        .firstOrNull ??
-                    tutoring.teacherId,
-                onJoinRoom: tutoring.status == 'EN_CURSO'
-                    ? () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => LiveKitRoomPage(
-                              sessionId: tutoring.id,
-                              subject: tutoring.subject,
-                              modality: tutoring.modality,
-                              teacherMode: false,
-                              students: [tutoring.studentId],
-                              endAt: tutoring.end?.toLocal(),
-                              studentMode: true,
-                              studentName: widget.data.profile.name,
-                              isIndividualTutoring: true,
-                            ),
-                          ),
-                        )
-                    : null,
-                onCancel: null,
-              ),
+        NeuSurface(
+          sunken: true,
+          radius: 16,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Text(
+            'Solo puedes unirte a las tutorías de hoy. Al entrar accederás directamente a la sala o a la sala de espera si el docente aún no inicia.',
+            style: neuBody(size: 13, color: Neu.heading, height: 1.4),
+          ),
+        ),
+        const SizedBox(height: 18),
+        if (groupSessions.isEmpty && virtualIndividual.isEmpty)
+          PaCard(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              children: [
+                const NeuIconBox(Icons.videocam_outlined,
+                    color: _blue, size: 48, iconSize: 26),
+                const SizedBox(height: 12),
+                Text(
+                  'No tienes tutorías activas para unirte',
+                  style: neuPoppins(
+                      size: 16, weight: FontWeight.w700, color: Neu.heading),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Cuando tengas una tutoría programada para hoy, podrás acceder directamente a la sala desde aquí.',
+                  textAlign: TextAlign.center,
+                  style: neuBody(size: 13, color: Neu.muted),
+                ),
+              ],
+            ),
+          )
+        else ...[
+          for (final session in groupSessions) ...[
+            Builder(builder: (context) {
+              final start = session.start?.toLocal();
+              final isToday = start != null &&
+                  start.year == now.year &&
+                  start.month == now.month &&
+                  start.day == now.day;
+              final teacher = widget.data.tutors
+                  .where((t) => t.teacherId == session.teacherId)
+                  .map((t) => t.name)
+                  .firstOrNull;
+              return StartTutoringCard(
+                subject: session.subject,
+                timeLabel: start == null
+                    ? 'Fecha no disponible'
+                    : (isToday
+                        ? 'Hoy · ${_formatHour(start)}'
+                        : '${start.day}/${start.month} · ${_formatHour(start)}'),
+                modalityLabel: _groupSessionModalityLabel(session.modality),
+                attendeesLabel: teacher != null && teacher.isNotEmpty
+                    ? 'Docente: $teacher'
+                    : '${session.studentIds.length} inscritos',
+                accentColor: _blue,
+                buttonLabel: 'Unirse a clase',
+                onAction: () async {
+                  final result = await Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => LiveKitRoomPage(
+                        sessionId: session.id,
+                        subject: session.subject,
+                        modality: session.modality,
+                        teacherMode: false,
+                        students: session.studentIds,
+                        endAt: session.end?.toLocal(),
+                        studentMode: true,
+                        studentName: widget.data.profile.name,
+                      ),
+                    ),
+                  );
+                  if ((result == 'ended' || session.state == 'FINALIZADA') &&
+                      context.mounted) {
+                    await showStudentTutoringRatingDialog(
+                      context,
+                      ref,
+                      sessionId: session.id,
+                      subject: session.subject,
+                    );
+                  }
+                },
+              );
+            }),
+          ],
+          for (final tutoring in virtualIndividual) ...[
+            Builder(builder: (context) {
+              final start = tutoring.start?.toLocal();
+              final isToday = start != null &&
+                  start.year == now.year &&
+                  start.month == now.month &&
+                  start.day == now.day;
+              final teacher = widget.data.tutors
+                      .where((tutor) => tutor.teacherId == tutoring.teacherId)
+                      .map((tutor) => tutor.name)
+                      .firstOrNull ??
+                  tutoring.teacherId;
+              return StartTutoringCard(
+                subject: tutoring.subject,
+                timeLabel: start == null
+                    ? 'Fecha no disponible'
+                    : (isToday
+                        ? 'Hoy · ${_formatHour(start)}'
+                        : '${start.day}/${start.month} · ${_formatHour(start)}'),
+                modalityLabel: tutoring.modality.isEmpty
+                    ? 'Virtual'
+                    : tutoring.modality,
+                attendeesLabel: 'Docente: $teacher',
+                accentColor: _blue,
+                buttonLabel: 'Unirse a clase',
+                onAction: () async {
+                  final result = await Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => LiveKitRoomPage(
+                        sessionId: tutoring.id,
+                        subject: tutoring.subject,
+                        modality: tutoring.modality,
+                        teacherMode: false,
+                        students: [tutoring.studentId],
+                        endAt: tutoring.end?.toLocal(),
+                        studentMode: true,
+                        studentName: widget.data.profile.name,
+                        isIndividualTutoring: true,
+                      ),
+                    ),
+                  );
+                  if (result == 'ended' && context.mounted) {
+                    await showStudentTutoringRatingDialog(
+                      context,
+                      ref,
+                      sessionId: tutoring.id,
+                      subject: tutoring.subject,
+                    );
+                  }
+                },
+              );
+            }),
           ],
         ],
       ],
@@ -1661,6 +1744,14 @@ class _GroupChatAndCallCard extends StatelessWidget {
       ),
     );
   }
+}
+
+String _formatHour(DateTime dt) {
+  final local = dt.toLocal();
+  final hour = local.hour % 12 == 0 ? 12 : local.hour % 12;
+  final minute = local.minute.toString().padLeft(2, '0');
+  final period = local.hour < 12 ? 'AM' : 'PM';
+  return '$hour:$minute $period';
 }
 
 String _groupSessionModalityLabel(String value) =>

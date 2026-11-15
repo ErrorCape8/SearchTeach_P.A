@@ -38,7 +38,7 @@ class _StudentHeader extends StatelessWidget {
                 'sesiones' => 'Mis sesiones',
                 'historial' => 'Historial de clases',
                 'calificar' => 'Calificar tutorías',
-                'chats-videoconferencias' => 'Videoconferencias',
+                'chats-videoconferencias' => 'Unirse a tutorías',
                 _ => 'Tutorías',
               }
             : tab == 2
@@ -51,14 +51,16 @@ class _StudentHeader extends StatelessWidget {
             if (profile.semester > 0) 'Semestre ${profile.semester}',
           ].join(' · ')
         : tab == 1
-            ? section == 'menu'
-                ? 'Todo sobre tus sesiones'
-                : 'Estudiante · ${profile.career}'
+            ? section == 'chats-videoconferencias'
+                ? 'Tú te unes a la sala'
+                : section == 'menu'
+                    ? 'Todo sobre tus sesiones'
+                    : 'Estudiante · ${profile.career}'
             : tab == 2
                 ? 'Estudiante'
                 : 'Notificaciones';
     final initials = _studentInitials(profile.name);
-    final showBack = tab == 1 && section != 'menu';
+    final showBack = tab == 1 && section != 'menu' && section != 'chats-videoconferencias';
 
     return NeuHeader(
       title: title,
