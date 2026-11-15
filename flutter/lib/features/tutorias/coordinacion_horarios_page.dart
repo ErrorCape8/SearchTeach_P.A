@@ -35,6 +35,7 @@ class _CoordinacionHorariosPageState
   int _section = 0;
   bool _loading = true;
   String? _error;
+  bool _fabExpanded = false;
 
   @override
   void initState() {
@@ -504,80 +505,192 @@ class _CoordinacionHorariosPageState
 
     return ColoredBox(
       color: Neu.bg,
-      child: Column(
+      child: Stack(
         children: [
-          NeuHeader(
-            title: 'Horarios de tutores',
-            subtitle: 'Asigna y administra su disponibilidad',
-            leading: widget.leading,
-            actions: [
-              if (wide)
-                NeuButton(
-                  'Programar tutoría',
-                  onPressed: _chooseTutoringType,
-                  icon: Icons.add,
-                  small: true,
-                  expand: false,
-                )
-              else
-                NeuCircleButton(
-                  icon: Icons.add,
-                  tooltip: 'Programar tutoría',
-                  onTap: _chooseTutoringType,
+          Column(
+            children: [
+              NeuHeader(
+                title: 'Horarios de tutores',
+                subtitle: 'Asigna y administra su disponibilidad',
+                leading: widget.leading,
+                actions: [
+                  NeuCircleButton(
+                    icon: Icons.refresh_rounded,
+                    tooltip: 'Actualizar',
+                    onTap: _load,
+                  ),
+                ],
+              ),
+              Expanded(
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 1280),
+                    child: _loading
+                        ? const Center(
+                            child: CircularProgressIndicator(
+                              color: _wine,
+                            ),
+                          )
+                        : _error != null
+                            ? ScheduleLoadError(message: _error!, onRetry: _load)
+                            : Column(
+                                children: [
+                                  ScheduleSectionSelector(
+                                    selected: _section,
+                                    withScheduleCount: withCount,
+                                    withoutScheduleCount: withoutCount,
+                                    onChanged: (value) =>
+                                        setState(() => _section = value),
+                                  ),
+                                  ScheduleFilters(
+                                    searchController: _searchController,
+                                    careers: _careers,
+                                    career: _career,
+                                    semester: _semester,
+                                    onSearchChanged: (_) => setState(() {}),
+                                    onCareerChanged: (value) =>
+                                        setState(() => _career = value),
+                                    onSemesterChanged: (value) =>
+                                        setState(() => _semester = value),
+                                    onRefresh: _load,
+                                    refreshing: _loading,
+                                  ),
+                                  Expanded(
+                                    child: _visibleTeachers.isEmpty
+                                        ? const ScheduleEmptyResults()
+                                        : TeacherScheduleGrid(
+                                            teachers: _visibleTeachers,
+                                            schedules: _scheduleByTeacher,
+                                            sessions: _sessionsByTeacher,
+                                            onEditSession: _editSession,
+                                            onDeleteSession: _deleteSession,
+                                            onEditSchedule: _editTeacherSchedule,
+                                          ),
+                                  ),
+                                ],
+                              ),
+                  ),
                 ),
-              const NeuHeaderLogo(),
+              ),
             ],
           ),
-          Expanded(
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1280),
-                child: _loading
-                    ? const Center(
-                        child: CircularProgressIndicator(
-                          color: _wine,
-                        ),
-                      )
-                    : _error != null
-                        ? ScheduleLoadError(message: _error!, onRetry: _load)
-                        : Column(
-                            children: [
-                              ScheduleSectionSelector(
-                                selected: _section,
-                                withScheduleCount: withCount,
-                                withoutScheduleCount: withoutCount,
-                                onChanged: (value) =>
-                                    setState(() => _section = value),
-                              ),
-                              ScheduleFilters(
-                                searchController: _searchController,
-                                careers: _careers,
-                                career: _career,
-                                semester: _semester,
-                                onSearchChanged: (_) => setState(() {}),
-                                onCareerChanged: (value) =>
-                                    setState(() => _career = value),
-                                onSemesterChanged: (value) =>
-                                    setState(() => _semester = value),
-                                onRefresh: _load,
-                                refreshing: _loading,
-                              ),
-                              Expanded(
-                                child: _visibleTeachers.isEmpty
-                                    ? const ScheduleEmptyResults()
-                                    : TeacherScheduleGrid(
-                                        teachers: _visibleTeachers,
-                                        schedules: _scheduleByTeacher,
-                                        sessions: _sessionsByTeacher,
-                                        onEditSession: _editSession,
-                                        onDeleteSession: _deleteSession,
-                                        onEditSchedule: _editTeacherSchedule,
-                                      ),
-                              ),
-                            ],
-                          ),
+          if (_fabExpanded)
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => setState(() => _fabExpanded = false),
+                child: Container(color: Colors.black.withOpacity(0.25)),
               ),
             ),
+          Positioned(
+            right: 24,
+            bottom: 24,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (_fabExpanded) ...[
+                  _buildFabOption(
+                    label: 'Tutorías de proyecto de aula',
+                    icon: Icons.groups_outlined,
+                    onTap: () async {
+                      setState(() => _fabExpanded = false);
+                      await context.push('/coordinacion/tutorias-colectivas');
+                      if (mounted) _load();
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  _buildFabOption(
+                    label: 'Tutorías retroalimentativas',
+                    icon: Icons.rate_review_outlined,
+                    onTap: () async {
+                      setState(() => _fabExpanded = false);
+                      await context.push('/coordinacion/programar-tutorias');
+                      if (mounted) _load();
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                FloatingActionButton.extended(
+                  heroTag: 'coord_schedule_fab',
+                  backgroundColor: _wine,
+                  foregroundColor: Colors.white,
+                  elevation: 6,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(28),
+                  ),
+                  onPressed: () =>
+                      setState(() => _fabExpanded = !_fabExpanded),
+                  icon: AnimatedRotation(
+                    turns: _fabExpanded ? 0.125 : 0,
+                    duration: const Duration(milliseconds: 200),
+                    child: const Icon(Icons.add_rounded, size: 26),
+                  ),
+                  label: Text(
+                    _fabExpanded ? 'Cerrar' : 'Programar tutoría',
+                    style: neuPoppins(
+                      size: 14,
+                      weight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFabOption({
+    required String label,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.12),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Text(
+              label,
+              style: neuPoppins(
+                size: 13,
+                weight: FontWeight.w600,
+                color: Neu.heading,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: _wine,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: _wine.withOpacity(0.35),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Icon(icon, color: Colors.white, size: 20),
           ),
         ],
       ),

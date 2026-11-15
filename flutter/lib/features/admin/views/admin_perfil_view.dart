@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/widgets/profile_security_dialogs.dart';
 import '../../../core/widgets/role_toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,77 +10,19 @@ import '../admin_controller.dart';
 class AdminPerfilView extends ConsumerWidget {
   const AdminPerfilView({super.key});
 
-  void _showEditPhoneDialog(
+  Future<void> _showEditPhoneDialog(
     BuildContext context,
     WidgetRef ref,
     String currentPhone,
-  ) {
-    final controller = TextEditingController(text: currentPhone);
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          'Editar teléfono',
-          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
-        ),
-        content: TextField(
-          controller: controller,
-          keyboardType: TextInputType.phone,
-          decoration: InputDecoration(
-            labelText: 'Número de teléfono',
-            filled: true,
-            fillColor: const Color(0xFFF1F4F9),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide.none,
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar',
-                style: TextStyle(color: Color(0xFF64748B))),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFEA580C),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-            ),
-            onPressed: () async {
-              final newPhone = controller.text.trim();
-              if (newPhone.isEmpty) {
-                RoleToast.showSnackBar(
-                  ctx,
-                  const SnackBar(content: Text('El teléfono es obligatorio.')),
-                );
-                return;
-              }
-              final saved = await ref
-                  .read(adminControllerProvider.notifier)
-                  .updateAdminPhone(newPhone);
-              if (!ctx.mounted) return;
-              Navigator.pop(ctx);
-              RoleToast.showSnackBar(
-                context,
-                SnackBar(
-                  content: Text(saved
-                      ? 'Teléfono actualizado.'
-                      : ref.read(adminControllerProvider).profileError ??
-                          'No se pudo actualizar el teléfono.'),
-                  backgroundColor:
-                      saved ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
-                ),
-              );
-            },
-            child: const Text('Guardar'),
-          ),
-        ],
-      ),
+  ) async {
+    final updated = await showChangePhoneDialog(
+      context,
+      ref,
+      currentPhone: currentPhone,
     );
+    if (updated) {
+      ref.read(adminControllerProvider.notifier).loadProfile();
+    }
   }
 
   @override
@@ -123,7 +66,7 @@ class AdminPerfilView extends ConsumerWidget {
             icon: Icons.lock_outline_rounded,
             title: 'Cambiar contraseña',
             subtitle: 'Mínimo 8 caracteres.',
-            onTap: () => context.push('/forgot-password'),
+            onTap: () => showChangePasswordDialog(context, ref),
           ),
         ]),
         const PaSection('Datos institucionales'),

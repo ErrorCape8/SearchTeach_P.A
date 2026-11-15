@@ -16,8 +16,6 @@ import 'views/admin_usuarios_view.dart';
 
 const _orange = Color(0xFFEA580C);
 
-/// Pestañas del controlador en el orden del menú: Inicio, Usuarios,
-/// Certificados y Perfil.
 const _navTabs = [0, 1, 3, 2];
 
 class AdminMainPage extends ConsumerWidget {
@@ -114,10 +112,7 @@ class AdminMainPage extends ConsumerWidget {
                     tooltip: 'Volver',
                     onTap: notifier.clearSelectedUser,
                   )
-                : _Avatar(
-                    initials: NeuSidebar.initials(name),
-                    onTap: () => notifier.setTab(2),
-                  ),
+                : null,
             actions: [
               if (wide)
                 NeuButton('Actualizar',
@@ -168,7 +163,6 @@ class AdminMainPage extends ConsumerWidget {
                 (Icons.home_outlined, 'Inicio', 0),
                 (Icons.groups_outlined, 'Usuarios', 1),
                 (Icons.description_outlined, 'Certificados', 3),
-                (Icons.person_outline_rounded, 'Perfil', 2),
               ],
               selected: currentTab,
               onSelect: notifier.setTab,
@@ -203,30 +197,3 @@ class AdminMainPage extends ConsumerWidget {
   }
 }
 
-class _Avatar extends StatelessWidget {
-  const _Avatar({required this.initials, required this.onTap});
-  final String initials;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => Semantics(
-        button: true,
-        label: 'Abrir perfil',
-        child: SizedBox(
-          width: 46,
-          height: 46,
-          child: NeuSurface(
-            radius: 46,
-            shadows: Neu.raiseS,
-            onTap: onTap,
-            child: Center(
-              child: Text(initials,
-                  style: neuPoppins(
-                      size: 15,
-                      weight: FontWeight.w700,
-                      color: NeuPalette.of(context).c)),
-            ),
-          ),
-        ),
-      );
-}

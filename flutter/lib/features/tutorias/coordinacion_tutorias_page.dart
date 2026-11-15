@@ -1,18 +1,20 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../core/api_client.dart';
-import '../../core/widgets/role_toast.dart';
-import '../auth/auth_repository.dart';
-import '../notifications/notifications_page.dart';
 import '../../core/career_catalog.dart';
-import 'informe_general_pages.dart';
+import '../../core/neu/neu.dart';
+import '../../core/widgets/role_toast.dart';
+import '../pa/pa_store.dart';
 import '../pa/pa_widgets.dart';
+import 'informe_general_pages.dart';
+
+const _wine = Color(0xFF800020);
 
 class CoordinacionTutoriasPage extends ConsumerStatefulWidget {
-  const CoordinacionTutoriasPage({super.key});
+  const CoordinacionTutoriasPage({this.editingId, super.key});
+  final String? editingId;
 
   @override
   ConsumerState<CoordinacionTutoriasPage> createState() =>
@@ -37,13 +39,9 @@ class _CoordinacionTutoriasPageState
   @override
   void initState() {
     super.initState();
-    _loadCreatedTutorias();
+    _editingId = widget.editingId;
     _loadTeachers();
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
+    _loadCreatedTutorias();
   }
 
   Future<void> _loadTeachers() async {
@@ -78,20 +76,23 @@ class _CoordinacionTutoriasPageState
           'El servidor devolvió una lista de tutorías vacía.',
         );
       }
-      final tutorias = data.map((entry) {
-        if (entry is! Map<String, dynamic>) {
-          throw const FormatException(
-            'El servidor devolvió una tutoría colectiva inválida.',
-          );
-        }
-        return entry;
-      }).toList(growable: false);
+      final tutorias = data.whereType<Map<String, dynamic>>().toList();
       if (!mounted) return;
       setState(() {
         _createdTutorias = tutorias;
         _loadingTutorias = false;
         _error = null;
       });
+
+      if (widget.editingId != null) {
+        final match = tutorias.firstWhere(
+          (t) => t['id']?.toString() == widget.editingId,
+          orElse: () => const {},
+        );
+        if (match.isNotEmpty) {
+          _editTutoria(match);
+        }
+      }
     } on DioException catch (error) {
       if (!mounted) return;
       setState(() {
@@ -108,6 +109,18 @@ class _CoordinacionTutoriasPageState
         _loadingTutorias = false;
       });
     }
+  }
+
+  String _teacherName(dynamic id) {
+    if (id == null) return '—';
+    final str = id.toString();
+    for (final t in _teachers) {
+      if (t['id']?.toString() == str || t['_id']?.toString() == str) {
+        final name = t['nombre']?.toString();
+        if (name != null && name.isNotEmpty) return name;
+      }
+    }
+    return str;
   }
 
   Future<void> _create() async {
@@ -150,11 +163,17 @@ class _CoordinacionTutoriasPageState
         );
       }
       await _loadCreatedTutorias();
+      ref.invalidate(paStoreProvider);
       if (!mounted) return;
       setState(() {
         _editingId = null;
         _selectedSection = 1;
       });
+      RoleToast.show(
+        context,
+        message: 'Tutoría colectiva guardada exitosamente.',
+        roleColor: _wine,
+      );
     } on DioException catch (error) {
       if (!mounted) return;
       setState(() => _error = _apiError(error));
@@ -190,7 +209,6 @@ class _CoordinacionTutoriasPageState
     });
   }
 
-  // ignore: unused_element
   void _cancelEdit() {
     setState(() {
       _editingId = null;
@@ -204,26 +222,6 @@ class _CoordinacionTutoriasPageState
     final id = tutoria['id'];
     if (id is! String || id.isEmpty) return;
     final confirmed = await _confirmDelete();
-    /*final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Eliminar tutoría colectiva'),
-        content: const Text(
-          'Se eliminarán también los proyectos, las inscripciones y los informes asociados. '
-          'Esta acción no se puede deshacer.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Eliminar'),
-          ),
-        ],
-      ),
-    );*/
     if (confirmed != true || !mounted) return;
     try {
       await ref.read(dioProvider).delete<void>(
@@ -231,6 +229,14 @@ class _CoordinacionTutoriasPageState
         queryParameters: const {'confirmacion': 'eliminar'},
       );
       await _loadCreatedTutorias();
+      ref.invalidate(paStoreProvider);
+      if (mounted) {
+        RoleToast.show(
+          context,
+          message: 'Tutoría colectiva eliminada.',
+          roleColor: _wine,
+        );
+      }
     } on DioException catch (error) {
       if (mounted) {
         RoleToast.showSnackBar(
@@ -257,6 +263,14 @@ class _CoordinacionTutoriasPageState
         queryParameters: const {'confirmacion': 'disolver'},
       );
       await _loadCreatedTutorias();
+      ref.invalidate(paStoreProvider);
+      if (mounted) {
+        RoleToast.show(
+          context,
+          message: 'Grupo de proyecto de aula disuelto.',
+          roleColor: _wine,
+        );
+      }
     } on DioException catch (error) {
       if (mounted) {
         RoleToast.showSnackBar(
@@ -275,14 +289,27 @@ class _CoordinacionTutoriasPageState
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, refresh) => AlertDialog(
-          title: const Text('Disolver grupo'),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text('Disolver grupo',
+              style: neuPoppins(size: 18, weight: FontWeight.w700)),
           content: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Text(
-                'Se archivará el grupo y se conservarán sus proyectos, reportes y chats. Escribe DISOLVER para continuar.'),
+            Text(
+              'Se archivará el grupo y se conservarán sus proyectos, reportes y chats. Escribe DISOLVER para continuar.',
+              style: neuBody(color: Neu.muted),
+            ),
+            const SizedBox(height: 12),
             TextField(
               controller: controller,
               autofocus: true,
               onChanged: (_) => refresh(() {}),
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: const Color(0xFFF1F4F9),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+              ),
             ),
           ]),
           actions: [
@@ -291,6 +318,7 @@ class _CoordinacionTutoriasPageState
               child: const Text('Cancelar'),
             ),
             FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: _wine),
               onPressed: controller.text.trim().toLowerCase() == 'disolver'
                   ? () => Navigator.pop(dialogContext, true)
                   : null,
@@ -310,25 +338,41 @@ class _CoordinacionTutoriasPageState
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, refresh) => AlertDialog(
-          title: const Text('Eliminar tutoría colectiva'),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text('Eliminar tutoría colectiva',
+              style: neuPoppins(size: 18, weight: FontWeight.w700)),
           content: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Text(
-                'Escribe ELIMINAR para borrar la tutoría y sus proyectos asociados.'),
+            Text(
+              'Escribe ELIMINAR para borrar la tutoría y sus proyectos asociados.',
+              style: neuBody(color: Neu.muted),
+            ),
+            const SizedBox(height: 12),
             TextField(
-                controller: controller,
-                onChanged: (_) => refresh(() {}),
-                decoration:
-                    const InputDecoration(labelText: 'Escribe ELIMINAR')),
+              controller: controller,
+              onChanged: (_) => refresh(() {}),
+              decoration: InputDecoration(
+                labelText: 'Escribe ELIMINAR',
+                filled: true,
+                fillColor: const Color(0xFFF1F4F9),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
           ]),
           actions: [
             TextButton(
-                onPressed: () => Navigator.pop(dialogContext, false),
-                child: const Text('Cancelar')),
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancelar'),
+            ),
             FilledButton(
-                onPressed: controller.text.trim().toUpperCase() == 'ELIMINAR'
-                    ? () => Navigator.pop(dialogContext, true)
-                    : null,
-                child: const Text('Eliminar')),
+              style: FilledButton.styleFrom(backgroundColor: Colors.red),
+              onPressed: controller.text.trim().toUpperCase() == 'ELIMINAR'
+                  ? () => Navigator.pop(dialogContext, true)
+                  : null,
+              child: const Text('Eliminar'),
+            ),
           ],
         ),
       ),
@@ -349,163 +393,275 @@ class _CoordinacionTutoriasPageState
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(
-          title: const Text('Proyectos de aula'),
-          actions: [
-            const NotificationBellButton(
-              accentColor: Color(0xFFA9154F),
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Neu.bg,
+      body: SafeArea(
+        child: Column(
+          children: [
+            NeuHeader(
+              title: 'Proyectos de aula',
+              subtitle: 'Crea y administra grupos de proyecto de aula',
+              leading: NeuCircleButton(
+                icon: Icons.chevron_left_rounded,
+                tooltip: 'Volver',
+                onTap: () => Navigator.of(context).maybePop(),
+              ),
+              actions: const [],
             ),
-            IconButton(
-              tooltip: 'Cerrar sesión',
-              onPressed: () async {
-                await ref.read(authRepositoryProvider).logout();
-                if (context.mounted) context.go('/login');
-              },
-              icon: const Icon(Icons.logout),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 10, 20, 14),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 820),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: NeuSurface(
+                        radius: 16,
+                        sunken: _selectedSection == 0,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        onTap: () => setState(() => _selectedSection = 0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              _editingId != null
+                                  ? Icons.edit_rounded
+                                  : Icons.add_circle_outline_rounded,
+                              size: 18,
+                              color: _selectedSection == 0 ? _wine : Neu.muted,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              _editingId != null
+                                  ? 'Editar proyecto de aula'
+                                  : 'Nuevo proyecto de aula',
+                              style: neuPoppins(
+                                size: 13.5,
+                                weight: FontWeight.w700,
+                                color:
+                                    _selectedSection == 0 ? _wine : Neu.muted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: NeuSurface(
+                        radius: 16,
+                        sunken: _selectedSection == 1,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        onTap: () => setState(() => _selectedSection = 1),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.folder_outlined,
+                              size: 18,
+                              color: _selectedSection == 1 ? _wine : Neu.muted,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Proyectos (${_createdTutorias.length})',
+                              style: neuPoppins(
+                                size: 13.5,
+                                weight: FontWeight.w700,
+                                color:
+                                    _selectedSection == 1 ? _wine : Neu.muted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Expanded(
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 820),
+                  child: _selectedSection == 0
+                      ? _buildForm()
+                      : _createdContent(),
+                ),
+              ),
             ),
           ],
         ),
-        body: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1040),
+      ),
+    );
+  }
+
+  Widget _buildForm() {
+    return Form(
+      key: _formKey,
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+        children: [
+          NeuSurface(
+            radius: 22,
+            padding: const EdgeInsets.all(22),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-                  child: SegmentedButton<int>(
-                    segments: [
-                      const ButtonSegment(
-                        value: 0,
-                        icon: Icon(Icons.add_circle_outline),
-                        label: Text('Nuevo proyecto de aula'),
+                Row(
+                  children: [
+                    Icon(
+                      _editingId != null
+                          ? Icons.edit_note_rounded
+                          : Icons.group_add_rounded,
+                      color: _wine,
+                      size: 26,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        _editingId != null
+                            ? 'Editar grupo de proyectos de aula'
+                            : 'Crear grupo de proyectos de aula',
+                        style: neuPoppins(
+                          size: 19,
+                          weight: FontWeight.w700,
+                          color: Neu.heading,
+                        ),
                       ),
-                      ButtonSegment(
-                        value: 1,
-                        icon: const Icon(Icons.folder_outlined),
-                        label: Text('Proyectos (${_createdTutorias.length})'),
-                      ),
-                    ],
-                    selected: {_selectedSection},
-                    onSelectionChanged: (selection) {
-                      setState(() => _selectedSection = selection.first);
-                    },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Define la carrera y el semestre, asigna un docente líder y cinco docentes de apoyo.',
+                  style: neuBody(color: Neu.muted, size: 13),
+                ),
+                const SizedBox(height: 20),
+                const PaFieldLabel('Carrera', first: true),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: Neu.line),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      isExpanded: true,
+                      value: _career,
+                      items: careerCatalog
+                          .map((career) => DropdownMenuItem(
+                                value: career,
+                                child: Text(career,
+                                    style: neuBody(color: Neu.heading)),
+                              ))
+                          .toList(),
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() {
+                            _career = value;
+                            _leaderId = null;
+                            _supportIds = List<String?>.filled(5, null);
+                          });
+                        }
+                      },
+                    ),
                   ),
                 ),
-                Expanded(
-                  child: _selectedSection == 0
-                      ? Form(
-                          key: _formKey,
-                          child: ListView(
-                            padding: const EdgeInsets.all(20),
-                            children: [
-                              const Text(
-                                'Crear grupo de proyectos de aula',
-                                style: TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              const Text(
-                                'Define la carrera y el semestre, asigna un docente líder y cinco docentes de apoyo.',
-                              ),
-                              const SizedBox(height: 20),
-                              DropdownButtonFormField<String>(
-                                initialValue: _career,
-                                decoration: const InputDecoration(
-                                  labelText: 'Carrera',
-                                  border: OutlineInputBorder(),
-                                ),
-                                items: careerCatalog
-                                    .map((career) => DropdownMenuItem(
-                                          value: career,
-                                          child: Text(career),
-                                        ))
-                                    .toList(),
-                                onChanged: (value) {
-                                  if (value != null) {
-                                    setState(() {
-                                      _career = value;
-                                      _leaderId = null;
-                                      _supportIds =
-                                          List<String?>.filled(5, null);
-                                    });
-                                  }
-                                },
-                              ),
-                              const SizedBox(height: 12),
-                              DropdownButtonFormField<int>(
-                                initialValue: _semester,
-                                decoration: const InputDecoration(
-                                  labelText: 'Semestre',
-                                  border: OutlineInputBorder(),
-                                ),
-                                items: [
-                                  for (var value = 1; value <= 6; value++)
-                                    DropdownMenuItem(
-                                      value: value,
-                                      child: Text('$value'),
-                                    ),
-                                ],
-                                onChanged: (value) {
-                                  if (value != null) {
-                                    setState(() => _semester = value);
-                                  }
-                                },
-                              ),
-                              const SizedBox(height: 12),
-                              _teacherDropdown(
-                                  label: 'Docente líder',
-                                  value: _leaderId,
-                                  excluded:
-                                      _supportIds.whereType<String>().toSet(),
-                                  onChanged: (value) =>
-                                      setState(() => _leaderId = value)),
-                              const SizedBox(height: 12),
-                              for (var index = 0; index < 5; index++) ...[
-                                _sectionTitle('Docente de apoyo ${index + 1}'),
-                                _teacherDropdown(
-                                    label: 'Seleccionar docente',
-                                    value: _supportIds[index],
-                                    excluded: {
-                                      if (_leaderId != null) _leaderId!,
-                                      ..._supportIds.whereType<String>()
-                                    }..remove(_supportIds[index]),
-                                    onChanged: (value) => setState(
-                                        () => _supportIds[index] = value)),
-                                const SizedBox(height: 10),
-                              ],
-                              if (_error != null)
-                                _MessageBox(message: _error!, isError: true),
-                              const SizedBox(height: 12),
-                              FilledButton.icon(
-                                onPressed: _saving ? null : _create,
-                                icon: _saving
-                                    ? const SizedBox(
-                                        width: 18,
-                                        height: 18,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                        ),
-                                      )
-                                    : const Icon(Icons.save_outlined),
-                                label: const Text('Crear grupo'),
-                              ),
-                            ],
+                const SizedBox(height: 14),
+                const PaFieldLabel('Semestre'),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: Neu.line),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<int>(
+                      isExpanded: true,
+                      value: _semester,
+                      items: [
+                        for (var value = 1; value <= 6; value++)
+                          DropdownMenuItem(
+                            value: value,
+                            child: Text('Semestre $value',
+                                style: neuBody(color: Neu.heading)),
                           ),
-                        )
-                      : _createdContent(),
+                      ],
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() => _semester = value);
+                        }
+                      },
+                    ),
+                  ),
                 ),
+                const SizedBox(height: 16),
+                const PaFieldLabel('Docente líder'),
+                _teacherDropdown(
+                  label: 'Docente líder',
+                  value: _leaderId,
+                  excluded: _supportIds.whereType<String>().toSet(),
+                  onChanged: (value) => setState(() => _leaderId = value),
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  'DOCENTES DE APOYO (5 REQUERIDOS)',
+                  style: neuPoppins(
+                    size: 11,
+                    weight: FontWeight.w700,
+                    color: _wine,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                for (var index = 0; index < 5; index++) ...[
+                  PaFieldLabel('Docente de apoyo ${index + 1}'),
+                  _teacherDropdown(
+                    label: 'Seleccionar docente',
+                    value: _supportIds[index],
+                    excluded: {
+                      if (_leaderId != null) _leaderId!,
+                      ..._supportIds.whereType<String>()
+                    }..remove(_supportIds[index]),
+                    onChanged: (value) =>
+                        setState(() => _supportIds[index] = value),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                if (_error != null) ...[
+                  const SizedBox(height: 10),
+                  PaInfo(_error!, tone: PaTone.error),
+                ],
+                const SizedBox(height: 22),
+                NeuButton(
+                  _editingId != null ? 'Guardar cambios' : 'Crear grupo',
+                  icon: Icons.check_circle_outline_rounded,
+                  loading: _saving,
+                  onPressed: _saving ? null : _create,
+                ),
+                if (_editingId != null) ...[
+                  const SizedBox(height: 10),
+                  NeuButton(
+                    'Cancelar edición',
+                    kind: NeuButtonKind.alt,
+                    icon: Icons.close_rounded,
+                    onPressed: _cancelEdit,
+                  ),
+                ],
               ],
             ),
           ),
-        ),
-      );
+        ],
+      ),
+    );
+  }
 
   Widget _createdContent() {
     if (_loadingTutorias) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(child: CircularProgressIndicator(color: _wine));
     }
     if (_error != null && _createdTutorias.isEmpty) {
       return Center(
@@ -514,145 +670,199 @@ class _CoordinacionTutoriasPageState
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(_error!, textAlign: TextAlign.center),
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                onPressed: _loadCreatedTutorias,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Reintentar'),
-              ),
+              Text(_error!,
+                  textAlign: TextAlign.center,
+                  style: neuBody(color: Neu.muted)),
+              const SizedBox(height: 14),
+              NeuButton('Reintentar',
+                  kind: NeuButtonKind.alt,
+                  small: true,
+                  expand: false,
+                  icon: Icons.refresh_rounded,
+                  onPressed: _loadCreatedTutorias),
             ],
           ),
         ),
       );
     }
     if (_createdTutorias.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Text('Todavía no has creado tutorías colectivas.'),
+          padding: const EdgeInsets.all(24),
+          child: Text(
+            'Todavía no has creado tutorías colectivas.',
+            style: neuBody(color: Neu.muted, size: 14),
+          ),
         ),
       );
     }
     return ListView.separated(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(20, 6, 20, 24),
       itemCount: _createdTutorias.length,
       separatorBuilder: (_, __) => const SizedBox(height: 12),
-      itemBuilder: (context, index) => Card(
-        child: InkWell(
-          borderRadius: BorderRadius.circular(20),
-          onTap: () => paPush(
-            context,
-            InformeGeneralCoordinacionPage(
-              tutoriaId: '${_createdTutorias[index]['id'] ?? ''}',
-              grupo: _createdTutorias[index],
-            ),
-          ),
-          child: Padding(
-          padding: const EdgeInsets.all(16),
+      itemBuilder: (context, index) {
+        final tutoria = _createdTutorias[index];
+        final id = '${tutoria['id'] ?? ''}';
+        final tech = tutoria['tecnologia'] ?? 'Carrera';
+        final sem = tutoria['semestre'] ?? '—';
+        final leaderName = _teacherName(tutoria['docenteLiderId']);
+        final isDisuelta = tutoria['estado'] == 'DISUELTA';
+        final proyectosCount =
+            (tutoria['proyectos'] as List?)?.length ?? 0;
+
+        return NeuSurface(
+          radius: 20,
+          padding: const EdgeInsets.all(18),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.groups_outlined, color: Colors.green),
-              const SizedBox(width: 12),
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: _wine.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(Icons.groups_rounded, color: _wine, size: 24),
+              ),
+              const SizedBox(width: 14),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${_createdTutorias[index]['tecnologia'] ?? 'Carrera'} · '
-                      'Semestre ${_createdTutorias[index]['semestre'] ?? '—'}',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () => paPush(
+                    context,
+                    InformeGeneralCoordinacionPage(
+                      tutoriaId: id,
+                      grupo: tutoria,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                        'Docente líder: ${_createdTutorias[index]['docenteLiderId'] ?? '—'}'),
-                    if (_createdTutorias[index]['estado'] == 'DISUELTA')
-                      const Text(
-                        'Grupo disuelto · historial conservado',
-                        style: TextStyle(color: Colors.blueGrey),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '$tech · Semestre $sem',
+                        style: neuPoppins(
+                          size: 15.5,
+                          weight: FontWeight.w700,
+                          color: Neu.heading,
+                        ),
                       ),
-                    Text(
-                      '${(_createdTutorias[index]['proyectos'] as List?)?.length ?? 0} proyectos · '
-                      'ID ${_createdTutorias[index]['id'] ?? '—'}',
-                    ),
-                  ],
+                      const SizedBox(height: 4),
+                      Text.rich(
+                        TextSpan(
+                          children: [
+                            TextSpan(
+                              text: 'Docente líder: ',
+                              style: neuBody(
+                                size: 13,
+                                weight: FontWeight.w700,
+                                color: Neu.heading,
+                              ),
+                            ),
+                            TextSpan(
+                              text: leaderName,
+                              style: neuBody(
+                                size: 13,
+                                color: _wine,
+                                weight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (isDisuelta) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          'Grupo disuelto · historial conservado',
+                          style: neuBody(size: 12, color: Colors.blueGrey),
+                        ),
+                      ],
+                      const SizedBox(height: 4),
+                      Text(
+                        '$proyectosCount proyectos · ID $id',
+                        style: neuBody(size: 12, color: Neu.muted),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              if (_createdTutorias[index]['estado'] != 'DISUELTA') ...[
-                IconButton(
-                    tooltip: 'Editar',
-                    onPressed: () => _editTutoria(_createdTutorias[index]),
-                    icon: const Icon(Icons.edit_outlined)),
-                IconButton(
-                  tooltip: 'Disolver grupo',
-                  onPressed: () => _disolverTutoria(_createdTutorias[index]),
-                  icon: const Icon(Icons.archive_outlined,
-                      color: Colors.blueGrey),
+              if (!isDisuelta) ...[
+                NeuCircleButton(
+                  icon: Icons.edit_rounded,
+                  tooltip: 'Editar',
+                  onTap: () => _editTutoria(tutoria),
                 ),
+                const SizedBox(width: 6),
+                NeuCircleButton(
+                  icon: Icons.archive_outlined,
+                  tooltip: 'Disolver grupo',
+                  onTap: () => _disolverTutoria(tutoria),
+                ),
+                const SizedBox(width: 6),
               ],
-              IconButton(
-                tooltip: 'Eliminar tutoría colectiva',
-                onPressed: () => _deleteTutoria(_createdTutorias[index]),
-                icon: const Icon(Icons.delete_outline, color: Colors.red),
+              NeuCircleButton(
+                icon: Icons.delete_outline_rounded,
+                tooltip: 'Eliminar',
+                onTap: () => _deleteTutoria(tutoria),
               ),
             ],
           ),
-        ),
+        );
+      },
+    );
+  }
+
+  Widget _teacherDropdown({
+    required String label,
+    required String? value,
+    required Set<String> excluded,
+    required ValueChanged<String?> onChanged,
+  }) {
+    var options = _teachers.where((teacher) {
+      final tTec = (teacher['tecnologia'] as String? ?? '').toLowerCase();
+      final matchesTec = tTec.isEmpty || tTec == _career.toLowerCase();
+      return teacher['id'] is String &&
+          matchesTec &&
+          (!excluded.contains(teacher['id']) || teacher['id'] == value);
+    }).toList();
+
+    if (options.isEmpty) {
+      options = _teachers.where((teacher) {
+        return teacher['id'] is String &&
+            (!excluded.contains(teacher['id']) || teacher['id'] == value);
+      }).toList();
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Neu.line),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          isExpanded: true,
+          value: value,
+          hint: Text(
+            options.isEmpty
+                ? 'No hay docentes disponibles'
+                : 'Selecciona un docente',
+            style: neuBody(color: Neu.muted),
+          ),
+          items: options
+              .map((teacher) => DropdownMenuItem<String>(
+                    value: teacher['id'] as String,
+                    child: Text(
+                      '${teacher['nombre'] ?? 'Docente'}',
+                      style: neuBody(color: Neu.heading),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ))
+              .toList(),
+          onChanged: _teachers.isEmpty ? null : onChanged,
         ),
       ),
     );
   }
-
-  Widget _sectionTitle(String title) => Padding(
-        padding: const EdgeInsets.only(top: 12, bottom: 8),
-        child: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-      );
-
-  Widget _teacherDropdown(
-      {required String label,
-      required String? value,
-      required Set<String> excluded,
-      required ValueChanged<String?> onChanged}) {
-    final options = _teachers
-        .where((teacher) =>
-            (teacher['tecnologia'] as String? ?? '').toLowerCase() ==
-                _career.toLowerCase() &&
-            teacher['id'] is String &&
-            (!excluded.contains(teacher['id']) || teacher['id'] == value))
-        .toList();
-    return DropdownButtonFormField<String>(
-        initialValue: value,
-        decoration: InputDecoration(
-            labelText: label, border: const OutlineInputBorder()),
-        items: options
-            .map((teacher) => DropdownMenuItem<String>(
-                value: teacher['id'] as String,
-                child: Text(teacher['nombre'] as String? ?? 'Docente')))
-            .toList(),
-        onChanged: _teachers.isEmpty ? null : onChanged,
-        validator: (selected) =>
-            selected == null ? 'Selecciona un docente.' : null,
-        hint: Text(options.isEmpty
-            ? 'No hay docentes para esta tecnología'
-            : 'Selecciona'));
-  }
-}
-
-class _MessageBox extends StatelessWidget {
-  const _MessageBox({required this.message, required this.isError});
-
-  final String message;
-  final bool isError;
-
-  @override
-  Widget build(BuildContext context) => Container(
-        margin: const EdgeInsets.only(top: 12),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: isError ? Colors.red.shade50 : Colors.green.shade50,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Text(message),
-      );
 }

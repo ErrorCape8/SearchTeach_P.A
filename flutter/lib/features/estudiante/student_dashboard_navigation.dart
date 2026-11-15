@@ -531,13 +531,27 @@ String _studentModalityLabel(String value) => switch (value.toUpperCase()) {
       _ => value,
     };
 
-class _LoadFailure extends StatelessWidget {
+class _LoadFailure extends ConsumerWidget {
   const _LoadFailure({required this.error, required this.onRetry});
   final Object error;
   final VoidCallback onRetry;
 
+  String _formatError(Object err) {
+    if (err is DioException) {
+      final code = err.response?.statusCode;
+      if (code == 404) {
+        return 'No se encontró tu perfil o tus datos aún no han sido configurados por coordinación.';
+      }
+      if (code == 401 || code == 403) {
+        return 'Tu sesión ha vencido o no tienes permisos. Por favor inicia sesión nuevamente.';
+      }
+      return 'No se pudo conectar con el servidor. Revisa tu conexión a internet.';
+    }
+    return '$err';
+  }
+
   @override
-  Widget build(BuildContext context) => Center(
+  Widget build(BuildContext context, WidgetRef ref) => Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 420),
           child: Padding(
@@ -557,15 +571,29 @@ class _LoadFailure extends StatelessWidget {
                 ),
                 const SizedBox(height: 7),
                 Text(
-                  '$error',
+                  _formatError(error),
                   textAlign: TextAlign.center,
                   style: const TextStyle(color: Colors.blueGrey),
                 ),
-                const SizedBox(height: 14),
-                FilledButton.icon(
-                  onPressed: onRetry,
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Reintentar'),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: () async {
+                        await ref.read(authRepositoryProvider).clearLocalSession();
+                        if (context.mounted) context.go('/login');
+                      },
+                      icon: const Icon(Icons.logout_rounded),
+                      label: const Text('Cerrar sesión'),
+                    ),
+                    const SizedBox(width: 12),
+                    FilledButton.icon(
+                      onPressed: onRetry,
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Reintentar'),
+                    ),
+                  ],
                 ),
               ],
             ),

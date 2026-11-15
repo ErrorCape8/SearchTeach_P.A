@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../tutorias/coordinacion_tutorias_page.dart';
 import 'pa_store.dart';
 import 'pa_widgets.dart';
 
@@ -10,11 +11,9 @@ int _porSemestre(PaColectiva a, PaColectiva b) => a.semestre != b.semestre
     ? a.semestre.compareTo(b.semestre)
     : a.seccion.compareTo(b.seccion);
 
-/// `clid`: cronograma de tutorías colectivas con su líder, apoyos y aula.
 class PaLideresPage extends ConsumerStatefulWidget {
   const PaLideresPage({this.leading, super.key});
 
-  /// Avatar de perfil cuando la página es una pestaña del panel.
   final Widget? leading;
 
   @override
@@ -22,16 +21,17 @@ class PaLideresPage extends ConsumerStatefulWidget {
 }
 
 class _PaLideresPageState extends ConsumerState<PaLideresPage> {
-  int _vista = 0; // 0 = tabla, 1 = lista
+  int _vista = 0;
 
   @override
   Widget build(BuildContext context) {
     final todas = ref.watch(paStoreProvider).colectivas;
     final carreras = todas.map((c) => c.carrera).toSet().toList();
+    final docenteMap = ref.watch(paDocenteMapProvider).valueOrNull ?? const {};
 
     return PaScaffold(
-      title: 'Tutores líderes',
-      subtitle: 'Cronograma de tutorías colectivas',
+      title: 'Grupos apoyo proyecto de aula',
+      subtitle: 'Cronograma y docentes asignados a proyectos de aula',
       leading: widget.leading,
       children: [
         PaSegmented(
@@ -40,14 +40,14 @@ class _PaLideresPageState extends ConsumerState<PaLideresPage> {
           onSelect: (i) => setState(() => _vista = i),
         ),
         PaInfo(_vista == 0
-            ? 'Desliza la tabla para ver todo. Toca una fila para asignar líder, apoyos y aula.'
-            : 'Cada materia tiene un tutor líder y los docentes de apoyo que él coordina.'),
+            ? 'Desliza la tabla para ver todo. Toca una fila para editar el líder y apoyos.'
+            : 'Cada materia tiene un tutor líder y los docentes de apoyo asignados. Toca una fila para editar.'),
         for (final carrera in carreras) ...[
           PaSection(carrera),
           if (_vista == 0)
-            _Tabla(todas.where((c) => c.carrera == carrera).toList())
+            _Tabla(todas.where((c) => c.carrera == carrera).toList(), docenteMap)
           else
-            _Lista(todas.where((c) => c.carrera == carrera).toList()),
+            _Lista(todas.where((c) => c.carrera == carrera).toList(), docenteMap),
         ],
       ],
     );
@@ -55,14 +55,12 @@ class _PaLideresPageState extends ConsumerState<PaLideresPage> {
 }
 
 void _abrirAsignacion(BuildContext context, PaColectiva c) =>
-    paPush(context, PaAsignacionPage(colId: c.id));
+    paPush(context, CoordinacionTutoriasPage(editingId: c.rawId.isNotEmpty ? c.rawId : '${c.id}'));
 
-/// `.ctb`: cabecera con el color oscuro del rol, celdas blancas centradas y
-/// la columna SEM combinada por semestre (`rowspan`). Ancho mínimo 660 px con
-/// desplazamiento horizontal.
 class _Tabla extends StatelessWidget {
-  const _Tabla(this.lista);
+  const _Tabla(this.lista, this.docentes);
   final List<PaColectiva> lista;
+  final Map<String, String> docentes;
 
   static const _heads = [
     'SEM',
@@ -72,7 +70,7 @@ class _Tabla extends StatelessWidget {
     'AULA',
     'DOCENTES DE APOYO',
   ];
-  static const _flex = [9.0, 7.0, 30.0, 22.0, 10.0, 22.0]; // suma 100
+  static const _flex = [9.0, 7.0, 30.0, 22.0, 10.0, 22.0];
 
   @override
   Widget build(BuildContext context) {
@@ -94,7 +92,6 @@ class _Tabla extends StatelessWidget {
           child: SizedBox(
             width: w,
             child: Column(children: [
-              // thead
               Container(
                 color: p.d,
                 child: Row(children: [
@@ -115,7 +112,6 @@ class _Tabla extends StatelessWidget {
                     ),
                 ]),
               ),
-              // tbody
               for (final g in grupos.entries)
                 IntrinsicHeight(
                   child: Row(
@@ -146,6 +142,9 @@ class _Tabla extends StatelessWidget {
     final partes = c.cuando.split(' · ');
     final dia = partes.first;
     final hora = partes.length > 1 ? partes.last : '';
+    final liderNombre = docentes[c.lider] ?? c.lider;
+    final apoyosNombres = c.apoyo.map((id) => docentes[id] ?? id).toList();
+
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () => _abrirAsignacion(context, c),
@@ -155,8 +154,8 @@ class _Tabla extends StatelessWidget {
           _celda(
             cw[2],
             Column(mainAxisSize: MainAxisSize.min, children: [
-              if (c.lider.isNotEmpty) ...[
-                Text(c.lider,
+              if (liderNombre.isNotEmpty) ...[
+                Text(liderNombre,
                     textAlign: TextAlign.center,
                     style: _celdaTxt.copyWith(fontWeight: FontWeight.w700)),
                 Text('(LÍDER)', style: sub),
@@ -170,7 +169,7 @@ class _Tabla extends StatelessWidget {
           _celda(cw[4], Text(c.aula, textAlign: TextAlign.center, style: _celdaTxt)),
           _celda(
               cw[5],
-              Text(c.apoyo.isEmpty ? 'N. A' : c.apoyo.join('\n'),
+              Text(apoyosNombres.isEmpty ? 'N. A' : apoyosNombres.join('\n'),
                   textAlign: TextAlign.center, style: _celdaTxt)),
         ]),
       ),
@@ -191,10 +190,10 @@ class _Tabla extends StatelessWidget {
       );
 }
 
-/// `cList`: una fila por materia con tag Asignado / Pendiente.
 class _Lista extends StatelessWidget {
-  const _Lista(this.lista);
+  const _Lista(this.lista, this.docentes);
   final List<PaColectiva> lista;
+  final Map<String, String> docentes;
 
   @override
   Widget build(BuildContext context) {
@@ -205,8 +204,8 @@ class _Lista extends StatelessWidget {
           icon: Icons.groups_2_outlined,
           title: c.materia,
           subtitle:
-              'Sem ${c.semestreRomano} · Sec ${c.seccion} · ${c.lider.isNotEmpty ? 'Líder: ${c.lider} · ${c.apoyo.length} de apoyo' : 'Sin líder asignado'}',
-          trailing: c.lider.isNotEmpty
+              'Sem ${c.semestreRomano} · Sec ${c.seccion} · ${(docentes[c.lider] ?? c.lider).isNotEmpty ? 'Líder: ${docentes[c.lider] ?? c.lider} · ${c.apoyo.length} de apoyo' : 'Sin líder asignado'}',
+          trailing: (docentes[c.lider] ?? c.lider).isNotEmpty
               ? const PaTag('Asignado', tone: PaTone.ok)
               : const PaTag('Pendiente', tone: PaTone.warn),
           onTap: () => _abrirAsignacion(context, c),
@@ -215,7 +214,6 @@ class _Lista extends StatelessWidget {
   }
 }
 
-/// `clid1`: asigna líder, docentes de apoyo y aula a una tutoría colectiva.
 class PaAsignacionPage extends ConsumerStatefulWidget {
   const PaAsignacionPage({required this.colId, super.key});
   final int colId;
@@ -294,7 +292,6 @@ class _PaAsignacionPageState extends ConsumerState<PaAsignacionPage> {
   }
 }
 
-/// `crep`: reportes consolidados enviados por los docentes líderes.
 class PaReportesPage extends ConsumerWidget {
   const PaReportesPage({this.leading, super.key});
   final Widget? leading;
@@ -302,7 +299,7 @@ class PaReportesPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final st = ref.watch(paStoreProvider);
-    final reportes = st.reportesDeLider; // solo lo que envía el docente líder
+    final reportes = st.reportesDeLider;
     return PaScaffold(
       title: 'Reportes',
       subtitle: 'Enviados por docentes líderes',
@@ -327,7 +324,6 @@ class PaReportesPage extends ConsumerWidget {
   }
 }
 
-/// `crepd`.
 class PaReporteDetallePage extends ConsumerStatefulWidget {
   const PaReporteDetallePage({required this.reporte, super.key});
   final PaReporte reporte;
@@ -341,7 +337,6 @@ class _PaReporteDetallePageState extends ConsumerState<PaReporteDetallePage> {
   @override
   void initState() {
     super.initState();
-    // Al abrir el detalle el reporte queda marcado como revisado.
     Future.microtask(() {
       if (mounted) {
         ref.read(paStoreProvider.notifier).marcarVisto(widget.reporte);
@@ -353,7 +348,6 @@ class _PaReporteDetallePageState extends ConsumerState<PaReporteDetallePage> {
   Widget build(BuildContext context) {
     final r = widget.reporte;
     final c = ref.read(paStoreProvider).colectiva(r.colId);
-    // Solo el reporte del líder: su asistencia y sus propias rúbricas.
     final propias = r.rubricas.where((x) => paMismoNombre(x.por, r.por)).toList();
     final presentes = r.asistencia.values.where((v) => v).length;
     final promedios = propias.map((x) => x.promedio).toList();
@@ -403,8 +397,6 @@ bool _mismaCarrera(String a, String b) {
   return x == y || x.contains(y) || y.contains(x);
 }
 
-/// Al tocar un proyecto: abre únicamente el reporte de su docente líder.
-/// Si el líder todavía no lo envió, muestra un aviso vacío.
 class PaReporteLiderPage extends ConsumerWidget {
   const PaReporteLiderPage({required this.carrera, this.semestre, super.key});
   final String carrera;

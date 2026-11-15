@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api_client.dart';
+import '../../core/role_theme.dart';
 import '../pa/pa_widgets.dart';
 
 class TutoriaHistorialPage extends ConsumerStatefulWidget {
@@ -10,12 +11,14 @@ class TutoriaHistorialPage extends ConsumerStatefulWidget {
     required this.sessionId,
     required this.subject,
     required this.isIndividual,
+    this.isTeacher = false,
     super.key,
   });
 
   final String sessionId;
   final String subject;
   final bool isIndividual;
+  final bool isTeacher;
 
   @override
   ConsumerState<TutoriaHistorialPage> createState() =>
@@ -101,87 +104,108 @@ class _TutoriaHistorialPageState extends ConsumerState<TutoriaHistorialPage> {
     return '$datePart · $timePart';
   }
 
+  bool get _isStudent => !widget.isTeacher;
+
+  Color get _accentColor =>
+      widget.isTeacher ? const Color(0xFF16834A) : const Color(0xFF1769AA);
+
   @override
   Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
+    final primary = _accentColor;
 
-    return PaScaffold(
-      title: 'Historial de tutoría',
-      subtitle: widget.subject,
-      actions: [
-        NeuCircleButton(
-          size: 40,
-          icon: Icons.refresh_rounded,
-          tooltip: 'Actualizar historial',
-          onTap: _loading ? null : _loadHistory,
+    return Theme(
+      data: withRoleAccent(
+        Theme.of(context).copyWith(
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: primary,
+            brightness: Theme.of(context).brightness,
+          ).copyWith(primary: primary),
+          scaffoldBackgroundColor: Neu.bg,
         ),
-      ],
-      children: [
-        if (_loading)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 60),
-            child: Center(child: CircularProgressIndicator()),
-          )
-        else if (_error != null)
-          PaCard(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const NeuIconBox(Icons.error_outline_rounded, color: Neu.error),
-                const SizedBox(height: 12),
-                Text(
-                  _error!,
-                  textAlign: TextAlign.center,
-                  style: neuBody(size: 13, color: Neu.muted),
-                ),
-                const SizedBox(height: 16),
-                NeuButton(
-                  'Reintentar',
-                  kind: NeuButtonKind.alt,
-                  small: true,
-                  icon: Icons.refresh_rounded,
-                  expand: false,
-                  onPressed: _loadHistory,
-                ),
-              ],
-            ),
-          )
-        else ...[
-          _sessionHeaderCard(primary),
-          const SizedBox(height: 14),
-          _attendanceCard(primary),
-          if (!widget.isIndividual) ...[
-            const SizedBox(height: 20),
-            Padding(
-              padding: const EdgeInsets.only(left: 4, bottom: 8),
-              child: Text(
-                'Registro del chat',
-                style: neuPoppins(
-                  size: 17,
-                  weight: FontWeight.w700,
-                  color: Neu.heading,
-                ),
-              ),
-            ),
-            if (_messages.isEmpty)
-              PaCard(
-                padding: const EdgeInsets.all(20),
-                child: Center(
-                  child: Text(
-                    'No hay mensajes registrados.',
+        primary,
+      ),
+      child: PaScaffold(
+        title: 'Historial de tutoría',
+        subtitle: widget.subject,
+        showLogo: false,
+        actions: [
+          NeuCircleButton(
+            size: 40,
+            icon: Icons.refresh_rounded,
+            tooltip: 'Actualizar historial',
+            onTap: _loading ? null : _loadHistory,
+          ),
+        ],
+        children: [
+          if (_loading)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 60),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (_error != null)
+            PaCard(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const NeuIconBox(Icons.error_outline_rounded,
+                      color: Neu.error),
+                  const SizedBox(height: 12),
+                  Text(
+                    _error!,
+                    textAlign: TextAlign.center,
                     style: neuBody(size: 13, color: Neu.muted),
                   ),
+                  const SizedBox(height: 16),
+                  NeuButton(
+                    'Reintentar',
+                    kind: NeuButtonKind.alt,
+                    small: true,
+                    icon: Icons.refresh_rounded,
+                    expand: false,
+                    onPressed: _loadHistory,
+                  ),
+                ],
+              ),
+            )
+          else ...[
+            _sessionHeaderCard(primary),
+            const SizedBox(height: 14),
+            _attendanceCard(primary),
+            const SizedBox(height: 14),
+            _ratingDisplayCard(primary),
+            if (!widget.isIndividual) ...[
+              const SizedBox(height: 20),
+              Padding(
+                padding: const EdgeInsets.only(left: 4, bottom: 8),
+                child: Text(
+                  'Registro del chat',
+                  style: neuPoppins(
+                    size: 17,
+                    weight: FontWeight.w700,
+                    color: Neu.heading,
+                  ),
                 ),
-              )
-            else
-              for (final message in _messages) ...[
-                _messageCard(message, primary),
-                const SizedBox(height: 10),
-              ],
+              ),
+              if (_messages.isEmpty)
+                PaCard(
+                  padding: const EdgeInsets.all(20),
+                  child: Center(
+                    child: Text(
+                      'No hay mensajes registrados.',
+                      style: neuBody(size: 13, color: Neu.muted),
+                    ),
+                  ),
+                )
+              else
+                for (final message in _messages) ...[
+                  _messageCard(message, primary),
+                  const SizedBox(height: 10),
+                ],
+            ],
           ],
         ],
-      ],
+      ),
     );
   }
 
@@ -288,7 +312,7 @@ class _TutoriaHistorialPageState extends ConsumerState<TutoriaHistorialPage> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Asistencia registrada',
+                    _isStudent ? 'Tu asistencia' : 'Asistencia registrada',
                     style: neuPoppins(
                       size: 15,
                       weight: FontWeight.w700,
@@ -317,7 +341,7 @@ class _TutoriaHistorialPageState extends ConsumerState<TutoriaHistorialPage> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    studentId,
+                    _isStudent ? 'Registro de participación' : studentId,
                     style: neuPoppins(
                       size: 14,
                       weight: FontWeight.w600,
@@ -348,6 +372,88 @@ class _TutoriaHistorialPageState extends ConsumerState<TutoriaHistorialPage> {
             ?.whereType<Map<String, dynamic>>()
             .toList() ??
         const <Map<String, dynamic>>[];
+
+    if (_isStudent) {
+      final studentAttended = _session?['asistio'] as bool? ??
+          (attendance.isNotEmpty
+              ? attendance.firstWhere(
+                  (a) => a['asistio'] != null,
+                  orElse: () => <String, dynamic>{},
+                )['asistio'] as bool?
+              : null);
+
+      return PaCard(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                NeuIconBox(
+                  Icons.fact_check_outlined,
+                  color: primary,
+                  size: 40,
+                  iconSize: 20,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Tu asistencia',
+                    style: neuPoppins(
+                      size: 15,
+                      weight: FontWeight.w700,
+                      color: Neu.heading,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Icon(
+                  studentAttended == true
+                      ? Icons.check_circle_rounded
+                      : studentAttended == false
+                          ? Icons.cancel_rounded
+                          : Icons.help_outline_rounded,
+                  color: studentAttended == true
+                      ? Neu.okFg
+                      : studentAttended == false
+                          ? Neu.errFg
+                          : Neu.muted,
+                  size: 22,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Registro de participación',
+                    style: neuPoppins(
+                      size: 14,
+                      weight: FontWeight.w600,
+                      color: Neu.heading,
+                    ),
+                  ),
+                ),
+                PaTag(
+                  studentAttended == true
+                      ? 'Asistió'
+                      : studentAttended == false
+                          ? 'No asistió'
+                          : 'Sin marcar',
+                  tone: studentAttended == true
+                      ? PaTone.ok
+                      : studentAttended == false
+                          ? PaTone.error
+                          : PaTone.neutral,
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    }
+
     final names = {
       for (final student in _students)
         if (student['id'] is String)
@@ -454,6 +560,100 @@ class _TutoriaHistorialPageState extends ConsumerState<TutoriaHistorialPage> {
                 );
               },
             ),
+        ],
+      ),
+    );
+  }
+
+  Widget _ratingDisplayCard(Color primary) {
+    final ratings = (_session?['valoraciones'] as List?)
+            ?.whereType<Map<String, dynamic>>()
+            .toList() ??
+        const <Map<String, dynamic>>[];
+
+    final int stars;
+    final String comment;
+    final bool hasRating;
+
+    if (ratings.isNotEmpty) {
+      final first = ratings.first;
+      stars = (first['estrellas'] as num?)?.toInt() ?? 0;
+      comment = first['comentario']?.toString() ?? '';
+      hasRating = stars > 0;
+    } else {
+      stars = 0;
+      comment = '';
+      hasRating = false;
+    }
+
+    return PaCard(
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              NeuIconBox(
+                Icons.star_rounded,
+                color: Colors.amber.shade700,
+                size: 40,
+                iconSize: 22,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  _isStudent
+                      ? 'Tu valoración de la tutoría'
+                      : 'Valoración recibida',
+                  style: neuPoppins(
+                    size: 15,
+                    weight: FontWeight.w700,
+                    color: Neu.heading,
+                  ),
+                ),
+              ),
+              if (hasRating)
+                PaTag(
+                  '$stars / 5',
+                  tone: stars >= 4 ? PaTone.ok : PaTone.warn,
+                ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          if (!hasRating)
+            Text(
+              'Aún no se ha registrado valoración para esta tutoría.',
+              style: neuBody(size: 13, color: Neu.muted),
+            )
+          else ...[
+            Row(
+              children: [
+                for (var i = 1; i <= 5; i++)
+                  Icon(
+                    i <= stars ? Icons.star_rounded : Icons.star_border_rounded,
+                    color: Colors.amber.shade600,
+                    size: 24,
+                  ),
+              ],
+            ),
+            if (comment.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Container(
+                width: double.infinity,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Neu.bg,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Neu.line, width: 0.8),
+                ),
+                child: Text(
+                  comment,
+                  style: neuBody(size: 13, color: Neu.text, height: 1.35),
+                ),
+              ),
+            ],
+          ],
         ],
       ),
     );

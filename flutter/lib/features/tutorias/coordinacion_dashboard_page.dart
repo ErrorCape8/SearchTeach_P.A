@@ -8,7 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api_client.dart';
 import '../../core/tutoring_updates.dart';
-import '../../core/widgets/brand_logo.dart';
+import '../../core/widgets/profile_security_dialogs.dart';
 import '../auth/auth_repository.dart';
 import 'coordinacion_horarios_page.dart';
 import 'coordinacion_solicitudes_page.dart';
@@ -34,12 +34,6 @@ class _CoordinacionDashboardPageState
   bool _loading = true;
   String? _error;
   List<Map<String, dynamic>> _teachers = [];
-  // ignore: unused_field
-  List<Map<String, dynamic>> _schedules = [];
-  // ignore: unused_field
-  List<Map<String, dynamic>> _publishedSessions = [];
-  // ignore: unused_field
-  List<Map<String, dynamic>> _groups = [];
   Map<String, dynamic> _profile = {};
   @override
   void initState() {
@@ -68,9 +62,6 @@ class _CoordinacionDashboardPageState
       final dio = ref.read(dioProvider);
       final responses = await Future.wait<Response<dynamic>>([
         dio.get<List<dynamic>>('/api/coordinacion/docentes'),
-        dio.get<List<dynamic>>('/api/coordinacion/horarios'),
-        dio.get<List<dynamic>>('/api/coordinacion/tutorias-colectivas'),
-        dio.get<List<dynamic>>('/api/coordinacion/sesiones-grupales'),
         dio.get<Map<String, dynamic>>('/api/usuarios/perfil'),
       ]);
       List<Map<String, dynamic>> rows(int index) =>
@@ -80,10 +71,7 @@ class _CoordinacionDashboardPageState
       if (!mounted) return;
       setState(() {
         _teachers = rows(0);
-        _schedules = rows(1);
-        _groups = rows(2);
-        _publishedSessions = rows(3);
-        final profile = responses[4].data;
+        final profile = responses[1].data;
         _profile =
             profile is Map<String, dynamic> ? profile : <String, dynamic>{};
         _loading = false;
@@ -103,13 +91,12 @@ class _CoordinacionDashboardPageState
   String _title() => const [
         'Inicio',
         'Horarios de tutores',
-        'Tutores líderes',
+        'Grupos apoyo proyecto de aula',
         'Solicitudes docentes',
         'Perfil',
         'Reportes de tutorías',
       ][_tab];
 
-  // Perfil no es una pestaña del menú: se abre desde el avatar / bloque de usuario.
   static const _navTabs = [0, 1, 2, 5];
 
   String get _name {
@@ -127,7 +114,6 @@ class _CoordinacionDashboardPageState
     if (mounted) context.go('/login');
   }
 
-  /// Avatar con las iniciales: abre el perfil (función del bloque de usuario).
   Widget _profileButton() => Semantics(
         button: true,
         label: 'Abrir perfil',
@@ -169,9 +155,7 @@ class _CoordinacionDashboardPageState
               expand: false)
         else
           NeuCircleButton(
-              icon: Icons.refresh_rounded,
-              tooltip: 'Actualizar',
-              onTap: _load),
+              icon: Icons.refresh_rounded, tooltip: 'Actualizar', onTap: _load),
         NeuCircleButton(
           icon: Icons.notifications_none_rounded,
           tooltip: 'Notificaciones',
@@ -187,7 +171,6 @@ class _CoordinacionDashboardPageState
       if (next.hasValue && mounted) _load();
     });
     final wide = MediaQuery.sizeOf(context).width >= 760;
-    // Horarios, Líderes y Reportes traen su propia cabecera neumórfica.
     final ownHeader = _tab == 1 || _tab == 2 || _tab == 5;
     final needsData = _tab == 0 || _tab == 4;
     final content = Column(
@@ -230,7 +213,7 @@ class _CoordinacionDashboardPageState
                 items: const [
                   NeuNavItem(Icons.home_outlined, 'Inicio'),
                   NeuNavItem(Icons.calendar_month_outlined, 'Horarios'),
-                  NeuNavItem(Icons.groups_outlined, 'Líderes'),
+                  NeuNavItem(Icons.groups_outlined, 'Grupos PA'),
                   NeuNavItem(Icons.inbox_outlined, 'Reportes'),
                 ],
                 index: _navTabs.indexOf(_tab),
@@ -260,8 +243,6 @@ String _initials(String value) {
   return words.take(2).map((word) => word[0].toUpperCase()).join();
 }
 
-/// Barra lateral (tablet / escritorio). Sin «Perfil»: se abre desde el bloque
-/// de usuario del pie, que además trae el botón de cerrar sesión.
 class _Sidebar extends StatelessWidget {
   const _Sidebar({
     required this.index,
@@ -277,7 +258,7 @@ class _Sidebar extends StatelessWidget {
   static const _items = [
     (Icons.home_outlined, 'Inicio', 0),
     (Icons.calendar_month_outlined, 'Horarios', 1),
-    (Icons.groups_outlined, 'Líderes', 2),
+    (Icons.groups_outlined, 'Grupos de apoyo', 2),
     (Icons.inbox_outlined, 'Reportes', 5),
   ];
 
@@ -296,12 +277,61 @@ class _Sidebar extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(14, 18, 14, 14),
           child: Column(children: [
-            const SizedBox(
-              height: 64,
-              width: 170,
-              child: BrandLogo(width: 170, height: 64, accentColor: _wine),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 4, 4, 18),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Image.asset(
+                    'assets/images/logo_dir.png',
+                    width: 48,
+                    fit: BoxFit.contain,
+                    semanticLabel: 'Logo de SearchTeach',
+                    errorBuilder: (_, __, ___) => const SizedBox(width: 48),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text.rich(
+                          TextSpan(
+                            children: [
+                              TextSpan(
+                                text: 'Search',
+                                style: neuPoppins(
+                                  size: 21,
+                                  weight: FontWeight.w700,
+                                  color: Neu.text,
+                                ),
+                              ),
+                              TextSpan(
+                                text: 'Teach',
+                                style: neuPoppins(
+                                  size: 21,
+                                  weight: FontWeight.w700,
+                                  color: _wine,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Text(
+                          'COORDINACIÓN',
+                          style: neuBody(
+                            size: 9.5,
+                            weight: FontWeight.w700,
+                            color: _wine,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 22),
+            const SizedBox(height: 12),
             for (final item in _items)
               Padding(
                 padding: const EdgeInsets.only(bottom: 6),
@@ -475,107 +505,16 @@ class _ProfileView extends ConsumerWidget {
   }
 
   Future<void> _editPhone(BuildContext context, WidgetRef ref) async {
-    final scaffoldMessenger = ScaffoldMessenger.maybeOf(context);
-    final controller =
-        TextEditingController(text: profile['telefono'] as String? ?? '');
-    final phone = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Actualizar teléfono'),
-        content: TextField(
-          controller: controller,
-          keyboardType: TextInputType.phone,
-          maxLength: 30,
-          decoration: const InputDecoration(labelText: 'Teléfono'),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Cancelar')),
-          FilledButton(
-              onPressed: () =>
-                  Navigator.pop(dialogContext, controller.text.trim()),
-              child: const Text('Guardar')),
-        ],
-      ),
+    final updated = await showChangePhoneDialog(
+      context,
+      ref,
+      currentPhone: profile['telefono'] as String? ?? '',
     );
-    controller.dispose();
-    if (phone == null || phone.isEmpty) return;
-    try {
-      await ref.read(dioProvider).put<Map<String, dynamic>>(
-        '/api/usuarios/perfil/telefono',
-        data: {'telefono': phone},
-      );
-      onRefresh();
-    } on DioException catch (error) {
-      final data = error.response?.data;
-      final message = data is Map && data['message'] is String
-          ? data['message'] as String
-          : 'No se pudo actualizar el teléfono.';
-      scaffoldMessenger?.showSnackBar(SnackBar(content: Text(message)));
-    }
+    if (updated) onRefresh();
   }
 
   Future<void> _editPassword(BuildContext context, WidgetRef ref) async {
-    final scaffoldMessenger = ScaffoldMessenger.maybeOf(context);
-    final current = TextEditingController();
-    final next = TextEditingController();
-    final passwords = await showDialog<(String, String)>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Cambiar contraseña'),
-        content: Column(mainAxisSize: MainAxisSize.min, children: [
-          TextField(
-              controller: current,
-              obscureText: true,
-              decoration:
-                  const InputDecoration(labelText: 'Contraseña actual')),
-          const SizedBox(height: 12),
-          TextField(
-              controller: next,
-              obscureText: true,
-              decoration: const InputDecoration(
-                  labelText: 'Nueva contraseña',
-                  helperText: 'Mínimo 8 caracteres'),
-              maxLength: 100),
-        ]),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Cancelar')),
-          FilledButton(
-              onPressed: () =>
-                  Navigator.pop(dialogContext, (current.text, next.text)),
-              child: const Text('Guardar')),
-        ],
-      ),
-    );
-    current.dispose();
-    next.dispose();
-    if (passwords == null) return;
-    if (passwords.$1.isEmpty || passwords.$2.length < 8) {
-      scaffoldMessenger?.showSnackBar(const SnackBar(
-          content: Text(
-              'Ingresa la contraseña actual y una nueva de al menos 8 caracteres.')));
-      return;
-    }
-    try {
-      await ref.read(dioProvider).put<void>(
-        '/api/usuarios/perfil/contrasena',
-        data: {
-          'contrasenaActual': passwords.$1,
-          'nuevaContrasena': passwords.$2
-        },
-      );
-      scaffoldMessenger?.showSnackBar(
-          const SnackBar(content: Text('Contraseña actualizada.')));
-    } on DioException catch (error) {
-      final data = error.response?.data;
-      final message = data is Map && data['message'] is String
-          ? data['message'] as String
-          : 'No se pudo actualizar la contraseña.';
-      scaffoldMessenger?.showSnackBar(SnackBar(content: Text(message)));
-    }
+    await showChangePasswordDialog(context, ref);
   }
 }
 
@@ -689,7 +628,6 @@ String _text(Object? value, String fallback) =>
         ? fallback
         : value.toString();
 
-// ignore: unused_element
 String _projectName(List<Map<String, dynamic>> groups, Object? projectId) {
   for (final group in groups) {
     final projects = group['proyectos'];
@@ -704,7 +642,6 @@ String _projectName(List<Map<String, dynamic>> groups, Object? projectId) {
   return 'Proyecto';
 }
 
-// ignore: unused_element
 String _date(Object? value) {
   final date = DateTime.tryParse(value?.toString() ?? '');
   if (date == null) return 'Fecha no disponible';

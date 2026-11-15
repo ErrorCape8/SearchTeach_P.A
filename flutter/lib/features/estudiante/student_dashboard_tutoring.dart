@@ -1,4 +1,3 @@
-// ignore_for_file: unused_element, unused_element_parameter
 part of 'student_dashboard_views.dart';
 
 class StudentTutoringView extends ConsumerStatefulWidget {
@@ -43,6 +42,7 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
   String _sessionFilter = 'encurso';
   final ScrollController _sessionsScrollController = ScrollController();
   Timer? _groupSessionRefreshTimer;
+  int _callsTab = 0;
 
   @override
   void initState() {
@@ -131,12 +131,6 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
             title: 'Proyectos de aula',
             subtitle: 'Consulta tus proyectos activos y finalizados.',
             onTap: () => _goToSection('proyectos-historial'),
-          ),
-          _MenuTile(
-            icon: Icons.star_outline,
-            title: 'Calificar tutorías',
-            subtitle: 'Valora una tutoría solamente después de finalizarla.',
-            onTap: () => _goToSection('calificar'),
           ),
         ],
       );
@@ -1164,28 +1158,245 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
   }
 
   Widget _groupChatsAndCalls() {
-    final sessions = widget.data.groupSessions
+    final groupSessions = widget.data.groupSessions
         .where((session) => session.state != 'FINALIZADA')
         .toList()
       ..sort((a, b) =>
           (a.start ?? DateTime(9999)).compareTo(b.start ?? DateTime(9999)));
-    if (sessions.isEmpty) {
-      return const _EmptyCard(
-        icon: Icons.forum_outlined,
-        title: 'Aún no tienes tutorías grupales',
-        message:
-            'Cuando te inscribas en una tutoría, su chat y su videollamada aparecerán aquí.',
-      );
-    }
+    final virtualIndividual = widget.data.tutorings
+        .where((t) =>
+            t.modality.toUpperCase() != 'PRESENCIAL' &&
+            t.status != 'REALIZADA' &&
+            t.status != 'CANCELADA')
+        .toList()
+      ..sort((a, b) =>
+          (a.start ?? DateTime(9999)).compareTo(b.start ?? DateTime(9999)));
+    final available = widget.data.availableGroupSessions.toList();
+
     return ListView(
-      padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 32),
       children: [
-        for (final session in sessions)
-          _GroupChatAndCallCard(
-            session: session,
-            studentName: widget.data.profile.name,
-          ),
+        PaSegmented(
+          labels: [
+            'Mis videollamadas (${groupSessions.length + virtualIndividual.length})',
+            'Sesiones disponibles (${available.length})',
+          ],
+          selected: _callsTab,
+          onSelect: (i) => setState(() => _callsTab = i),
+        ),
+        const SizedBox(height: 14),
+        if (_callsTab == 0) ...[
+          if (groupSessions.isEmpty && virtualIndividual.isEmpty)
+            PaCard(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                children: [
+                  const NeuIconBox(Icons.videocam_outlined,
+                      color: _blue, size: 48, iconSize: 26),
+                  const SizedBox(height: 12),
+                  Text(
+                    'No tienes videollamadas activas',
+                    style: neuPoppins(
+                        size: 16, weight: FontWeight.w700, color: Neu.heading),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Cuando te inscribas en una tutoría grupal o individual virtual, podrás unirte a la videollamada y al chat desde aquí.',
+                    textAlign: TextAlign.center,
+                    style: neuBody(size: 13, color: Neu.muted),
+                  ),
+                  const SizedBox(height: 16),
+                  if (available.isNotEmpty)
+                    NeuButton(
+                      'Explorar sesiones disponibles',
+                      icon: Icons.search_rounded,
+                      kind: NeuButtonKind.alt,
+                      small: true,
+                      expand: false,
+                      onPressed: () => setState(() => _callsTab = 1),
+                    ),
+                ],
+              ),
+            )
+          else ...[
+            for (final session in groupSessions)
+              _GroupChatAndCallCard(
+                session: session,
+                studentName: widget.data.profile.name,
+              ),
+            for (final tutoring in virtualIndividual)
+              _TutoringCard(
+                tutoring: tutoring,
+                teacherName: widget.data.tutors
+                        .where((tutor) => tutor.teacherId == tutoring.teacherId)
+                        .map((tutor) => tutor.name)
+                        .firstOrNull ??
+                    tutoring.teacherId,
+                onJoinRoom: tutoring.status == 'EN_CURSO'
+                    ? () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => LiveKitRoomPage(
+                              sessionId: tutoring.id,
+                              subject: tutoring.subject,
+                              modality: tutoring.modality,
+                              teacherMode: false,
+                              students: [tutoring.studentId],
+                              endAt: tutoring.end?.toLocal(),
+                              studentMode: true,
+                              studentName: widget.data.profile.name,
+                              isIndividualTutoring: true,
+                            ),
+                          ),
+                        )
+                    : null,
+                onCancel: null,
+              ),
+          ],
+        ] else ...[
+          ..._publishedGroupSessionsWidgets(),
+        ],
       ],
+    );
+  }
+
+  List<Widget> _publishedGroupSessionsWidgets() {
+    final sessions = widget.data.availableGroupSessions
+        .where((session) =>
+            _modalityFilter == 'Todas' ||
+            session.modality.toUpperCase() == _modalityFilter.toUpperCase())
+        .toList();
+    return [
+      Wrap(
+        spacing: 8,
+        children: [
+          for (final modality in const [
+            'Todas',
+            'VIRTUAL',
+            'PRESENCIAL',
+            'HIBRIDA',
+          ])
+            ChoiceChip(
+              label: Text(switch (modality) {
+                'VIRTUAL' => 'Virtual',
+                'PRESENCIAL' => 'Presencial',
+                'HIBRIDA' => 'Híbrida',
+                _ => modality,
+              }),
+              selected: _modalityFilter == modality,
+              onSelected: (_) => setState(() => _modalityFilter = modality),
+              selectedColor: _blue,
+              backgroundColor: Colors.white,
+              side: BorderSide.none,
+              labelStyle: TextStyle(
+                color: _modalityFilter == modality ? Colors.white : _navy,
+                fontSize: 12,
+              ),
+            ),
+        ],
+      ),
+      const SizedBox(height: 12),
+      if (sessions.isEmpty)
+        const _EmptyCard(
+          icon: Icons.event_busy_outlined,
+          title: 'No hay sesiones disponibles',
+          message:
+              'Cuando coordinación publique tutorías para tu tecnología, aparecerán aquí.',
+        )
+      else
+        for (final session in sessions) ...[
+          _publishedSessionCard(session),
+          const SizedBox(height: 10),
+        ],
+    ];
+  }
+
+  Widget _publishedSessionCard(StudentGroupSession session) {
+    AvailableTutor? teacher;
+    for (final item in widget.data.tutors) {
+      if (item.teacherId == session.teacherId) teacher = item;
+    }
+    final start = session.start?.toLocal();
+    final end = session.end?.toLocal();
+    final now = DateTime.now();
+    final enrolledGroups = widget.data.groupSessions
+        .where((item) => item.end?.isAfter(now) ?? false)
+        .toList();
+    final enrolledIndividual = widget.data.tutorings.where((item) =>
+        (item.status == 'SOLICITADA' ||
+            item.status == 'ALTERNATIVA_PROPUESTA' ||
+            item.status == 'PROGRAMADA' ||
+            item.status == 'EN_CURSO') &&
+        (item.end?.isAfter(now) ?? false));
+    final maximumReached =
+        enrolledGroups.length + enrolledIndividual.length >= 3;
+    final overlapsGroup = start != null &&
+        end != null &&
+        enrolledGroups.any((item) =>
+            item.start != null &&
+            item.end != null &&
+            start.isBefore(item.end!) &&
+            item.start!.isBefore(end));
+    final overlapsIndividual = start != null &&
+        end != null &&
+        enrolledIndividual.any((item) =>
+            item.start != null &&
+            item.end != null &&
+            start.isBefore(item.end!) &&
+            item.start!.isBefore(end));
+    final hasScheduleConflict = overlapsGroup || overlapsIndividual;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(session.subject,
+                style: const TextStyle(
+                    fontWeight: FontWeight.w800, fontSize: 16)),
+            const SizedBox(height: 6),
+            Text(
+                '${teacher?.name ?? 'Docente'} · ${session.technology} · Semestre ${session.semester}'),
+            if (session.modality.isNotEmpty)
+              Text(
+                '${_groupSessionModality(session.modality)}${session.modality.toUpperCase() == 'VIRTUAL' || session.location.trim().isEmpty ? '' : ' · ${session.location}'}',
+              ),
+            if (start != null && end != null)
+              Text(
+                  '${start.day.toString().padLeft(2, '0')}/${start.month.toString().padLeft(2, '0')}/${start.year} · '
+                  '${start.hour.toString().padLeft(2, '0')}:${start.minute.toString().padLeft(2, '0')}–'
+                  '${end.hour.toString().padLeft(2, '0')}:${end.minute.toString().padLeft(2, '0')}'),
+            const SizedBox(height: 8),
+            Text('${5 - session.studentCount} cupos disponibles',
+                style: const TextStyle(color: _muted)),
+            if (maximumReached || hasScheduleConflict)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  maximumReached
+                      ? 'Ya tienes tres tutorías inscritas.'
+                      : 'Esta sesión se cruza con otra tutoría tuya.',
+                  style: const TextStyle(color: Colors.red),
+                ),
+              ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: FilledButton(
+                onPressed: maximumReached ||
+                        hasScheduleConflict ||
+                        start == null ||
+                        end == null
+                    ? null
+                    : () => widget.onJoinPublishedSession(session),
+                child: Text(maximumReached
+                    ? 'Límite alcanzado'
+                    : hasScheduleConflict
+                        ? 'Cruce de horario'
+                        : 'Reservar'),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

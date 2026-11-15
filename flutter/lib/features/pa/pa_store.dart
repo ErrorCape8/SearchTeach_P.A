@@ -63,6 +63,7 @@ class PaUsuario {
 class PaColectiva {
   const PaColectiva({
     required this.id,
+    this.rawId = '',
     required this.materia,
     required this.carrera,
     required this.semestre,
@@ -74,6 +75,7 @@ class PaColectiva {
   });
 
   final int id;
+  final String rawId;
   final String materia;
   final String carrera;
   final int semestre;
@@ -93,6 +95,7 @@ class PaColectiva {
   PaColectiva copyWith({String? lider, List<String>? apoyo, String? aula}) =>
       PaColectiva(
         id: id,
+        rawId: rawId,
         materia: materia,
         carrera: carrera,
         semestre: semestre,
@@ -342,6 +345,7 @@ class PaStore extends StateNotifier<PaState> {
 
           loaded.add(PaColectiva(
             id: intId,
+            rawId: rawId,
             materia: materia,
             carrera: tech,
             semestre: sem,

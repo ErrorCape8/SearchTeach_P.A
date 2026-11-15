@@ -1,12 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../widgets/brand_logo.dart';
 import 'neu_theme.dart';
 import 'neu_widgets.dart';
 
-/// Barra lateral neumórfica (`#app.neu .side`) para pantallas anchas:
-/// logo + rol, opciones de menú y, al pie, el bloque de usuario con el botón
-/// de cerrar sesión. En celular se usa [NeuBottomBar] en su lugar.
 class NeuSidebar extends StatelessWidget {
   const NeuSidebar({
     required this.items,
@@ -20,7 +16,6 @@ class NeuSidebar extends StatelessWidget {
     super.key,
   });
 
-  /// (icono, etiqueta, id de pestaña).
   final List<(IconData, String, int)> items;
   final int? selected;
   final ValueChanged<int> onSelect;
@@ -52,18 +47,60 @@ class NeuSidebar extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(14, 18, 14, 14),
           child: Column(children: [
-            SizedBox(
-              height: 72,
-              width: 170,
-              child: BrandLogo(width: 170, height: 72, accentColor: p.c),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 4, 4, 18),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Image.asset(
+                    'assets/images/logo_dir.png',
+                    width: 48,
+                    fit: BoxFit.contain,
+                    semanticLabel: 'Logo de SearchTeach',
+                    errorBuilder: (_, __, ___) => const SizedBox(width: 48),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text.rich(
+                          TextSpan(
+                            children: [
+                              TextSpan(
+                                text: 'Search',
+                                style: neuPoppins(
+                                  size: 21,
+                                  weight: FontWeight.w700,
+                                  color: Neu.text,
+                                ),
+                              ),
+                              TextSpan(
+                                text: 'Teach',
+                                style: neuPoppins(
+                                  size: 21,
+                                  weight: FontWeight.w700,
+                                  color: p.c,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Text(
+                          roleLabel.toUpperCase(),
+                          style: neuBody(
+                            size: 9.5,
+                            weight: FontWeight.w700,
+                            color: p.c,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-            Text(roleLabel.toUpperCase(),
-                style: neuBody(
-                    size: 11,
-                    weight: FontWeight.w700,
-                    color: p.c,
-                    letterSpacing: .6)),
-            const SizedBox(height: 20),
             for (final item in items)
               Padding(
                 padding: const EdgeInsets.only(bottom: 6),

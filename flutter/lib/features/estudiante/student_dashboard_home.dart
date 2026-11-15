@@ -490,147 +490,18 @@ class StudentProfileView extends ConsumerWidget {
   }
 
   Future<void> _editPhone(BuildContext context, WidgetRef ref) async {
-    final controller = TextEditingController(text: profile.phone);
-    try {
-      final phone = await showDialog<String>(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('Actualizar teléfono'),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            maxLength: 30,
-            keyboardType: TextInputType.phone,
-            decoration: const InputDecoration(
-              labelText: 'Teléfono',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Cancelar'),
-            ),
-            FilledButton(
-              onPressed: () =>
-                  Navigator.pop(dialogContext, controller.text.trim()),
-              child: const Text('Guardar'),
-            ),
-          ],
-        ),
-      );
-      if (!context.mounted) return;
-      if (phone == null) return;
-      if (phone.isEmpty) {
-        _showProfileMessage(context, 'El teléfono no puede quedar vacío.');
-        return;
-      }
-      await ref.read(dioProvider).patch<void>(
-        '/api/usuarios/perfil/telefono',
-        data: {'telefono': phone},
-      );
+    final updated = await showChangePhoneDialog(
+      context,
+      ref,
+      currentPhone: profile.phone,
+    );
+    if (updated && context.mounted) {
       ref.invalidate(studentDashboardProvider);
-      if (!context.mounted) return;
-      _showProfileMessage(context, 'Teléfono actualizado.');
-    } on DioException catch (error) {
-      if (!context.mounted) return;
-      _showProfileMessage(context, _profileApiMessage(error));
-    } finally {
-      controller.dispose();
     }
   }
 
   Future<void> _changePassword(BuildContext context, WidgetRef ref) async {
-    final current = TextEditingController();
-    final next = TextEditingController();
-    final confirmation = TextEditingController();
-    final formKey = GlobalKey<FormState>();
-    try {
-      final values = await showDialog<({String current, String next})>(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('Cambiar contraseña'),
-          content: Form(
-            key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextFormField(
-                  controller: current,
-                  obscureText: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Contraseña actual',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (value) => value == null || value.isEmpty
-                      ? 'Campo obligatorio'
-                      : null,
-                ),
-                const SizedBox(height: 10),
-                TextFormField(
-                  controller: next,
-                  obscureText: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Nueva contraseña',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (value) => value == null || value.length < 8
-                      ? 'Usa al menos 8 caracteres'
-                      : null,
-                ),
-                const SizedBox(height: 10),
-                TextFormField(
-                  controller: confirmation,
-                  obscureText: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Confirmar nueva contraseña',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (value) => value != next.text
-                      ? 'Las contraseñas no coinciden'
-                      : null,
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Cancelar'),
-            ),
-            FilledButton(
-              onPressed: () {
-                if (formKey.currentState?.validate() ?? false) {
-                  Navigator.pop(dialogContext, (
-                    current: current.text,
-                    next: next.text,
-                  ));
-                }
-              },
-              child: const Text('Guardar'),
-            ),
-          ],
-        ),
-      );
-      if (!context.mounted) return;
-      if (values == null) return;
-      await ref.read(dioProvider).patch<void>(
-        '/api/usuarios/perfil/contrasena',
-        data: {
-          'contrasenaActual': values.current,
-          'nuevaContrasena': values.next,
-        },
-      );
-      if (!context.mounted) return;
-      _showProfileMessage(context, 'Contraseña actualizada.');
-    } on DioException catch (error) {
-      if (!context.mounted) return;
-      _showProfileMessage(context, _profileApiMessage(error));
-    } finally {
-      current.dispose();
-      next.dispose();
-      confirmation.dispose();
-    }
+    await showChangePasswordDialog(context, ref);
   }
 
   Future<void> _registerSemester(BuildContext context, WidgetRef ref) async {

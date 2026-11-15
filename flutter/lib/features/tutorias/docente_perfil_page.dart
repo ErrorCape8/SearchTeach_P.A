@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import '../../core/widgets/profile_security_dialogs.dart';
 import '../../core/widgets/role_toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
@@ -162,90 +163,18 @@ class DocentePerfilPage extends ConsumerWidget {
 
   Future<void> _editPhone(
       BuildContext context, WidgetRef ref, String current) async {
-    final controller =
-        TextEditingController(text: current == 'No registrado' ? '' : current);
-    final value = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Editar teléfono'),
-        content: TextField(
-            controller: controller, keyboardType: TextInputType.phone),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancelar')),
-          FilledButton(
-              onPressed: () => Navigator.pop(context, controller.text.trim()),
-              child: const Text('Guardar')),
-        ],
-      ),
+    final updated = await showChangePhoneDialog(
+      context,
+      ref,
+      currentPhone: current == 'No registrado' ? '' : current,
     );
-    controller.dispose();
-    if (value == null || value.isEmpty) return;
-    try {
-      await ref
-          .read(dioProvider)
-          .patch('/api/usuarios/perfil/telefono', data: {'telefono': value});
+    if (updated) {
       ref.invalidate(docenteProfileProvider);
-    } on DioException catch (error) {
-      if (context.mounted) {
-        RoleToast.showSnackBar(
-            context, SnackBar(content: Text(_message(error))));
-      }
     }
   }
 
   Future<void> _changePassword(BuildContext context, WidgetRef ref) async {
-    final current = TextEditingController();
-    final next = TextEditingController();
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Cambiar contraseña'),
-        content: Column(mainAxisSize: MainAxisSize.min, children: [
-          TextField(
-              controller: current,
-              obscureText: true,
-              decoration:
-                  const InputDecoration(labelText: 'Contraseña actual')),
-          TextField(
-              controller: next,
-              obscureText: true,
-              decoration: const InputDecoration(labelText: 'Nueva contraseña')),
-        ]),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancelar')),
-          FilledButton(
-            onPressed: () async {
-              if (current.text.isEmpty || next.text.length < 8) return;
-              try {
-                await ref
-                    .read(dioProvider)
-                    .patch('/api/usuarios/perfil/contrasena', data: {
-                  'contrasenaActual': current.text,
-                  'nuevaContrasena': next.text
-                });
-                if (context.mounted) Navigator.pop(context, true);
-              } on DioException catch (error) {
-                if (context.mounted) {
-                  RoleToast.showSnackBar(
-                      context, SnackBar(content: Text(_message(error))));
-                }
-              }
-            },
-            child: const Text('Guardar'),
-          ),
-        ],
-      ),
-    );
-    current.dispose();
-    next.dispose();
-    if (confirmed == true && context.mounted) {
-      RoleToast.showSnackBar(
-          context, const SnackBar(content: Text('Contraseña actualizada.')));
-    }
+    await showChangePasswordDialog(context, ref);
   }
 
   String _message(DioException error) {

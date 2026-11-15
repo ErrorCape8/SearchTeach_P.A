@@ -3,12 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api_client.dart';
+import '../../core/widgets/profile_security_dialogs.dart';
 import '../../core/widgets/role_toast.dart';
 import '../pa/pa_widgets.dart';
 import 'director_widgets.dart';
 
-/// Perfil de la cuenta. Si el backend no devuelve datos para este rol la
-/// pantalla sigue funcionando y muestra "No disponible" en cada campo.
 final directorProfileProvider =
     FutureProvider.autoDispose<Map<String, dynamic>?>((ref) async {
   try {
@@ -126,74 +125,21 @@ class DirPerfilView extends ConsumerWidget {
 
   Future<void> _editPhone(
       BuildContext context, WidgetRef ref, String current) async {
-    final controller =
-        TextEditingController(text: current == 'No disponible' ? '' : current);
-    final value = await _neuDialog<String>(
+    final updated = await showChangePhoneDialog(
       context,
-      title: 'Editar teléfono',
-      fields: [
-        NeuField(
-            controller: controller,
-            hint: 'Teléfono',
-            keyboardType: TextInputType.phone),
-      ],
-      confirmLabel: 'Guardar',
-      onConfirm: (ctx) => controller.text.trim(),
+      ref,
+      currentPhone: current == 'No disponible' ? '' : current,
     );
-    controller.dispose();
-    if (value == null || value.isEmpty) return;
-    try {
-      await ref
-          .read(dioProvider)
-          .patch('/api/usuarios/perfil/telefono', data: {'telefono': value});
+    if (updated) {
       ref.invalidate(directorProfileProvider);
-      if (context.mounted) _toast(context, 'Teléfono actualizado.');
-    } on DioException catch (error) {
-      if (context.mounted) _toast(context, _message(error));
     }
   }
 
   Future<void> _changePassword(BuildContext context, WidgetRef ref) async {
-    final current = TextEditingController();
-    final next = TextEditingController();
-    final done = await _neuDialog<bool>(
-      context,
-      title: 'Cambiar contraseña',
-      fields: [
-        NeuField(
-            controller: current, hint: 'Contraseña actual', obscure: true),
-        const SizedBox(height: 10),
-        NeuField(controller: next, hint: 'Nueva contraseña', obscure: true),
-      ],
-      confirmLabel: 'Guardar',
-      onConfirm: (ctx) {
-        if (current.text.isEmpty || next.text.length < 8) {
-          _toast(ctx, 'La nueva contraseña debe tener mínimo 8 caracteres.');
-          return null;
-        }
-        return true;
-      },
-    );
-    final currentText = current.text;
-    final nextText = next.text;
-    current.dispose();
-    next.dispose();
-    if (done != true) return;
-    try {
-      await ref.read(dioProvider).patch('/api/usuarios/perfil/contrasena',
-          data: {
-            'contrasenaActual': currentText,
-            'nuevaContrasena': nextText,
-          });
-      if (context.mounted) _toast(context, 'Contraseña actualizada.');
-    } on DioException catch (error) {
-      if (context.mounted) _toast(context, _message(error));
-    }
+    await showChangePasswordDialog(context, ref);
   }
 }
 
-/// Diálogo con la estética neumórfica. [onConfirm] devuelve el valor a cerrar
-/// o `null` para mantenerlo abierto.
 Future<T?> _neuDialog<T>(
   BuildContext context, {
   required String title,

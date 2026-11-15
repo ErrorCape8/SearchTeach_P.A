@@ -1,9 +1,12 @@
+import 'dart:js_interop';
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import '../../../core/widgets/role_toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:web/web.dart' as web;
 
 import '../../../core/api_client.dart';
 import '../../pa/pa_widgets.dart';
@@ -139,16 +142,16 @@ class _AdminCertificacionesViewState
           'El servidor devolvió un PDF vacío o inválido.',
         );
       }
-      final uri = Uri.dataFromBytes(bytes, mimeType: 'application/pdf');
-      final opened = await launchUrl(
-        uri,
-        mode: LaunchMode.externalApplication,
+      if (!mounted) return;
+      final blob = web.Blob(
+        [Uint8List.fromList(bytes).toJS].toJS,
+        web.BlobPropertyBag(type: 'application/pdf'),
       );
-      if (!opened) {
-        throw const FormatException(
-          'No se encontró una aplicación para abrir el PDF.',
-        );
-      }
+      final blobUrl = web.URL.createObjectURL(blob);
+      web.window.open(blobUrl, '_blank');
+      Future.delayed(const Duration(seconds: 60), () {
+        web.URL.revokeObjectURL(blobUrl);
+      });
     } on DioException catch (error) {
       if (mounted) _showMessage(_apiError(error), isError: true);
     } on FormatException catch (error) {
@@ -165,7 +168,6 @@ class _AdminCertificacionesViewState
     }
   }
 
-  /// «Ver PDF y revisar»: abre el soporte y luego pide la decisión.
   Future<void> _openAndReview(_Certification certification) async {
     await _openPdf(certification);
     if (!mounted || certification.estado.toUpperCase() != 'PENDIENTE') return;
@@ -213,7 +215,6 @@ class _AdminCertificacionesViewState
 
   @override
   Widget build(BuildContext context) {
-    // Al actualizar desde la cabecera se recarga también esta lista.
     ref.listen(adminPendingCertificationsProvider, (_, __) {
       if (mounted) _load();
     });

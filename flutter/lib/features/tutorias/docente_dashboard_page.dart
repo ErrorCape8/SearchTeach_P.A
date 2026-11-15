@@ -1,4 +1,3 @@
-// ignore_for_file: unused_element, unused_element_parameter
 import 'dart:async';
 
 import 'package:dio/dio.dart';
@@ -9,7 +8,6 @@ import 'package:go_router/go_router.dart';
 import '../../core/api_client.dart';
 import '../../core/role_theme.dart';
 import '../../core/tutoring_updates.dart';
-import '../../core/widgets/brand_logo.dart';
 import '../../core/widgets/role_toast.dart';
 import '../auth/auth_repository.dart';
 import '../notifications/notifications_page.dart';
@@ -85,7 +83,7 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
   String get _headerTitle =>
       _tab == 0 ? 'Panel docente' : _teacherTabNames[_tab] ?? 'Panel docente';
 
-  static const _navigationTabs = [0, 2, 3, 1, 4];
+  static const _navigationTabs = [0, 2, 3, 1, 4, 6];
 
   static String _initials(String value) {
     final parts =
@@ -227,6 +225,7 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
                   NeuNavItem(Icons.calendar_month_outlined, 'Mis sesiones'),
                   NeuNavItem(Icons.menu_book_outlined, 'Tutoría'),
                   NeuNavItem(Icons.star_outline_rounded, 'Líder PA'),
+                  NeuNavItem(Icons.history_outlined, 'Historial'),
                 ],
                 index: _navigationTabs.indexOf(_tab),
                 onSelect: (position) => setState(
@@ -693,6 +692,7 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
                         sessionId: session.id,
                         subject: session.subject,
                         isIndividual: false,
+                        isTeacher: true,
                       ),
                     ),
                   ),
@@ -767,6 +767,7 @@ class _TeacherSidebar extends StatelessWidget {
     (Icons.calendar_month_outlined, 'Mis sesiones', 3),
     (Icons.menu_book_outlined, 'Tutoría', 1),
     (Icons.star_outline_rounded, 'Líder PA', 4),
+    (Icons.history_outlined, 'Historial', 6),
   ];
 
   @override
@@ -784,20 +785,60 @@ class _TeacherSidebar extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(14, 18, 14, 14),
           child: Column(children: [
-            const SizedBox(
-              height: 64,
-              width: 170,
-              child: BrandLogo(
-                  width: 170, height: 64, accentColor: _teacherGreen),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 4, 4, 18),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Image.asset(
+                    'assets/images/logo_dir.png',
+                    width: 48,
+                    fit: BoxFit.contain,
+                    semanticLabel: 'Logo de SearchTeach',
+                    errorBuilder: (_, __, ___) => const SizedBox(width: 48),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text.rich(
+                          TextSpan(
+                            children: [
+                              TextSpan(
+                                text: 'Search',
+                                style: neuPoppins(
+                                  size: 21,
+                                  weight: FontWeight.w700,
+                                  color: Neu.text,
+                                ),
+                              ),
+                              TextSpan(
+                                text: 'Teach',
+                                style: neuPoppins(
+                                  size: 21,
+                                  weight: FontWeight.w700,
+                                  color: _teacherGreen,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Text(
+                          'DOCENTE',
+                          style: neuBody(
+                            size: 9.5,
+                            weight: FontWeight.w700,
+                            color: _teacherGreen,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 6),
-            Text('DOCENTE',
-                style: neuBody(
-                    size: 11,
-                    weight: FontWeight.w700,
-                    color: _teacherGreen,
-                    letterSpacing: 1.2)),
-            const SizedBox(height: 20),
             for (final item in _items)
               Padding(
                 padding: const EdgeInsets.only(bottom: 6),
@@ -1000,8 +1041,6 @@ class _TeacherHomeDashboard extends ConsumerWidget {
                   ('$finishedCount', 'Finalizadas'),
                   ('$withStudentsCount', 'Con inscritos'),
                 ]),
-                const SizedBox(height: 6),
-                _TeacherQuickLinks(onOpen: onOpen),
                 const SizedBox(height: 18),
                 if (showCalendar)
                   Row(
@@ -1436,62 +1475,6 @@ class _TeacherCalendarDay extends StatelessWidget {
                     ),
                 ],
               ),
-      );
-}
-
-class _TeacherQuickLinks extends StatelessWidget {
-  const _TeacherQuickLinks({required this.onOpen, super.key});
-  final ValueChanged<int> onOpen;
-
-  @override
-  Widget build(BuildContext context) => Wrap(
-        spacing: 10,
-        runSpacing: 10,
-        children: [
-          _TeacherQuickLink(
-              label: 'Solicitudes',
-              icon: Icons.inbox_outlined,
-              onTap: () => onOpen(8)),
-          _TeacherQuickLink(
-              label: 'Proyectos colectivos',
-              icon: Icons.groups_outlined,
-              onTap: () => onOpen(3)),
-          _TeacherQuickLink(
-              label: 'Rúbricas y reporte',
-              icon: Icons.fact_check_outlined,
-              onTap: () => paPush(context, const PaColectivasDocentePage())),
-          _TeacherQuickLink(
-              label: 'Líder PA',
-              icon: Icons.star_outline_rounded,
-              onTap: () => onOpen(4)),
-          _TeacherQuickLink(
-              label: 'Historial',
-              icon: Icons.history_outlined,
-              onTap: () => onOpen(6)),
-        ],
-      );
-}
-
-class _TeacherQuickLink extends StatelessWidget {
-  const _TeacherQuickLink({
-    required this.label,
-    required this.icon,
-    required this.onTap,
-    super.key,
-  });
-
-  final String label;
-  final IconData icon;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => NeuButton(
-        label,
-        icon: icon,
-        kind: NeuButtonKind.alt,
-        small: true,
-        expand: false,
-        onPressed: onTap,
       );
 }
 

@@ -78,16 +78,15 @@ class PaScaffold extends StatelessWidget {
     required this.children,
     this.actions = const [],
     this.leading,
+    this.showLogo = false,
     super.key,
   });
   final String title;
   final String subtitle;
   final List<Widget> children;
   final List<Widget> actions;
-
-  /// Si se indica, reemplaza el botón «Volver» (p. ej. el avatar de perfil
-  /// cuando la pantalla es una pestaña del panel y no una vista apilada).
   final Widget? leading;
+  final bool showLogo;
 
   @override
   Widget build(BuildContext context) {
@@ -106,7 +105,10 @@ class PaScaffold extends StatelessWidget {
                   tooltip: 'Volver',
                   onTap: () => Navigator.of(context).maybePop(),
                 ),
-            actions: [...actions, const NeuHeaderLogo()],
+            actions: [
+              ...actions,
+              if (showLogo) const NeuHeaderLogo(),
+            ],
           ),
           Expanded(
             child: Align(
