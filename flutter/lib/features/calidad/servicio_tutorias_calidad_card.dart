@@ -8,13 +8,20 @@ import 'calidad_director_provider.dart';
 /// Calcula y muestra la calificación general anónima a partir de las
 /// estrellas (1-5) otorgadas por los estudiantes.
 class ServicioTutoriasCalidadCard extends ConsumerWidget {
-  const ServicioTutoriasCalidadCard({super.key});
+  const ServicioTutoriasCalidadCard({
+    this.filtro = const CalidadFiltro(),
+    this.titulo = 'Servicio de tutorías',
+    super.key,
+  });
+
+  final CalidadFiltro filtro;
+  final String titulo;
 
   static const Color _starColor = Color(0xFFF59E0B);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final asyncCalidad = ref.watch(calidadDirectorProvider);
+    final asyncCalidad = ref.watch(calidadFiltradaProvider(filtro));
 
     return NeuSurface(
       radius: 22,
@@ -26,7 +33,7 @@ class ServicioTutoriasCalidadCard extends ConsumerWidget {
             children: [
               Expanded(
                 child: Text(
-                  'Servicio de tutorías',
+                  titulo,
                   style: neuPoppins(size: 16.5, weight: FontWeight.w600),
                 ),
               ),

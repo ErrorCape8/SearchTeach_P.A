@@ -9,6 +9,7 @@ import '../../core/tutoring_updates.dart';
 import '../auth/auth_repository.dart';
 import '../notifications/notifications_page.dart';
 import '../pa/pa_widgets.dart';
+import '../calidad/calidad_director_provider.dart';
 import 'attendance_prediction_page.dart';
 import 'director_dashboard_provider.dart';
 import 'director_perfil.dart';
@@ -55,6 +56,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
   Future<void> _refresh() async {
     ref.invalidate(directorDashboardProvider);
     ref.invalidate(proyectosAulaProvider);
+    ref.invalidate(calidadFiltradaProvider);
     ref.invalidate(directorProfileProvider);
     ref.invalidate(notificationUnreadCountProvider);
     try {
@@ -75,6 +77,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
       if (next.hasValue && mounted) {
         ref.invalidate(directorDashboardProvider);
         ref.invalidate(proyectosAulaProvider);
+        ref.invalidate(calidadFiltradaProvider);
       }
     });
 

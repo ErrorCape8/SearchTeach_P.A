@@ -102,7 +102,8 @@ public class InscripcionProyectosAulaService {
 				List.of(estudianteId),
 				tutoria.tecnologia(),
 				tutoria.semestre(), codigo, "EN_CURSO", null, null, null,
-				null, null, null, null, descripcion, null);
+				null, null, null, null, descripcion, null,
+				com.pa.searchteach.tutorias.service.grupal.RelojTutorias.ahora());
 		TutoriaColectiva actualizado = tutoria.actualizarProyecto(proyecto);
 		tutoriaColectivaRepositorio.save(actualizado);
 		actualizacionesTutoriasService.publicar("PROYECTO_CAMBIO", tutoriaId);

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/career_catalog.dart';
+import '../calidad/calidad_panel.dart';
 import '../pa/pa_widgets.dart';
 import 'director_dashboard_provider.dart';
 import 'director_widgets.dart';
@@ -30,7 +31,6 @@ class DirHomeView extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = NeuPalette.of(context);
     final next = data.proximaSemanaTotal;
-    final weeks = data.ultimasSemanas;
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       PaKpiRow([
@@ -82,32 +82,6 @@ class DirHomeView extends StatelessWidget {
             ]),
           ),
         ),
-      ),
-      const PaSection('¿Cómo van las tutorías?'),
-      Padding(
-        padding: const EdgeInsets.only(bottom: 12),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Expanded(
-              child: PaKpi('${data.countStatus(DirStatus.bien)}', 'Bien',
-                  color: Neu.okFg)),
-          const SizedBox(width: 10),
-          Expanded(
-              child: PaKpi(
-                  '${data.countStatus(DirStatus.atencion)}', 'Atención',
-                  color: Neu.warnFg)),
-          const SizedBox(width: 10),
-          Expanded(
-              child: PaKpi('${data.countStatus(DirStatus.critico)}', 'Crítico',
-                  color: Neu.errFg)),
-        ]),
-      ),
-      const PaSection('Tutorías por semana'),
-      DirBarChart(
-        height: 130,
-        bars: [
-          for (var i = 0; i < weeks.length; i++)
-            DirBar('S${i + 1}', weeks[i].total.toDouble()),
-        ],
       ),
       const PaSection('Más información'),
       PaRowList([
@@ -383,47 +357,9 @@ class DirCalidadView extends StatelessWidget {
 
   final DirectorDashboard data;
 
-  String _detail(SubjectTutoringSummary s) {
-    final rate = s.tasaAsistencia;
-    if (rate == null) return 'Aún no hay asistencia registrada.';
-    final text = '${rate.round()}%';
-    return switch (dirStatusOf(rate)) {
-      DirStatus.critico => 'Asistencia baja ($text): conviene reforzar el apoyo.',
-      DirStatus.atencion => 'Revisar: asistencia $text.',
-      _ => 'Buena asistencia ($text).',
-    };
-  }
-
   @override
-  Widget build(BuildContext context) {
-    final subjects = data.tutoriasPorMateria;
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      const PaInfo('Nunca se muestra quién califica.',
-          icon: Icons.lock_outline_rounded),
-      const SizedBox(height: 2),
-      PaCard(
-        padding: const EdgeInsets.fromLTRB(18, 18, 18, 8),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Servicio de tutorías', style: neuPoppins(size: 16)),
-          const PaEmpty(
-              'Aún no hay calificaciones registradas. Cuando existan, se mostrarán aquí sin identificar a quien califica.'),
-        ]),
-      ),
-      const PaSection('Estado de cada materia'),
-      PaRowList(
-        [
-          for (final s in subjects)
-            DirRow(
-              title: s.materia,
-              subtitle: _detail(s),
-              trailing: PaTag(dirStatusOf(s.tasaAsistencia).label,
-                  tone: dirStatusOf(s.tasaAsistencia).tone),
-            ),
-        ],
-        empty: 'Todavía no hay materias con tutorías registradas.',
-      ),
-    ]);
-  }
+  Widget build(BuildContext context) =>
+      CalidadPanel(semanas: data.ultimasSemanas);
 }
 
 // ═════════════════════════════════════════════════════════════════════════════

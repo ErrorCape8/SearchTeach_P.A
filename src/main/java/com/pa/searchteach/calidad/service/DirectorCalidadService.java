@@ -1,27 +1,45 @@
 package com.pa.searchteach.calidad.service;
 
 import java.lang.reflect.Method;
+import java.text.Normalizer;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 import com.pa.searchteach.calidad.dto.CalidadGeneralSummary;
 import com.pa.searchteach.calidad.dto.CalidadGeneralSummary.CalificacionAnonimaDto;
+import com.pa.searchteach.calidad.dto.CalidadGeneralSummary.ComentarioFrecuenteDto;
 import com.pa.searchteach.calidad.dto.CalidadGeneralSummary.MateriaCalidadDto;
 import com.pa.searchteach.calidad.dto.RegistrarCalificacionRequest;
 import com.pa.searchteach.calidad.model.CalificacionTutoria;
 import com.pa.searchteach.calidad.repository.CalificacionTutoriaRepositorio;
 import com.pa.searchteach.tutorias.model.SesionTutoria;
+import com.pa.searchteach.tutorias.model.ValoracionTutoria;
 import com.pa.searchteach.tutorias.repository.SesionTutoriaRepositorio;
 import org.springframework.stereotype.Service;
 
 @Service
 public class DirectorCalidadService {
+
+	private static final String MATERIA_CANONICA_PA = "Tutoría de Proyecto de Aula";
+
+	/** Mensajes predeterminados que el estudiante puede elegir al calificar. */
+	private static final Set<String> COMENTARIOS_PREDETERMINADOS = Set.of(
+			"El tutor no se presentó", "El tutor no ingresó", "El tutor no explicó bien",
+			"El tutor llegó tarde", "La explicación fue poco clara", "Necesité más apoyo del tutor",
+			"La clase estuvo bien", "El tutor explicó lo básico", "El tutor podría mejorar",
+			"El tutor explicó claramente", "Buena atención del tutor", "El tutor resolvió mis dudas",
+			"Excelente explicación del tutor", "El tutor fue atento y claro", "Recomiendo a este tutor");
+
+	private static final int MAX_COMENTARIOS_FRECUENTES = 8;
 
 	private final CalificacionTutoriaRepositorio calificacionRepositorio;
 	private final SesionTutoriaRepositorio sesionRepositorio;
@@ -76,7 +94,22 @@ public class DirectorCalidadService {
 	}
 
 	public CalidadGeneralSummary obtenerResumenCalidad() {
-		List<RegistroCalificacion> registros = recolectarTodasLasCalificaciones();
+		return obtenerResumenCalidad(null, null);
+	}
+
+	/**
+	 * @param tipo    "PA" para limitar a tutorías de proyecto de aula; null = todas.
+	 * @param carrera tecnología/carrera a la que pertenece la tutoría; null = todas.
+	 */
+	public CalidadGeneralSummary obtenerResumenCalidad(String tipo, String carrera) {
+		boolean soloPa = tipo != null && tipo.trim().equalsIgnoreCase("PA");
+		String carreraNorm = carrera == null || carrera.isBlank() ? null : normalizar(carrera);
+
+		List<RegistroCalificacion> registros = recolectarTodasLasCalificaciones().stream()
+				.filter(r -> !soloPa || r.esPa())
+				.filter(r -> carreraNorm == null
+						|| r.tecnologias().stream().map(DirectorCalidadService::normalizar).anyMatch(carreraNorm::equals))
+				.toList();
 
 		Map<Integer, Long> distribucion = new LinkedHashMap<>();
 		for (int star = 5; star >= 1; star--) {
@@ -84,7 +117,7 @@ public class DirectorCalidadService {
 		}
 
 		if (registros.isEmpty()) {
-			return new CalidadGeneralSummary(null, 0L, distribucion, List.of(), List.of());
+			return new CalidadGeneralSummary(null, 0L, distribucion, List.of(), List.of(), List.of());
 		}
 
 		long total = registros.size();
@@ -131,47 +164,124 @@ public class DirectorCalidadService {
 				total,
 				distribucion,
 				materiasDto,
-				recientes);
+				recientes,
+				contarComentariosFrecuentes(registros));
 	}
 
 	/**
-	 * Lee tanto la colección dedicada `calificaciones_tutoria` como cualquier
-	 * calificación embebida dentro de `SesionTutoria` para no perder votos previos.
+	 * Cuenta cuántas veces se eligió cada mensaje predeterminado. El comentario
+	 * guardado une los mensajes elegidos con ". ", así que se separa por punto.
+	 */
+	private static List<ComentarioFrecuenteDto> contarComentariosFrecuentes(List<RegistroCalificacion> registros) {
+		Map<String, Long> conteo = new HashMap<>();
+		for (RegistroCalificacion r : registros) {
+			if (r.comentario() == null || r.comentario().isBlank()) {
+				continue;
+			}
+			for (String fragmento : r.comentario().split("\\.\\s*")) {
+				String texto = fragmento.trim();
+				if (COMENTARIOS_PREDETERMINADOS.contains(texto)) {
+					conteo.merge(texto, 1L, Long::sum);
+				}
+			}
+		}
+		return conteo.entrySet().stream()
+				.sorted(Map.Entry.<String, Long>comparingByValue().reversed()
+						.thenComparing(Map.Entry.comparingByKey()))
+				.limit(MAX_COMENTARIOS_FRECUENTES)
+				.map(e -> new ComentarioFrecuenteDto(e.getKey(), e.getValue()))
+				.toList();
+	}
+
+	/**
+	 * Une las calificaciones de la colección `calificaciones_tutoria` con las
+	 * valoraciones guardadas dentro de cada `SesionTutoria` (las que envía la app
+	 * del estudiante a /api/tutorias/grupales/{id}/valoracion). Si una misma
+	 * valoración está en ambos sitios (misma sesión y estudiante) se cuenta una vez.
 	 */
 	private List<RegistroCalificacion> recolectarTodasLasCalificaciones() {
-		List<RegistroCalificacion> resultado = new ArrayList<>();
-
-		for (CalificacionTutoria c : calificacionRepositorio.findAllByOrderByFechaCreacionDesc()) {
-			if (c.getEstrellas() >= 1 && c.getEstrellas() <= 5) {
-				resultado.add(new RegistroCalificacion(
-						c.getEstrellas(),
-						c.getMateria(),
-						c.getComentario(),
-						c.getFechaCreacion()));
+		Map<String, SesionTutoria> sesiones = new HashMap<>();
+		for (SesionTutoria sesion : sesionRepositorio.findAll()) {
+			if (sesion.id() != null) {
+				sesiones.put(sesion.id(), sesion);
 			}
 		}
 
-		if (resultado.isEmpty()) {
-			for (SesionTutoria sesion : sesionRepositorio.findAll()) {
-				Object listaEmb = leerCampo(sesion, "calificaciones", "getCalificaciones", "evaluaciones", "resenas");
-				if (listaEmb instanceof Iterable<?> iterable) {
-					for (Object item : iterable) {
-						Integer stars = leerEntero(item, "estrellas", "getEstrellas", "puntuacion", "getPuntuacion", "rating", "calificacion");
-						if (stars != null && stars >= 1 && stars <= 5) {
-							String comentario = leerTexto(item, "comentario", "getComentario", "observacion");
-							LocalDateTime fecha = leerFecha(item, "fecha", "getFecha", "fechaCreacion", "getFechaCreacion");
-							resultado.add(new RegistroCalificacion(
-									stars,
-									sesion.materia(),
-									comentario,
-									fecha != null ? fecha : sesion.fechaInicio()));
-						}
-					}
+		List<RegistroCalificacion> resultado = new ArrayList<>();
+		Set<String> vistas = new HashSet<>();
+
+		for (CalificacionTutoria c : calificacionRepositorio.findAllByOrderByFechaCreacionDesc()) {
+			if (c.getEstrellas() < 1 || c.getEstrellas() > 5) {
+				continue;
+			}
+			SesionTutoria sesion = c.getSesionId() == null ? null : sesiones.get(c.getSesionId());
+			if (c.getSesionId() != null && c.getEstudianteId() != null) {
+				vistas.add(c.getSesionId() + "|" + c.getEstudianteId());
+			}
+			boolean esPa = (sesion != null && esSesionPa(sesion)) || esMateriaPa(c.getMateria());
+			resultado.add(new RegistroCalificacion(
+					c.getEstrellas(),
+					c.getMateria(),
+					c.getComentario(),
+					c.getFechaCreacion(),
+					esPa,
+					tecnologiasDe(sesion)));
+		}
+
+		for (SesionTutoria sesion : sesiones.values()) {
+			boolean esPa = esSesionPa(sesion);
+			String materia = sesion.materia() != null && !sesion.materia().isBlank()
+					? sesion.materia().trim()
+					: (esPa ? MATERIA_CANONICA_PA : "Tutoría académica");
+			for (ValoracionTutoria v : sesion.valoraciones()) {
+				if (v.estrellas() < 1 || v.estrellas() > 5) {
+					continue;
 				}
+				if (v.estudianteId() != null && !vistas.add(sesion.id() + "|" + v.estudianteId())) {
+					continue;
+				}
+				resultado.add(new RegistroCalificacion(
+						v.estrellas(),
+						materia,
+						v.comentario(),
+						v.creadaEn() != null ? v.creadaEn() : sesion.fechaInicio(),
+						esPa,
+						tecnologiasDe(sesion)));
 			}
 		}
 
 		return resultado;
+	}
+
+	private static List<String> tecnologiasDe(SesionTutoria sesion) {
+		if (sesion == null) {
+			return List.of();
+		}
+		List<String> lista = new ArrayList<>(sesion.tecnologias());
+		if (!lista.contains(sesion.tecnologia())) {
+			lista.add(sesion.tecnologia());
+		}
+		return lista;
+	}
+
+	/** Misma regla que el dashboard: una tutoría es de PA según el nombre de su materia. */
+	private static boolean esSesionPa(SesionTutoria sesion) {
+		return esMateriaPa(sesion.materia());
+	}
+
+	private static boolean esMateriaPa(String materia) {
+		if (materia == null || materia.isBlank()) {
+			return false;
+		}
+		String norm = normalizar(materia);
+		return norm.contains("proyecto de aula") || norm.equals("tutoria pa") || norm.equals("pa");
+	}
+
+	private static String normalizar(String texto) {
+		return Normalizer.normalize(texto == null ? "" : texto, Normalizer.Form.NFD)
+				.replaceAll("\\p{M}+", "")
+				.toLowerCase()
+				.trim();
 	}
 
 	private static Object leerCampo(Object target, String... names) {
@@ -187,26 +297,12 @@ public class DirectorCalidadService {
 		return null;
 	}
 
-	private static Integer leerEntero(Object target, String... names) {
-		Object val = leerCampo(target, names);
-		if (val instanceof Number n) return n.intValue();
-		return null;
-	}
-
-	private static String leerTexto(Object target, String... names) {
-		Object val = leerCampo(target, names);
-		return val instanceof String s ? s : null;
-	}
-
-	private static LocalDateTime leerFecha(Object target, String... names) {
-		Object val = leerCampo(target, names);
-		return val instanceof LocalDateTime dt ? dt : null;
-	}
-
 	private record RegistroCalificacion(
 			int estrellas,
 			String materia,
 			String comentario,
-			LocalDateTime fecha) {
+			LocalDateTime fecha,
+			boolean esPa,
+			List<String> tecnologias) {
 	}
 }

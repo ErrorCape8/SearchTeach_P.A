@@ -9,7 +9,8 @@ public record CalidadGeneralSummary(
 		long totalCalificaciones,
 		Map<Integer, Long> distribucionEstrellas,
 		List<MateriaCalidadDto> calificacionPorMateria,
-		List<CalificacionAnonimaDto> comentariosRecientes) {
+		List<CalificacionAnonimaDto> comentariosRecientes,
+		List<ComentarioFrecuenteDto> comentariosFrecuentes) {
 
 	public record MateriaCalidadDto(
 			String materia,
@@ -22,5 +23,10 @@ public record CalidadGeneralSummary(
 			String materia,
 			String comentario,
 			LocalDateTime fecha) {
+	}
+
+	public record ComentarioFrecuenteDto(
+			String comentario,
+			long veces) {
 	}
 }
