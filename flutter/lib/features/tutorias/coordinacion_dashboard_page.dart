@@ -155,7 +155,9 @@ class _CoordinacionDashboardPageState
               expand: false)
         else
           NeuCircleButton(
-              icon: Icons.refresh_rounded, tooltip: 'Actualizar', onTap: _load),
+              icon: Icons.refresh_rounded,
+              tooltip: 'Actualizar',
+              onTap: _load),
         NeuCircleButton(
           icon: Icons.notifications_none_rounded,
           tooltip: 'Notificaciones',
@@ -283,7 +285,7 @@ class _Sidebar extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Image.asset(
-                    'assets/images/logo_dir.png',
+                    'assets/images/logo_coo.png',
                     width: 48,
                     fit: BoxFit.contain,
                     semanticLabel: 'Logo de SearchTeach',

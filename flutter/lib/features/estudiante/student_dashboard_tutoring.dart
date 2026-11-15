@@ -42,7 +42,6 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
   String _sessionFilter = 'encurso';
   final ScrollController _sessionsScrollController = ScrollController();
   Timer? _groupSessionRefreshTimer;
-  int _callsTab = 0;
 
   @override
   void initState() {
@@ -199,11 +198,16 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
               .where((item) => item.tutoringState != 'DISUELTA')
               .toList();
           return activeProjects.isEmpty
-              ? const _EmptyCard(
-                  icon: Icons.assignment_outlined,
-                  title: 'Aún no tienes un proyecto inscrito',
-                  message:
-                      'Cuando te inscribas, aquí verás el horario y los reportes de tu tutor.',
+              ? ListView(
+                  padding: const EdgeInsets.fromLTRB(18, 14, 18, 32),
+                  children: const [
+                    _EmptyCard(
+                      icon: Icons.assignment_outlined,
+                      title: 'Aún no tienes un proyecto inscrito',
+                      message:
+                          'Cuando te inscribas, aquí verás el horario y los reportes de tu tutor.',
+                    ),
+                  ],
                 )
               : ListView(
                   padding: const EdgeInsets.fromLTRB(18, 14, 18, 32),
@@ -489,10 +493,15 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
               .where((item) => item.tutoringState != 'DISUELTA')
               .toList();
           if (visibleProjects.isEmpty) {
-            return const _EmptyCard(
-              icon: Icons.folder_off_outlined,
-              title: 'No tienes proyectos de aula',
-              message: 'Cuando te inscribas en un proyecto aparecerá aquí.',
+            return ListView(
+              padding: const EdgeInsets.fromLTRB(18, 14, 18, 32),
+              children: const [
+                _EmptyCard(
+                  icon: Icons.folder_off_outlined,
+                  title: 'No tienes proyectos de aula',
+                  message: 'Cuando te inscribas en un proyecto aparecerá aquí.',
+                ),
+              ],
             );
           }
           return ListView(
@@ -715,10 +724,15 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
         .where((session) => session.state == 'FINALIZADA')
         .toList();
     if (completed.isEmpty) {
-      return const _EmptyCard(
-        icon: Icons.star_border,
-        title: 'No hay tutorías para calificar',
-        message: 'La opción aparecerá cuando una tutoría haya terminado.',
+      return ListView(
+        padding: const EdgeInsets.fromLTRB(18, 14, 18, 32),
+        children: const [
+          _EmptyCard(
+            icon: Icons.star_border,
+            title: 'No hay tutorías para calificar',
+            message: 'La opción aparecerá cuando una tutoría haya terminado.',
+          ),
+        ],
       );
     }
     return ListView(
@@ -1171,21 +1185,10 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
         .toList()
       ..sort((a, b) =>
           (a.start ?? DateTime(9999)).compareTo(b.start ?? DateTime(9999)));
-    final available = widget.data.availableGroupSessions.toList();
-
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 32),
       children: [
-        PaSegmented(
-          labels: [
-            'Mis videollamadas (${groupSessions.length + virtualIndividual.length})',
-            'Sesiones disponibles (${available.length})',
-          ],
-          selected: _callsTab,
-          onSelect: (i) => setState(() => _callsTab = i),
-        ),
-        const SizedBox(height: 14),
-        if (_callsTab == 0) ...[
+        ...[
           if (groupSessions.isEmpty && virtualIndividual.isEmpty)
             PaCard(
               padding: const EdgeInsets.all(24),
@@ -1205,16 +1208,6 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
                     textAlign: TextAlign.center,
                     style: neuBody(size: 13, color: Neu.muted),
                   ),
-                  const SizedBox(height: 16),
-                  if (available.isNotEmpty)
-                    NeuButton(
-                      'Explorar sesiones disponibles',
-                      icon: Icons.search_rounded,
-                      kind: NeuButtonKind.alt,
-                      small: true,
-                      expand: false,
-                      onPressed: () => setState(() => _callsTab = 1),
-                    ),
                 ],
               ),
             )
@@ -1252,62 +1245,9 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
                 onCancel: null,
               ),
           ],
-        ] else ...[
-          ..._publishedGroupSessionsWidgets(),
         ],
       ],
     );
-  }
-
-  List<Widget> _publishedGroupSessionsWidgets() {
-    final sessions = widget.data.availableGroupSessions
-        .where((session) =>
-            _modalityFilter == 'Todas' ||
-            session.modality.toUpperCase() == _modalityFilter.toUpperCase())
-        .toList();
-    return [
-      Wrap(
-        spacing: 8,
-        children: [
-          for (final modality in const [
-            'Todas',
-            'VIRTUAL',
-            'PRESENCIAL',
-            'HIBRIDA',
-          ])
-            ChoiceChip(
-              label: Text(switch (modality) {
-                'VIRTUAL' => 'Virtual',
-                'PRESENCIAL' => 'Presencial',
-                'HIBRIDA' => 'Híbrida',
-                _ => modality,
-              }),
-              selected: _modalityFilter == modality,
-              onSelected: (_) => setState(() => _modalityFilter = modality),
-              selectedColor: _blue,
-              backgroundColor: Colors.white,
-              side: BorderSide.none,
-              labelStyle: TextStyle(
-                color: _modalityFilter == modality ? Colors.white : _navy,
-                fontSize: 12,
-              ),
-            ),
-        ],
-      ),
-      const SizedBox(height: 12),
-      if (sessions.isEmpty)
-        const _EmptyCard(
-          icon: Icons.event_busy_outlined,
-          title: 'No hay sesiones disponibles',
-          message:
-              'Cuando coordinación publique tutorías para tu tecnología, aparecerán aquí.',
-        )
-      else
-        for (final session in sessions) ...[
-          _publishedSessionCard(session),
-          const SizedBox(height: 10),
-        ],
-    ];
   }
 
   Widget _publishedSessionCard(StudentGroupSession session) {

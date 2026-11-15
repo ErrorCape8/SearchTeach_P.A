@@ -791,7 +791,7 @@ class _TeacherSidebar extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Image.asset(
-                    'assets/images/logo_dir.png',
+                    'assets/images/logo_doc.png',
                     width: 48,
                     fit: BoxFit.contain,
                     semanticLabel: 'Logo de SearchTeach',

@@ -6,6 +6,7 @@ import 'core/session_persistence.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'features/admin/admin_main_page.dart';
+import 'features/auth/auth_repository.dart';
 import 'features/auth/login_page.dart';
 import 'features/auth/session_restore_page.dart';
 import 'features/auth/register_page.dart';
@@ -20,8 +21,47 @@ import 'features/notifications/notifications_page.dart';
 import 'core/widgets/app_error_page.dart';
 import 'core/app_error.dart';
 
+final _container = ProviderContainer();
+
+const _publicPaths = {'/session', '/login', '/register', '/forgot-password', '/error'};
+String? _guardToken;
+String? _guardHome;
+
+/// Protege las rutas: sin sesión se envía a /login y, con sesión, solo se
+/// permite el área que corresponde al rol de la cuenta (estudiante, docente,
+/// coordinación, administrador o dirección).
+Future<String?> _routeGuard(BuildContext context, GoRouterState state) async {
+  final path = state.uri.path;
+  if (_publicPaths.contains(path)) return null;
+
+  final token =
+      await _container.read(secureStorageProvider).read(key: 'token');
+  if (token == null) {
+    _guardToken = null;
+    _guardHome = null;
+    return '/login';
+  }
+  if (path == '/notificaciones') return null;
+
+  try {
+    if (_guardToken != token || _guardHome == null) {
+      _guardHome = await _container.read(authRepositoryProvider).landingRoute();
+      _guardToken = token;
+    }
+  } catch (_) {
+    // No se pudo verificar el rol: la pantalla de sesión permite reintentar.
+    return '/session';
+  }
+
+  final home = _guardHome!;
+  final segments = state.uri.pathSegments;
+  final area = segments.isEmpty ? '/' : '/${segments.first}';
+  return area == home ? null : home;
+}
+
 final _router = GoRouter(
   initialLocation: '/session',
+  redirect: _routeGuard,
   errorBuilder: (context, state) {
     final error = state.error;
     final errorStr = error?.toString().toLowerCase() ?? '';
@@ -96,7 +136,7 @@ Future<void> main() async {
         error: details.exception,
         info: const AppErrorInfo(AppErrorKind.server),
       );
-  runApp(const ProviderScope(child: App()));
+  runApp(UncontrolledProviderScope(container: _container, child: const App()));
 }
 
 class App extends StatefulWidget {

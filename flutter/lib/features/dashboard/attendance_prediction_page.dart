@@ -4,7 +4,11 @@ import '../pa/pa_widgets.dart';
 import 'director_dashboard_provider.dart';
 import 'director_widgets.dart';
 
-/// Datos históricos disponibles y estimación de asistencia por materia.
+/// Registros de entrenamiento del modelo (`models/asistencia.arff`).
+/// Actualizar este valor cada vez que se reentrene el modelo.
+const _modelTrainingRecords = 7796;
+
+/// Actividad registrada en la app y estimación de asistencia por materia.
 class AttendancePredictionPage extends StatelessWidget {
   const AttendancePredictionPage({required this.dashboard, super.key});
 
@@ -16,16 +20,16 @@ class AttendancePredictionPage extends StatelessWidget {
     final available = dashboard.modeloAsistenciaDisponible;
 
     return PaScaffold(
-      title: 'Datos históricos disponibles',
-      subtitle: 'Historial y estimación de asistencia por materia',
+      title: 'Asistencia y estimación',
+      subtitle: 'Actividad de la app y estimación de asistencia por materia',
       children: [
-        const PaSection('Resumen histórico'),
+        const PaSection('Actividad registrada en la app'),
         PaKpiRow([
           ('${training.asistencias}', 'Asistencias'),
           ('${training.inasistencias}', 'Inasistencias'),
-          ('${training.registrosEtiquetados}', 'Total evaluados'),
+          ('${training.registrosEtiquetados}', 'Total con resultado'),
         ]),
-        const PaSection('Detalle de registros históricos'),
+        const PaSection('Detalle de registros de la app'),
         PaRowList([
           _metric('Registros con resultado', training.registrosEtiquetados),
           _metric('Asistencias confirmadas', training.asistencias),
@@ -37,9 +41,17 @@ class AttendancePredictionPage extends StatelessWidget {
         ]),
         const SizedBox(height: 12),
         const PaSection('Estimación de asistencia por materia'),
+        const PaInfo(
+          'El modelo fue entrenado con $_modelTrainingRecords registros '
+          'históricos. Los datos de arriba son la actividad registrada en la '
+          'app y no se usan para reentrenarlo.',
+          tone: PaTone.neutral,
+          icon: Icons.info_outline_rounded,
+        ),
+        const SizedBox(height: 10),
         PaInfo(
           available
-              ? 'Estimación generada a partir de los datos históricos del programa.'
+              ? 'Estimación generada con el modelo entrenado con registros históricos.'
               : 'No hay datos suficientes o el modelo no está disponible.',
           tone: available ? PaTone.ok : PaTone.error,
           icon: available

@@ -13,5 +13,33 @@ public record DashboardSummary(
 		boolean modeloAsistenciaDisponible,
 		List<SubjectAttendancePrediction> prediccionesAsistencia,
 		List<WeeklyAttendancePrediction> prediccionesAsistenciaSemanales,
-		long tutoriasProgramadasNoEvaluables) {
+		long tutoriasProgramadasNoEvaluables,
+		PaDashboardSummary resumenPa) {
+
+	public DashboardSummary(
+			long totalTutorias,
+			long tutoriasRealizadas,
+			long tutoriasProgramadas,
+			Double tasaAsistencia,
+			List<WeeklyTutoringCount> historialSemanal,
+			List<SubjectTutoringSummary> tutoriasPorMateria,
+			AttendanceTrainingData datosModeloAsistencia,
+			boolean modeloAsistenciaDisponible,
+			List<SubjectAttendancePrediction> prediccionesAsistencia,
+			List<WeeklyAttendancePrediction> prediccionesAsistenciaSemanales,
+			long tutoriasProgramadasNoEvaluables) {
+		this(
+				totalTutorias,
+				tutoriasRealizadas,
+				tutoriasProgramadas,
+				tasaAsistencia,
+				historialSemanal,
+				tutoriasPorMateria,
+				datosModeloAsistencia,
+				modeloAsistenciaDisponible,
+				prediccionesAsistencia,
+				prediccionesAsistenciaSemanales,
+				tutoriasProgramadasNoEvaluables,
+				null);
+	}
 }

@@ -327,6 +327,18 @@ class _AdminUsuariosViewState extends ConsumerState<AdminUsuariosView> {
             ),
           ]),
         ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: NeuButton('Importar usuarios (CSV)',
+                small: true,
+                expand: false,
+                loading: _importingUsers,
+                icon: Icons.upload_file_outlined,
+                onPressed: _importUsers),
+          ),
+        ),
         if (_showFilters)
           Padding(
             padding: const EdgeInsets.fromLTRB(18, 0, 18, 6),
@@ -345,13 +357,6 @@ class _AdminUsuariosViewState extends ConsumerState<AdminUsuariosView> {
                     expand: false,
                     icon: Icons.refresh_rounded,
                     onPressed: state.isLoadingUsers ? null : notifier.loadUsers),
-                const SizedBox(width: 10),
-                NeuButton('Importar CSV / XLSX',
-                    kind: NeuButtonKind.alt,
-                    small: true,
-                    expand: false,
-                    icon: Icons.upload_file_outlined,
-                    onPressed: _importingUsers ? null : _importUsers),
               ]),
               const SizedBox(height: 8),
             ]),

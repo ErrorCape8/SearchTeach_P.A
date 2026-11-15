@@ -137,73 +137,74 @@ class _TutoriaHistorialPageState extends ConsumerState<TutoriaHistorialPage> {
           ),
         ],
         children: [
-          if (_loading)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 60),
-              child: Center(child: CircularProgressIndicator()),
-            )
-          else if (_error != null)
-            PaCard(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const NeuIconBox(Icons.error_outline_rounded,
-                      color: Neu.error),
-                  const SizedBox(height: 12),
-                  Text(
-                    _error!,
-                    textAlign: TextAlign.center,
-                    style: neuBody(size: 13, color: Neu.muted),
-                  ),
-                  const SizedBox(height: 16),
-                  NeuButton(
-                    'Reintentar',
-                    kind: NeuButtonKind.alt,
-                    small: true,
-                    icon: Icons.refresh_rounded,
-                    expand: false,
-                    onPressed: _loadHistory,
-                  ),
-                ],
-              ),
-            )
-          else ...[
-            _sessionHeaderCard(primary),
-            const SizedBox(height: 14),
-            _attendanceCard(primary),
+        if (_loading)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 60),
+            child: Center(child: CircularProgressIndicator()),
+          )
+        else if (_error != null)
+          PaCard(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const NeuIconBox(Icons.error_outline_rounded, color: Neu.error),
+                const SizedBox(height: 12),
+                Text(
+                  _error!,
+                  textAlign: TextAlign.center,
+                  style: neuBody(size: 13, color: Neu.muted),
+                ),
+                const SizedBox(height: 16),
+                NeuButton(
+                  'Reintentar',
+                  kind: NeuButtonKind.alt,
+                  small: true,
+                  icon: Icons.refresh_rounded,
+                  expand: false,
+                  onPressed: _loadHistory,
+                ),
+              ],
+            ),
+          )
+        else ...[
+          _sessionHeaderCard(primary),
+          const SizedBox(height: 14),
+          _attendanceCard(primary),
+          if (!widget.isTeacher) ...[
             const SizedBox(height: 14),
             _ratingDisplayCard(primary),
-            if (!widget.isIndividual) ...[
-              const SizedBox(height: 20),
-              Padding(
-                padding: const EdgeInsets.only(left: 4, bottom: 8),
-                child: Text(
-                  'Registro del chat',
-                  style: neuPoppins(
-                    size: 17,
-                    weight: FontWeight.w700,
-                    color: Neu.heading,
-                  ),
+          ],
+          if (!widget.isIndividual) ...[
+            const SizedBox(height: 20),
+            Padding(
+              padding: const EdgeInsets.only(left: 4, bottom: 8),
+              child: Text(
+                'Registro del chat',
+                style: neuPoppins(
+                  size: 17,
+                  weight: FontWeight.w700,
+                  color: Neu.heading,
                 ),
               ),
-              if (_messages.isEmpty)
-                PaCard(
-                  padding: const EdgeInsets.all(20),
-                  child: Center(
-                    child: Text(
-                      'No hay mensajes registrados.',
-                      style: neuBody(size: 13, color: Neu.muted),
-                    ),
+            ),
+            if (_messages.isEmpty)
+              PaCard(
+                padding: const EdgeInsets.all(20),
+                child: Center(
+                  child: Text(
+                    'No hay mensajes registrados.',
+                    style: neuBody(size: 13, color: Neu.muted),
                   ),
-                )
-              else
-                for (final message in _messages) ...[
-                  _messageCard(message, primary),
-                  const SizedBox(height: 10),
-                ],
-            ],
+                ),
+              )
+            else
+              for (final message in _messages) ...[
+                _messageCard(message, primary),
+                const SizedBox(height: 10),
+              ],
           ],
+        ],
         ],
       ),
     );
@@ -630,7 +631,9 @@ class _TutoriaHistorialPageState extends ConsumerState<TutoriaHistorialPage> {
               children: [
                 for (var i = 1; i <= 5; i++)
                   Icon(
-                    i <= stars ? Icons.star_rounded : Icons.star_border_rounded,
+                    i <= stars
+                        ? Icons.star_rounded
+                        : Icons.star_border_rounded,
                     color: Colors.amber.shade600,
                     size: 24,
                   ),

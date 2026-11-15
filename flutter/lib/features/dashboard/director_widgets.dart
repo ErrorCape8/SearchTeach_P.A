@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../pa/pa_widgets.dart';
@@ -44,7 +46,7 @@ extension DirStatusX on DirStatus {
 //  DATOS DERIVADOS DEL DASHBOARD (sin inventar nada: todo sale del backend)
 // ═════════════════════════════════════════════════════════════════════════════
 
-/// Tutorías previstas para la próxima semana en una materia.
+/// Asistencias estimadas para una materia.
 class DirSubjectForecast {
   const DirSubjectForecast(this.materia, this.total);
   final String materia;
@@ -52,22 +54,45 @@ class DirSubjectForecast {
 }
 
 extension DirectorDashboardX on DirectorDashboard {
-  /// Pronóstico de la próxima semana por materia (de mayor a menor).
-  List<DirSubjectForecast> get pronosticoPorMateria {
-    final list = <DirSubjectForecast>[
-      for (final s in tutoriasPorMateria)
-        if (s.pronostico != null && s.pronostico!.prediccionesSemanales.isNotEmpty)
-          DirSubjectForecast(
-              s.materia, s.pronostico!.prediccionesSemanales.first.total),
-    ]..sort((a, b) => b.total.compareTo(a.total));
-    return list;
+  /// Primera semana con tutorías programadas evaluadas por el modelo de
+  /// asistencia; `null` si no hay ninguna.
+  WeeklyAttendancePrediction? get semanaPronosticada {
+    if (prediccionesAsistenciaSemanales.isEmpty) return null;
+    final sorted = [...prediccionesAsistenciaSemanales]
+      ..sort((a, b) => a.semanaInicio.compareTo(b.semanaInicio));
+    return sorted.first;
   }
 
-  /// Suma del pronóstico de todas las materias; `null` si no hay pronóstico.
+  /// Asistencias esperadas por materia (tutorías evaluadas × probabilidad
+  /// media de asistencia), de mayor a menor.
+  List<DirSubjectForecast> get pronosticoPorMateria => [
+        for (final s in prediccionesAsistencia)
+          DirSubjectForecast(
+              s.materia,
+              (s.tutoriasEvaluadas * s.probabilidadAsistenciaPromedio)
+                  .round()),
+      ]..sort((a, b) => b.total.compareTo(a.total));
+
+  /// Asistencias esperadas en la semana pronosticada; `null` si no hay.
   int? get proximaSemanaTotal {
-    final list = pronosticoPorMateria;
-    if (list.isEmpty) return null;
-    return list.fold<int>(0, (sum, item) => sum + item.total);
+    final week = semanaPronosticada;
+    if (week == null) return null;
+    return (week.tutoriasEvaluadas * week.probabilidadAsistenciaPromedio)
+        .round();
+  }
+
+  /// Rango de referencia: esperado ± una desviación estándar
+  /// (√(n·p·(1−p))), acotado entre 0 y el total de tutorías evaluadas.
+  (int, int)? get rangoProximaSemana {
+    final week = semanaPronosticada;
+    if (week == null) return null;
+    final n = week.tutoriasEvaluadas;
+    final p = week.probabilidadAsistenciaPromedio.clamp(0.0, 1.0).toDouble();
+    final mean = n * p;
+    final sd = math.sqrt(n * p * (1 - p));
+    final low = (mean - sd).round().clamp(0, n).toInt();
+    final high = (mean + sd).round().clamp(0, n).toInt();
+    return (low, high);
   }
 
   /// Últimas 10 semanas, de la más antigua a la más reciente.
@@ -76,16 +101,15 @@ extension DirectorDashboardX on DirectorDashboard {
     return all.length > 10 ? all.sublist(all.length - 10) : all;
   }
 
-  /// `sube`, `baja` o `estable` frente a la última semana registrada.
+  /// `sube`, `baja` o `estable`: probabilidad de asistencia estimada frente
+  /// a la asistencia real registrada (±3 puntos = estable).
   String? get tendencia {
-    final next = proximaSemanaTotal;
-    final weeks = ultimasSemanas;
-    if (next == null || weeks.isEmpty) return null;
-    final last = weeks.last.total;
-    if (last == 0) return next > 0 ? 'sube' : 'estable';
-    final change = (next - last) / last;
-    if (change > .03) return 'sube';
-    if (change < -.03) return 'baja';
+    final week = semanaPronosticada;
+    final actual = tasaAsistencia;
+    if (week == null || actual == null) return null;
+    final diff = week.probabilidadAsistenciaPromedio * 100 - actual;
+    if (diff > 3) return 'sube';
+    if (diff < -3) return 'baja';
     return 'estable';
   }
 

@@ -53,7 +53,7 @@ class NeuSidebar extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Image.asset(
-                    'assets/images/logo_dir.png',
+                    p.logoAsset,
                     width: 48,
                     fit: BoxFit.contain,
                     semanticLabel: 'Logo de SearchTeach',

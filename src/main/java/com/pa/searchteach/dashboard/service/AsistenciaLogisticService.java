@@ -2,9 +2,9 @@ package com.pa.searchteach.dashboard.service;
 
 import java.text.Normalizer;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
@@ -21,88 +21,79 @@ import weka.core.Instance;
 import weka.core.Instances;
 import weka.core.SerializationHelper;
 
+/**
+ * Predice la probabilidad de asistencia a una tutoría con un modelo Weka Logistic.
+ *
+ * <p>El archivo {@code models/asistencia.model} debe guardarse junto con su cabecera
+ * (Weka Explorer o al guardar clasificador + cabecera con SerializationHelper.writeAll). Las categorías de materia,
+ * modalidad y día se leen de esa cabecera, así que el modelo puede cubrir cualquier
+ * catálogo de materias sin tocar este código.
+ */
 @Service
 public class AsistenciaLogisticService {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(AsistenciaLogisticService.class);
 	private static final String MODEL_PATH = "models/asistencia.model";
 	private static final Pattern DIACRITICAL_MARKS = Pattern.compile("\\p{M}+");
-	private static final List<String> MATERIAS = List.of(
-			"Estructuras de Datos",
-			"Calculo Diferencial",
-			"Bases de Datos",
-			"Ingles",
-			"Programacion",
-			"Algebra Lineal",
-			"Estadistica",
-			"Fisica");
-	private static final List<String> MODALIDADES = List.of("HIBRIDA", "VIRTUAL", "PRESENCIAL");
-	private static final List<String> DIAS = List.of(
-			"LUNES", "MARTES", "MIERCOLES", "JUEVES", "VIERNES", "SABADO");
-	private static final int CLASS_INDEX = 4;
-	private static final List<String> RESULTADOS_ASISTENCIA = List.of("no", "si");
 	private static final String CLASE_ASISTENCIA = "si";
 
-	private volatile Logistic model;
+	private volatile Modelo modelo;
 
 	@PostConstruct
 	void cargarModelo() {
 		try (var input = new ClassPathResource(MODEL_PATH).getInputStream()) {
-			Object loadedModel = SerializationHelper.read(input);
-			if (!(loadedModel instanceof Logistic logistic)) {
-				throw new IllegalStateException("El archivo no contiene un modelo Weka Logistic.");
+			Object[] objetos = SerializationHelper.readAll(input);
+			if (objetos.length < 2 || !(objetos[0] instanceof Logistic) || !(objetos[1] instanceof Instances)) {
+				throw new IllegalStateException(
+						"El archivo debe contener un Weka Logistic y su cabecera (Instances).");
 			}
-			model = logistic;
-			LOGGER.info("Modelo Weka Logistic de asistencia cargado desde {}", MODEL_PATH);
+			modelo = Modelo.desde((Logistic) objetos[0], (Instances) objetos[1]);
+			LOGGER.info("Modelo Weka Logistic de asistencia cargado desde {} ({} materias).",
+					MODEL_PATH, modelo.materias().size());
 		} catch (Exception exception) {
-			model = null;
+			modelo = null;
 			LOGGER.error("No se pudo cargar el modelo Weka de asistencia desde {}.", MODEL_PATH, exception);
 		}
 	}
 
 	public boolean isAvailable() {
-		return model != null;
+		return modelo != null;
 	}
 
 	public Optional<Prediction> predecir(String materiaTutoria, ModalidadTutoria modalidadTutoria, LocalDateTime fechaInicio) {
-		Logistic currentModel = model;
-		if (currentModel == null) {
+		Modelo actual = modelo;
+		if (actual == null || materiaTutoria == null || modalidadTutoria == null || fechaInicio == null) {
 			return Optional.empty();
 		}
-		if (materiaTutoria == null || modalidadTutoria == null || fechaInicio == null) {
-			return Optional.empty();
-		}
-
-		String materia = encontrarCategoria(materiaTutoria, MATERIAS).orElse(null);
-		String modalidad = encontrarCategoria(modalidadTutoria.name(), MODALIDADES).orElse(null);
-		String dia = encontrarCategoria(nombreDia(fechaInicio), DIAS).orElse(null);
+		String materia = actual.materias().get(normalizar(materiaTutoria));
+		String modalidad = actual.modalidades().get(normalizar(modalidadTutoria.name()));
+		String dia = actual.dias().get(normalizar(nombreDia(fechaInicio)));
 		if (materia == null || modalidad == null || dia == null) {
 			return Optional.empty();
 		}
 
-		Instances header = crearCabecera();
+		Instances header = actual.header();
 		Instance instance = new DenseInstance(header.numAttributes());
 		instance.setDataset(header);
-		instance.setValue(0, materia);
-		instance.setValue(1, modalidad);
-		instance.setValue(2, dia);
-		instance.setValue(3, fechaInicio.getHour());
-		instance.setMissing(CLASS_INDEX);
+		instance.setValue(header.attribute("materia"), materia);
+		instance.setValue(header.attribute("modalidad"), modalidad);
+		instance.setValue(header.attribute("dia_semana"), dia);
+		instance.setValue(header.attribute("hora"), fechaInicio.getHour());
+		instance.setMissing(header.classIndex());
 
 		double[] distribution;
 		try {
-			synchronized (currentModel) {
-				distribution = currentModel.distributionForInstance(instance);
+			synchronized (actual.logistic()) {
+				distribution = actual.logistic().distributionForInstance(instance);
 			}
 		} catch (Exception exception) {
 			throw new IllegalStateException("No se pudo clasificar una inscripción con el modelo de asistencia.", exception);
 		}
-		int attendanceClassIndex = RESULTADOS_ASISTENCIA.indexOf(CLASE_ASISTENCIA);
-		if (attendanceClassIndex < 0 || distribution.length <= attendanceClassIndex
-				|| !Double.isFinite(distribution[attendanceClassIndex])) {
+		int indice = actual.claseAsistencia();
+		if (distribution.length <= indice || !Double.isFinite(distribution[indice])) {
 			throw new IllegalStateException("El modelo Weka devolvió una probabilidad de asistencia inválida.");
 		}
-		double attendanceProbability = distribution[attendanceClassIndex];
+		double attendanceProbability = distribution[indice];
 		return Optional.of(new Prediction(attendanceProbability >= 0.5, attendanceProbability));
 	}
 
@@ -114,13 +105,8 @@ public class AsistenciaLogisticService {
 			case THURSDAY -> "JUEVES";
 			case FRIDAY -> "VIERNES";
 			case SATURDAY -> "SABADO";
-			case SUNDAY -> "";
+			case SUNDAY -> "DOMINGO";
 		};
-	}
-
-	private static Optional<String> encontrarCategoria(String value, List<String> categories) {
-		String normalizedValue = normalizar(value);
-		return categories.stream().filter(category -> normalizar(category).equals(normalizedValue)).findFirst();
 	}
 
 	private static String normalizar(String value) {
@@ -129,16 +115,46 @@ public class AsistenciaLogisticService {
 		return withoutMarks.trim().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
 	}
 
-	private static Instances crearCabecera() {
-		ArrayList<Attribute> attributes = new ArrayList<>(5);
-		attributes.add(new Attribute("materia", MATERIAS));
-		attributes.add(new Attribute("modalidad", MODALIDADES));
-		attributes.add(new Attribute("dia_semana", DIAS));
-		attributes.add(new Attribute("hora"));
-		attributes.add(new Attribute("asistio", RESULTADOS_ASISTENCIA));
-		Instances header = new Instances("tutorias_entrenamiento_weka", attributes, 0);
-		header.setClassIndex(CLASS_INDEX);
-		return header;
+	private static Map<String, String> categorias(Attribute atributo) {
+		Map<String, String> categorias = new HashMap<>();
+		for (int i = 0; i < atributo.numValues(); i++) {
+			categorias.putIfAbsent(normalizar(atributo.value(i)), atributo.value(i));
+		}
+		return categorias;
+	}
+
+	private static Attribute atributo(Instances estructura, String nombre, boolean nominal) {
+		Attribute atributo = estructura.attribute(nombre);
+		if (atributo == null || atributo.isNominal() != nominal) {
+			throw new IllegalStateException("La cabecera del modelo no tiene el atributo '" + nombre
+					+ "' como " + (nominal ? "nominal" : "numérico") + ".");
+		}
+		return atributo;
+	}
+
+	private record Modelo(
+			Logistic logistic,
+			Instances header,
+			Map<String, String> materias,
+			Map<String, String> modalidades,
+			Map<String, String> dias,
+			int claseAsistencia) {
+
+		private static Modelo desde(Logistic logistic, Instances estructura) {
+			Attribute materia = atributo(estructura, "materia", true);
+			Attribute modalidad = atributo(estructura, "modalidad", true);
+			Attribute dia = atributo(estructura, "dia_semana", true);
+			atributo(estructura, "hora", false);
+			Attribute clase = atributo(estructura, "asistio", true);
+			int claseAsistencia = clase.indexOfValue(CLASE_ASISTENCIA);
+			if (claseAsistencia < 0) {
+				throw new IllegalStateException("La clase 'asistio' del modelo no tiene el valor '" + CLASE_ASISTENCIA + "'.");
+			}
+			Instances header = new Instances(estructura, 0);
+			header.setClassIndex(header.attribute("asistio").index());
+			return new Modelo(logistic, header, categorias(materia), categorias(modalidad), categorias(dia),
+					claseAsistencia);
+		}
 	}
 
 	public record Prediction(boolean asistenciaPredicha, double probabilidadAsistencia) {

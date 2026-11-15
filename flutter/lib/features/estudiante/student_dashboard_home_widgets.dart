@@ -79,7 +79,9 @@ class _EmptyCard extends StatelessWidget {
   final String message;
 
   @override
-  Widget build(BuildContext context) => Card(
+  Widget build(BuildContext context) => SizedBox(
+        width: double.infinity,
+        child: Card(
         color: Colors.white,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
@@ -103,6 +105,7 @@ class _EmptyCard extends StatelessWidget {
               ),
             ],
           ),
+        ),
         ),
       );
 }
