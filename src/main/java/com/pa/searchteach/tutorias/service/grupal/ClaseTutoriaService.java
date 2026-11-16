@@ -128,7 +128,9 @@ public class ClaseTutoriaService {
 			throw new ResponseStatusException(HttpStatus.CONFLICT,
 					"El docente debe habilitar la clase antes de registrar asistencia.");
 		}
-		return sesiones.save(sesion.registrarAsistencia(estudianteId, asistio));
+		return sesiones.save(autoRegistroVirtual
+				? sesion.registrarEntrada(estudianteId, ahora())
+				: sesion.registrarAsistencia(estudianteId, asistio));
 	}
 
 	public SesionTutoria cerrarClase(String sesionId, String docenteId, String motivo) {

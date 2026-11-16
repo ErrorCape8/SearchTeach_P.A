@@ -94,14 +94,22 @@ public class DirectorCalidadService {
 	}
 
 	public CalidadGeneralSummary obtenerResumenCalidad() {
-		return obtenerResumenCalidad(null, null);
+		return obtenerResumenCalidad(null, null, null);
 	}
 
 	/**
-	 * @param tipo    "PA" para limitar a tutorías de proyecto de aula; null = todas.
-	 * @param carrera tecnología/carrera a la que pertenece la tutoría; null = todas.
+	 * @param tipo     "PA" para limitar a tutorías de proyecto de aula; null = todas.
+	 * @param carrera  tecnología/carrera a la que pertenece la tutoría; null = todas.
+	 * @param semestre semestre de la tutoría; null = todos.
 	 */
 	public CalidadGeneralSummary obtenerResumenCalidad(String tipo, String carrera) {
+		return obtenerResumenCalidad(tipo, carrera, null);
+	}
+
+	public CalidadGeneralSummary obtenerResumenCalidad(String tipo, String carrera, Integer semestre) {
+		if (semestre != null && (semestre < 1 || semestre > 6)) {
+			throw new IllegalArgumentException("El semestre debe estar entre 1 y 6.");
+		}
 		boolean soloPa = tipo != null && tipo.trim().equalsIgnoreCase("PA");
 		String carreraNorm = carrera == null || carrera.isBlank() ? null : normalizar(carrera);
 
@@ -109,6 +117,7 @@ public class DirectorCalidadService {
 				.filter(r -> !soloPa || r.esPa())
 				.filter(r -> carreraNorm == null
 						|| r.tecnologias().stream().map(DirectorCalidadService::normalizar).anyMatch(carreraNorm::equals))
+				.filter(r -> semestre == null || semestre.equals(r.semestre()))
 				.toList();
 
 		Map<Integer, Long> distribucion = new LinkedHashMap<>();
@@ -225,7 +234,8 @@ public class DirectorCalidadService {
 					c.getComentario(),
 					c.getFechaCreacion(),
 					esPa,
-					tecnologiasDe(sesion)));
+					tecnologiasDe(sesion),
+					sesion == null ? null : sesion.semestre()));
 		}
 
 		for (SesionTutoria sesion : sesiones.values()) {
@@ -246,7 +256,8 @@ public class DirectorCalidadService {
 						v.comentario(),
 						v.creadaEn() != null ? v.creadaEn() : sesion.fechaInicio(),
 						esPa,
-						tecnologiasDe(sesion)));
+						tecnologiasDe(sesion),
+						sesion.semestre()));
 			}
 		}
 
@@ -303,6 +314,7 @@ public class DirectorCalidadService {
 			String comentario,
 			LocalDateTime fecha,
 			boolean esPa,
-			List<String> tecnologias) {
+			List<String> tecnologias,
+			Integer semestre) {
 	}
 }

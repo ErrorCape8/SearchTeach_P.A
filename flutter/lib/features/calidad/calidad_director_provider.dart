@@ -132,17 +132,21 @@ const Map<String, int> kComentarioEstrellas = {
 /// Filtro de la vista de calidad: `tipo` = 'PA' limita a proyecto de aula y
 /// `carrera` a una tecnología concreta. Sin valores = calidad general.
 class CalidadFiltro {
-  const CalidadFiltro({this.tipo, this.carrera});
+  const CalidadFiltro({this.tipo, this.carrera, this.semestre});
 
   final String? tipo;
   final String? carrera;
+  final int? semestre;
 
   @override
   bool operator ==(Object other) =>
-      other is CalidadFiltro && other.tipo == tipo && other.carrera == carrera;
+      other is CalidadFiltro &&
+      other.tipo == tipo &&
+      other.carrera == carrera &&
+      other.semestre == semestre;
 
   @override
-  int get hashCode => Object.hash(tipo, carrera);
+  int get hashCode => Object.hash(tipo, carrera, semestre);
 }
 
 class MateriaCalidadItem {
@@ -193,6 +197,7 @@ final calidadFiltradaProvider = FutureProvider.autoDispose
     queryParameters: {
       if (filtro.tipo != null) 'tipo': filtro.tipo,
       if (filtro.carrera != null) 'carrera': filtro.carrera,
+      if (filtro.semestre != null) 'semestre': filtro.semestre,
     },
   );
   final data = response.data;

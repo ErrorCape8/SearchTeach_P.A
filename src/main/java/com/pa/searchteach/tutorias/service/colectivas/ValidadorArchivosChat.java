@@ -46,4 +46,46 @@ final class ValidadorArchivosChat {
 				&& (bytes[2] & 0xFF) == 0xDF
 				&& (bytes[3] & 0xFF) == 0xA3;
 	}
+
+	static boolean archivoValidoAudioWav(byte[] bytes) {
+		if (bytes.length < 44
+				|| !coincide(bytes, 0, "RIFF")
+				|| !coincide(bytes, 8, "WAVE")
+				|| !coincide(bytes, 12, "fmt ")
+				|| !coincide(bytes, 36, "data")) {
+			return false;
+		}
+		int channels = unsignedShort(bytes, 22);
+		int bitsPerSample = unsignedShort(bytes, 34);
+		long dataLength = unsignedInt(bytes, 40);
+		int blockAlign = unsignedShort(bytes, 32);
+		return unsignedInt(bytes, 4) == bytes.length - 8L
+				&& unsignedInt(bytes, 16) == 16
+				&& unsignedShort(bytes, 20) == 1
+				&& channels > 0
+				&& unsignedInt(bytes, 24) > 0
+				&& bitsPerSample == 16
+				&& blockAlign == channels * (bitsPerSample / 8)
+				&& dataLength > 0
+				&& dataLength == bytes.length - 44L
+				&& dataLength % blockAlign == 0;
+	}
+
+	private static boolean coincide(byte[] bytes, int offset, String value) {
+		for (int index = 0; index < value.length(); index++) {
+			if (bytes[offset + index] != value.charAt(index)) return false;
+		}
+		return true;
+	}
+
+	private static int unsignedShort(byte[] bytes, int offset) {
+		return (bytes[offset] & 0xFF) | ((bytes[offset + 1] & 0xFF) << 8);
+	}
+
+	private static long unsignedInt(byte[] bytes, int offset) {
+		return Integer.toUnsignedLong((bytes[offset] & 0xFF)
+				| ((bytes[offset + 1] & 0xFF) << 8)
+				| ((bytes[offset + 2] & 0xFF) << 16)
+				| ((bytes[offset + 3] & 0xFF) << 24));
+	}
 }

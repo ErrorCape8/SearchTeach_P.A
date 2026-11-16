@@ -25,8 +25,9 @@ public class CalidadController {
 	@GetMapping("/direccion/calidad")
 	public ResponseEntity<CalidadGeneralSummary> obtenerCalidadGeneral(
 			@RequestParam(required = false) String tipo,
-			@RequestParam(required = false) String carrera) {
-		return ResponseEntity.ok(calidadService.obtenerResumenCalidad(tipo, carrera));
+			@RequestParam(required = false) String carrera,
+			@RequestParam(required = false) Integer semestre) {
+		return ResponseEntity.ok(calidadService.obtenerResumenCalidad(tipo, carrera, semestre));
 	}
 
 	@PostMapping("/tutorias/calificar")

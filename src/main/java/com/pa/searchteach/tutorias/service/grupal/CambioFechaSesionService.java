@@ -52,19 +52,9 @@ public class CambioFechaSesionService {
 			throw new ResponseStatusException(HttpStatus.FORBIDDEN,
 					"Solo puedes solicitar cambios para tus propias tutorías.");
 		}
-		LocalDateTime ahora = ahora();
 		if ("FINALIZADA".equals(sesion.estadoClase())) {
 			throw new ResponseStatusException(HttpStatus.CONFLICT,
 					"No puedes cambiar la fecha de una tutoría que ya comenzó.");
-		}
-		if (solicitud.fechaInicio() == null || solicitud.fechaFin() == null
-				|| !solicitud.fechaInicio().isAfter(ahora)
-				|| !solicitud.fechaFin().isAfter(solicitud.fechaInicio())
-				|| solicitud.fechaInicio().equals(sesion.fechaInicio())
-				|| !solicitud.fechaFin().equals(solicitud.fechaInicio().plus(
-						java.time.Duration.between(sesion.fechaInicio(), sesion.fechaFin())))) {
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-					"Selecciona una nueva fecha futura y un horario válido.");
 		}
 		User docente = usuarios.findById(docenteId)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
@@ -81,12 +71,11 @@ public class CambioFechaSesionService {
 		String nombreDocente = docente.getNombre() == null ? docenteId : docente.getNombre().trim();
 		SolicitudCambioFechaSesion guardada = solicitudesCambio.save(
 				SolicitudCambioFechaSesion.pendiente(sesionId, docenteId, nombreDocente, sesion.materia(),
-						sesion.fechaInicio(), sesion.fechaFin(), solicitud.fechaInicio(), solicitud.fechaFin(),
+						sesion.fechaInicio(), sesion.fechaFin(), null, null,
 						solicitud.motivo().trim()));
 		String mensaje = nombreDocente + " solicita cambiar la tutoría de "
 				+ sesion.materia() + " (" + sesion.fechaInicio() + "–" + sesion.fechaFin()
-				+ ") a " + solicitud.fechaInicio() + "–" + solicitud.fechaFin()
-				+ ". Motivo: " + solicitud.motivo().trim();
+				+ "). Motivo: " + solicitud.motivo().trim();
 		coordinadoresDisponibles.forEach(coordinador -> notificationService.notifyUser(
 				coordinador.getId(), "Solicitud de cambio de fecha", mensaje,
 				"/coordinacion/solicitudes?request=" + guardada.id()));

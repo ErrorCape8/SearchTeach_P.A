@@ -11,6 +11,7 @@ class _StudentHeader extends StatelessWidget {
     required this.onRefresh,
     required this.onProfile,
     required this.onNotifications,
+    required this.onLogout,
     required this.onBack,
   });
 
@@ -21,6 +22,7 @@ class _StudentHeader extends StatelessWidget {
   final VoidCallback onRefresh;
   final VoidCallback onProfile;
   final VoidCallback onNotifications;
+  final VoidCallback onLogout;
   final VoidCallback onBack;
 
   @override
@@ -103,6 +105,11 @@ class _StudentHeader extends StatelessWidget {
           tooltip: 'Avisos',
           onTap: onNotifications,
         ),
+        NeuCircleButton(
+          icon: Icons.logout_rounded,
+          tooltip: 'Cerrar sesión',
+          onTap: onLogout,
+        ),
       ],
     );
   }
@@ -182,26 +189,6 @@ class _StudentSidePanelState extends State<_StudentSidePanel> {
           modality: session.modality,
           location: session.location,
           status: session.state == 'EN_CURSO' ? 'En curso' : 'Pendiente',
-        ));
-      }
-    }
-    for (final tutoring in widget.data.tutorings) {
-      final start = tutoring.start?.toLocal();
-      if (start != null &&
-          (tutoring.status == 'PROGRAMADA' || tutoring.status == 'EN_CURSO') &&
-          (start.isAfter(now) || tutoring.status == 'EN_CURSO')) {
-        sessions.add((
-          subject: tutoring.subject,
-          start: start,
-          end: tutoring.end?.toLocal(),
-          teacher: widget.data.tutors
-                  .where((tutor) => tutor.teacherId == tutoring.teacherId)
-                  .map((tutor) => tutor.name)
-                  .firstOrNull ??
-              tutoring.teacherId,
-          modality: tutoring.modality,
-          location: '',
-          status: tutoring.status == 'EN_CURSO' ? 'En curso' : 'Pendiente',
         ));
       }
     }

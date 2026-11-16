@@ -10,14 +10,12 @@ class TutoriaHistorialPage extends ConsumerStatefulWidget {
   const TutoriaHistorialPage({
     required this.sessionId,
     required this.subject,
-    required this.isIndividual,
     this.isTeacher = false,
     super.key,
   });
 
   final String sessionId;
   final String subject;
-  final bool isIndividual;
   final bool isTeacher;
 
   @override
@@ -32,9 +30,8 @@ class _TutoriaHistorialPageState extends ConsumerState<TutoriaHistorialPage> {
   bool _loading = true;
   String? _error;
 
-  String get _sessionPath => widget.isIndividual
-      ? '/api/tutorias/${Uri.encodeComponent(widget.sessionId)}'
-      : '/api/tutorias/grupales/${Uri.encodeComponent(widget.sessionId)}';
+  String get _sessionPath =>
+      '/api/tutorias/grupales/${Uri.encodeComponent(widget.sessionId)}';
 
   @override
   void initState() {
@@ -55,20 +52,16 @@ class _TutoriaHistorialPageState extends ConsumerState<TutoriaHistorialPage> {
         throw const FormatException('El servidor devolvió una tutoría vacía.');
       }
 
-      List<Map<String, dynamic>> students = [];
-      List<Map<String, dynamic>> messages = [];
-      if (!widget.isIndividual) {
-        final results = await Future.wait([
-          dio.get<List<dynamic>>('$_sessionPath/estudiantes'),
-          dio.get<List<dynamic>>('$_sessionPath/chat'),
-        ]);
-        students = (results[0].data ?? const [])
-            .whereType<Map<String, dynamic>>()
-            .toList();
-        messages = (results[1].data ?? const [])
-            .whereType<Map<String, dynamic>>()
-            .toList();
-      }
+      final results = await Future.wait([
+        dio.get<List<dynamic>>('$_sessionPath/estudiantes'),
+        dio.get<List<dynamic>>('$_sessionPath/chat'),
+      ]);
+      final students = (results[0].data ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .toList();
+      final messages = (results[1].data ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .toList();
       if (!mounted) return;
       setState(() {
         _session = session;
@@ -125,7 +118,7 @@ class _TutoriaHistorialPageState extends ConsumerState<TutoriaHistorialPage> {
         primary,
       ),
       child: PaScaffold(
-        title: 'Historial de tutoría',
+        title: 'Historial de tutoría grupal',
         subtitle: widget.subject,
         showLogo: false,
         actions: [
@@ -137,45 +130,45 @@ class _TutoriaHistorialPageState extends ConsumerState<TutoriaHistorialPage> {
           ),
         ],
         children: [
-        if (_loading)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 60),
-            child: Center(child: CircularProgressIndicator()),
-          )
-        else if (_error != null)
-          PaCard(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const NeuIconBox(Icons.error_outline_rounded, color: Neu.error),
-                const SizedBox(height: 12),
-                Text(
-                  _error!,
-                  textAlign: TextAlign.center,
-                  style: neuBody(size: 13, color: Neu.muted),
-                ),
-                const SizedBox(height: 16),
-                NeuButton(
-                  'Reintentar',
-                  kind: NeuButtonKind.alt,
-                  small: true,
-                  icon: Icons.refresh_rounded,
-                  expand: false,
-                  onPressed: _loadHistory,
-                ),
-              ],
-            ),
-          )
-        else ...[
-          _sessionHeaderCard(primary),
-          const SizedBox(height: 14),
-          _attendanceCard(primary),
-          if (!widget.isTeacher) ...[
+          if (_loading)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 60),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (_error != null)
+            PaCard(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const NeuIconBox(Icons.error_outline_rounded,
+                      color: Neu.error),
+                  const SizedBox(height: 12),
+                  Text(
+                    _error!,
+                    textAlign: TextAlign.center,
+                    style: neuBody(size: 13, color: Neu.muted),
+                  ),
+                  const SizedBox(height: 16),
+                  NeuButton(
+                    'Reintentar',
+                    kind: NeuButtonKind.alt,
+                    small: true,
+                    icon: Icons.refresh_rounded,
+                    expand: false,
+                    onPressed: _loadHistory,
+                  ),
+                ],
+              ),
+            )
+          else ...[
+            _sessionHeaderCard(primary),
             const SizedBox(height: 14),
-            _ratingDisplayCard(primary),
-          ],
-          if (!widget.isIndividual) ...[
+            _attendanceCard(primary),
+            if (!widget.isTeacher) ...[
+              const SizedBox(height: 14),
+              _ratingDisplayCard(primary),
+            ],
             const SizedBox(height: 20),
             Padding(
               padding: const EdgeInsets.only(left: 4, bottom: 8),
@@ -204,7 +197,6 @@ class _TutoriaHistorialPageState extends ConsumerState<TutoriaHistorialPage> {
                 const SizedBox(height: 10),
               ],
           ],
-        ],
         ],
       ),
     );
@@ -249,9 +241,7 @@ class _TutoriaHistorialPageState extends ConsumerState<TutoriaHistorialPage> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      widget.isIndividual
-                          ? 'Tutoría individual'
-                          : 'Tutoría colectiva',
+                      'Tutoría colectiva',
                       style: neuBody(size: 12.5, color: Neu.muted),
                     ),
                   ],
@@ -294,94 +284,22 @@ class _TutoriaHistorialPageState extends ConsumerState<TutoriaHistorialPage> {
   }
 
   Widget _attendanceCard(Color primary) {
-    if (widget.isIndividual) {
-      final attended = _session?['asistio'];
-      final studentId = _session?['estudianteId']?.toString() ?? 'Estudiante';
-      return PaCard(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                NeuIconBox(
-                  Icons.fact_check_outlined,
-                  color: primary,
-                  size: 40,
-                  iconSize: 20,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    _isStudent ? 'Tu asistencia' : 'Asistencia registrada',
-                    style: neuPoppins(
-                      size: 15,
-                      weight: FontWeight.w700,
-                      color: Neu.heading,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                Icon(
-                  attended == true
-                      ? Icons.check_circle_rounded
-                      : attended == false
-                          ? Icons.cancel_rounded
-                          : Icons.help_outline_rounded,
-                  color: attended == true
-                      ? Neu.okFg
-                      : attended == false
-                          ? Neu.errFg
-                          : Neu.muted,
-                  size: 22,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    _isStudent ? 'Registro de participación' : studentId,
-                    style: neuPoppins(
-                      size: 14,
-                      weight: FontWeight.w600,
-                      color: Neu.heading,
-                    ),
-                  ),
-                ),
-                PaTag(
-                  attended == true
-                      ? 'Asistió'
-                      : attended == false
-                          ? 'No asistió'
-                          : 'Sin marcar',
-                  tone: attended == true
-                      ? PaTone.ok
-                      : attended == false
-                          ? PaTone.error
-                          : PaTone.neutral,
-                ),
-              ],
-            ),
-          ],
-        ),
-      );
-    }
-
     final attendance = (_session?['asistencias'] as List?)
             ?.whereType<Map<String, dynamic>>()
             .toList() ??
         const <Map<String, dynamic>>[];
 
     if (_isStudent) {
+      final attendanceRecord = attendance.firstWhere(
+        (item) => item['asistio'] != null,
+        orElse: () => const <String, dynamic>{},
+      );
       final studentAttended = _session?['asistio'] as bool? ??
-          (attendance.isNotEmpty
-              ? attendance.firstWhere(
-                  (a) => a['asistio'] != null,
-                  orElse: () => <String, dynamic>{},
-                )['asistio'] as bool?
-              : null);
+          attendanceRecord['asistio'] as bool?;
+      final enteredLate = attendanceRecord['estado'] == 'ENTRO_TARDE' ||
+          _session?['estadoAsistencia'] == 'ENTRO_TARDE';
+      final lateMinutes = (attendanceRecord['minutosTarde'] ??
+              _session?['minutosTarde']) as num?;
 
       return PaCard(
         padding: const EdgeInsets.all(18),
@@ -437,16 +355,20 @@ class _TutoriaHistorialPageState extends ConsumerState<TutoriaHistorialPage> {
                   ),
                 ),
                 PaTag(
-                  studentAttended == true
-                      ? 'Asistió'
-                      : studentAttended == false
-                          ? 'No asistió'
-                          : 'Sin marcar',
-                  tone: studentAttended == true
-                      ? PaTone.ok
-                      : studentAttended == false
-                          ? PaTone.error
-                          : PaTone.neutral,
+                  enteredLate
+                      ? 'Entró tarde · ${lateMinutes?.toInt() ?? 0} min'
+                      : studentAttended == true
+                          ? 'Asistió'
+                          : studentAttended == false
+                              ? 'No asistió'
+                              : 'Sin marcar',
+                  tone: enteredLate
+                      ? PaTone.neutral
+                      : studentAttended == true
+                          ? PaTone.ok
+                          : studentAttended == false
+                              ? PaTone.error
+                              : PaTone.neutral,
                 ),
               ],
             ),
@@ -461,10 +383,10 @@ class _TutoriaHistorialPageState extends ConsumerState<TutoriaHistorialPage> {
           student['id'] as String:
               student['nombre']?.toString() ?? student['id'] as String,
     };
-    final marked = {
+    final attendanceByStudent = {
       for (final item in attendance)
         if (item['estudianteId'] is String)
-          item['estudianteId'] as String: item['asistio'] as bool?,
+          item['estudianteId'] as String: item,
     };
     final studentIds = _session?['estudianteIds'] is List
         ? (_session!['estudianteIds'] as List).whereType<String>().toList()
@@ -518,7 +440,10 @@ class _TutoriaHistorialPageState extends ConsumerState<TutoriaHistorialPage> {
                   const Divider(height: 14, color: Neu.line),
               itemBuilder: (context, index) {
                 final id = studentIds[index];
-                final isAttended = marked[id];
+                final record = attendanceByStudent[id] ?? const <String, dynamic>{};
+                final isAttended = record['asistio'] as bool?;
+                final enteredLate = record['estado'] == 'ENTRO_TARDE';
+                final lateMinutes = record['minutosTarde'] as num?;
                 return Row(
                   children: [
                     Icon(
@@ -546,16 +471,20 @@ class _TutoriaHistorialPageState extends ConsumerState<TutoriaHistorialPage> {
                       ),
                     ),
                     PaTag(
-                      isAttended == true
-                          ? 'Asistió'
-                          : isAttended == false
-                              ? 'No asistió'
-                              : 'Sin marcar',
-                      tone: isAttended == true
-                          ? PaTone.ok
-                          : isAttended == false
-                              ? PaTone.error
-                              : PaTone.neutral,
+                      enteredLate
+                          ? 'Entró tarde · ${lateMinutes?.toInt() ?? 0} min'
+                          : isAttended == true
+                              ? 'Asistió'
+                              : isAttended == false
+                                  ? 'No asistió'
+                                  : 'Sin marcar',
+                      tone: enteredLate
+                          ? PaTone.neutral
+                          : isAttended == true
+                              ? PaTone.ok
+                              : isAttended == false
+                                  ? PaTone.error
+                                  : PaTone.neutral,
                     ),
                   ],
                 );
@@ -631,9 +560,7 @@ class _TutoriaHistorialPageState extends ConsumerState<TutoriaHistorialPage> {
               children: [
                 for (var i = 1; i <= 5; i++)
                   Icon(
-                    i <= stars
-                        ? Icons.star_rounded
-                        : Icons.star_border_rounded,
+                    i <= stars ? Icons.star_rounded : Icons.star_border_rounded,
                     color: Colors.amber.shade600,
                     size: 24,
                   ),

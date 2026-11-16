@@ -97,48 +97,10 @@ class AvailableSubject {
       );
 }
 
-class StudentTutoring {
-  const StudentTutoring({
-    required this.id,
-    required this.teacherId,
-    required this.studentId,
-    required this.subject,
-    required this.modality,
-    required this.start,
-    required this.end,
-    required this.alternativeStart,
-    required this.status,
-  });
-
-  final String id;
-  final String teacherId;
-  final String studentId;
-  final String subject;
-  final String modality;
-  final DateTime? start;
-  final DateTime? end;
-  final DateTime? alternativeStart;
-  final String status;
-
-  factory StudentTutoring.fromJson(Map<String, dynamic> json) =>
-      StudentTutoring(
-        id: _string(json['id']),
-        teacherId: _string(json['docenteId']),
-        studentId: _string(json['estudianteId']),
-        subject: _string(json['materia'], fallback: 'Tutoría'),
-        modality: _string(json['modalidad']),
-        start: _date(json['fechaInicio']),
-        end: _date(json['fechaFin']),
-        alternativeStart: _date(json['fechaAlternativaInicio']),
-        status: _string(json['estado']),
-      );
-}
-
 class StudentDashboardData {
   const StudentDashboardData({
     required this.profile,
     required this.tutors,
-    required this.tutorings,
     this.projectSpaces = const [],
     this.groupSessions = const [],
     this.availableGroupSessions = const [],
@@ -146,7 +108,6 @@ class StudentDashboardData {
 
   final StudentProfile profile;
   final List<AvailableTutor> tutors;
-  final List<StudentTutoring> tutorings;
   final List<ClassroomProjectSpace> projectSpaces;
   final List<StudentGroupSession> groupSessions;
   final List<StudentGroupSession> availableGroupSessions;
@@ -155,7 +116,6 @@ class StudentDashboardData {
       StudentDashboardData(
         profile: profile,
         tutors: tutors,
-        tutorings: tutorings,
         projectSpaces: projectSpaces,
         groupSessions: value.enrolled,
         availableGroupSessions: value.available,
@@ -430,24 +390,17 @@ final studentDashboardProvider =
 
   final results = await Future.wait<List<dynamic>>([
     safeList('/api/tutorias/disponibles'),
-    safeList('/api/tutorias'),
     safeList('/api/estudiante/tutorias-colectivas/espacios'),
   ]);
 
   final tutorsJson = results[0];
-  final tutoringsJson = results[1];
-  final projectsJson = results[2];
+  final projectsJson = results[1];
 
   final profile = StudentProfile.fromJson(profileJson);
   final tutors = tutorsJson
       .whereType<Map<String, dynamic>>()
       .map(AvailableTutor.fromJson)
       .where((tutor) => tutor.teacherId != profile.id)
-      .toList();
-  final tutorings = tutoringsJson
-      .whereType<Map<String, dynamic>>()
-      .map(StudentTutoring.fromJson)
-      .where((tutoring) => tutoring.studentId == profile.id)
       .toList();
   final projectSpaces = <ClassroomProjectSpace>[];
   for (final entry in projectsJson.whereType<Map<String, dynamic>>()) {
@@ -475,7 +428,6 @@ final studentDashboardProvider =
   return StudentDashboardData(
     profile: profile,
     tutors: tutors,
-    tutorings: tutorings,
     projectSpaces: projectSpaces,
   );
 });
@@ -631,13 +583,6 @@ Future<void> enrollInPublishedGroupTutoring({
     },
   );
 }
-
-Future<void> updateTutoring({
-  required Dio dio,
-  required StudentTutoring tutoring,
-  required String action,
-}) =>
-    dio.patch<void>('/api/tutorias/${tutoring.id}/$action');
 
 String _apiModality(String value) {
   switch (value.toLowerCase()) {

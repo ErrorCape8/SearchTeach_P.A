@@ -12,11 +12,10 @@ import '../../core/widgets/role_toast.dart';
 import '../../core/widgets/start_tutoring_card.dart';
 import '../auth/auth_repository.dart';
 import '../notifications/notifications_page.dart';
-import 'docente_proyectos_aula_page.dart';
 import 'docente_lider_proyectos_page.dart';
 import 'docente_perfil_page.dart';
-import 'docente_solicitudes_page.dart';
-import '../pa/pa_docente_pages.dart';
+import 'docente_tutorias_pa_page.dart';
+import 'docente_grupos_reportes_section.dart';
 import '../pa/pa_widgets.dart';
 import 'livekit_room_page.dart';
 import 'presencial_tutoria_page.dart';
@@ -71,14 +70,13 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
 
   static const _teacherTabNames = {
     0: 'Inicio',
-    1: 'Tutoría',
-    2: 'Empezar tutorías',
+    1: 'Tutorías PA',
+    2: 'Empezar tutoría',
     3: 'Mis sesiones',
     4: 'Líder de proyecto de aula',
     5: 'Avisos',
     6: 'Historial',
     7: 'Mi perfil',
-    8: 'Solicitudes',
   };
 
   String get _headerTitle =>
@@ -175,6 +173,11 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
           badge: unread > 0 ? unread : null,
           onTap: () => setState(() => _tab = 5),
         ),
+        NeuCircleButton(
+          icon: Icons.logout_rounded,
+          tooltip: 'Cerrar sesión',
+          onTap: _logout,
+        ),
       ],
     );
   }
@@ -186,9 +189,8 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
     });
     final wide = MediaQuery.sizeOf(context).width >= 760;
     final profile = ref.watch(docenteProfileProvider).asData?.value;
-    final teacherName = profile?['nombre'] is String
-        ? profile!['nombre'] as String
-        : 'Docente';
+    final teacherName =
+        profile?['nombre'] is String ? profile!['nombre'] as String : 'Docente';
     final teacherCareer = profile?['carrera'] is String
         ? profile!['carrera'] as String
         : 'SearchTeach';
@@ -236,7 +238,7 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
                   NeuNavItem(Icons.home_outlined, 'Inicio'),
                   NeuNavItem(Icons.videocam_outlined, 'Empezar'),
                   NeuNavItem(Icons.calendar_month_outlined, 'Mis sesiones'),
-                  NeuNavItem(Icons.menu_book_outlined, 'Tutoría'),
+                  NeuNavItem(Icons.menu_book_outlined, 'Tutoría PA'),
                   NeuNavItem(Icons.star_outline_rounded, 'Líder PA'),
                   NeuNavItem(Icons.history_outlined, 'Historial'),
                   NeuNavItem(Icons.person_outline_rounded, 'Mi perfil'),
@@ -252,17 +254,16 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
 
   Widget _content(String teacherName) => switch (_tab) {
         0 => _home(teacherName),
-        1 => _sessions(),
+        1 => const DocenteTutoriasPaPage(),
         2 => _startTutoring(),
-        3 => const DocenteProyectosAulaPage(),
+        3 => _sessions(),
         4 => const DocenteLiderProyectosPage(),
         5 => const NotificationsInbox(
             accentColor: _teacherGreen,
             htmlStyle: true,
           ),
         6 => _history(),
-        7 => DocentePerfilPage(onLogout: _logout),
-        8 => const DocenteSolicitudesPage(),
+        7 => const DocentePerfilPage(),
         _ => _home(teacherName),
       };
 
@@ -283,64 +284,76 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
         loading: () => const Center(
           child: CircularProgressIndicator(color: _teacherGreen),
         ),
-        error: (error, _) => view == _SessionView.history
-            ? _historyPage(
-                body: _historyMessage(
-                  'No se pudo cargar el historial: $error',
-                  onRetry: () => ref.invalidate(_teacherSessionsProvider),
-                ),
-              )
-            : Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 460),
-                    child: PaCard(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const NeuIconBox(Icons.cloud_off_outlined,
-                              color: Neu.error),
-                          const SizedBox(height: 12),
-                          Text(
-                            'No se pudieron cargar tus tutorías.',
-                            style: neuPoppins(
-                                size: 15,
-                                weight: FontWeight.w700,
-                                color: Neu.heading),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            '$error',
-                            textAlign: TextAlign.center,
-                            style: neuBody(size: 13, color: Neu.muted),
-                          ),
-                          const SizedBox(height: 16),
-                          NeuButton(
-                            'Reintentar',
-                            onPressed: () =>
-                                ref.invalidate(_teacherSessionsProvider),
-                            kind: NeuButtonKind.alt,
-                            small: true,
-                            icon: Icons.refresh,
-                            expand: false,
-                          ),
-                        ],
-                      ),
+        error: (error, _) {
+          if (view == _SessionView.history) {
+            return _historyPage(
+              body: _historyMessage(
+                'No se pudo cargar el historial: $error',
+                onRetry: () => ref.invalidate(_teacherSessionsProvider),
+              ),
+            );
+          }
+          final errorCard = Padding(
+            padding: const EdgeInsets.all(24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 460),
+              child: PaCard(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const NeuIconBox(Icons.cloud_off_outlined,
+                        color: Neu.error),
+                    const SizedBox(height: 12),
+                    Text(
+                      'No se pudieron cargar tus tutorías.',
+                      style: neuPoppins(
+                          size: 15,
+                          weight: FontWeight.w700,
+                          color: Neu.heading),
                     ),
-                  ),
+                    const SizedBox(height: 6),
+                    Text(
+                      '$error',
+                      textAlign: TextAlign.center,
+                      style: neuBody(size: 13, color: Neu.muted),
+                    ),
+                    const SizedBox(height: 16),
+                    NeuButton(
+                      'Reintentar',
+                      onPressed: () => ref.invalidate(_teacherSessionsProvider),
+                      kind: NeuButtonKind.alt,
+                      small: true,
+                      icon: Icons.refresh,
+                      expand: false,
+                    ),
+                  ],
                 ),
               ),
+            ),
+          );
+          if (view == _SessionView.scheduled) {
+            return ListView(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+              children: [
+                errorCard,
+                const DocenteGruposReportesSection(),
+              ],
+            );
+          }
+          return Center(child: errorCard);
+        },
         data: (allSessions) {
+          final now = DateTime.now();
           final sessions = allSessions
               .where((session) => switch (view) {
                     _SessionView.history => session.state == 'FINALIZADA',
-                    _SessionView.scheduled ||
-                    _SessionView.start =>
-                      session.state != 'FINALIZADA' &&
-                          session.start != null &&
-                          _isSameDay(session.start!, DateTime.now()),
+                    _SessionView.scheduled => session.state != 'FINALIZADA' &&
+                        session.start != null &&
+                        (session.end ?? session.start!).isAfter(now),
+                    _SessionView.start => session.state != 'FINALIZADA' &&
+                        session.start != null &&
+                        _isSameDay(session.start!, now),
                   })
               .toList()
             ..sort((a, b) => (a.start ?? DateTime(9999))
@@ -360,142 +373,68 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
             );
           }
 
-          if (view == _SessionView.start) {
-            return ListView(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
-              children: [
-                NeuSurface(
-                  sunken: true,
-                  radius: 16,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  child: Text(
-                    'Solo puedes iniciar la tutoría de hoy. Al iniciar entras primero; los estudiantes aparecen en la sala a medida que se conectan.',
-                    style: neuBody(size: 13, color: Neu.heading, height: 1.4),
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      switch (view) {
+                        _SessionView.scheduled => 'Mis sesiones',
+                        _SessionView.start => 'Tutorías de hoy',
+                        _SessionView.history => 'Historial'
+                      },
+                      style: neuPoppins(
+                        size: 20,
+                        weight: FontWeight.w700,
+                        color: Neu.heading,
+                      ),
+                    ),
+                  ),
+                  if (view == _SessionView.scheduled)
+                    NeuSegmented(
+                      labels: const ['Lista', 'Calendario'],
+                      icons: const [
+                        Icons.view_list_rounded,
+                        Icons.calendar_month_rounded,
+                      ],
+                      selected: _sessionsCalendar ? 1 : 0,
+                      onSelect: (value) => setState(
+                        () => _sessionsCalendar = value == 1,
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              if (sessions.isEmpty && view == _SessionView.scheduled)
+                const _TeacherEmptyCard(
+                  icon: Icons.event_available_outlined,
+                  message: 'No tienes tutorías retroalimentativas vigentes.',
+                ),
+              if (sessions.isEmpty && view == _SessionView.start)
+                const _TeacherEmptyCard(
+                  icon: Icons.event_available_outlined,
+                  message: 'No tienes tutorías programadas para hoy.',
+                ),
+              if (view == _SessionView.scheduled && _sessionsCalendar)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 14),
+                  child: _TeacherCalendarPanel(
+                    sessions: sessions,
+                    onOpenSessions: () =>
+                        setState(() => _sessionsCalendar = false),
                   ),
                 ),
-                const SizedBox(height: 18),
-                if (sessions.isEmpty)
-                  Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 460),
-                        child: const _TeacherEmptyCard(
-                          icon: Icons.event_available_outlined,
-                          message: 'No tienes tutorías programadas para hoy.',
-                        ),
-                      ),
-                    ),
-                  )
-                else
-                  for (final session in sessions)
-                    StartTutoringCard(
-                      subject: session.subject,
-                      timeLabel: session.start == null
-                          ? 'Fecha no disponible'
-                          : 'Hoy · ${_formatHour(session.start!)}',
-                      modalityLabel: _modalityLabel(session.modality),
-                      attendeesLabel: '${session.students.length} inscritos',
-                      accentColor: _teacherGreen,
-                      buttonLabel: session.modality.toUpperCase() == 'PRESENCIAL'
-                          ? (session.state == 'EN_CURSO'
-                              ? 'Tomar asistencia'
-                              : 'Habilitar clase presencial')
-                          : 'Iniciar tutoría',
-                      onAction: () async {
-                        if (session.modality.toUpperCase() == 'PRESENCIAL') {
-                          await Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => PresencialTutoriaPage(
-                                sessionId: session.id,
-                                subject: session.subject,
-                              ),
-                            ),
-                          );
-                        } else {
-                          await Navigator.of(context).push(MaterialPageRoute(
-                            builder: (_) => LiveKitRoomPage(
-                              sessionId: session.id,
-                              subject: session.subject,
-                              modality: session.modality,
-                              teacherMode: true,
-                              students: session.students,
-                              ended: false,
-                              endAt: session.end,
-                            ),
-                          ));
-                        }
-                        if (mounted) {
-                          ref.invalidate(_teacherSessionsProvider);
-                        }
-                      },
-                    ),
+              if (view != _SessionView.scheduled || !_sessionsCalendar)
+                for (final session in sessions)
+                  _buildSessionCard(context, session, view),
+              if (view == _SessionView.scheduled) ...[
+                const SizedBox(height: 10),
+                const DocenteGruposReportesSection(),
               ],
-            );
-          }
-
-          return sessions.isEmpty
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 460),
-                      child: const _TeacherEmptyCard(
-                        icon: Icons.event_available_outlined,
-                        message: 'No tienes tutorías programadas para hoy.',
-                      ),
-                    ),
-                  ),
-                )
-              : ListView(
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            switch (view) {
-                              _SessionView.scheduled => 'Mis sesiones',
-                              _SessionView.start => 'Tutorías de hoy',
-                              _SessionView.history => 'Historial'
-                            },
-                            style: neuPoppins(
-                              size: 20,
-                              weight: FontWeight.w700,
-                              color: Neu.heading,
-                            ),
-                          ),
-                        ),
-                        if (view == _SessionView.scheduled)
-                          NeuSegmented(
-                            labels: const ['Lista', 'Calendario'],
-                            icons: const [
-                              Icons.view_list_rounded,
-                              Icons.calendar_month_rounded,
-                            ],
-                            selected: _sessionsCalendar ? 1 : 0,
-                            onSelect: (value) => setState(
-                              () => _sessionsCalendar = value == 1,
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    if (view == _SessionView.scheduled && _sessionsCalendar)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 14),
-                        child: _TeacherCalendarPanel(
-                          sessions: sessions,
-                          onOpenSessions: () =>
-                              setState(() => _sessionsCalendar = false),
-                        ),
-                      ),
-                    if (view != _SessionView.scheduled || !_sessionsCalendar)
-                      for (final session in sessions)
-                        _buildSessionCard(context, session, view),
-                  ],
-                );
+            ],
+          );
         },
       );
 
@@ -526,25 +465,27 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
                     const SizedBox(height: 4),
                     Text(
                       '${session.start == null ? 'Fecha no disponible' : _dateTimeLabel(session.start!)} · ${_modalityLabel(session.modality)} · Semestre ${session.semester} · ${session.technologies.join(', ')}${session.modality.toUpperCase() == 'VIRTUAL' || session.location.trim().isEmpty ? '' : '\nLugar: ${session.location}'}\n${session.students.isEmpty ? 'Publicada · sin inscritos' : 'Estudiantes inscritos: ${session.students.length}'}${session.state == 'FINALIZADA' ? '\nClase finalizada' : ''}',
-                      style:
-                          neuBody(size: 13, color: Neu.muted, height: 1.35),
+                      style: neuBody(size: 13, color: Neu.muted, height: 1.35),
                     ),
                   ],
                 ),
               ),
-              if (session.id.isNotEmpty &&
+              if (view == _SessionView.scheduled &&
+                  session.id.isNotEmpty &&
                   session.start != null &&
                   session.end != null &&
                   session.state != 'FINALIZADA')
-                NeuCircleButton(
-                  size: 38,
+                NeuButton(
+                  'Solicitar cambio de fecha',
+                  kind: NeuButtonKind.alt,
+                  small: true,
+                  expand: false,
                   icon: Icons.edit_calendar_outlined,
-                  tooltip: 'Solicitar cambio de fecha',
-                  onTap: () => _requestDateChange(session),
+                  onPressed: () => _requestDateChange(session),
                 ),
             ],
           ),
-          if (session.id.isNotEmpty) ...[
+          if (session.id.isNotEmpty && view != _SessionView.scheduled) ...[
             const SizedBox(height: 12),
             Wrap(
               alignment: WrapAlignment.end,
@@ -780,7 +721,6 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
                       builder: (_) => TutoriaHistorialPage(
                         sessionId: session.id,
                         subject: session.subject,
-                        isIndividual: false,
                         isTeacher: true,
                       ),
                     ),
@@ -793,25 +733,16 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
       );
 
   Future<void> _requestDateChange(_TeacherTutoringSession session) async {
-    final originalStart = session.start;
-    final originalEnd = session.end;
-    if (session.id.isEmpty || originalStart == null || originalEnd == null) {
-      return;
-    }
+    if (session.id.isEmpty) return;
     final draft = await showDialog<_DateChangeDraft>(
       context: context,
-      builder: (_) =>
-          _DateChangeDialog(start: originalStart, end: originalEnd),
+      builder: (_) => const _DateChangeDialog(),
     );
     if (draft == null || !mounted) return;
     try {
       await ref.read(dioProvider).post(
         '/api/tutorias/grupales/${Uri.encodeComponent(session.id)}/solicitud-cambio-fecha',
-        data: {
-          'fechaInicio': draft.start.toIso8601String(),
-          'fechaFin': draft.end.toIso8601String(),
-          'motivo': draft.reason,
-        },
+        data: {'motivo': draft.reason},
       );
       if (!mounted) return;
       RoleToast.show(context,
@@ -854,7 +785,7 @@ class _TeacherSidebar extends StatelessWidget {
     (Icons.home_outlined, 'Inicio', 0),
     (Icons.videocam_outlined, 'Empezar', 2),
     (Icons.calendar_month_outlined, 'Mis sesiones', 3),
-    (Icons.menu_book_outlined, 'Tutoría', 1),
+    (Icons.menu_book_outlined, 'Tutorías PA', 1),
     (Icons.star_outline_rounded, 'Líder PA', 4),
     (Icons.history_outlined, 'Historial', 6),
   ];
@@ -990,11 +921,23 @@ class _TeacherSidebar extends StatelessWidget {
                             style: neuBody(size: 12, color: Neu.muted)),
                       ]),
                 ),
-                IconButton(
-                  tooltip: 'Cerrar sesión',
-                  onPressed: onLogout,
-                  icon: const Icon(Icons.logout_rounded, color: Neu.muted),
-                ),
+              ]),
+            ),
+            const SizedBox(height: 8),
+            NeuSurface(
+              radius: 14,
+              shadows: Neu.raiseS,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+              onTap: onLogout,
+              child: Row(children: [
+                const Icon(Icons.logout_rounded,
+                    size: 20, color: _teacherGreen),
+                const SizedBox(width: 10),
+                Text('Cerrar sesión',
+                    style: neuBody(
+                        size: 13,
+                        weight: FontWeight.w700,
+                        color: _teacherGreen)),
               ]),
             ),
           ]),
@@ -1033,7 +976,8 @@ class _HistoryDetail extends StatelessWidget {
 }
 
 class _TeacherHomeDashboard extends ConsumerWidget {
-  const _TeacherHomeDashboard({required this.onOpen, required this.name, super.key});
+  const _TeacherHomeDashboard(
+      {required this.onOpen, required this.name, super.key});
   final ValueChanged<int> onOpen;
   final String name;
 
@@ -1073,16 +1017,14 @@ class _TeacherHomeDashboard extends ConsumerWidget {
       'diciembre'
     ];
     final scheduled = sessions
-        .where((session) =>
-            session.state != 'FINALIZADA' && session.start != null)
+        .where(
+            (session) => session.state != 'FINALIZADA' && session.start != null)
         .toList()
       ..sort((a, b) => a.start!.compareTo(b.start!));
-    final upcoming = scheduled
-        .where((session) => session.start!.isAfter(now))
-        .toList();
+    final upcoming =
+        scheduled.where((session) => session.start!.isAfter(now)).toList();
     final nextSession = upcoming.isEmpty ? null : upcoming.first;
-    final finishedCount =
-        sessions.where((s) => s.state == 'FINALIZADA').length;
+    final finishedCount = sessions.where((s) => s.state == 'FINALIZADA').length;
     final withStudentsCount =
         sessions.where((s) => s.students.isNotEmpty).length;
 
@@ -1098,7 +1040,7 @@ class _TeacherHomeDashboard extends ConsumerWidget {
               loading: loading,
               error: error,
               onRetry: () => ref.invalidate(_teacherSessionsProvider),
-              onOpenSessions: () => onOpen(1),
+              onOpenSessions: () => onOpen(3),
               onStart: () => onOpen(2),
             );
             final content = Column(
@@ -1141,7 +1083,7 @@ class _TeacherHomeDashboard extends ConsumerWidget {
                         flex: 4,
                         child: _TeacherCalendarPanel(
                           sessions: scheduled,
-                          onOpenSessions: () => onOpen(1),
+                          onOpenSessions: () => onOpen(3),
                         ),
                       ),
                     ],
@@ -1151,7 +1093,7 @@ class _TeacherHomeDashboard extends ConsumerWidget {
                   const SizedBox(height: 18),
                   _TeacherCalendarPanel(
                     sessions: scheduled,
-                    onOpenSessions: () => onOpen(1),
+                    onOpenSessions: () => onOpen(3),
                   ),
                 ],
               ],
@@ -1417,9 +1359,7 @@ class _TeacherCalendarPanel extends StatelessWidget {
               Expanded(
                 child: Text('Calendario',
                     style: neuPoppins(
-                        color: Neu.heading,
-                        size: 16,
-                        weight: FontWeight.w700)),
+                        color: Neu.heading, size: 16, weight: FontWeight.w700)),
               ),
               Text('${monthNames[now.month - 1]} ${now.year}',
                   style: neuBody(color: Neu.muted, size: 12)),
@@ -1454,8 +1394,7 @@ class _TeacherCalendarPanel extends StatelessWidget {
                         hasSession: sessions.any((session) =>
                             session.start?.year == now.year &&
                             session.start?.month == now.month &&
-                            session.start?.day ==
-                                cells[week * 7 + dayIndex]),
+                            session.start?.day == cells[week * 7 + dayIndex]),
                       ),
                     ),
                 ],
@@ -1490,9 +1429,7 @@ class _TeacherCalendarPanel extends StatelessWidget {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: neuBody(
-                            color: Neu.text,
-                            size: 12,
-                            weight: FontWeight.w600),
+                            color: Neu.text, size: 12, weight: FontWeight.w600),
                       ),
                     ),
                   ],
@@ -1568,7 +1505,8 @@ class _TeacherCalendarDay extends StatelessWidget {
 }
 
 class _TeacherInlineDetail extends StatelessWidget {
-  const _TeacherInlineDetail({required this.icon, required this.text, super.key});
+  const _TeacherInlineDetail(
+      {required this.icon, required this.text, super.key});
   final IconData icon;
   final String text;
 
@@ -1578,9 +1516,7 @@ class _TeacherInlineDetail extends StatelessWidget {
         children: [
           Icon(icon, size: 14, color: _teacherGreen),
           const SizedBox(width: 5),
-          Text(text,
-              style: neuBody(
-                  color: Neu.muted, size: 11.5)),
+          Text(text, style: neuBody(color: Neu.muted, size: 11.5)),
         ],
       );
 }
@@ -1667,24 +1603,18 @@ class _TeacherTutoringSession {
 }
 
 class _DateChangeDraft {
-  const _DateChangeDraft(this.start, this.end, this.reason);
-  final DateTime start;
-  final DateTime end;
+  const _DateChangeDraft(this.reason);
   final String reason;
 }
 
 class _DateChangeDialog extends StatefulWidget {
-  const _DateChangeDialog({required this.start, required this.end, super.key});
-  final DateTime start;
-  final DateTime end;
+  const _DateChangeDialog({super.key});
 
   @override
   State<_DateChangeDialog> createState() => _DateChangeDialogState();
 }
 
 class _DateChangeDialogState extends State<_DateChangeDialog> {
-  late DateTime _date = widget.start.add(const Duration(days: 1));
-  late TimeOfDay _time = TimeOfDay.fromDateTime(widget.start);
   final _reason = TextEditingController();
   String? _error;
 
@@ -1695,120 +1625,91 @@ class _DateChangeDialogState extends State<_DateChangeDialog> {
   }
 
   @override
-  Widget build(BuildContext context) => AlertDialog(
-        backgroundColor: Neu.bg,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          'Solicitar cambio de fecha',
-          style: neuPoppins(
-              size: 18, weight: FontWeight.w700, color: Neu.heading),
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Theme(
+      data: theme.copyWith(
+        colorScheme: theme.colorScheme.copyWith(
+          primary: const Color(0xFF1769AA),
         ),
-        content: SizedBox(
-          width: 420,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'La solicitud se enviará a coordinación para su aprobación.',
-                style: neuBody(size: 13, color: Neu.muted),
-              ),
-              const SizedBox(height: 14),
-              Row(children: [
-                Expanded(
-                  child: NeuButton(
-                    _dateLabel(_date),
-                    icon: Icons.calendar_month_outlined,
-                    kind: NeuButtonKind.alt,
-                    small: true,
-                    onPressed: () async {
-                      final picked = await showDatePicker(
-                        context: context,
-                        firstDate: DateTime.now(),
-                        lastDate: DateTime.now().add(const Duration(days: 365)),
-                        initialDate: _date.isBefore(DateTime.now())
-                            ? DateTime.now()
-                            : _date,
-                      );
-                      if (picked != null) setState(() => _date = picked);
-                    },
-                  ),
+      ),
+      child: Dialog(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(20),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: NeuSurface(
+            radius: 22,
+            padding: const EdgeInsets.all(22),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Solicitar cambio de fecha',
+                  style: neuPoppins(
+                      size: 18, weight: FontWeight.w700, color: Neu.heading),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: NeuButton(
-                    _time.format(context),
-                    icon: Icons.schedule,
-                    kind: NeuButtonKind.alt,
-                    small: true,
-                    onPressed: () async {
-                      final picked = await showTimePicker(
-                        context: context,
-                        initialTime: _time,
-                      );
-                      if (picked != null) setState(() => _time = picked);
-                    },
-                  ),
+                const SizedBox(height: 6),
+                Text(
+                  'Escribe el mensaje; coordinación definirá la nueva fecha al revisar la solicitud.',
+                  style: neuBody(size: 13, color: Neu.muted),
                 ),
-              ]),
-              const SizedBox(height: 14),
-              Text(
-                'MOTIVO',
-                style: neuBody(
-                    size: 11, weight: FontWeight.w700, color: Neu.muted),
-              ),
-              const SizedBox(height: 6),
-              NeuField(
-                controller: _reason,
-                hint: 'Explica el motivo del cambio...',
-                minLines: 3,
-                maxLines: 4,
-                maxLength: 1000,
-              ),
-              if (_error != null) ...[
-                const SizedBox(height: 8),
-                Text(_error!,
-                    style: neuBody(size: 12, color: Neu.error)),
+                const SizedBox(height: 16),
+                Text(
+                  'MENSAJE',
+                  style: neuBody(
+                      size: 11, weight: FontWeight.w700, color: Neu.muted),
+                ),
+                const SizedBox(height: 6),
+                NeuField(
+                  controller: _reason,
+                  hint: 'Explica el motivo del cambio...',
+                  minLines: 3,
+                  maxLines: 4,
+                  maxLength: 1000,
+                ),
+                if (_error != null) ...[
+                  const SizedBox(height: 8),
+                  Text(_error!, style: neuBody(size: 12, color: Neu.error)),
+                ],
+                const SizedBox(height: 18),
+                Wrap(
+                  alignment: WrapAlignment.end,
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: [
+                    NeuButton(
+                      'Cancelar',
+                      kind: NeuButtonKind.alt,
+                      small: true,
+                      expand: false,
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                    NeuButton(
+                      'Enviar solicitud',
+                      small: true,
+                      expand: false,
+                      onPressed: () {
+                        final reason = _reason.text.trim();
+                        if (reason.isEmpty) {
+                          setState(
+                              () => _error = 'Escribe el mensaje de la solicitud.');
+                          return;
+                        }
+                        Navigator.pop(context, _DateChangeDraft(reason));
+                      },
+                    ),
+                  ],
+                ),
               ],
-            ],
+            ),
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancelar',
-                style: neuBody(size: 14, color: Neu.muted)),
-          ),
-          NeuButton(
-            'Enviar solicitud',
-            small: true,
-            expand: false,
-            onPressed: () {
-              final start = DateTime(_date.year, _date.month, _date.day,
-                  _time.hour, _time.minute);
-              if (!start.isAfter(DateTime.now())) {
-                setState(
-                    () => _error = 'Selecciona una fecha y hora futura.');
-                return;
-              }
-              if (_reason.text.trim().isEmpty) {
-                setState(
-                    () => _error = 'Escribe el motivo de la solicitud.');
-                return;
-              }
-              final duration = widget.end.difference(widget.start);
-              Navigator.pop(
-                context,
-                _DateChangeDraft(
-                  start,
-                  start.add(duration),
-                  _reason.text.trim(),
-                ),
-              );
-            },
-          ),
-        ],
-      );
+      ),
+    );
+  }
 }
 
 String _dateTimeLabel(DateTime value) =>

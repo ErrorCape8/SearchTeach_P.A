@@ -86,8 +86,9 @@ public class ChatProyectoAulaService {
 				case "pdf" -> "application/pdf";
 				case "docx" -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 				case "webm" -> "audio/webm";
+				case "wav" -> "audio/wav";
 				default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-						"Solo se permiten archivos PDF, Word (.docx) o audio WebM.");
+						"Solo se permiten archivos PDF, Word (.docx) o audio WebM/WAV.");
 			};
 			if (bytes.length > 8 * 1024 * 1024) {
 				throw new ResponseStatusException(HttpStatus.PAYLOAD_TOO_LARGE,
@@ -97,7 +98,12 @@ public class ChatProyectoAulaService {
 				throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
 						"El audio no tiene un contenedor WebM válido.");
 			}
-			if (!"webm".equals(extension) && !ValidadorArchivosChat.archivoValido(extension, bytes)) {
+			if ("wav".equals(extension) && !ValidadorArchivosChat.archivoValidoAudioWav(bytes)) {
+				throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+						"El audio no tiene un archivo WAV PCM válido.");
+			}
+			if (!"webm".equals(extension) && !"wav".equals(extension)
+					&& !ValidadorArchivosChat.archivoValido(extension, bytes)) {
 				throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
 						"El contenido del archivo no coincide con su tipo permitido.");
 			}

@@ -7,6 +7,7 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -207,7 +208,10 @@ public class DirectorDashboardService {
 				.filter(inscripcion -> inscripcion.fechaInicio() != null && inscripcion.fechaInicio().isAfter(now))
 				.toList();
 
-		Map<String, PredictionAccumulator> predictions = new TreeMap<>();
+		Map<PredictionKey, PredictionAccumulator> predictions = new TreeMap<>(
+				Comparator.comparing(PredictionKey::materia)
+						.thenComparing(PredictionKey::carrera, Comparator.nullsFirst(Comparator.naturalOrder()))
+						.thenComparing(PredictionKey::semestre, Comparator.nullsFirst(Comparator.naturalOrder())));
 		Map<LocalDate, PredictionAccumulator> predictionsByWeek = new TreeMap<>();
 		PredictionAccumulator paAccumulator = new PredictionAccumulator();
 		long notEvaluable = 0;
@@ -234,7 +238,11 @@ public class DirectorDashboardService {
 			}
 
 			String etiquetaSubject = inscripcion.esPa() ? MATERIA_CANONICA_PA : inscripcion.materia();
-			predictions.computeIfAbsent(etiquetaSubject, ignored -> new PredictionAccumulator())
+			PredictionKey predictionKey = new PredictionKey(
+					etiquetaSubject,
+					resolverTecnologiaCanonica(inscripcion.tecnologia()),
+					inscripcion.semestre());
+			predictions.computeIfAbsent(predictionKey, ignored -> new PredictionAccumulator())
 					.add(prediction.get());
 			LocalDate week = inscripcion.fechaInicio().toLocalDate().with(DayOfWeek.MONDAY);
 			predictionsByWeek.computeIfAbsent(week, ignored -> new PredictionAccumulator())
@@ -596,6 +604,9 @@ public class DirectorDashboardService {
 			PredictionAccumulator paAccumulator) {
 	}
 
+	private record PredictionKey(String materia, String carrera, Integer semestre) {
+	}
+
 	private static final class PredictionAccumulator {
 		private long evaluated;
 		private long attended;
@@ -618,9 +629,11 @@ public class DirectorDashboardService {
 					attendanceProbabilitySum / evaluated);
 		}
 
-		private SubjectAttendancePrediction toDto(String materia) {
+		private SubjectAttendancePrediction toDto(PredictionKey key) {
 			return new SubjectAttendancePrediction(
-					materia,
+					key.materia(),
+					key.carrera(),
+					key.semestre(),
 					evaluated,
 					attended,
 					evaluated - attended,

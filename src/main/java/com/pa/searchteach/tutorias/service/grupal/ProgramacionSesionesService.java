@@ -137,7 +137,8 @@ public class ProgramacionSesionesService {
 				bloque.fechaInicio(), bloque.fechaFin(), solicitud.tecnologia(), solicitud.semestre(), actual.asistencias(),
 				bloque.materia().trim(), List.of(solicitud.tecnologia()), bloque.modalidad(),
 				bloque.ubicacion() == null ? null : bloque.ubicacion().trim(), actual.estadoClase(),
-				actual.motivoCierre(), actual.finalizadaEn(), actual.historialChat(), actual.valoraciones()));
+				actual.iniciadaEn(), actual.motivoCierre(), actual.finalizadaEn(), actual.historialChat(),
+				actual.valoraciones()));
 		actualizacionesTutorias.publicar("REPROGRAMADA", actualizada.id());
 		return actualizada;
 	}

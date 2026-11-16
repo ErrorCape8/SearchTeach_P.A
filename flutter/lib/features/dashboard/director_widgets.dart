@@ -65,13 +65,34 @@ extension DirectorDashboardX on DirectorDashboard {
 
   /// Asistencias esperadas por materia (tutorías evaluadas × probabilidad
   /// media de asistencia), de mayor a menor.
-  List<DirSubjectForecast> get pronosticoPorMateria => [
-        for (final s in prediccionesAsistencia)
-          DirSubjectForecast(
-              s.materia,
-              (s.tutoriasEvaluadas * s.probabilidadAsistenciaPromedio)
-                  .round()),
-      ]..sort((a, b) => b.total.compareTo(a.total));
+  List<DirSubjectForecast> get pronosticoPorMateria =>
+      pronosticoPorMateriaFiltrado();
+
+  /// Asistencias esperadas por materia, acotadas por los filtros del tablero.
+  List<DirSubjectForecast> pronosticoPorMateriaFiltrado({
+    String? carrera,
+    int? semestre,
+  }) {
+    final totals = <String, double>{};
+    for (final prediction in prediccionesAsistencia) {
+      if (carrera != null && prediction.carrera != carrera) continue;
+      if (semestre != null && prediction.semestre != semestre) continue;
+      totals.update(
+        prediction.materia,
+        (value) =>
+            value +
+            prediction.tutoriasEvaluadas *
+                prediction.probabilidadAsistenciaPromedio,
+        ifAbsent: () =>
+            prediction.tutoriasEvaluadas *
+            prediction.probabilidadAsistenciaPromedio,
+      );
+    }
+    return [
+      for (final entry in totals.entries)
+        DirSubjectForecast(entry.key, entry.value.round()),
+    ]..sort((a, b) => b.total.compareTo(a.total));
+  }
 
   /// Asistencias esperadas en la semana pronosticada; `null` si no hay.
   int? get proximaSemanaTotal {
@@ -298,7 +319,8 @@ class DirHBars extends StatelessWidget {
                           child: Align(
                             alignment: Alignment.centerLeft,
                             child: FractionallySizedBox(
-                              widthFactor: item.ratio.clamp(0.0, 1.0).toDouble(),
+                              widthFactor:
+                                  item.ratio.clamp(0.0, 1.0).toDouble(),
                               child: Container(
                                 height: 10,
                                 decoration: BoxDecoration(
@@ -358,9 +380,9 @@ class DirRow extends StatelessWidget {
         NeuIconBox(icon, size: 46, radius: 15, iconSize: 22),
         const SizedBox(width: 14),
         Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(title,
-                style: neuPoppins(size: 15.5, weight: FontWeight.w600)),
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(title, style: neuPoppins(size: 15.5, weight: FontWeight.w600)),
             const SizedBox(height: 2),
             Text(subtitle,
                 style: neuBody(size: 12.5, color: Neu.muted, height: 1.3)),
@@ -368,8 +390,7 @@ class DirRow extends StatelessWidget {
         ),
         if (trailing != null) ...[const SizedBox(width: 10), trailing!],
         if (trailing == null && onTap != null)
-          const Icon(Icons.chevron_right_rounded,
-              size: 24, color: Neu.chevron),
+          const Icon(Icons.chevron_right_rounded, size: 24, color: Neu.chevron),
       ]),
     );
     if (onTap == null) return row;

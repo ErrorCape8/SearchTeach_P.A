@@ -10,7 +10,6 @@ class StudentTutoringView extends ConsumerStatefulWidget {
     required this.onJoinProjectCode,
     required this.onLeaveGroupSession,
     required this.onJoinPublishedSession,
-    required this.onAction,
     required this.onShowMessage,
     required this.onSectionChanged,
     super.key,
@@ -25,7 +24,6 @@ class StudentTutoringView extends ConsumerStatefulWidget {
   final Future<void> Function(StudentGroupSession session) onLeaveGroupSession;
   final Future<void> Function(StudentGroupSession session)
       onJoinPublishedSession;
-  final Future<void> Function(StudentTutoring tutoring, String action) onAction;
   final void Function(String message) onShowMessage;
   final ValueChanged<String> onSectionChanged;
 
@@ -39,7 +37,6 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
   String _query = '';
   int _semesterFilter = 0;
   String _modalityFilter = 'Todas';
-  String _sessionFilter = 'encurso';
   final ScrollController _sessionsScrollController = ScrollController();
   Timer? _groupSessionRefreshTimer;
 
@@ -55,9 +52,6 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
     super.didUpdateWidget(oldWidget);
     if (widget.focusRequest != oldWidget.focusRequest) {
       _section = widget.focusSection;
-      if (widget.focusSection == 'sesiones') {
-        _sessionFilter = 'encurso';
-      }
       _syncGroupSessionRefresh();
     }
   }
@@ -95,10 +89,7 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
   }
 
   void _openEnrolledSessions() {
-    setState(() {
-      _section = 'sesiones';
-      _sessionFilter = 'encurso';
-    });
+    setState(() => _section = 'sesiones');
     _syncGroupSessionRefresh();
     widget.onSectionChanged('sesiones');
   }
@@ -133,8 +124,8 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
           ),
           _MenuTile(
             icon: Icons.folder_shared_outlined,
-            title: 'Proyectos de aula',
-            subtitle: 'Consulta tus proyectos activos y finalizados.',
+            title: 'Historial de proyectos de aula',
+            subtitle: 'Consulta tus proyectos finalizados.',
             onTap: () => _goToSection('proyectos-historial'),
           ),
         ],
@@ -161,12 +152,7 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
       case 'historial':
         return _history();
       default:
-        return _tutoringList(
-          widget.data.tutorings
-              .where((t) => t.status == 'REALIZADA' || t.status == 'CANCELADA'),
-          emptyTitle: 'Tu historial está vacío',
-          emptyMessage: 'Las tutorías finalizadas aparecerán aquí.',
-        );
+        return _menu();
     }
   }
 
@@ -178,7 +164,8 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.error_outline_rounded, size: 36, color: Neu.error),
+                const Icon(Icons.error_outline_rounded,
+                    size: 36, color: Neu.error),
                 const SizedBox(height: 10),
                 Text(
                   'No se pudo cargar el seguimiento de tu proyecto',
@@ -195,7 +182,8 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
                   'Reintentar',
                   small: true,
                   expand: false,
-                  onPressed: () => ref.invalidate(studentProjectFollowupProvider),
+                  onPressed: () =>
+                      ref.invalidate(studentProjectFollowupProvider),
                 ),
               ],
             ),
@@ -203,7 +191,9 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
         ),
         data: (projects) {
           final activeProjects = projects
-              .where((item) => item.tutoringState != 'DISUELTA')
+              .where((item) =>
+                  item.tutoringState != 'DISUELTA' &&
+                  item.status != 'FINALIZADO')
               .toList();
           return activeProjects.isEmpty
               ? ListView(
@@ -231,7 +221,8 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
                               children: [
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         item.project.name,
@@ -243,23 +234,44 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
                                       const SizedBox(height: 2),
                                       Text(
                                         '${item.project.career} · Semestre ${item.project.semester}',
-                                        style: neuBody(size: 12.5, color: Neu.muted),
+                                        style: neuBody(
+                                            size: 12.5, color: Neu.muted),
                                       ),
                                     ],
                                   ),
                                 ),
                                 const SizedBox(width: 8),
-                                PaTag(
-                                  item.status == 'FINALIZADO'
-                                      ? 'Finalizado'
-                                      : item.status == 'PENDIENTE_CONFIRMACION'
-                                          ? 'Pendiente cierre'
-                                          : 'En curso',
-                                  tone: item.status == 'FINALIZADO'
-                                      ? PaTone.ok
-                                      : item.status == 'PENDIENTE_CONFIRMACION'
-                                          ? PaTone.warn
-                                          : PaTone.neutral,
+                                NeuSunken(
+                                  radius: 12,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        'ESTADO',
+                                        style: neuBody(
+                                          size: 9,
+                                          weight: FontWeight.w700,
+                                          color: Neu.muted,
+                                        ),
+                                      ),
+                                      Text(
+                                        item.status == 'PENDIENTE_CONFIRMACION'
+                                            ? 'Pendiente cierre'
+                                            : 'En curso',
+                                        style: neuBody(
+                                          size: 11,
+                                          weight: FontWeight.w700,
+                                          color: _blue,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ],
                             ),
@@ -279,12 +291,14 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
                               const SizedBox(height: 8),
                               Row(
                                 children: [
-                                  const Icon(Icons.group_outlined, size: 16, color: Neu.muted),
+                                  const Icon(Icons.group_outlined,
+                                      size: 16, color: Neu.muted),
                                   const SizedBox(width: 6),
                                   Expanded(
                                     child: Text(
                                       'Integrantes (${item.project.studentIds.length}/4): ${item.project.studentIds.join(', ')}',
-                                      style: neuBody(size: 12, color: Neu.muted),
+                                      style:
+                                          neuBody(size: 12, color: Neu.muted),
                                     ),
                                   ),
                                 ],
@@ -311,7 +325,8 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
                                   children: [
                                     Row(
                                       children: [
-                                        const Icon(Icons.videocam_rounded, size: 18, color: _blue),
+                                        const Icon(Icons.videocam_rounded,
+                                            size: 18, color: _blue),
                                         const SizedBox(width: 8),
                                         Text(
                                           'Reunión programada con el tutor',
@@ -329,31 +344,42 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
                                       style: neuBody(size: 12.5),
                                     ),
                                     const SizedBox(height: 10),
-                                    NeuButton(
-                                      'Ingresar al chat / reunión',
-                                      icon: Icons.chat_bubble_outline_rounded,
-                                      small: true,
-                                      expand: false,
-                                      onPressed: () {
-                                        final sesId = item.meetingSessionId.isNotEmpty
-                                            ? item.meetingSessionId
-                                            : (item.sessions.isNotEmpty ? item.sessions.first.id : '0');
-                                        Navigator.of(context).push(MaterialPageRoute(
-                                          builder: (_) => ProyectoAulaChatPage(
-                                            tutoringId: item.tutoringId,
-                                            projectId: item.project.projectId,
-                                            sessionId: sesId,
-                                            title: item.project.name,
-                                            teacherMode: false,
-                                          ),
-                                        ));
-                                      },
-                                    ),
                                   ],
                                 ),
                               ),
                             ],
-                            if (item.closureReport.isNotEmpty || item.closureReason.isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            NeuButton(
+                              'Abrir chat del proyecto',
+                              icon: Icons.chat_bubble_outline_rounded,
+                              small: true,
+                              expand: false,
+                              onPressed: () {
+                                final sessionId =
+                                    item.meetingSessionId.isNotEmpty
+                                        ? item.meetingSessionId
+                                        : item.sessions.isNotEmpty
+                                            ? item.sessions.first.id
+                                            : null;
+                                if (sessionId == null) {
+                                  widget.onShowMessage(
+                                    'El chat estará disponible cuando el tutor registre una sesión.',
+                                  );
+                                  return;
+                                }
+                                Navigator.of(context).push(MaterialPageRoute(
+                                  builder: (_) => ProyectoAulaChatPage(
+                                    tutoringId: item.tutoringId,
+                                    projectId: item.project.projectId,
+                                    sessionId: sessionId,
+                                    title: item.project.name,
+                                    teacherMode: false,
+                                  ),
+                                ));
+                              },
+                            ),
+                            if (item.closureReport.isNotEmpty ||
+                                item.closureReason.isNotEmpty) ...[
                               const SizedBox(height: 12),
                               NeuSunken(
                                 radius: 14,
@@ -363,13 +389,15 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
                                   children: [
                                     Text(
                                       'Reporte de evaluación del tutor',
-                                      style: neuBody(size: 13, weight: FontWeight.w700),
+                                      style: neuBody(
+                                          size: 13, weight: FontWeight.w700),
                                     ),
                                     if (item.closureReason.isNotEmpty) ...[
                                       const SizedBox(height: 4),
                                       Text(
                                         'Estado: ${item.closureReason}',
-                                        style: neuBody(size: 12, color: Neu.muted),
+                                        style:
+                                            neuBody(size: 12, color: Neu.muted),
                                       ),
                                     ],
                                     if (item.closureReport.isNotEmpty) ...[
@@ -397,7 +425,8 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
                                 ),
                               ),
                             if (item.sessions.isEmpty)
-                              const PaEmpty('El tutor aún no ha registrado sesiones ni horarios.')
+                              const PaEmpty(
+                                  'El tutor aún no ha registrado sesiones ni horarios.')
                             else
                               PaRowList([
                                 for (final session in item.sessions)
@@ -406,13 +435,17 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
                                     title: session.start == null
                                         ? 'Fecha pendiente'
                                         : _longDate(session.start!.toLocal()),
-                                    subtitle: '${session.start == null ? '' : TimeOfDay.fromDateTime(session.start!.toLocal()).format(context)} – '
+                                    subtitle:
+                                        '${session.start == null ? '' : TimeOfDay.fromDateTime(session.start!.toLocal()).format(context)} – '
                                         '${session.end == null ? '' : TimeOfDay.fromDateTime(session.end!.toLocal()).format(context)}\n'
                                         '${session.notes.isEmpty ? 'Sin notas del tutor' : session.notes}',
-                                    trailing: const Icon(Icons.chat_bubble_outline_rounded,
-                                        size: 20, color: _blue),
+                                    trailing: const Icon(
+                                        Icons.chat_bubble_outline_rounded,
+                                        size: 20,
+                                        color: _blue),
                                     onTap: () async {
-                                      await Navigator.of(context).push(MaterialPageRoute(
+                                      await Navigator.of(context)
+                                          .push(MaterialPageRoute(
                                         builder: (_) => ProyectoAulaChatPage(
                                           tutoringId: item.tutoringId,
                                           projectId: item.project.projectId,
@@ -422,18 +455,21 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
                                         ),
                                       ));
                                       if (mounted) {
-                                        ref.invalidate(studentProjectFollowupProvider);
+                                        ref.invalidate(
+                                            studentProjectFollowupProvider);
                                       }
                                     },
                                   ),
                               ]),
-                            if (item.status == 'EN_CURSO' && item.tutoringState == 'ACTIVA') ...[
+                            if (item.status == 'EN_CURSO' &&
+                                item.tutoringState == 'ACTIVA') ...[
                               const SizedBox(height: 14),
                               Align(
                                 alignment: Alignment.centerRight,
                                 child: TextButton.icon(
                                   onPressed: () => _leaveClassroomProject(item),
-                                  icon: const Icon(Icons.exit_to_app, color: Neu.error),
+                                  icon: const Icon(Icons.exit_to_app,
+                                      color: Neu.error),
                                   label: Text(
                                     'Desistir del proyecto',
                                     style: neuBody(size: 13, color: Neu.error),
@@ -498,7 +534,9 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
         ),
         data: (projects) {
           final visibleProjects = projects
-              .where((item) => item.tutoringState != 'DISUELTA')
+              .where((item) =>
+                  item.tutoringState != 'DISUELTA' &&
+                  item.status == 'FINALIZADO')
               .toList();
           if (visibleProjects.isEmpty) {
             return ListView(
@@ -506,8 +544,8 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
               children: const [
                 _EmptyCard(
                   icon: Icons.folder_off_outlined,
-                  title: 'No tienes proyectos de aula',
-                  message: 'Cuando te inscribas en un proyecto aparecerá aquí.',
+                  title: 'No tienes proyectos finalizados',
+                  message: 'Tus proyectos cerrados aparecerán aquí.',
                 ),
               ],
             );
@@ -545,9 +583,6 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
         .toList()
       ..sort(
           (a, b) => (b.start ?? DateTime(0)).compareTo(a.start ?? DateTime(0)));
-    final individualHistory = widget.data.tutorings
-        .where((t) => t.status == 'REALIZADA' || t.status == 'CANCELADA')
-        .toList();
     return ref.watch(studentProjectFollowupProvider).when(
           loading: () => ListView(
             padding: const EdgeInsets.all(24),
@@ -562,12 +597,10 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
           ),
           error: (error, _) => _historyContent(
             completedGroups,
-            individualHistory,
             const [],
           ),
           data: (projects) => _historyContent(
             completedGroups,
-            individualHistory,
             projects
                 .where((item) =>
                     item.tutoringState != 'DISUELTA' &&
@@ -579,12 +612,9 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
 
   Widget _historyContent(
     List<StudentGroupSession> completedGroups,
-    List<StudentTutoring> individualHistory,
     List<StudentProjectFollowup> completedProjects,
   ) {
-    if (completedGroups.isEmpty &&
-        individualHistory.isEmpty &&
-        completedProjects.isEmpty) {
+    if (completedGroups.isEmpty && completedProjects.isEmpty) {
       return ListView(
         padding: const EdgeInsets.all(24),
         children: const [
@@ -616,17 +646,8 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
             SizedBox(
               width: 150,
               child: _HistoryMetricCard(
-                value:
-                    '${completedGroups.length + individualHistory.where((item) => item.status == 'REALIZADA').length}',
+                value: '${completedGroups.length}',
                 label: 'Realizadas',
-              ),
-            ),
-            SizedBox(
-              width: 150,
-              child: _HistoryMetricCard(
-                value:
-                    '${individualHistory.where((item) => item.status == 'CANCELADA').length}',
-                label: 'Canceladas',
               ),
             ),
             SizedBox(
@@ -655,32 +676,6 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
                 showRating: false,
               )),
         ],
-        if (individualHistory.isNotEmpty) ...[
-          const SizedBox(height: 10),
-          const Text(
-            'Tutorías individuales',
-            style: TextStyle(
-              color: _navy,
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 10),
-        ],
-        ...individualHistory.map(
-          (tutoring) => _TutoringCard(
-            tutoring: tutoring,
-            onOpenHistory: () => Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => TutoriaHistorialPage(
-                  sessionId: tutoring.id,
-                  subject: tutoring.subject,
-                  isIndividual: true,
-                ),
-              ),
-            ),
-          ),
-        ),
         if (completedProjects.isNotEmpty) ...[
           const SizedBox(height: 10),
           const Text(
@@ -958,150 +953,49 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
         .where((session) =>
             session.state == 'PROGRAMADA' || session.state == 'EN_CURSO')
         .toList();
-    final activeIndividual = widget.data.tutorings
-        .where((tutoring) =>
-            tutoring.status == 'PROGRAMADA' || tutoring.status == 'EN_CURSO')
-        .toList();
-    final cancelled = widget.data.tutorings
-        .where((tutoring) => tutoring.status == 'CANCELADA');
-    final options = [
-      (
-        'encurso',
-        'Mis sesiones',
-        activeGroupSessions.length + activeIndividual.length
-      ),
-      ('canceladas', 'Canceladas', cancelled.length),
-    ];
-
-    Widget content;
-    switch (_sessionFilter) {
-      case 'encurso':
-        final agenda = <({DateTime? start, Widget card})>[
-          for (final session in activeGroupSessions)
-            (
-              start: session.start?.toLocal(),
-              card: _GroupSessionCard(
-                session: session,
-                studentName: widget.data.profile.name,
-                teacherName: widget.data.tutors
-                        .where((tutor) => tutor.teacherId == session.teacherId)
-                        .map((tutor) => tutor.name)
-                        .firstOrNull ??
-                    session.teacherId,
-                onLeave: () => widget.onLeaveGroupSession(session),
-              ),
-            ),
-          for (final tutoring in activeIndividual)
-            (
-              start: tutoring.start?.toLocal(),
-              card: _TutoringCard(
-                tutoring: tutoring,
-                teacherName: widget.data.tutors
-                        .where((tutor) => tutor.teacherId == tutoring.teacherId)
-                        .map((tutor) => tutor.name)
-                        .firstOrNull ??
-                    tutoring.teacherId,
-                onJoinRoom: tutoring.status == 'EN_CURSO' &&
-                        tutoring.modality.toUpperCase() != 'PRESENCIAL'
-                    ? () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => LiveKitRoomPage(
-                              sessionId: tutoring.id,
-                              subject: tutoring.subject,
-                              modality: tutoring.modality,
-                              teacherMode: false,
-                              students: [tutoring.studentId],
-                              endAt: tutoring.end?.toLocal(),
-                              studentMode: true,
-                              studentName: widget.data.profile.name,
-                              isIndividualTutoring: true,
-                            ),
-                          ),
-                        )
-                    : null,
-                onCancel: tutoring.status == 'PROGRAMADA'
-                    ? () => widget.onAction(tutoring, 'cancelar')
-                    : null,
-              ),
-            ),
-        ]..sort((a, b) =>
-            (a.start ?? DateTime(9999)).compareTo(b.start ?? DateTime(9999)));
-        content = agenda.isEmpty
-            ? ListView(
-                controller: _sessionsScrollController,
-                padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
-                children: const [
-                  _EmptyCard(
-                    icon: Icons.event_note_outlined,
-                    title: 'No tienes sesiones próximas',
-                    message:
-                        'Tus tutorías confirmadas aparecerán aquí. Podrás entrar cuando el docente inicie la clase.',
-                  ),
-                ],
-              )
-            : ListView(
-                controller: _sessionsScrollController,
-                padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
-                children: [
-                  const Text(
-                    'Aquí ves cuándo y dónde te toca cada sesión.',
-                    style: TextStyle(color: _muted, fontSize: 12),
-                  ),
-                  ..._agendaSections(agenda),
-                ],
-              );
-        break;
-      case 'canceladas':
-        content = _tutoringList(
-          cancelled,
-          scrollController: _sessionsScrollController,
-          emptyTitle: 'No tienes tutorías canceladas',
-          emptyMessage: 'Las tutorías canceladas aparecerán aquí.',
-        );
-        break;
-      default:
-        content = _tutoringList(
-          const [],
-          scrollController: _sessionsScrollController,
-          emptyTitle: 'No tienes sesiones próximas',
-          emptyMessage: 'Tus tutorías confirmadas aparecerán aquí.',
-        );
-    }
-
-    return Column(
-      children: [
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.fromLTRB(18, 12, 12, 4),
-          child: Row(
-            children: [
-              for (final option in options)
-                Padding(
-                  padding: const EdgeInsets.only(right: 5),
-                  child: ChoiceChip(
-                    label: Text('${option.$2} (${option.$3})'),
-                    selected: _sessionFilter == option.$1,
-                    onSelected: (_) =>
-                        setState(() => _sessionFilter = option.$1),
-                    visualDensity: VisualDensity.compact,
-                    labelStyle: TextStyle(
-                      fontSize: 11,
-                      color: _sessionFilter == option.$1
-                          ? Colors.white
-                          : const Color(0xFF334155),
-                    ),
-                    backgroundColor: Colors.white,
-                    selectedColor: const Color(0xFF0D4FC4),
-                    side: BorderSide.none,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    showCheckmark: false,
-                  ),
-                ),
-            ],
+    final agenda = <({DateTime? start, Widget card})>[
+      for (final session in activeGroupSessions)
+        (
+          start: session.start?.toLocal(),
+          card: _GroupSessionCard(
+            session: session,
+            studentName: widget.data.profile.name,
+            teacherName: widget.data.tutors
+                    .where((tutor) => tutor.teacherId == session.teacherId)
+                    .map((tutor) => tutor.name)
+                    .firstOrNull ??
+                session.teacherId,
+            onLeave: () => widget.onLeaveGroupSession(session),
           ),
         ),
+    ]..sort((a, b) =>
+        (a.start ?? DateTime(9999)).compareTo(b.start ?? DateTime(9999)));
+    final content = agenda.isEmpty
+        ? ListView(
+            controller: _sessionsScrollController,
+            padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
+            children: const [
+              _EmptyCard(
+                icon: Icons.event_note_outlined,
+                title: 'No tienes sesiones próximas',
+                message:
+                    'Tus tutorías grupales confirmadas aparecerán aquí. Podrás entrar cuando el docente inicie la clase.',
+              ),
+            ],
+          )
+        : ListView(
+            controller: _sessionsScrollController,
+            padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+            children: [
+              const Text(
+                'Aquí ves cuándo y dónde te toca cada sesión.',
+                style: TextStyle(color: _muted, fontSize: 12),
+              ),
+              ..._agendaSections(agenda),
+            ],
+          );
+    return Column(
+      children: [
         Expanded(child: content),
         const Padding(
           padding: EdgeInsets.fromLTRB(24, 0, 24, 10),
@@ -1124,9 +1018,8 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
     var index = 0;
     while (index < agenda.length && agenda[index].start != null) {
       final start = agenda[index].start!;
-      final weekStart =
-          DateTime(start.year, start.month, start.day)
-              .subtract(Duration(days: start.weekday - 1));
+      final weekStart = DateTime(start.year, start.month, start.day)
+          .subtract(Duration(days: start.weekday - 1));
       var weekEnd = index + 1;
       while (weekEnd < agenda.length && agenda[weekEnd].start != null) {
         final next = agenda[weekEnd].start!;
@@ -1180,161 +1073,43 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
   }
 
   Widget _groupChatsAndCalls() {
-    final now = DateTime.now();
     final groupSessions = widget.data.groupSessions
         .where((session) => session.state != 'FINALIZADA')
         .toList()
       ..sort((a, b) =>
           (a.start ?? DateTime(9999)).compareTo(b.start ?? DateTime(9999)));
-    final virtualIndividual = widget.data.tutorings
-        .where((t) =>
-            t.modality.toUpperCase() != 'PRESENCIAL' &&
-            t.status != 'REALIZADA' &&
-            t.status != 'CANCELADA')
-        .toList()
-      ..sort((a, b) =>
-          (a.start ?? DateTime(9999)).compareTo(b.start ?? DateTime(9999)));
-
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 32),
       children: [
-        NeuSurface(
-          sunken: true,
-          radius: 16,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          child: Text(
-            'Solo puedes unirte a las tutorías de hoy. Al entrar accederás directamente a la sala o a la sala de espera si el docente aún no inicia.',
-            style: neuBody(size: 13, color: Neu.heading, height: 1.4),
-          ),
-        ),
-        const SizedBox(height: 18),
-        if (groupSessions.isEmpty && virtualIndividual.isEmpty)
-          PaCard(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              children: [
-                const NeuIconBox(Icons.videocam_outlined,
-                    color: _blue, size: 48, iconSize: 26),
-                const SizedBox(height: 12),
-                Text(
-                  'No tienes tutorías activas para unirte',
-                  style: neuPoppins(
-                      size: 16, weight: FontWeight.w700, color: Neu.heading),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Cuando tengas una tutoría programada para hoy, podrás acceder directamente a la sala desde aquí.',
-                  textAlign: TextAlign.center,
-                  style: neuBody(size: 13, color: Neu.muted),
-                ),
-              ],
-            ),
-          )
-        else ...[
-          for (final session in groupSessions) ...[
-            Builder(builder: (context) {
-              final start = session.start?.toLocal();
-              final isToday = start != null &&
-                  start.year == now.year &&
-                  start.month == now.month &&
-                  start.day == now.day;
-              final teacher = widget.data.tutors
-                  .where((t) => t.teacherId == session.teacherId)
-                  .map((t) => t.name)
-                  .firstOrNull;
-              return StartTutoringCard(
-                subject: session.subject,
-                timeLabel: start == null
-                    ? 'Fecha no disponible'
-                    : (isToday
-                        ? 'Hoy · ${_formatHour(start)}'
-                        : '${start.day}/${start.month} · ${_formatHour(start)}'),
-                modalityLabel: _groupSessionModalityLabel(session.modality),
-                attendeesLabel: teacher != null && teacher.isNotEmpty
-                    ? 'Docente: $teacher'
-                    : '${session.studentIds.length} inscritos',
-                accentColor: _blue,
-                buttonLabel: 'Unirse a clase',
-                onAction: () async {
-                  final result = await Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => LiveKitRoomPage(
-                        sessionId: session.id,
-                        subject: session.subject,
-                        modality: session.modality,
-                        teacherMode: false,
-                        students: session.studentIds,
-                        endAt: session.end?.toLocal(),
-                        studentMode: true,
-                        studentName: widget.data.profile.name,
-                      ),
-                    ),
-                  );
-                  if ((result == 'ended' || session.state == 'FINALIZADA') &&
-                      context.mounted) {
-                    await showStudentTutoringRatingDialog(
-                      context,
-                      ref,
-                      sessionId: session.id,
-                      subject: session.subject,
-                    );
-                  }
-                },
-              );
-            }),
-          ],
-          for (final tutoring in virtualIndividual) ...[
-            Builder(builder: (context) {
-              final start = tutoring.start?.toLocal();
-              final isToday = start != null &&
-                  start.year == now.year &&
-                  start.month == now.month &&
-                  start.day == now.day;
-              final teacher = widget.data.tutors
-                      .where((tutor) => tutor.teacherId == tutoring.teacherId)
-                      .map((tutor) => tutor.name)
-                      .firstOrNull ??
-                  tutoring.teacherId;
-              return StartTutoringCard(
-                subject: tutoring.subject,
-                timeLabel: start == null
-                    ? 'Fecha no disponible'
-                    : (isToday
-                        ? 'Hoy · ${_formatHour(start)}'
-                        : '${start.day}/${start.month} · ${_formatHour(start)}'),
-                modalityLabel: tutoring.modality.isEmpty
-                    ? 'Virtual'
-                    : tutoring.modality,
-                attendeesLabel: 'Docente: $teacher',
-                accentColor: _blue,
-                buttonLabel: 'Unirse a clase',
-                onAction: () async {
-                  final result = await Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => LiveKitRoomPage(
-                        sessionId: tutoring.id,
-                        subject: tutoring.subject,
-                        modality: tutoring.modality,
-                        teacherMode: false,
-                        students: [tutoring.studentId],
-                        endAt: tutoring.end?.toLocal(),
-                        studentMode: true,
-                        studentName: widget.data.profile.name,
-                        isIndividualTutoring: true,
-                      ),
-                    ),
-                  );
-                  if (result == 'ended' && context.mounted) {
-                    await showStudentTutoringRatingDialog(
-                      context,
-                      ref,
-                      sessionId: tutoring.id,
-                      subject: tutoring.subject,
-                    );
-                  }
-                },
-              );
-            }),
+        ...[
+          if (groupSessions.isEmpty)
+            PaCard(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                children: [
+                  const NeuIconBox(Icons.videocam_outlined,
+                      color: _blue, size: 48, iconSize: 26),
+                  const SizedBox(height: 12),
+                  Text(
+                    'No tienes videollamadas activas',
+                    style: neuPoppins(
+                        size: 16, weight: FontWeight.w700, color: Neu.heading),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Cuando te inscribas en una tutoría grupal virtual, podrás unirte a la videollamada y al chat desde aquí.',
+                    textAlign: TextAlign.center,
+                    style: neuBody(size: 13, color: Neu.muted),
+                  ),
+                ],
+              ),
+            )
+          else ...[
+            for (final session in groupSessions)
+              _GroupChatAndCallCard(
+                session: session,
+                studentName: widget.data.profile.name,
+              ),
           ],
         ],
       ],
@@ -1352,14 +1127,7 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
     final enrolledGroups = widget.data.groupSessions
         .where((item) => item.end?.isAfter(now) ?? false)
         .toList();
-    final enrolledIndividual = widget.data.tutorings.where((item) =>
-        (item.status == 'SOLICITADA' ||
-            item.status == 'ALTERNATIVA_PROPUESTA' ||
-            item.status == 'PROGRAMADA' ||
-            item.status == 'EN_CURSO') &&
-        (item.end?.isAfter(now) ?? false));
-    final maximumReached =
-        enrolledGroups.length + enrolledIndividual.length >= 3;
+    final maximumReached = enrolledGroups.length >= 3;
     final overlapsGroup = start != null &&
         end != null &&
         enrolledGroups.any((item) =>
@@ -1367,14 +1135,7 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
             item.end != null &&
             start.isBefore(item.end!) &&
             item.start!.isBefore(end));
-    final overlapsIndividual = start != null &&
-        end != null &&
-        enrolledIndividual.any((item) =>
-            item.start != null &&
-            item.end != null &&
-            start.isBefore(item.end!) &&
-            item.start!.isBefore(end));
-    final hasScheduleConflict = overlapsGroup || overlapsIndividual;
+    final hasScheduleConflict = overlapsGroup;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -1382,8 +1143,8 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(session.subject,
-                style: const TextStyle(
-                    fontWeight: FontWeight.w800, fontSize: 16)),
+                style:
+                    const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
             const SizedBox(height: 6),
             Text(
                 '${teacher?.name ?? 'Docente'} · ${session.technology} · Semestre ${session.semester}'),
@@ -1496,14 +1257,7 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
         final enrolledGroups = widget.data.groupSessions
             .where((item) => item.end?.isAfter(now) ?? false)
             .toList();
-        final enrolledIndividual = widget.data.tutorings.where((item) =>
-            (item.status == 'SOLICITADA' ||
-                item.status == 'ALTERNATIVA_PROPUESTA' ||
-                item.status == 'PROGRAMADA' ||
-                item.status == 'EN_CURSO') &&
-            (item.end?.isAfter(now) ?? false));
-        final maximumReached =
-            enrolledGroups.length + enrolledIndividual.length >= 3;
+        final maximumReached = enrolledGroups.length >= 3;
         final overlapsGroup = start != null &&
             end != null &&
             enrolledGroups.any((item) =>
@@ -1511,14 +1265,7 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
                 item.end != null &&
                 start.isBefore(item.end!) &&
                 item.start!.isBefore(end));
-        final overlapsIndividual = start != null &&
-            end != null &&
-            enrolledIndividual.any((item) =>
-                item.start != null &&
-                item.end != null &&
-                start.isBefore(item.end!) &&
-                item.start!.isBefore(end));
-        final hasScheduleConflict = overlapsGroup || overlapsIndividual;
+        final hasScheduleConflict = overlapsGroup;
         return Card(
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -1583,41 +1330,6 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
         'VIRTUAL' => 'Virtual',
         _ => value,
       };
-
-  Widget _tutoringList(
-    Iterable<StudentTutoring> values, {
-    ScrollController? scrollController,
-    required String emptyTitle,
-    required String emptyMessage,
-  }) {
-    final items = values.toList()
-      ..sort((a, b) =>
-          (a.start ?? DateTime(9999)).compareTo(b.start ?? DateTime(9999)));
-    return ListView(
-      controller: scrollController,
-      padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
-      children: [
-        if (items.isEmpty)
-          _EmptyCard(
-            icon: Icons.event_note_outlined,
-            title: emptyTitle,
-            message: emptyMessage,
-          )
-        else
-          ...items.map((tutoring) => _TutoringCard(
-                tutoring: tutoring,
-                onConfirm: tutoring.status == 'ALTERNATIVA_PROPUESTA'
-                    ? () => widget.onAction(tutoring, 'confirmar-alternativa')
-                    : null,
-                onCancel: tutoring.status == 'SOLICITADA' ||
-                        tutoring.status == 'ALTERNATIVA_PROPUESTA' ||
-                        tutoring.status == 'PROGRAMADA'
-                    ? () => widget.onAction(tutoring, 'cancelar')
-                    : null,
-              )),
-      ],
-    );
-  }
 }
 
 class _HistoryMetricCard extends StatelessWidget {

@@ -24,6 +24,7 @@ const _navItems = <(String, IconData)>[
   ('Tutorías', Icons.book_outlined),
   ('Calidad', Icons.star_border_rounded),
   ('Pronóstico', Icons.bar_chart_rounded),
+  ('Proyectos PA', Icons.assignment_outlined),
 ];
 
 const _subtitles = <String>[
@@ -31,6 +32,7 @@ const _subtitles = <String>[
   'Información por materia',
   'Calificaciones anónimas',
   'Demanda de tutorías',
+  'Proyectos de aula inscritos',
 ];
 
 String? _nonEmpty(Map<String, dynamic>? data, String key) {
@@ -46,10 +48,18 @@ class DashboardPage extends ConsumerStatefulWidget {
 }
 
 class _DashboardPageState extends ConsumerState<DashboardPage> {
-  static const _profileTab = 4;
+  static const _projectsMenuItem = 4;
+  static const _profileTab = 5;
   int _tab = 0;
+  String? _careerFilter;
+  int? _semesterFilter;
+  bool _filtersExpanded = false;
 
   void _select(int index) {
+    if (index == _projectsMenuItem) {
+      paPush(context, const ProyectosAulaPage(), accent: _purple);
+      return;
+    }
     if (index != _tab) setState(() => _tab = index);
   }
 
@@ -132,8 +142,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                   index: _tab >= _navItems.length ? -1 : _tab,
                   onSelect: _select,
                   items: [
-                    for (final item in _navItems)
-                      NeuNavItem(item.$2, item.$1),
+                    for (final item in _navItems) NeuNavItem(item.$2, item.$1),
                   ],
                 ),
         ),
@@ -212,9 +221,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
         const SizedBox(width: 10),
         if (compact)
           NeuCircleButton(
-              icon: Icons.sync_rounded,
-              tooltip: 'Actualizar',
-              onTap: _refresh)
+              icon: Icons.sync_rounded, tooltip: 'Actualizar', onTap: _refresh)
         else
           SizedBox(
             height: 42,
@@ -239,6 +246,11 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
           badge: unread,
           onTap: () => context.push('/notificaciones', extra: _purple),
         ),
+        NeuCircleButton(
+          icon: Icons.logout_rounded,
+          tooltip: 'Cerrar sesión',
+          onTap: _logout,
+        ),
       ]),
     );
   }
@@ -248,7 +260,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
   Widget _body(bool wide) {
     final Widget child;
     if (_tab == _profileTab) {
-      child = DirPerfilView(onLogout: _logout);
+      child = const DirPerfilView();
     } else {
       child = ref.watch(directorDashboardProvider).when(
             loading: () => const SizedBox(
@@ -260,16 +272,32 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
               0 => DirHomeView(
                   data: data,
                   onOpenForecast: () => _select(3),
-                  onOpenProjects: () => paPush(
-                    context,
-                    const ProyectosAulaPage(),
-                    accent: _purple,
-                  ),
+                  onOpenProjects: () => _select(_projectsMenuItem),
                 ),
               1 => DirTutoriasView(data: data),
-              2 => DirCalidadView(data: data),
+              2 => DirCalidadView(
+                  data: data,
+                  career: _careerFilter,
+                  semester: _semesterFilter,
+                  filtersExpanded: _filtersExpanded,
+                  onToggleFilters: () =>
+                      setState(() => _filtersExpanded = !_filtersExpanded),
+                  onCareerChanged: (value) =>
+                      setState(() => _careerFilter = value),
+                  onSemesterChanged: (value) =>
+                      setState(() => _semesterFilter = value),
+                ),
               _ => DirForecastView(
                   data: data,
+                  career: _careerFilter,
+                  semester: _semesterFilter,
+                  filtersExpanded: _filtersExpanded,
+                  onToggleFilters: () =>
+                      setState(() => _filtersExpanded = !_filtersExpanded),
+                  onCareerChanged: (value) =>
+                      setState(() => _careerFilter = value),
+                  onSemesterChanged: (value) =>
+                      setState(() => _semesterFilter = value),
                   onOpenAttendance: () => paPush(
                     context,
                     AttendancePredictionPage(dashboard: data),
@@ -356,16 +384,19 @@ class _Sidebar extends StatelessWidget {
       decoration: const BoxDecoration(
         color: Neu.bg,
         boxShadow: [
-          BoxShadow(color: Neu.shadowDark, offset: Offset(4, 0), blurRadius: 12),
+          BoxShadow(
+              color: Neu.shadowDark, offset: Offset(4, 0), blurRadius: 12),
         ],
       ),
       child: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(12, 22, 12, 14),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(8, 0, 8, 22),
-              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              child:
+                  Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Image.asset(
                   'assets/images/logo_dir.png',
                   width: 52,
@@ -418,13 +449,12 @@ class _Sidebar extends StatelessWidget {
                   child: NeuSurface(
                     radius: 18,
                     shadows: i == selected ? Neu.raiseS : const [],
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 13),
                     onTap: () => onSelect(i),
                     child: Row(children: [
                       Icon(_navItems[i].$2,
-                          size: 24,
-                          color: i == selected ? _purple : Neu.muted),
+                          size: 24, color: i == selected ? _purple : Neu.muted),
                       const SizedBox(width: 14),
                       Text(_navItems[i].$1,
                           style: neuPoppins(
@@ -440,10 +470,11 @@ class _Sidebar extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(0, 8, 0, 0),
               child: NeuSurface(
                 radius: 18,
-                shadows: selected == 4 ? const [] : Neu.raiseS,
-                sunken: selected == 4,
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                onTap: () => onSelect(4),
+                shadows: selected == 5 ? const [] : Neu.raiseS,
+                sunken: selected == 5,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                onTap: () => onSelect(5),
                 child: Row(children: [
                   SizedBox(
                     width: 40,
@@ -456,7 +487,7 @@ class _Sidebar extends StatelessWidget {
                             style: neuPoppins(
                                 size: 13,
                                 weight: FontWeight.w700,
-                                color: selected == 4 ? _purple : Neu.muted)),
+                                color: selected == 5 ? _purple : Neu.muted)),
                       ),
                     ),
                   ),
@@ -470,21 +501,29 @@ class _Sidebar extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                               style: neuPoppins(
                                   size: 13.5,
-                                  color: selected == 4 ? _purple : Neu.text)),
+                                  color: selected == 5 ? _purple : Neu.text)),
                           Text(role,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: neuBody(size: 12, color: Neu.muted)),
                         ]),
                   ),
-                  IconButton(
-                    tooltip: 'Cerrar sesión',
-                    onPressed: onLogout,
-                    icon: const Icon(Icons.logout_rounded,
-                        size: 20, color: Neu.muted),
-                  ),
                 ]),
               ),
+            ),
+            const SizedBox(height: 8),
+            NeuSurface(
+              radius: 14,
+              shadows: Neu.raiseS,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+              onTap: onLogout,
+              child: Row(children: [
+                const Icon(Icons.logout_rounded, size: 20, color: _purple),
+                const SizedBox(width: 10),
+                Text('Cerrar sesión',
+                    style: neuBody(
+                        size: 13, weight: FontWeight.w700, color: _purple)),
+              ]),
             ),
           ]),
         ),

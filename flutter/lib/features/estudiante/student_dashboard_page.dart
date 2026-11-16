@@ -116,6 +116,7 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage>
                           },
                           onProfile: () => _selectTab(4),
                           onNotifications: () => _selectTab(5),
+                          onLogout: _logout,
                           onBack: () => _openTutorSection('menu'),
                         ),
                         Expanded(
@@ -154,7 +155,6 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage>
                                         onLeaveGroupSession: _leaveGroupSession,
                                         onJoinPublishedSession: (session) =>
                                             _joinPublishedSession(session),
-                                        onAction: _tutoringAction,
                                         onShowMessage: _showMessage,
                                         onSectionChanged: (section) => setState(
                                             () => _focusTutoring = section),
@@ -166,7 +166,6 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage>
                                                 .contains('docente')
                                             ? () => context.go('/docente')
                                             : null,
-                                        onLogout: _logout,
                                       ),
                                       const NotificationsInbox(
                                         accentColor: _blue,
@@ -328,25 +327,6 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage>
       _showMessage(_apiMessage(error));
     } on FormatException catch (error) {
       _showMessage(error.message);
-    }
-  }
-
-  Future<void> _tutoringAction(
-    StudentTutoring tutoring,
-    String action,
-  ) async {
-    try {
-      await updateTutoring(
-        dio: ref.read(dioProvider),
-        tutoring: tutoring,
-        action: action,
-      );
-      ref.invalidate(studentDashboardProvider);
-      _showMessage(action == 'cancelar'
-          ? 'La tutoría fue cancelada.'
-          : 'La propuesta de horario fue aceptada.');
-    } on DioException catch (error) {
-      _showMessage(_apiMessage(error));
     }
   }
 

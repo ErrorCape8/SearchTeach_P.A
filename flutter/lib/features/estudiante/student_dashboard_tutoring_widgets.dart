@@ -53,128 +53,6 @@ class _TutorCard extends StatelessWidget {
       );
 }
 
-class _TutoringCard extends StatelessWidget {
-  const _TutoringCard({
-    required this.tutoring,
-    this.teacherName = '',
-    this.onConfirm,
-    this.onCancel,
-    this.onJoinRoom,
-    this.onOpenHistory,
-  });
-  final StudentTutoring tutoring;
-  final String teacherName;
-  final VoidCallback? onConfirm;
-  final VoidCallback? onCancel;
-  final VoidCallback? onJoinRoom;
-  final VoidCallback? onOpenHistory;
-
-  @override
-  Widget build(BuildContext context) {
-    final isVirtual = tutoring.modality.toUpperCase() != 'PRESENCIAL';
-    final modalityColor =
-        isVirtual ? const Color(0xFF1769AA) : const Color(0xFF16805D);
-    return Card(
-        margin: const EdgeInsets.only(bottom: 12),
-        color: Colors.white,
-        elevation: 1,
-        shadowColor: const Color(0x10141E3C),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        child: Padding(
-          padding: const EdgeInsets.all(18),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(children: [
-                Expanded(
-                  child: Text(tutoring.subject,
-                      style: const TextStyle(
-                          color: _navy,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800)),
-                ),
-                _StatusPill(text: _statusLabel(tutoring.status)),
-              ]),
-              const SizedBox(height: 9),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: modalityColor.withValues(alpha: .09),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      isVirtual
-                          ? Icons.videocam_outlined
-                          : Icons.location_on_outlined,
-                      size: 15,
-                      color: modalityColor,
-                    ),
-                    const SizedBox(width: 5),
-                    Text(
-                      _modalityLabel(tutoring.modality),
-                      style: TextStyle(
-                        color: modalityColor,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                tutoring.start == null
-                    ? 'Horario por confirmar'
-                    : '${_longDate(tutoring.start!.toLocal())}'
-                        '${tutoring.end == null ? '' : ' – ${TimeOfDay.fromDateTime(tutoring.end!.toLocal()).format(context)}'}',
-                style: const TextStyle(color: _muted),
-              ),
-              const SizedBox(height: 5),
-              if (teacherName.isNotEmpty)
-                Text('Docente: $teacherName',
-                    style: const TextStyle(color: _muted)),
-              if (teacherName.isNotEmpty) const SizedBox(height: 5),
-              if (onJoinRoom != null) ...[
-                const SizedBox(height: 12),
-                FilledButton.icon(
-                  onPressed: onJoinRoom,
-                  icon: const Icon(Icons.video_call_outlined),
-                  label: const Text('Entrar a la clase'),
-                ),
-              ],
-              if (onOpenHistory != null) ...[
-                const SizedBox(height: 8),
-                OutlinedButton.icon(
-                  onPressed: onOpenHistory,
-                  icon: const Icon(Icons.history),
-                  label: const Text('Ver historial'),
-                ),
-              ],
-              if (onConfirm != null || onCancel != null) ...[
-                const SizedBox(height: 12),
-                Wrap(spacing: 8, children: [
-                  if (onConfirm != null)
-                    FilledButton(
-                      onPressed: onConfirm,
-                      child: const Text('Aceptar propuesta'),
-                    ),
-                  if (onCancel != null)
-                    TextButton(
-                      onPressed: onCancel,
-                      child: const Text('Cancelar'),
-                    ),
-                ]),
-              ],
-            ],
-          ),
-        ),
-      );
-  }
-}
-
 class _GroupSessionCard extends StatelessWidget {
   const _GroupSessionCard({
     required this.session,
@@ -471,7 +349,6 @@ class _GroupHistoryCardState extends ConsumerState<_GroupHistoryCard> {
         builder: (_) => TutoriaHistorialPage(
           sessionId: widget.session.id,
           subject: widget.session.subject,
-          isIndividual: false,
         ),
       ),
     );
@@ -612,10 +489,6 @@ class _StatusPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = switch (text) {
       'PROGRAMADA' || 'En curso' || 'Realizada' => const Color(0xFF2B8A65),
-      'ALTERNATIVA_PROPUESTA' ||
-      'Propuesta de horario' =>
-        const Color(0xFFD08419),
-      'CANCELADA' || 'Cancelada' => const Color(0xFF9B4C4C),
       _ => _blue,
     };
     return Container(
@@ -625,23 +498,13 @@ class _StatusPill extends StatelessWidget {
         borderRadius: BorderRadius.circular(30),
       ),
       child: Text(
-        _statusLabel(text),
+        text,
         style:
             TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w700),
       ),
     );
   }
 }
-
-String _statusLabel(String value) => switch (value) {
-      'SOLICITADA' => 'Pendiente',
-      'ALTERNATIVA_PROPUESTA' => 'Propuesta de horario',
-      'PROGRAMADA' => 'Programada',
-      'EN_CURSO' => 'En curso',
-      'REALIZADA' => 'Realizada',
-      'CANCELADA' => 'Cancelada',
-      _ => value,
-    };
 
 String _modalityLabel(String value) => switch (value.toUpperCase()) {
       'PRESENCIAL' => 'Presencial',

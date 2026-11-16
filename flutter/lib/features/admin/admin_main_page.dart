@@ -132,6 +132,11 @@ class AdminMainPage extends ConsumerWidget {
                 badge: pending > 0 ? pending : null,
                 onTap: () => context.push('/notificaciones', extra: _orange),
               ),
+              NeuCircleButton(
+                icon: Icons.logout_rounded,
+                tooltip: 'Cerrar sesión',
+                onTap: logout,
+              ),
             ],
           );
 

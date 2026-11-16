@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/widgets/profile_security_dialogs.dart';
-import '../../../core/widgets/role_toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import '../../auth/auth_repository.dart';
 import '../../pa/pa_widgets.dart';
 import '../admin_controller.dart';
 
@@ -80,15 +77,6 @@ class AdminPerfilView extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(4, 0, 4, 18),
           child: Text('Estos datos los gestiona TI.',
               style: neuBody(size: 12.5, color: Neu.muted)),
-        ),
-        NeuButton(
-          'Cerrar sesión',
-          kind: NeuButtonKind.danger,
-          icon: Icons.logout_rounded,
-          onPressed: () async {
-            await ref.read(authRepositoryProvider).logout();
-            if (context.mounted) context.go('/login');
-          },
         ),
       ],
     );

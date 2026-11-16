@@ -159,11 +159,21 @@ class NeuSidebar extends StatelessWidget {
                             style: neuBody(size: 12, color: Neu.muted)),
                       ]),
                 ),
-                IconButton(
-                  tooltip: 'Cerrar sesión',
-                  onPressed: onLogout,
-                  icon: const Icon(Icons.logout_rounded, color: Neu.muted),
-                ),
+              ]),
+            ),
+            const SizedBox(height: 8),
+            NeuSurface(
+              radius: 14,
+              shadows: Neu.raiseS,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+              onTap: onLogout,
+              child: Row(children: [
+                const Icon(Icons.logout_rounded,
+                    size: 20, color: Neu.navIdle),
+                const SizedBox(width: 10),
+                Text('Cerrar sesión',
+                    style: neuBody(
+                        size: 13, weight: FontWeight.w700, color: Neu.muted)),
               ]),
             ),
           ]),

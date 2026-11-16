@@ -112,9 +112,9 @@ class _ProyectosAulaPageState extends ConsumerState<ProyectosAulaPage> {
           selected: _career,
           onChanged: (v) => setState(() => _career = v),
         ),
+        _HistoricoPronosticoBlock(career: _career),
         const PaSection('Proyectos inscritos'),
         ...projectWidgets,
-        _HistoricoPronosticoBlock(career: _career),
       ],
     );
   }

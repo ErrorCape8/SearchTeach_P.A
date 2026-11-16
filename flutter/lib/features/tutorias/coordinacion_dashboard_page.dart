@@ -163,6 +163,11 @@ class _CoordinacionDashboardPageState
           tooltip: 'Notificaciones',
           onTap: () => context.push('/notificaciones', extra: _wine),
         ),
+        NeuCircleButton(
+          icon: Icons.logout_rounded,
+          tooltip: 'Cerrar sesión',
+          onTap: _logout,
+        ),
       ],
     );
   }
@@ -217,9 +222,16 @@ class _CoordinacionDashboardPageState
                   NeuNavItem(Icons.calendar_month_outlined, 'Horarios'),
                   NeuNavItem(Icons.groups_outlined, 'Grupos PA'),
                   NeuNavItem(Icons.inbox_outlined, 'Reportes'),
+                  NeuNavItem(Icons.logout_rounded, 'Salir'),
                 ],
                 index: _navTabs.indexOf(_tab),
-                onSelect: (i) => _select(_navTabs[i]),
+                onSelect: (i) {
+                  if (i == _navTabs.length) {
+                    _logout();
+                  } else {
+                    _select(_navTabs[i]);
+                  }
+                },
               ),
       ),
     );
@@ -393,11 +405,20 @@ class _Sidebar extends StatelessWidget {
                             style: neuBody(size: 12, color: Neu.muted)),
                       ]),
                 ),
-                IconButton(
-                  tooltip: 'Cerrar sesión',
-                  onPressed: onLogout,
-                  icon: const Icon(Icons.logout_rounded, color: Neu.muted),
-                ),
+              ]),
+            ),
+            const SizedBox(height: 8),
+            NeuSurface(
+              radius: 14,
+              shadows: Neu.raiseS,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+              onTap: onLogout,
+              child: Row(children: [
+                const Icon(Icons.logout_rounded, size: 20, color: _wine),
+                const SizedBox(width: 10),
+                Text('Cerrar sesión',
+                    style: neuBody(
+                        size: 13, weight: FontWeight.w700, color: _wine)),
               ]),
             ),
           ]),
@@ -492,15 +513,6 @@ class _ProfileView extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(4, 0, 4, 18),
           child: Text('Estos datos los gestiona TI.',
               style: neuBody(size: 12.5, color: Neu.muted)),
-        ),
-        NeuButton(
-          'Cerrar sesión',
-          kind: NeuButtonKind.danger,
-          icon: Icons.logout_rounded,
-          onPressed: () async {
-            await ref.read(authRepositoryProvider).logout();
-            if (context.mounted) context.go('/login');
-          },
         ),
       ],
     );

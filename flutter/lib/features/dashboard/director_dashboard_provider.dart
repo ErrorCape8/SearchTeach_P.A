@@ -83,6 +83,8 @@ class DirectorDashboard {
         final map = entry as Map<String, dynamic>;
         return SubjectAttendancePrediction(
           materia: (map['materia'] as String).trim(),
+          carrera: (map['carrera'] as String?)?.trim(),
+          semestre: (map['semestre'] as num?)?.toInt(),
           tutoriasEvaluadas: _readInt(map, 'tutoriasEvaluadas'),
           asistenciasPredichas: _readInt(map, 'asistenciasPredichas'),
           inasistenciasPredichas: _readInt(map, 'inasistenciasPredichas'),
@@ -286,6 +288,8 @@ class AttendanceTrainingData {
 class SubjectAttendancePrediction {
   const SubjectAttendancePrediction({
     required this.materia,
+    required this.carrera,
+    required this.semestre,
     required this.tutoriasEvaluadas,
     required this.asistenciasPredichas,
     required this.inasistenciasPredichas,
@@ -293,6 +297,8 @@ class SubjectAttendancePrediction {
   });
 
   final String materia;
+  final String? carrera;
+  final int? semestre;
   final int tutoriasEvaluadas;
   final int asistenciasPredichas;
   final int inasistenciasPredichas;

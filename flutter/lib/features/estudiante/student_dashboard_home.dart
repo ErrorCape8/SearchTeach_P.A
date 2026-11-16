@@ -22,24 +22,6 @@ class StudentHomeView extends StatelessWidget {
       String location,
       DateTime start
     })>[];
-    for (final tutoring in data.tutorings.where((item) =>
-        item.status == 'EN_CURSO' || item.status == 'PROGRAMADA')) {
-      final start = tutoring.start?.toLocal();
-      if (start != null &&
-          (tutoring.status == 'EN_CURSO' || start.isAfter(now))) {
-        upcoming.add((
-          subject: tutoring.subject,
-          teacher: data.tutors
-                  .where((item) => item.teacherId == tutoring.teacherId)
-                  .map((item) => item.name)
-                  .firstOrNull ??
-              '',
-          modality: tutoring.modality,
-          location: '',
-          start: start,
-        ));
-      }
-    }
     for (final session in data.groupSessions.where(
         (item) => item.state == 'PROGRAMADA' || item.state == 'EN_CURSO')) {
       final start = session.start?.toLocal();
@@ -60,17 +42,6 @@ class StudentHomeView extends StatelessWidget {
     }
     upcoming.sort((a, b) => a.start.compareTo(b.start));
     final recent = <({String subject, String teacher, DateTime? start})>[
-      for (final tutoring
-          in data.tutorings.where((item) => item.status == 'REALIZADA'))
-        (
-          subject: tutoring.subject,
-          teacher: data.tutors
-                  .where((item) => item.teacherId == tutoring.teacherId)
-                  .map((item) => item.name)
-                  .firstOrNull ??
-              '',
-          start: tutoring.start,
-        ),
       for (final session
           in data.groupSessions.where((item) => item.state == 'FINALIZADA'))
         (
@@ -84,7 +55,7 @@ class StudentHomeView extends StatelessWidget {
         ),
     ]..sort(
         (a, b) => (b.start ?? DateTime(0)).compareTo(a.start ?? DateTime(0)));
-    final totalTutorings = data.tutorings.length + data.groupSessions.length;
+    final totalTutorings = data.groupSessions.length;
     final projects = data.projectSpaces.where((space) => space.enrolled).length;
     return ListView(
       padding: const EdgeInsets.fromLTRB(24, 18, 18, 32),
@@ -368,13 +339,11 @@ String _studentMonth(int month) => const [
 class StudentProfileView extends ConsumerWidget {
   const StudentProfileView({
     required this.profile,
-    required this.onLogout,
     this.onTeacherMode,
     super.key,
   });
 
   final StudentProfile profile;
-  final VoidCallback onLogout;
   final VoidCallback? onTeacherMode;
 
   @override
@@ -463,18 +432,6 @@ class StudentProfileView extends ConsumerWidget {
             'Estos datos los gestiona TI y están bloqueados.',
             style: TextStyle(color: _muted, fontSize: 10),
           ),
-        ),
-        FilledButton(
-          onPressed: onLogout,
-          style: FilledButton.styleFrom(
-            backgroundColor: const Color(0xFFFFECEC),
-            foregroundColor: const Color(0xFF9D2525),
-            elevation: 0,
-            minimumSize: const Size.fromHeight(44),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          ),
-          child: const Text('Cerrar sesión', style: TextStyle(fontSize: 13)),
         ),
       ],
     );

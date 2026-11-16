@@ -21,9 +21,7 @@ final docenteProfileProvider =
 });
 
 class DocentePerfilPage extends ConsumerWidget {
-  const DocentePerfilPage({super.key, this.onLogout});
-
-  final VoidCallback? onLogout;
+  const DocentePerfilPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -142,26 +140,6 @@ class DocentePerfilPage extends ConsumerWidget {
                       ),
                     ],
                   ),
-                  if (onLogout != null) ...[
-                    const SizedBox(height: 18),
-                    FilledButton.icon(
-                      onPressed: onLogout,
-                      icon: const Icon(Icons.logout_rounded),
-                      label: const Text(
-                        'Cerrar sesión',
-                        style: TextStyle(fontSize: 13),
-                      ),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFFFFECEC),
-                        foregroundColor: const Color(0xFF9D2525),
-                        elevation: 0,
-                        minimumSize: const Size.fromHeight(44),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                      ),
-                    ),
-                  ],
                 ],
               ),
             ),

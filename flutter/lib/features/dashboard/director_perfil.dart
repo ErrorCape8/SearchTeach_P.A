@@ -39,9 +39,7 @@ String initialsOf(String? name) {
 }
 
 class DirPerfilView extends ConsumerWidget {
-  const DirPerfilView({required this.onLogout, super.key});
-
-  final VoidCallback onLogout;
+  const DirPerfilView({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -86,11 +84,6 @@ class DirPerfilView extends ConsumerWidget {
       const SizedBox(height: 6),
       Text('Estos datos los gestiona la institución y no se pueden editar.',
           style: neuBody(size: 12.5, color: Neu.muted)),
-      const SizedBox(height: 18),
-      NeuButton('Cerrar sesión',
-          kind: NeuButtonKind.alt,
-          icon: Icons.logout_rounded,
-          onPressed: onLogout),
     ]);
   }
 

@@ -25,7 +25,6 @@ class LiveKitRoomPage extends ConsumerStatefulWidget {
     this.projectReportSessionId,
     this.studentMode = false,
     this.studentName = 'Estudiante',
-    this.isIndividualTutoring = false,
     this.onNavigateToDashboard,
     super.key,
   });
@@ -42,7 +41,6 @@ class LiveKitRoomPage extends ConsumerStatefulWidget {
   final String? projectReportSessionId;
   final bool studentMode;
   final String studentName;
-  final bool isIndividualTutoring;
   final ValueChanged<int>? onNavigateToDashboard;
 
   bool get isProjectMeeting =>
@@ -55,22 +53,26 @@ class LiveKitRoomPage extends ConsumerStatefulWidget {
 }
 
 class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
+  static const _sharedRoomBackground = Color(0xFF111318);
   static const _teacherRoomAccent = Color(0xFF16834A);
   static const _studentRoomAccent = Color(0xFF1769AA);
 
   final Room _room = Room();
   final TextEditingController _message = TextEditingController();
   final List<_RoomMessage> _messages = [];
-  final Map<String, bool?> _attendance = {};
+  final Map<String, Map<String, dynamic>> _attendance = {};
   final Map<String, String> _studentNames = {};
+  final Map<String, bool> _raisedHands = {};
   dynamic _listener;
   bool _connecting = true;
   bool _connected = false;
   bool _waitingForTeacher = false;
   bool _microphoneEnabled = true;
   bool _cameraEnabled = true;
+  bool _screenShareEnabled = false;
+  bool _handRaised = false;
   bool _showChat = false;
-  bool _showAttendance = false;
+  bool _showPeople = false;
   bool _ended = false;
   bool _attendanceLoading = true;
   bool _attendanceSlow = false;
@@ -90,13 +92,11 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
   void initState() {
     super.initState();
     _ended = widget.ended;
-    _showAttendance = false;
-    _showChat = false;
-    if (!widget.isIndividualTutoring) {
-      _loadChatHistory();
-      _chatTimer =
-          Timer.periodic(const Duration(seconds: 5), (_) => _loadChatHistory());
-    }
+    _showPeople = widget.teacherMode;
+    _showChat = widget.ended || widget.studentMode || widget.teacherMode;
+    _loadChatHistory();
+    _chatTimer =
+        Timer.periodic(const Duration(seconds: 5), (_) => _loadChatHistory());
     if (!widget.isProjectMeeting) {
       _loadAttendance();
       _loadStudentNames();
@@ -127,7 +127,6 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
   }
 
   Future<void> _loadStudentNames() async {
-    if (widget.isIndividualTutoring) return;
     try {
       final response = await ref.read(dioProvider).get<List<dynamic>>(
           '/api/tutorias/grupales/${widget.sessionId}/estudiantes');
@@ -164,24 +163,8 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
     }
     try {
       final response = await ref.read(dioProvider).get<Map<String, dynamic>>(
-            widget.isIndividualTutoring
-                ? '/api/tutorias/${Uri.encodeComponent(widget.sessionId)}'
-                : '/api/tutorias/grupales/${Uri.encodeComponent(widget.sessionId)}',
+            '/api/tutorias/grupales/${Uri.encodeComponent(widget.sessionId)}',
           );
-      if (widget.isIndividualTutoring) {
-        final studentId = response.data?['estudianteId'];
-        final attended = response.data?['asistio'];
-        if (!mounted) return;
-        if (studentId is! String || studentId.isEmpty) {
-          setState(() => _attendanceError =
-              'No se encontró el estudiante de esta tutoría.');
-          return;
-        }
-        setState(() {
-          if (attended is bool) _attendance[studentId] = attended;
-        });
-        return;
-      }
       final list = response.data?['asistencias'];
       if (!mounted) return;
       if (list is! List) {
@@ -190,12 +173,10 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
         return;
       }
       setState(() {
+        _attendance.clear();
         for (final item in list.whereType<Map<String, dynamic>>()) {
           final id = item['estudianteId'];
-          final attended = item['asistio'];
-          if (id is String && attended is bool) {
-            _attendance[id] = attended;
-          }
+          if (id is String) _attendance[id] = item;
         }
       });
     } on DioException catch (error) {
@@ -223,20 +204,9 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
     if (_ended || widget.isProjectMeeting) return;
     try {
       final response = await ref.read(dioProvider).get<Map<String, dynamic>>(
-            widget.isIndividualTutoring
-                ? '/api/tutorias/${Uri.encodeComponent(widget.sessionId)}'
-                : '/api/tutorias/grupales/${Uri.encodeComponent(widget.sessionId)}',
+            '/api/tutorias/grupales/${Uri.encodeComponent(widget.sessionId)}',
           );
-      final Object? sessionState;
-      if (widget.isIndividualTutoring) {
-        sessionState = response.data?['estado'];
-      } else {
-        sessionState = response.data?['estadoClase'];
-      }
-      final isFinished = widget.isIndividualTutoring
-          ? sessionState == 'REALIZADA'
-          : sessionState == 'FINALIZADA';
-      if (!isFinished || !mounted) return;
+      if (response.data?['estadoClase'] != 'FINALIZADA' || !mounted) return;
       _roomStatusTimer?.cancel();
       await _room.disconnect();
       if (!widget.teacherMode && mounted) {
@@ -248,7 +218,6 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
   }
 
   Future<void> _loadChatHistory() async {
-    if (widget.isIndividualTutoring) return;
     try {
       final path = widget.isProjectMeeting
           ? _projectChatPath
@@ -260,12 +229,22 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
           ..clear()
           ..addAll((response.data ?? const [])
               .whereType<Map<String, dynamic>>()
-              .map((message) => _RoomMessage(
-                    sender: message['nombre']?.toString() ??
-                        message['emisorId']?.toString() ??
-                        'Participante',
-                    text: message['texto']?.toString() ?? '',
-                  )));
+              .map((message) {
+                final identity = message['emisorId']?.toString() ?? '';
+                final localIdentity = _room.localParticipant?.identity;
+                final isLocal = localIdentity != null &&
+                    identity == localIdentity;
+                return _RoomMessage(
+                  sender: isLocal
+                      ? 'Tú'
+                      : message['nombre']?.toString() ??
+                          (identity.isEmpty ? 'Participante' : identity),
+                  text: message['texto']?.toString() ?? '',
+                  fromTeacher: isLocal
+                      ? widget.teacherMode
+                      : _isTeacherParticipant(identity),
+                );
+              }));
       });
     } on DioException catch (error) {
       if (mounted) {
@@ -282,9 +261,7 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
                 ? '/api/tutorias-colectivas/${Uri.encodeComponent(widget.projectTutoringId!)}'
                     '/proyectos/${Uri.encodeComponent(widget.projectId!)}'
                     '/sesiones/${Uri.encodeComponent(widget.projectReportSessionId!)}/livekit-token'
-                : widget.isIndividualTutoring
-                    ? '/api/tutorias/${Uri.encodeComponent(widget.sessionId)}/livekit-token'
-                    : '/api/tutorias/grupales/${Uri.encodeComponent(widget.sessionId)}/livekit-token',
+                : '/api/tutorias/grupales/${Uri.encodeComponent(widget.sessionId)}/livekit-token',
           );
       final credentials = response.data;
       if (credentials == null ||
@@ -297,13 +274,17 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
       _listener.on<DataReceivedEvent>((event) {
         try {
           final decoded = jsonDecode(utf8.decode(event.data));
-          if (decoded is Map && decoded['text'] is String && mounted) {
+          if (decoded is! Map || !mounted) return;
+          final identity = event.participant?.identity ?? '';
+          if (decoded['type'] == 'hand' && decoded['raised'] is bool) {
+            setState(() => _raisedHands[identity] = decoded['raised'] as bool);
+            return;
+          }
+          if (decoded['text'] is String) {
             setState(() => _messages.add(_RoomMessage(
-                  sender: _participantLabel(
-                    event.participant?.identity ?? '',
-                    event.participant?.name,
-                  ),
+                  sender: _participantLabel(identity, event.participant?.name),
                   text: (decoded['text'] as String).trim(),
+                  fromTeacher: _isTeacherParticipant(identity),
                 )));
           }
         } on FormatException {
@@ -313,8 +294,10 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
       _listener.on<ParticipantConnectedEvent>((_) {
         if (mounted) setState(() {});
       });
-      _listener.on<ParticipantDisconnectedEvent>((_) {
-        if (mounted) setState(() {});
+      _listener.on<ParticipantDisconnectedEvent>((event) {
+        if (mounted) {
+          setState(() => _raisedHands.remove(event.participant.identity));
+        }
       });
       _listener.on<RoomDisconnectedEvent>((_) {
         if (!mounted) return;
@@ -350,14 +333,10 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
         if (identity != null && identity.isNotEmpty) {
           try {
             await ref.read(dioProvider).patch(
-                  widget.isIndividualTutoring
-                      ? '/api/tutorias/${Uri.encodeComponent(widget.sessionId)}/asistencia'
-                      : '/api/tutorias/grupales/${Uri.encodeComponent(widget.sessionId)}/asistencia',
-                  data: widget.isIndividualTutoring
-                      ? {'asistio': true}
-                      : {'estudianteId': identity, 'asistio': true},
-                );
-            if (mounted) setState(() => _attendance[identity] = true);
+              '/api/tutorias/grupales/${Uri.encodeComponent(widget.sessionId)}/asistencia',
+              data: {'estudianteId': identity, 'asistio': true},
+            );
+            await _loadAttendance();
           } on DioException {
             warnings.add(
                 'La llamada está activa, pero no se pudo guardar tu asistencia.');
@@ -385,8 +364,7 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
     } on DioException catch (error) {
       if (error.response?.statusCode == 409 &&
           widget.studentMode &&
-          !widget.isProjectMeeting &&
-          !widget.isIndividualTutoring) {
+          !widget.isProjectMeeting) {
         await _enterWaitingRoom();
         return;
       }
@@ -484,12 +462,76 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
     }
   }
 
+  Future<void> _toggleScreenShare() async {
+    final participant = _room.localParticipant;
+    if (participant == null) return;
+    final next = !_screenShareEnabled;
+    try {
+      await participant.setScreenShareEnabled(next);
+      if (mounted) setState(() => _screenShareEnabled = next);
+    } catch (_) {
+      _showMediaError(
+          'No se pudo compartir la pantalla. Revisa los permisos del navegador o dispositivo.');
+    }
+  }
+
+  Future<void> _toggleHand() async {
+    final participant = _room.localParticipant;
+    if (participant == null) return;
+    final next = !_handRaised;
+    try {
+      final payload = utf8.encode(jsonEncode({
+        'type': 'hand',
+        'raised': next,
+      }));
+      await participant.publishData(
+        payload,
+        reliable: true,
+        topic: 'searchteach.hand',
+      );
+      if (!mounted) return;
+      setState(() {
+        _handRaised = next;
+        _raisedHands[participant.identity] = next;
+      });
+    } catch (_) {
+      _showMediaError('No se pudo actualizar el estado de la mano.');
+    }
+  }
+
+  bool _isTeacherParticipant(String identity) {
+    if (identity.isEmpty) return !widget.teacherMode;
+    if (widget.students.contains(identity)) return false;
+    final localIdentity = _room.localParticipant?.identity;
+    if (identity == localIdentity) return widget.teacherMode;
+    return true;
+  }
+
+  String _attendanceLabel(String studentId) {
+    final attendance = _attendance[studentId];
+    if (attendance == null) return 'Asistencia pendiente';
+    if (attendance['estado'] == 'ENTRO_TARDE') {
+      final minutes = attendance['minutosTarde'];
+      return 'Entró tarde · ${minutes is num ? minutes.toInt() : 0} min';
+    }
+    if (attendance['asistio'] == true) return 'Asistió';
+    if (attendance['asistio'] == false) return 'No asistió';
+    return 'Asistencia pendiente';
+  }
+
+  Color _attendanceColor(String studentId) {
+    final attendance = _attendance[studentId];
+    if (attendance?['estado'] == 'ENTRO_TARDE') return Colors.amber;
+    if (attendance?['asistio'] == true) return Neu.okFg;
+    if (attendance?['asistio'] == false) return Neu.errFg;
+    return Colors.white54;
+  }
+
   void _showMediaError(String message) {
     if (mounted) setState(() => _mediaWarning = message);
   }
 
   Future<void> _sendMessage() async {
-    if (widget.isIndividualTutoring) return;
     final text = _message.text.trim();
     if (text.isEmpty || _ended) return;
     try {
@@ -522,7 +564,8 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
       return;
     }
     if (mounted) {
-      setState(() => _messages.add(_RoomMessage(sender: 'Tú', text: text)));
+      setState(() => _messages.add(_RoomMessage(
+          sender: 'Tú', text: text, fromTeacher: widget.teacherMode)));
       _message.clear();
     }
   }
@@ -541,60 +584,12 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
   }
 
   String _studentLabel(String studentId) {
-    if (widget.isIndividualTutoring) {
-      if (widget.studentMode) return widget.studentName;
-      for (final participant in _room.remoteParticipants.values) {
-        if (participant.identity == studentId) {
-          return _participantLabel(studentId, participant.name);
-        }
-      }
-      return 'Estudiante';
-    }
     final index = widget.students.indexOf(studentId) + 1;
     return 'Estudiante $index';
   }
 
-  Future<void> _setAttendance(String studentId, bool attended) async {
-    try {
-      await ref.read(dioProvider).patch(
-            widget.isIndividualTutoring
-                ? '/api/tutorias/${Uri.encodeComponent(widget.sessionId)}/asistencia'
-                : '/api/tutorias/grupales/${Uri.encodeComponent(widget.sessionId)}/asistencia',
-            data: widget.isIndividualTutoring
-                ? {'asistio': attended}
-                : {'estudianteId': studentId, 'asistio': attended},
-          );
-      if (mounted) setState(() => _attendance[studentId] = attended);
-    } on DioException catch (error) {
-      if (mounted) {
-        RoleToast.showSnackBar(
-            context,
-            SnackBar(
-                content: Text(
-                    error.message ?? 'No se pudo guardar la asistencia.')));
-      }
-    }
-  }
-
   Future<void> _finish(String reason) async {
     try {
-      if (widget.isIndividualTutoring) {
-        final studentId = widget.students.isEmpty ? '' : widget.students.first;
-        await ref.read(dioProvider).patch(
-          '/api/tutorias/${Uri.encodeComponent(widget.sessionId)}/finalizar',
-          data: {
-            'asistio': _attendance[studentId] ?? false,
-            'motivo': reason,
-          },
-        );
-        await _room.disconnect();
-        if (mounted) {
-          RoleToast.show(context,
-              message: 'Tutoría finalizada.', roleColor: _teacherRoomAccent);
-          Navigator.of(context).pop();
-        }
-        return;
-      }
       await ref.read(dioProvider).patch(
           '/api/tutorias/grupales/${widget.sessionId}/finalizar',
           data: {'motivo': reason});
@@ -623,7 +618,11 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
         final track = publication.track;
         if (track != null) {
           localHasVideo = true;
-          yield _VideoTile(label: 'Tú', track: _cameraEnabled ? track : null);
+          final screenShare = publication.source == TrackSource.screenShareVideo;
+          yield _VideoTile(
+            label: screenShare ? 'Tu pantalla' : 'Tú',
+            track: screenShare || _cameraEnabled ? track : null,
+          );
         }
       }
     }
@@ -634,9 +633,13 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
         final track = publication.track;
         if (track != null) {
           participantHasVideo = true;
+          final screenShare = publication.source == TrackSource.screenShareVideo;
           yield _VideoTile(
-              label: _participantLabel(participant.identity, participant.name),
-              track: track);
+            label: screenShare
+                ? 'Pantalla · ${_participantLabel(participant.identity, participant.name)}'
+                : _participantLabel(participant.identity, participant.name),
+            track: track,
+          );
         }
       }
       if (!participantHasVideo) {
@@ -882,57 +885,104 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
       );
     }
     return Scaffold(
-      backgroundColor: Neu.bg,
-      body: SafeArea(
-        child: Column(
+      backgroundColor: _sharedRoomBackground,
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF161922),
+        foregroundColor: Colors.white,
+        elevation: 0,
+        shape: const Border(
+          bottom: BorderSide(color: Color(0xFF262B37), width: 1),
+        ),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildRoomHeader(),
-            if (_mediaWarning != null)
-              Container(
-                color: const Color(0xFFFFF3CD),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Row(
-                  children: [
-                    const Icon(Icons.warning_amber_rounded,
-                        color: Colors.orange, size: 18),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        _mediaWarning!,
-                        style: const TextStyle(
-                            color: Color(0xFF856404), fontSize: 12),
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close, size: 16),
-                      onPressed: () => setState(() => _mediaWarning = null),
-                    ),
-                  ],
-                ),
+            Text(
+              widget.subject,
+              style: neuPoppins(
+                size: 16,
+                weight: FontWeight.w700,
+                color: Colors.white,
               ),
-            Expanded(
-              child: wide
-                  ? Row(
-                      children: [
-                        Expanded(child: _videoGallery()),
-                        if (_showChat) _chatPanel(),
-                        if (_showAttendance) _attendancePanel(),
-                      ],
-                    )
-                  : Column(
-                      children: [
-                        Expanded(child: _videoGallery()),
-                        if (_showChat)
-                          SizedBox(height: 240, child: _chatPanel()),
-                        if (_showAttendance)
-                          SizedBox(height: 240, child: _attendancePanel()),
-                      ],
-                    ),
             ),
-            _callControls(),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 7,
+                  height: 7,
+                  decoration: BoxDecoration(
+                    color: _roomAccent,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  '${_room.remoteParticipants.length + (_connected ? 1 : 0)} participantes',
+                  style: neuBody(size: 11.5, color: Colors.white70),
+                ),
+              ],
+            ),
           ],
         ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: IconButton(
+              tooltip: _showChat ? 'Ocultar chat' : 'Mostrar chat',
+              style: IconButton.styleFrom(
+                backgroundColor:
+                    _showChat ? _roomAccent.withOpacity(0.2) : Colors.transparent,
+                foregroundColor: _showChat ? _roomAccent : Colors.white70,
+              ),
+              onPressed: () => setState(() => _showChat = !_showChat),
+              icon: Icon(
+                  _showChat ? Icons.chat_rounded : Icons.chat_outlined),
+            ),
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          if (_mediaWarning != null)
+            MaterialBanner(
+              backgroundColor: const Color(0xFF3A2B18),
+              content: Text(
+                _mediaWarning!,
+                style: const TextStyle(color: Colors.white),
+              ),
+              leading: const Icon(
+                Icons.warning_amber_rounded,
+                color: Colors.amber,
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => setState(() => _mediaWarning = null),
+                  child: const Text('Entendido'),
+                ),
+              ],
+            ),
+          Expanded(
+            child: wide
+                ? Row(
+                    children: [
+                      Expanded(flex: 4, child: _videoGallery()),
+                      if (_showChat)
+                        SizedBox(width: 320, child: _chatPanel()),
+                    ],
+                  )
+                : Column(
+                    children: [
+                      Expanded(
+                        flex: _showChat ? 3 : 1,
+                        child: _videoGallery(),
+                      ),
+                      if (_showChat)
+                        SizedBox(height: 220, child: _chatPanel()),
+                    ],
+                  ),
+          ),
+          _callControls(),
+        ],
       ),
     );
   }
@@ -959,421 +1009,430 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
       });
 
   Widget _chatPanel() => Container(
-        width: 320,
-        margin: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: Neu.raise,
+        decoration: const BoxDecoration(
+          color: Color(0xFF161922),
+          border: Border(
+            left: BorderSide(color: Color(0xFF262B37), width: 1),
+          ),
         ),
-        clipBehavior: Clip.antiAlias,
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 10, 10),
-              child: Row(
-                children: [
-                  Icon(Icons.chat_bubble_outline_rounded,
-                      size: 18, color: _roomAccent),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Chat (${_messages.length})',
-                    style: neuPoppins(
-                        size: 14, weight: FontWeight.w700, color: Neu.heading),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.close_rounded,
-                        size: 20, color: Neu.muted),
-                    tooltip: 'Cerrar chat',
-                    onPressed: () => setState(() => _showChat = false),
-                  ),
-                ],
+              padding: const EdgeInsets.fromLTRB(10, 10, 10, 4),
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1E222D),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    _chatTab(
+                      'Chat (${_messages.length})',
+                      !_showPeople,
+                      () => setState(() => _showPeople = false),
+                    ),
+                    _chatTab(
+                      'Participantes (${widget.students.length + 1})',
+                      _showPeople,
+                      () => setState(() => _showPeople = true),
+                    ),
+                    if (_showPeople && !widget.isProjectMeeting)
+                      IconButton(
+                        tooltip: 'Actualizar participantes',
+                        visualDensity: VisualDensity.compact,
+                        onPressed: _attendanceLoading ? null : _loadAttendance,
+                        icon: _attendanceLoading
+                            ? const SizedBox.square(
+                                dimension: 16,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(Icons.refresh,
+                                size: 18, color: Colors.white70),
+                      ),
+                  ],
+                ),
               ),
             ),
-            const Divider(height: 1, color: Neu.line),
-            Expanded(
-              child: _messages.isEmpty
-                  ? Center(
-                      child: Text(
-                        'Aún no hay mensajes.',
-                        style: neuBody(color: Neu.muted, size: 13),
+            if (_showPeople && !widget.isProjectMeeting && _attendanceLoading) ...[
+              LinearProgressIndicator(
+                minHeight: 2,
+                color: _roomAccent,
+                backgroundColor: Colors.white10,
+              ),
+              if (_attendanceSlow)
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(12, 8, 12, 4),
+                  child: Row(
+                    children: [
+                      SizedBox.square(
+                        dimension: 15,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white70,
+                        ),
                       ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(12),
-                      itemCount: _messages.length,
-                      itemBuilder: (context, index) {
-                        final message = _messages[index];
-                        final isMe = message.sender == 'Tú';
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: Align(
-                            alignment: isMe
-                                ? Alignment.centerRight
-                                : Alignment.centerLeft,
-                            child: Column(
-                              crossAxisAlignment: isMe
-                                  ? CrossAxisAlignment.end
-                                  : CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  message.sender,
-                                  style: neuPoppins(
-                                    color: _roomAccent,
-                                    size: 11,
-                                    weight: FontWeight.w700,
-                                  ),
-                                ),
-                                Container(
-                                  margin: const EdgeInsets.only(top: 3),
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 8),
-                                  decoration: BoxDecoration(
-                                    color: isMe
-                                        ? _roomAccent.withValues(alpha: 0.12)
-                                        : const Color(0xFFF1F4F9),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: isMe
-                                          ? _roomAccent.withValues(alpha: 0.3)
-                                          : const Color(0xFFE2E8F0),
-                                      width: 0.8,
-                                    ),
-                                  ),
-                                  child: Text(
-                                    message.text,
-                                    style: neuBody(
-                                        size: 12.5, color: Neu.heading),
-                                  ),
-                                ),
-                              ],
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Conectando con el servidor; la primera carga puede tardar hasta un minuto.',
+                          style: TextStyle(fontSize: 11, color: Colors.white70),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+            if (_showPeople &&
+                !widget.isProjectMeeting &&
+                _attendanceError != null)
+              Material(
+                color: const Color(0xFF382315),
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.warning_amber_rounded,
+                          color: Color(0xFFFFA726), size: 17),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          _attendanceError!,
+                          style: const TextStyle(
+                              fontSize: 11, color: Colors.white),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: _attendanceLoading ? null : _loadAttendance,
+                        child: const Text('Reintentar',
+                            style: TextStyle(color: Color(0xFFFFA726))),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            const Divider(height: 1, color: Color(0xFF262B37)),
+            Expanded(
+              child: _showPeople
+                  ? ListView(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      children: [
+                        if (widget.students.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Text(
+                              'Aún no hay estudiantes inscritos.',
+                              textAlign: TextAlign.center,
+                              style: neuBody(size: 12, color: Colors.white54),
                             ),
                           ),
-                        );
-                      },
-                    ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(10),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _message,
-                      maxLength: 500,
-                      onSubmitted: (_) => _sendMessage(),
-                      style: neuBody(size: 12.5, color: Neu.heading),
-                      decoration: InputDecoration(
-                        hintText: 'Envía un mensaje…',
-                        hintStyle: neuBody(size: 12.5, color: Neu.muted),
-                        counterText: '',
-                        filled: true,
-                        fillColor: const Color(0xFFF1F4F9),
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 10),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(20),
-                          borderSide: BorderSide.none,
+                        ListTile(
+                          dense: true,
+                          leading: CircleAvatar(
+                            radius: widget.teacherMode ? 16 : 13,
+                            backgroundColor: _roomAccent.withOpacity(0.2),
+                            child: Icon(
+                              Icons.school_rounded,
+                              size: widget.teacherMode ? 16 : 13,
+                              color: _roomAccent,
+                            ),
+                          ),
+                          title: Text(
+                            widget.teacherMode ? 'Tú · Docente' : 'Tutor',
+                            style: neuPoppins(
+                              size: widget.teacherMode ? 13 : 11,
+                              weight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                          trailing: _handRaised
+                              ? const Icon(Icons.pan_tool_alt_rounded,
+                                  color: Colors.amber, size: 19)
+                              : null,
                         ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  NeuCircleButton(
-                    size: 38,
-                    icon: Icons.send_rounded,
-                    tooltip: 'Enviar mensaje',
-                    onTap: _sendMessage,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      );
-
-  Widget _attendancePanel() => Container(
-        width: 320,
-        margin: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: Neu.raise,
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 10, 10),
-              child: Row(
-                children: [
-                  Icon(Icons.people_outline_rounded,
-                      size: 18, color: _roomAccent),
-                  const SizedBox(width: 8),
-                  Text(
-                    widget.teacherMode
-                        ? 'Asistencia (${widget.students.length})'
-                        : 'Participantes (${widget.students.length + 1})',
-                    style: neuPoppins(
-                        size: 14, weight: FontWeight.w700, color: Neu.heading),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    tooltip: 'Actualizar asistencia',
-                    visualDensity: VisualDensity.compact,
-                    onPressed: _attendanceLoading ? null : _loadAttendance,
-                    icon: _attendanceLoading
-                        ? const SizedBox.square(
-                            dimension: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.refresh_rounded,
-                            size: 18, color: Neu.muted),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close_rounded,
-                        size: 20, color: Neu.muted),
-                    tooltip: 'Cerrar asistencia',
-                    onPressed: () => setState(() => _showAttendance = false),
-                  ),
-                ],
-              ),
-            ),
-            if (widget.teacherMode)
-              Container(
-                width: double.infinity,
-                color: _roomAccent.withValues(alpha: 0.08),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                child: Text(
-                  _attendanceError != null
-                      ? _attendanceError!
-                      : _attendanceSlow
-                          ? 'Cargando asistencia…'
-                          : 'Presentes: ${_attendance.values.where((v) => v == true).length} | Ausentes: ${_attendance.values.where((v) => v == false).length}',
-                  style: neuPoppins(
-                    color: _attendanceError != null ? Neu.errFg : _roomAccent,
-                    size: 11,
-                    weight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            const Divider(height: 1, color: Neu.line),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                children: [
-                  ListTile(
-                    dense: true,
-                    leading: CircleAvatar(
-                      radius: 14,
-                      backgroundColor: _roomAccent.withValues(alpha: 0.15),
-                      child: Icon(Icons.school_rounded,
-                          size: 15, color: _roomAccent),
-                    ),
-                    title: Text(
-                      widget.teacherMode ? 'Tú · Docente' : 'Tutor',
-                      style: neuPoppins(
-                          size: 12.5,
-                          weight: FontWeight.w600,
-                          color: Neu.heading),
-                    ),
-                  ),
-                  for (final student in widget.students)
-                    ListTile(
-                      dense: true,
-                      leading: const CircleAvatar(
-                        radius: 14,
-                        backgroundColor: Color(0xFFE2E8F0),
-                        child: Icon(Icons.person_outline_rounded,
-                            size: 15, color: Neu.muted),
-                      ),
-                      title: Text(
-                        _studentNames[student] ?? _studentLabel(student),
-                        style: neuPoppins(
-                            size: 12.5,
-                            weight: FontWeight.w500,
-                            color: Neu.heading),
-                      ),
-                      subtitle: widget.teacherMode
-                          ? Text(
-                              _attendance[student] == true
-                                  ? 'Asistió'
-                                  : _attendance[student] == false
-                                      ? 'No asistió'
-                                      : 'Sin registrar',
-                              style: neuBody(
-                                size: 11,
-                                color: _attendance[student] == true
-                                    ? Neu.okFg
-                                    : _attendance[student] == false
-                                        ? Neu.errFg
-                                        : Neu.muted,
+                        for (final student in widget.students)
+                          ListTile(
+                            dense: true,
+                            leading: CircleAvatar(
+                              radius: widget.teacherMode ? 16 : 13,
+                              backgroundColor: const Color(0xFF252A36),
+                              child: Icon(
+                                Icons.person_outline_rounded,
+                                size: widget.teacherMode ? 16 : 13,
+                                color: Colors.white70,
                               ),
-                            )
-                          : null,
-                      trailing: widget.teacherMode && !widget.isProjectMeeting
-                          ? Wrap(
-                              spacing: 2,
-                              children: [
-                                IconButton(
-                                  tooltip: 'Marcar presente',
-                                  visualDensity: VisualDensity.compact,
-                                  onPressed: () =>
-                                      _setAttendance(student, true),
-                                  icon: Icon(
-                                    Icons.check_circle_rounded,
-                                    color: _attendance[student] == true
-                                        ? Neu.okFg
-                                        : Colors.grey[400],
-                                    size: 22,
+                            ),
+                            title: Text(
+                              _studentNames[student] ?? _studentLabel(student),
+                              style: neuPoppins(
+                                size: widget.teacherMode ? 13 : 11,
+                                weight: FontWeight.w500,
+                                color: Colors.white,
+                              ),
+                            ),
+                            subtitle: !widget.isProjectMeeting
+                                ? Text(
+                                    _attendanceLabel(student),
+                                    style: neuBody(
+                                      size: widget.teacherMode ? 11 : 9,
+                                      color: _attendanceColor(student),
+                                    ),
+                                  )
+                                : null,
+                            trailing: _raisedHands[student] == true
+                                ? const Icon(Icons.pan_tool_alt_rounded,
+                                    color: Colors.amber, size: 19)
+                                : null,
+                          ),
+                      ],
+                    )
+                  : _messages.isEmpty
+                      ? Center(
+                          child: Text(
+                            'Aún no hay mensajes.',
+                            style: neuBody(
+                              color: Colors.white54,
+                              size: 13,
+                            ),
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.all(12),
+                          itemCount: _messages.length,
+                          itemBuilder: (context, index) {
+                            final message = _messages[index];
+                            final accent = message.fromTeacher
+                                ? _teacherRoomAccent
+                                : _studentRoomAccent;
+                            return Align(
+                              alignment: message.fromTeacher
+                                  ? Alignment.centerLeft
+                                  : Alignment.centerRight,
+                              child: ConstrainedBox(
+                                constraints:
+                                    const BoxConstraints(maxWidth: 280),
+                                child: Padding(
+                                  padding: const EdgeInsets.only(bottom: 10),
+                                  child: Column(
+                                    crossAxisAlignment: message.fromTeacher
+                                        ? CrossAxisAlignment.start
+                                        : CrossAxisAlignment.end,
+                                    children: [
+                                      Text(
+                                        message.sender,
+                                        textAlign: message.fromTeacher
+                                            ? TextAlign.left
+                                            : TextAlign.right,
+                                        style: neuPoppins(
+                                          color: accent,
+                                          size: 11,
+                                          weight: FontWeight.w700,
+                                        ),
+                                      ),
+                                      Container(
+                                        margin: const EdgeInsets.only(top: 3),
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 12, vertical: 8),
+                                        decoration: BoxDecoration(
+                                          color: accent.withOpacity(0.16),
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                          border: Border.all(
+                                            color: accent.withOpacity(0.42),
+                                            width: 0.8,
+                                          ),
+                                        ),
+                                        child: SelectableText(
+                                          message.text,
+                                          style: neuBody(
+                                            size: 12,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                                IconButton(
-                                  tooltip: 'Marcar ausente',
-                                  visualDensity: VisualDensity.compact,
-                                  onPressed: () =>
-                                      _setAttendance(student, false),
-                                  icon: Icon(
-                                    Icons.cancel_rounded,
-                                    color: _attendance[student] == false
-                                        ? Neu.errFg
-                                        : Colors.grey[400],
-                                    size: 22,
-                                  ),
-                                ),
-                              ],
-                            )
-                          : null,
-                    ),
-                ],
-              ),
+                              ),
+                            );
+                          },
+                        ),
             ),
+            if (_ended)
+              Padding(
+                padding: const EdgeInsets.all(10),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Chat guardado de la sesión. Solo lectura.',
+                    style: neuBody(
+                      color: Colors.white54,
+                      size: widget.teacherMode ? 11 : 9,
+                    ),
+                  ),
+                ),
+              )
+            else
+              Padding(
+                padding: const EdgeInsets.all(10),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _message,
+                        maxLength: 500,
+                        onSubmitted: (_) => _sendMessage(),
+                        style: neuBody(
+                          size: widget.teacherMode ? 13 : 10,
+                          color: Colors.white,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: 'Envía un mensaje…',
+                          hintStyle: neuBody(
+                            size: widget.teacherMode ? 13 : 10,
+                            color: Colors.white38,
+                          ),
+                          counterText: '',
+                          filled: true,
+                          fillColor: const Color(0xFF232733),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 10,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            borderSide: const BorderSide(
+                              color: Color(0xFF333847),
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            borderSide: const BorderSide(
+                              color: Color(0xFF333847),
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            borderSide: BorderSide(
+                              color: _roomAccent,
+                              width: 1.5,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Material(
+                      color: _roomAccent,
+                      shape: const CircleBorder(),
+                      child: InkWell(
+                        customBorder: const CircleBorder(),
+                        onTap: _sendMessage,
+                        child: Padding(
+                          padding: const EdgeInsets.all(10),
+                          child: Icon(
+                            Icons.send_rounded,
+                            size: widget.teacherMode ? 18 : 14,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
           ],
         ),
       );
 
-  Widget _callControls() => Container(
-        decoration: const BoxDecoration(
-          color: Neu.bg,
-          boxShadow: [
-            BoxShadow(
-              color: Neu.shadowDark,
-              offset: Offset(0, -2),
-              blurRadius: 8,
+  Widget _chatTab(String label, bool selected, VoidCallback onTap) => Expanded(
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(10),
+          child: Container(
+            height: 36,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color:
+                  selected ? _roomAccent.withOpacity(0.18) : Colors.transparent,
+              borderRadius: BorderRadius.circular(10),
             ),
-          ],
+            child: Text(
+              label,
+              style: neuPoppins(
+                color: selected ? _roomAccent : Colors.white60,
+                size: widget.teacherMode ? 12 : 9,
+                weight: selected ? FontWeight.w700 : FontWeight.w500,
+              ),
+            ),
+          ),
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        child: SafeArea(
-          top: false,
-          child: Row(
+      );
+  Widget _callControls() => SafeArea(
+        top: false,
+        child: Container(
+          width: double.infinity,
+          decoration: const BoxDecoration(
+            color: Color(0xFF161922),
+            border: Border(
+              top: BorderSide(color: Color(0xFF262B37), width: 1),
+            ),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Wrap(
+            alignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 14,
+            runSpacing: 10,
             children: [
-              Tooltip(
-                message: 'Salir de la clase',
-                child: NeuSurface(
-                  radius: 44,
-                  shadows: Neu.raiseS,
-                  padding: const EdgeInsets.all(12),
-                  onTap: () => Navigator.of(context).maybePop(),
-                  child: const Icon(
-                    Icons.logout_rounded,
-                    size: 20,
-                    color: Neu.muted,
-                  ),
+              if (widget.modality.toUpperCase() != 'PRESENCIAL')
+                _CallControl(
+                    icon: _microphoneEnabled ? Icons.mic : Icons.mic_off,
+                    label: _microphoneEnabled ? 'Silenciar' : 'Activar audio',
+                    onPressed: _toggleMicrophone,
+                    active: _microphoneEnabled),
+              if (widget.modality.toUpperCase() != 'PRESENCIAL')
+                _CallControl(
+                    icon: _cameraEnabled ? Icons.videocam : Icons.videocam_off,
+                    label: _cameraEnabled ? 'Apagar cámara' : 'Activar cámara',
+                    onPressed: _toggleCamera,
+                    active: _cameraEnabled),
+              if (widget.teacherMode &&
+                  widget.modality.toUpperCase() != 'PRESENCIAL')
+                _CallControl(
+                  icon: _screenShareEnabled
+                      ? Icons.stop_screen_share_outlined
+                      : Icons.screen_share_outlined,
+                  label: _screenShareEnabled
+                      ? 'Dejar de compartir'
+                      : 'Compartir pantalla',
+                  onPressed: _toggleScreenShare,
+                  active: _screenShareEnabled,
                 ),
-              ),
-              const Spacer(),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (widget.modality.toUpperCase() != 'PRESENCIAL') ...[
-                    Tooltip(
-                      message: _microphoneEnabled
-                          ? 'Silenciar micrófono'
-                          : 'Activar micrófono',
-                      child: NeuSurface(
-                        radius: 44,
-                        sunken: !_microphoneEnabled,
-                        shadows: _microphoneEnabled ? Neu.raiseS : const [],
-                        padding: const EdgeInsets.all(12),
-                        onTap: _toggleMicrophone,
-                        child: Icon(
-                          _microphoneEnabled
-                              ? Icons.mic_rounded
-                              : Icons.mic_off_rounded,
-                          size: 20,
-                          color: _microphoneEnabled ? Neu.heading : Neu.errFg,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Tooltip(
-                      message: _cameraEnabled
-                          ? 'Apagar cámara'
-                          : 'Activar cámara',
-                      child: NeuSurface(
-                        radius: 44,
-                        sunken: !_cameraEnabled,
-                        shadows: _cameraEnabled ? Neu.raiseS : const [],
-                        padding: const EdgeInsets.all(12),
-                        onTap: _toggleCamera,
-                        child: Icon(
-                          _cameraEnabled
-                              ? Icons.videocam_rounded
-                              : Icons.videocam_off_rounded,
-                          size: 20,
-                          color: _cameraEnabled ? Neu.heading : Neu.errFg,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                  ],
-                  if (!widget.isIndividualTutoring) ...[
-                    Tooltip(
-                      message: _showChat ? 'Cerrar chat' : 'Abrir chat',
-                      child: NeuSurface(
-                        radius: 44,
-                        sunken: _showChat,
-                        shadows: _showChat ? const [] : Neu.raiseS,
-                        padding: const EdgeInsets.all(12),
-                        onTap: () => setState(() => _showChat = !_showChat),
-                        child: Icon(
-                          Icons.chat_bubble_outline_rounded,
-                          size: 20,
-                          color: _showChat ? _roomAccent : Neu.heading,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                  ],
-                  if (widget.teacherMode || !widget.isIndividualTutoring)
-                    Tooltip(
-                      message: widget.teacherMode
-                          ? (_showAttendance
-                              ? 'Cerrar asistencia'
-                              : 'Tomar asistencia')
-                          : (_showAttendance
-                              ? 'Cerrar participantes'
-                              : 'Ver participantes'),
-                      child: NeuSurface(
-                        radius: 44,
-                        sunken: _showAttendance,
-                        shadows: _showAttendance ? const [] : Neu.raiseS,
-                        padding: const EdgeInsets.all(12),
-                        onTap: () => setState(
-                            () => _showAttendance = !_showAttendance),
-                        child: Icon(
-                          Icons.people_outline_rounded,
-                          size: 20,
-                          color: _showAttendance ? _roomAccent : Neu.heading,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              const Spacer(),
+              _CallControl(
+                  icon: Icons.chat_outlined,
+                  label: _showChat ? 'Cerrar chat' : 'Chat',
+                  onPressed: () => setState(() => _showChat = !_showChat),
+                  active: _showChat),
+              _CallControl(
+                  icon: Icons.people_outline,
+                  label: 'Participantes',
+                  onPressed: () => setState(() {
+                        _showChat = true;
+                        _showPeople = true;
+                      }),
+                  active: _showPeople),
+              if (!widget.teacherMode)
+                _CallControl(
+                  icon: _handRaised
+                      ? Icons.pan_tool_alt_rounded
+                      : Icons.pan_tool_outlined,
+                  label: _handRaised ? 'Bajar la mano' : 'Levantar la mano',
+                  onPressed: _toggleHand,
+                  active: _handRaised,
+                ),
               if (widget.teacherMode && !widget.isProjectMeeting)
                 Tooltip(
                   message: 'Finalizar clase',
@@ -1582,8 +1641,64 @@ class _WaitingParticipantTile extends StatelessWidget {
       );
 }
 
+class _CallControl extends StatelessWidget {
+  const _CallControl({
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+    required this.active,
+    this.danger = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onPressed;
+  final bool active;
+  final bool danger;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = Theme.of(context).colorScheme.primary;
+    final background = danger
+        ? const Color(0xFFDC3545)
+        : active
+            ? accent
+            : const Color(0xFF262B36);
+
+    return Tooltip(
+      message: label,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Material(
+            color: background,
+            shape: const CircleBorder(),
+            elevation: active || danger ? 2 : 0,
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: onPressed,
+              child: SizedBox(
+                width: 50,
+                height: 50,
+                child: Icon(icon, color: Colors.white, size: 22),
+              ),
+            ),
+          ),
+          const SizedBox(height: 5),
+          Text(label, style: neuBody(size: 11, color: Colors.white70)),
+        ],
+      ),
+    );
+  }
+}
+
 class _RoomMessage {
-  const _RoomMessage({required this.sender, required this.text});
+  const _RoomMessage({
+    required this.sender,
+    required this.text,
+    required this.fromTeacher,
+  });
   final String sender;
   final String text;
+  final bool fromTeacher;
 }

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:searchteach_mobile/core/api_client.dart';
 import 'core/session_persistence.dart';
+import 'core/neu/neu.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'features/admin/admin_main_page.dart';
@@ -23,7 +24,13 @@ import 'core/app_error.dart';
 
 final _container = ProviderContainer();
 
-const _publicPaths = {'/session', '/login', '/register', '/forgot-password', '/error'};
+const _publicPaths = {
+  '/session',
+  '/login',
+  '/register',
+  '/forgot-password',
+  '/error'
+};
 String? _guardToken;
 String? _guardHome;
 
@@ -34,8 +41,7 @@ Future<String?> _routeGuard(BuildContext context, GoRouterState state) async {
   final path = state.uri.path;
   if (_publicPaths.contains(path)) return null;
 
-  final token =
-      await _container.read(secureStorageProvider).read(key: 'token');
+  final token = await _container.read(secureStorageProvider).read(key: 'token');
   if (token == null) {
     _guardToken = null;
     _guardHome = null;
@@ -187,6 +193,7 @@ class _AppState extends State<App> {
             primary: const Color(0xFFA9154F),
           ),
           scaffoldBackgroundColor: const Color(0xFFF5F7FB),
+          canvasColor: Neu.bg,
           cardTheme: CardThemeData(
             color: Colors.white,
             elevation: 2,
@@ -213,6 +220,55 @@ class _AppState extends State<App> {
               borderRadius: BorderRadius.circular(14),
               borderSide: const BorderSide(color: Color(0xFF1E3FA8), width: 2),
             ),
+          ),
+          dialogTheme: DialogThemeData(
+            backgroundColor: Neu.bg,
+            surfaceTintColor: Colors.transparent,
+            shadowColor: Neu.shadowDark,
+            elevation: 3,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          ),
+          datePickerTheme: DatePickerThemeData(
+            backgroundColor: Neu.bg,
+            surfaceTintColor: Colors.transparent,
+            shadowColor: Neu.shadowDark,
+            elevation: 3,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            headerBackgroundColor: Neu.bg,
+            headerForegroundColor: Neu.heading,
+            weekdayStyle:
+                neuBody(size: 12, weight: FontWeight.w700, color: Neu.muted),
+            dayStyle: neuBody(size: 13, weight: FontWeight.w500),
+            dayForegroundColor: WidgetStateProperty.resolveWith(
+                (states) => states.contains(WidgetState.disabled)
+                    ? Neu.chevron
+                    : states.contains(WidgetState.selected)
+                        ? Colors.white
+                        : Neu.text),
+          ),
+          timePickerTheme: TimePickerThemeData(
+            backgroundColor: Neu.bg,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            hourMinuteShape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          popupMenuTheme: PopupMenuThemeData(
+            color: Neu.bg,
+            surfaceTintColor: Colors.transparent,
+            elevation: 3,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            textStyle: neuBody(size: 14, color: Neu.text),
+          ),
+          listTileTheme: ListTileThemeData(
+            iconColor: Neu.muted,
+            textColor: Neu.text,
+            selectedTileColor: Neu.quietBg,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
           filledButtonTheme: FilledButtonThemeData(
             style: FilledButton.styleFrom(

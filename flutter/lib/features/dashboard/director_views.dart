@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/career_catalog.dart';
+import '../calidad/calidad_director_provider.dart';
 import '../calidad/calidad_panel.dart';
 import '../pa/pa_widgets.dart';
 import 'director_dashboard_provider.dart';
@@ -353,13 +354,177 @@ class _DirTutoriasViewState extends State<DirTutoriasView> {
 // ═════════════════════════════════════════════════════════════════════════════
 
 class DirCalidadView extends StatelessWidget {
-  const DirCalidadView({required this.data, super.key});
+  const DirCalidadView({
+    required this.data,
+    required this.career,
+    required this.semester,
+    required this.filtersExpanded,
+    required this.onToggleFilters,
+    required this.onCareerChanged,
+    required this.onSemesterChanged,
+    super.key,
+  });
 
   final DirectorDashboard data;
+  final String? career;
+  final int? semester;
+  final bool filtersExpanded;
+  final VoidCallback onToggleFilters;
+  final ValueChanged<String?> onCareerChanged;
+  final ValueChanged<int?> onSemesterChanged;
 
   @override
-  Widget build(BuildContext context) =>
-      CalidadPanel(semanas: data.ultimasSemanas);
+  Widget build(BuildContext context) => CalidadPanel(
+        filtro: CalidadFiltro(carrera: career, semestre: semester),
+        analyticsFilters: DirectorAnalyticsFilters(
+          data: data,
+          career: career,
+          semester: semester,
+          filtersExpanded: filtersExpanded,
+          onToggleFilters: onToggleFilters,
+          onCareerChanged: onCareerChanged,
+          onSemesterChanged: onSemesterChanged,
+        ),
+      );
+}
+
+class DirectorAnalyticsFilters extends StatelessWidget {
+  const DirectorAnalyticsFilters({
+    required this.data,
+    required this.career,
+    required this.semester,
+    required this.filtersExpanded,
+    required this.onToggleFilters,
+    required this.onCareerChanged,
+    required this.onSemesterChanged,
+    super.key,
+  });
+
+  final DirectorDashboard data;
+  final String? career;
+  final int? semester;
+  final bool filtersExpanded;
+  final VoidCallback onToggleFilters;
+  final ValueChanged<String?> onCareerChanged;
+  final ValueChanged<int?> onSemesterChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = NeuPalette.of(context);
+    final careers = <String>{
+      ...careerCatalog,
+      for (final subject in data.tutoriasPorMateria) ...subject.carreras,
+    }.toList()
+      ..sort();
+    final activeFilters = [
+      if (career != null) career!,
+      if (semester != null) 'Semestre $semester',
+    ];
+
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      NeuSurface(
+        radius: 14,
+        shadows: Neu.raiseS,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        onTap: onToggleFilters,
+        child: Row(children: [
+          Icon(Icons.filter_alt_outlined, color: palette.c),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Filtrar gráficos',
+                    style: neuPoppins(
+                        size: 14, weight: FontWeight.w700, color: palette.c)),
+                Text(
+                  activeFilters.isEmpty
+                      ? 'Todas las carreras y semestres'
+                      : activeFilters.join(' · '),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: neuBody(size: 12, color: Neu.muted),
+                ),
+              ],
+            ),
+          ),
+          Icon(
+            filtersExpanded
+                ? Icons.keyboard_arrow_up_rounded
+                : Icons.keyboard_arrow_down_rounded,
+            color: palette.c,
+          ),
+        ]),
+      ),
+      if (filtersExpanded) ...[
+        const SizedBox(height: 10),
+        Row(children: [
+          Expanded(
+            child: NeuSurface(
+              radius: 14,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String?>(
+                  value: career,
+                  isExpanded: true,
+                  icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                  hint: const Text('Todas las carreras',
+                      overflow: TextOverflow.ellipsis),
+                  items: [
+                    const DropdownMenuItem<String?>(
+                      value: null,
+                      child: Text('Todas las carreras',
+                          overflow: TextOverflow.ellipsis),
+                    ),
+                    for (final item in careers)
+                      DropdownMenuItem<String?>(
+                        value: item,
+                        child: Text(item,
+                            overflow: TextOverflow.ellipsis, maxLines: 1),
+                      ),
+                  ],
+                  onChanged: onCareerChanged,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: NeuSurface(
+              radius: 14,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<int?>(
+                  value: semester,
+                  isExpanded: true,
+                  icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                  hint: const Text('Todos los semestres',
+                      overflow: TextOverflow.ellipsis),
+                  items: [
+                    const DropdownMenuItem<int?>(
+                      value: null,
+                      child: Text('Todos los semestres',
+                          overflow: TextOverflow.ellipsis),
+                    ),
+                    for (var item = 1; item <= 6; item++)
+                      DropdownMenuItem<int?>(
+                        value: item,
+                        child: Text('Semestre $item'),
+                      ),
+                  ],
+                  onChanged: onSemesterChanged,
+                ),
+              ),
+            ),
+          ),
+        ]),
+      ],
+      Text(
+        'Estos filtros actualizan el gráfico de comentarios y el pronóstico por materia.',
+        style: neuBody(size: 12, color: Neu.muted),
+      ),
+    ]);
+  }
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -369,11 +534,23 @@ class DirCalidadView extends StatelessWidget {
 class DirForecastView extends StatelessWidget {
   const DirForecastView({
     required this.data,
+    required this.career,
+    required this.semester,
+    required this.filtersExpanded,
+    required this.onToggleFilters,
+    required this.onCareerChanged,
+    required this.onSemesterChanged,
     required this.onOpenAttendance,
     super.key,
   });
 
   final DirectorDashboard data;
+  final String? career;
+  final int? semester;
+  final bool filtersExpanded;
+  final VoidCallback onToggleFilters;
+  final ValueChanged<String?> onCareerChanged;
+  final ValueChanged<int?> onSemesterChanged;
   final VoidCallback onOpenAttendance;
 
   @override
@@ -384,10 +561,24 @@ class DirForecastView extends StatelessWidget {
     final range = data.rangoProximaSemana;
     final trend = data.tendencia;
     final weeks = data.ultimasSemanas;
-    final perSubject = data.pronosticoPorMateria;
+    final perSubject = data.pronosticoPorMateriaFiltrado(
+      carrera: career,
+      semestre: semester,
+    );
+    final filtersActive = career != null || semester != null;
+    final filters = DirectorAnalyticsFilters(
+      data: data,
+      career: career,
+      semester: semester,
+      filtersExpanded: filtersExpanded,
+      onToggleFilters: onToggleFilters,
+      onCareerChanged: onCareerChanged,
+      onSemesterChanged: onSemesterChanged,
+    );
 
     if (week == null || next == null || range == null) {
       return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        filters,
         PaInfo(
             data.modeloAsistenciaDisponible
                 ? 'Todavía no hay pronósticos. No hay tutorías programadas compatibles con el modelo de asistencia.'
@@ -406,6 +597,7 @@ class DirForecastView extends StatelessWidget {
     final weekLabel = _dm(week.semanaInicio);
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      filters,
       const PaInfo(
           'El modelo de asistencia estima cuántos estudiantes asistirán a las tutorías programadas. La próxima semana se verá así:'),
       PaCard(
@@ -428,7 +620,7 @@ class DirForecastView extends StatelessWidget {
           ],
         ]),
       ),
-      const PaSection('Por materia · tutorías programadas'),
+      const PaSection('Asistencia estimada por materia'),
       DirBarChart(
         height: 150,
         showValues: true,
@@ -439,7 +631,9 @@ class DirForecastView extends StatelessWidget {
         ],
         caption: perSubject.length > 6
             ? 'Las 6 materias con más asistencias estimadas (de ${perSubject.length} con tutorías programadas).'
-            : 'Asistencias estimadas en las tutorías programadas de cada materia.',
+            : filtersActive
+                ? 'Cada barra estima estudiantes asistentes para los filtros elegidos. El resumen superior y el histórico siguen mostrando el total general.'
+                : 'Cada barra estima cuántos estudiantes asistirían a las tutorías programadas de esa materia.',
       ),
       _attendanceEntry(),
       PaCard(

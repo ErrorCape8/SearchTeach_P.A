@@ -132,7 +132,11 @@ class _CoordinacionSolicitudesPageState
           const SizedBox(height: 14),
           Text('Horario actual: ${_format(oldStart)} – ${_format(oldEnd)}'),
           const SizedBox(height: 4),
-          Text('Solicita: ${_format(desiredStart)} – ${_format(desiredEnd)}'),
+          Text(
+            desiredStart != null && desiredEnd != null
+                ? 'Solicita: ${_format(desiredStart)} – ${_format(desiredEnd)}'
+                : 'La nueva fecha y hora se definirán al aprobar.',
+          ),
           const SizedBox(height: 12),
           Text('Motivo: ${_value(item['motivo'], 'Sin motivo')}',
               style: const TextStyle(color: _muted, height: 1.35)),
@@ -140,7 +144,7 @@ class _CoordinacionSolicitudesPageState
           Wrap(spacing: 10, runSpacing: 8, children: [
             FilledButton.icon(
               style: FilledButton.styleFrom(backgroundColor: _wine),
-              onPressed: () => _accept(item, desiredStart),
+              onPressed: () => _accept(item),
               icon: const Icon(Icons.check),
               label: const Text('Aceptar'),
             ),
@@ -156,9 +160,13 @@ class _CoordinacionSolicitudesPageState
     );
   }
 
-  Future<void> _accept(Map<String, dynamic> item, DateTime requested) async {
+  Future<void> _accept(Map<String, dynamic> item) async {
     var assignLater = false;
-    var start = requested;
+    final now = DateTime.now();
+    final parsedStart = _parse(item['fechaInicioOriginal']);
+    var start = parsedStart != null && parsedStart.isAfter(now)
+        ? parsedStart
+        : now.add(const Duration(days: 1));
     final choice = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
@@ -191,11 +199,9 @@ class _CoordinacionSolicitudesPageState
                 onPressed: () async {
                   final date = await showDatePicker(
                     context: context,
-                    initialDate: start.isAfter(DateTime.now())
-                        ? start
-                        : DateTime.now().add(const Duration(days: 1)),
-                    firstDate: DateTime.now(),
-                    lastDate: DateTime.now().add(const Duration(days: 365 * 3)),
+                    initialDate: start,
+                    firstDate: DateTime(now.year, now.month, now.day),
+                    lastDate: DateTime(now.year + 3, now.month, now.day),
                   );
                   if (date != null) {
                     setDialogState(() => start = DateTime(date.year, date.month,
@@ -301,12 +307,13 @@ class _CoordinacionSolicitudesPageState
     }
   }
 
-  static DateTime _parse(dynamic value) =>
-      DateTime.tryParse(value?.toString() ?? '') ?? DateTime.now();
+  static DateTime? _parse(dynamic value) =>
+      DateTime.tryParse(value?.toString() ?? '');
   static String _value(dynamic value, String fallback) =>
       value is String && value.trim().isNotEmpty ? value : fallback;
   static String _date(DateTime value) =>
       '${value.day.toString().padLeft(2, '0')}/${value.month.toString().padLeft(2, '0')}/${value.year}';
-  static String _format(DateTime value) =>
-      '${_date(value)} ${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
+  static String _format(DateTime? value) => value == null
+      ? 'No definido'
+      : '${_date(value)} ${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
 }
