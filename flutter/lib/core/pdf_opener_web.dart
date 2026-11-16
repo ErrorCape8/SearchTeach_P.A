@@ -14,3 +14,7 @@ Future<void> openPdfBytes(Uint8List bytes, String name) async {
     web.URL.revokeObjectURL(blobUrl);
   });
 }
+
+Future<void> openPdfUrl(String url) async {
+  web.window.open(url, '_blank');
+}

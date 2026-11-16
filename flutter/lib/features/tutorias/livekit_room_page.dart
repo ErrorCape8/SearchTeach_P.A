@@ -55,7 +55,6 @@ class LiveKitRoomPage extends ConsumerStatefulWidget {
 }
 
 class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
-  static const _sharedRoomBackground = Color(0xFF111318);
   static const _teacherRoomAccent = Color(0xFF16834A);
   static const _studentRoomAccent = Color(0xFF1769AA);
 
@@ -748,7 +747,7 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(20),
-                      boxShadow: Neu.raiseM,
+                      boxShadow: Neu.raise,
                     ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -787,7 +786,6 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
                         NeuButton(
                           'Salir de la espera',
                           icon: Icons.arrow_back_rounded,
-                          accentColor: _roomAccent,
                           expand: false,
                           onPressed: () => Navigator.of(context).maybePop(),
                         ),
@@ -844,7 +842,7 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(20),
-                      boxShadow: Neu.raiseM,
+                      boxShadow: Neu.raise,
                     ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -870,7 +868,6 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
                         NeuButton(
                           'Volver',
                           icon: Icons.arrow_back_rounded,
-                          accentColor: _roomAccent,
                           expand: false,
                           onPressed: () => Navigator.of(context).maybePop(),
                         ),
@@ -967,7 +964,7 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(18),
-          boxShadow: Neu.raiseM,
+          boxShadow: Neu.raise,
         ),
         clipBehavior: Clip.antiAlias,
         child: Column(
@@ -1034,12 +1031,12 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
                                       horizontal: 12, vertical: 8),
                                   decoration: BoxDecoration(
                                     color: isMe
-                                        ? _roomAccent.withOpacity(0.12)
+                                        ? _roomAccent.withValues(alpha: 0.12)
                                         : const Color(0xFFF1F4F9),
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
                                       color: isMe
-                                          ? _roomAccent.withOpacity(0.3)
+                                          ? _roomAccent.withValues(alpha: 0.3)
                                           : const Color(0xFFE2E8F0),
                                       width: 0.8,
                                     ),
@@ -1102,7 +1099,7 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(18),
-          boxShadow: Neu.raiseM,
+          boxShadow: Neu.raise,
         ),
         clipBehavior: Clip.antiAlias,
         child: Column(
@@ -1146,13 +1143,17 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
             if (widget.teacherMode)
               Container(
                 width: double.infinity,
-                color: _roomAccent.withOpacity(0.08),
+                color: _roomAccent.withValues(alpha: 0.08),
                 padding:
                     const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 child: Text(
-                  'Presentes: ${_attendance.values.where((v) => v == true).length} | Ausentes: ${_attendance.values.where((v) => v == false).length}',
+                  _attendanceError != null
+                      ? _attendanceError!
+                      : _attendanceSlow
+                          ? 'Cargando asistencia…'
+                          : 'Presentes: ${_attendance.values.where((v) => v == true).length} | Ausentes: ${_attendance.values.where((v) => v == false).length}',
                   style: neuPoppins(
-                    color: _roomAccent,
+                    color: _attendanceError != null ? Neu.errFg : _roomAccent,
                     size: 11,
                     weight: FontWeight.w700,
                   ),
@@ -1167,7 +1168,7 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
                     dense: true,
                     leading: CircleAvatar(
                       radius: 14,
-                      backgroundColor: _roomAccent.withOpacity(0.15),
+                      backgroundColor: _roomAccent.withValues(alpha: 0.15),
                       child: Icon(Icons.school_rounded,
                           size: 15, color: _roomAccent),
                     ),
@@ -1508,7 +1509,7 @@ class _VideoTile extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.65),
+                  color: Colors.black.withValues(alpha: 0.65),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: Colors.white12, width: 0.8),
                 ),
