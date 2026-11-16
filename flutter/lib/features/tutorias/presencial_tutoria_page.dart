@@ -282,7 +282,8 @@ class _PresencialTutoriaPageState extends ConsumerState<PresencialTutoriaPage> {
                               ? null
                               : () => _finish('FINALIZADA'),
                           icon: const Icon(Icons.check_circle_outline),
-                          label: const Text('Finalizar clase'),
+                          label:
+                              const Text('Finalizar clase: temas concluidos'),
                         ),
                         OutlinedButton.icon(
                           onPressed: _saving ||

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:dio/dio.dart';
 
 import '../../core/api_client.dart';
 import '../../core/widgets/role_toast.dart';
@@ -170,7 +171,50 @@ Future<void> showStudentTutoringRatingDialog(
       );
       ref.invalidate(studentGroupSessionsProvider);
     }
-  } catch (_) {
-    // Manejo seguro sin bloquear al usuario
+  } on DioException catch (error) {
+    if (!context.mounted) return;
+    final data = error.response?.data;
+    final message = data is Map && data['message'] is String
+        ? data['message'] as String
+        : 'No se pudo enviar la calificación.';
+    RoleToast.show(context,
+        message: message, roleColor: const Color(0xFF1769AA));
+  }
+}
+
+Future<void> showStudentTutoringRatingIfNeeded(
+  BuildContext context,
+  WidgetRef ref, {
+  required String sessionId,
+  required String studentId,
+  required String subject,
+}) async {
+  try {
+    final response = await ref.read(dioProvider).get<Map<String, dynamic>>(
+          '/api/tutorias/grupales/${Uri.encodeComponent(sessionId)}',
+        );
+    final session = response.data;
+    if (session?['estadoClase'] != 'FINALIZADA') return;
+    final ratings = session?['valoraciones'];
+    final alreadyRated = ratings is List &&
+        ratings
+            .whereType<Map<String, dynamic>>()
+            .any((rating) => rating['estudianteId']?.toString() == studentId);
+    if (alreadyRated || !context.mounted) return;
+
+    await showStudentTutoringRatingDialog(
+      context,
+      ref,
+      sessionId: sessionId,
+      subject: subject,
+    );
+  } on DioException catch (error) {
+    if (!context.mounted) return;
+    final data = error.response?.data;
+    final message = data is Map && data['message'] is String
+        ? data['message'] as String
+        : 'No se pudo comprobar si la tutoría ya finalizó.';
+    RoleToast.show(context,
+        message: message, roleColor: const Color(0xFF1769AA));
   }
 }

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:async';
 
+import 'package:audioplayers/audioplayers.dart';
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -46,6 +47,7 @@ class ProyectoAulaChatPage extends ConsumerStatefulWidget {
 class _ProyectoAulaChatPageState extends ConsumerState<ProyectoAulaChatPage> {
   final _text = TextEditingController();
   final _audioRecorder = AudioRecorder();
+  final _audioPlayer = AudioPlayer();
   List<Map<String, dynamic>> _messages = [];
   PlatformFile? _attachment;
   bool _loading = true;
@@ -65,6 +67,13 @@ class _ProyectoAulaChatPageState extends ConsumerState<ProyectoAulaChatPage> {
   Timer? _refreshTimer;
   CancelToken? _streamCancel;
   StreamSubscription<String>? _streamSubscription;
+  StreamSubscription<PlayerState>? _audioStateSubscription;
+  StreamSubscription<Duration>? _audioPositionSubscription;
+  StreamSubscription<Duration>? _audioDurationSubscription;
+  String? _activeAudioMessageId;
+  String? _loadingAudioMessageId;
+  Duration _audioPosition = Duration.zero;
+  Duration _audioDuration = Duration.zero;
 
   String get _path =>
       '/api/tutorias-colectivas/${Uri.encodeComponent(widget.tutoringId)}'
@@ -94,6 +103,22 @@ class _ProyectoAulaChatPageState extends ConsumerState<ProyectoAulaChatPage> {
     super.initState();
     _load();
     _connectStream();
+    _audioStateSubscription = _audioPlayer.onPlayerStateChanged.listen((state) {
+      if (!mounted) return;
+      setState(() {
+        if (state == PlayerState.completed) {
+          _audioPosition = _audioDuration;
+        } else if (state == PlayerState.stopped) {
+          _audioPosition = Duration.zero;
+        }
+      });
+    });
+    _audioPositionSubscription = _audioPlayer.onPositionChanged.listen((value) {
+      if (mounted) setState(() => _audioPosition = value);
+    });
+    _audioDurationSubscription = _audioPlayer.onDurationChanged.listen((value) {
+      if (mounted) setState(() => _audioDuration = value);
+    });
     _refreshTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       if (mounted) _load();
     });
@@ -106,7 +131,11 @@ class _ProyectoAulaChatPageState extends ConsumerState<ProyectoAulaChatPage> {
     _recordingTimer?.cancel();
     _streamCancel?.cancel('Chat cerrado');
     _streamSubscription?.cancel();
+    _audioStateSubscription?.cancel();
+    _audioPositionSubscription?.cancel();
+    _audioDurationSubscription?.cancel();
     _recordingSubscription?.cancel();
+    unawaited(_audioPlayer.dispose());
     unawaited(_audioRecorder.dispose());
     super.dispose();
   }
@@ -275,51 +304,162 @@ class _ProyectoAulaChatPageState extends ConsumerState<ProyectoAulaChatPage> {
 
   Future<void> _requestProjectClosure() async {
     var reason = 'LISTO';
-    final selected = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-          builder: (context, setDialogState) => AlertDialog(
-                title: const Text('Solicitar finalización de PA'),
-                content: Column(mainAxisSize: MainAxisSize.min, children: [
-                  RadioListTile<String>(
-                      value: 'LISTO',
-                      groupValue: reason,
-                      onChanged: (value) =>
-                          setDialogState(() => reason = value!),
-                      title: const Text('Dar por completado el asesoramiento')),
-                  RadioListTile<String>(
-                      value: 'SIN_ATENCION',
-                      groupValue: reason,
-                      onChanged: (value) =>
-                          setDialogState(() => reason = value!),
-                      title:
-                          const Text('Finalizar por falta de participación')),
-                  TextField(
-                    maxLines: 4,
-                    maxLength: 4000,
-                    decoration: const InputDecoration(
-                      labelText: 'Reporte obligatorio de lo realizado',
-                      border: OutlineInputBorder(),
+    final reportController = TextEditingController(text: _closureReport);
+    String? selected;
+    try {
+      selected = await showDialog<String>(
+        context: context,
+        builder: (dialogContext) => StatefulBuilder(
+          builder: (context, setDialogState) {
+            Widget reasonOption(String value, String label) {
+              final isSelected = reason == value;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: NeuSurface(
+                  radius: 14,
+                  sunken: isSelected,
+                  onTap: () => setDialogState(() => reason = value),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  child: Row(children: [
+                    Icon(
+                      isSelected
+                          ? Icons.radio_button_checked_rounded
+                          : Icons.radio_button_unchecked_rounded,
+                      color: isSelected ? _roleAccent : Neu.muted,
+                      size: 21,
                     ),
-                    onChanged: (value) =>
-                        setDialogState(() => _closureReport = value),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(label,
+                          style: neuBody(
+                            size: 14,
+                            weight:
+                                isSelected ? FontWeight.w600 : FontWeight.w400,
+                            color: Neu.heading,
+                          )),
+                    ),
+                  ]),
+                ),
+              );
+            }
+
+            return Dialog(
+              backgroundColor: Neu.bg,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(22)),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 560),
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Solicitar finalización de PA',
+                          style: neuPoppins(
+                              size: 20,
+                              weight: FontWeight.w700,
+                              color: Neu.heading),
+                        ),
+                        const SizedBox(height: 18),
+                        reasonOption(
+                            'LISTO', 'Dar por completado el asesoramiento'),
+                        reasonOption('SIN_ATENCION',
+                            'Finalizar por falta de participación'),
+                        NeuSurface(
+                          radius: 14,
+                          sunken: true,
+                          padding: const EdgeInsets.all(12),
+                          child: TextField(
+                            controller: reportController,
+                            maxLines: 4,
+                            maxLength: 4000,
+                            cursorColor: _roleAccent,
+                            style: neuBody(size: 14, color: Neu.heading),
+                            decoration: InputDecoration(
+                              hintText: 'Reporte obligatorio de lo realizado',
+                              hintStyle: neuBody(size: 14, color: Neu.muted),
+                              border: InputBorder.none,
+                              counterText: '',
+                              isDense: true,
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                            onChanged: (value) =>
+                                setDialogState(() => _closureReport = value),
+                          ),
+                        ),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text('${_closureReport.length}/4000',
+                                style: neuBody(size: 11, color: Neu.muted)),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(Icons.info_outline_rounded,
+                                size: 18, color: _roleAccent),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'El docente líder revisará el reporte antes de confirmar el cierre.',
+                                style: neuBody(size: 12, color: Neu.muted),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 18),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            NeuSurface(
+                              radius: 14,
+                              onTap: () => Navigator.pop(dialogContext),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 11),
+                              child: Text('Cancelar',
+                                  style: neuBody(
+                                      size: 13,
+                                      weight: FontWeight.w600,
+                                      color: Neu.muted)),
+                            ),
+                            const SizedBox(width: 10),
+                            NeuSurface(
+                              radius: 14,
+                              sunken: _closureReport.trim().isNotEmpty,
+                              onTap: _closureReport.trim().isEmpty
+                                  ? null
+                                  : () => Navigator.pop(dialogContext, reason),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 11),
+                              child: Text('Enviar al líder',
+                                  style: neuBody(
+                                      size: 13,
+                                      weight: FontWeight.w700,
+                                      color: _closureReport.trim().isEmpty
+                                          ? Neu.muted
+                                          : _roleAccent)),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                  const Text(
-                      'El docente líder revisará el reporte antes de confirmar el cierre.'),
-                ]),
-                actions: [
-                  TextButton(
-                      onPressed: () => Navigator.pop(dialogContext),
-                      child: const Text('Cancelar')),
-                  FilledButton(
-                    onPressed: _closureReport.trim().isEmpty
-                        ? null
-                        : () => Navigator.pop(dialogContext, reason),
-                    child: const Text('Enviar al líder'),
-                  ),
-                ],
-              )),
-    );
+                ),
+              ),
+            );
+          },
+        ),
+      );
+    } finally {
+      reportController.dispose();
+    }
     if (selected == null) return;
     try {
       await ref.read(dioProvider).post(
@@ -358,13 +498,15 @@ class _ProyectoAulaChatPageState extends ConsumerState<ProyectoAulaChatPage> {
   Future<void> _startVoiceRecording() async {
     if (_recording || _finalizingRecording || _sending) return;
     if (_attachment != null) {
-      setState(() => _error = 'Quita el adjunto actual antes de grabar una nota de voz.');
+      setState(() =>
+          _error = 'Quita el adjunto actual antes de grabar una nota de voz.');
       return;
     }
     try {
       if (!await _audioRecorder.hasPermission()) {
         if (mounted) {
-          setState(() => _error = 'Permite el acceso al micrófono para grabar.');
+          setState(
+              () => _error = 'Permite el acceso al micrófono para grabar.');
         }
         return;
       }
@@ -424,8 +566,7 @@ class _ProyectoAulaChatPageState extends ConsumerState<ProyectoAulaChatPage> {
       }
       final wav = _encodePcmAsWav(pcm);
       if (wav.length > 8 * 1024 * 1024) {
-        throw const FormatException(
-            'La nota de voz supera el límite de 8 MB.');
+        throw const FormatException('La nota de voz supera el límite de 8 MB.');
       }
       if (!mounted) return;
       setState(() {
@@ -521,6 +662,86 @@ class _ProyectoAulaChatPageState extends ConsumerState<ProyectoAulaChatPage> {
     }
   }
 
+  Future<void> _toggleVoicePlayback(Map<String, dynamic> message) async {
+    final id = message['id']?.toString() ?? '';
+    if (id.isEmpty || _loadingAudioMessageId != null) return;
+
+    try {
+      if (_activeAudioMessageId == id) {
+        if (_audioPlayer.state == PlayerState.playing) {
+          await _audioPlayer.pause();
+          return;
+        }
+        if (_audioPlayer.state == PlayerState.paused) {
+          await _audioPlayer.resume();
+          return;
+        }
+        if (_audioPlayer.state == PlayerState.completed) {
+          await _audioPlayer.seek(Duration.zero);
+          await _audioPlayer.resume();
+          return;
+        }
+      }
+
+      setState(() => _loadingAudioMessageId = id);
+      final response = await ref.read(dioProvider).get<List<int>>(
+            '$_path/${Uri.encodeComponent(id)}/archivo',
+            options: Options(responseType: ResponseType.bytes),
+          );
+      final bytes = response.data;
+      if (bytes == null || bytes.isEmpty) {
+        throw const FormatException('La nota de voz está vacía.');
+      }
+
+      await _audioPlayer.stop();
+      if (!mounted) return;
+      setState(() {
+        _activeAudioMessageId = id;
+        _audioPosition = Duration.zero;
+        _audioDuration = Duration.zero;
+      });
+      final mimeType = message['archivoMime']?.toString();
+      final fileName = message['archivoNombre']?.toString().toLowerCase() ?? '';
+      await _audioPlayer.setSourceBytes(
+        Uint8List.fromList(bytes),
+        mimeType: mimeType?.startsWith('audio/') == true
+            ? mimeType
+            : fileName.endsWith('.wav')
+                ? 'audio/wav'
+                : 'audio/webm',
+      );
+      await _audioPlayer.resume();
+    } on DioException catch (error) {
+      if (mounted) {
+        RoleToast.showSnackBar(
+            context, SnackBar(content: Text(_apiMessage(error))));
+      }
+    } on FormatException catch (error) {
+      if (mounted) {
+        RoleToast.showSnackBar(context, SnackBar(content: Text(error.message)));
+      }
+    } on PlatformException catch (error) {
+      if (mounted) {
+        RoleToast.showSnackBar(
+          context,
+          SnackBar(
+              content:
+                  Text(error.message ?? 'No se pudo reproducir el audio.')),
+        );
+      }
+    } finally {
+      if (mounted && _loadingAudioMessageId == id) {
+        setState(() => _loadingAudioMessageId = null);
+      }
+    }
+  }
+
+  String _audioTime(Duration duration) {
+    final minutes = duration.inMinutes.toString().padLeft(2, '0');
+    final seconds = (duration.inSeconds % 60).toString().padLeft(2, '0');
+    return '$minutes:$seconds';
+  }
+
   Future<void> _download(Map<String, dynamic> message) async {
     final id = message['id']?.toString() ?? '';
     final name = message['archivoNombre']?.toString() ?? 'adjunto';
@@ -565,10 +786,12 @@ class _ProyectoAulaChatPageState extends ConsumerState<ProyectoAulaChatPage> {
           elevation: 0,
           title: Text(
             widget.title,
-            style: neuPoppins(size: 17, weight: FontWeight.w700, color: Neu.heading),
+            style: neuPoppins(
+                size: 17, weight: FontWeight.w700, color: Neu.heading),
           ),
           actions: [
-            if (_canManageProject && _projectState?['estadoCierre'] == 'EN_CURSO')
+            if (_canManageProject &&
+                _projectState?['estadoCierre'] == 'EN_CURSO')
               PopupMenuButton<String>(
                 tooltip: 'Acciones del proyecto',
                 onSelected: (_) => _requestProjectClosure(),
@@ -578,9 +801,8 @@ class _ProyectoAulaChatPageState extends ConsumerState<ProyectoAulaChatPage> {
                 ],
               ),
             IconButton(
-              tooltip: _panelOpen
-                  ? 'Cerrar menú'
-                  : 'Videoconferencias y documentos',
+              tooltip:
+                  _panelOpen ? 'Cerrar menú' : 'Videoconferencias y documentos',
               onPressed: () => setState(() => _panelOpen = !_panelOpen),
               icon: Icon(
                 _panelOpen
@@ -606,8 +828,8 @@ class _ProyectoAulaChatPageState extends ConsumerState<ProyectoAulaChatPage> {
                     Expanded(
                       child: _loading
                           ? Center(
-                              child: CircularProgressIndicator(
-                                  color: _roleAccent))
+                              child:
+                                  CircularProgressIndicator(color: _roleAccent))
                           : _error != null && _messages.isEmpty
                               ? Center(child: _chatNotice(_error!))
                               : ListView(
@@ -820,9 +1042,7 @@ class _ProyectoAulaChatPageState extends ConsumerState<ProyectoAulaChatPage> {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         child: Row(children: [
           Icon(
-            state == 'CANCELADA'
-                ? Icons.event_busy
-                : Icons.video_call_outlined,
+            state == 'CANCELADA' ? Icons.event_busy : Icons.video_call_outlined,
             color: _roleAccent,
           ),
           const SizedBox(width: 10),
@@ -903,8 +1123,7 @@ class _ProyectoAulaChatPageState extends ConsumerState<ProyectoAulaChatPage> {
     final sentAt =
         DateTime.tryParse(message['enviadoEn']?.toString() ?? '')?.toLocal();
     return Align(
-      alignment:
-          senderIsTeacher ? Alignment.centerLeft : Alignment.centerRight,
+      alignment: senderIsTeacher ? Alignment.centerLeft : Alignment.centerRight,
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 560),
         child: Padding(
@@ -912,9 +1131,7 @@ class _ProyectoAulaChatPageState extends ConsumerState<ProyectoAulaChatPage> {
           child: Container(
             padding: const EdgeInsets.all(13),
             decoration: BoxDecoration(
-              color: own
-                  ? senderAccent.withValues(alpha: 0.09)
-                  : Neu.bg,
+              color: own ? senderAccent.withValues(alpha: 0.09) : Neu.bg,
               borderRadius: BorderRadius.only(
                 topLeft: const Radius.circular(18),
                 topRight: const Radius.circular(18),
@@ -944,9 +1161,7 @@ class _ProyectoAulaChatPageState extends ConsumerState<ProyectoAulaChatPage> {
                 Text(
                   own ? 'Tú · $senderRole' : senderRole,
                   style: neuPoppins(
-                      size: 11.5,
-                      weight: FontWeight.w700,
-                      color: senderAccent),
+                      size: 11.5, weight: FontWeight.w700, color: senderAccent),
                 ),
               ]),
               if ((message['texto']?.toString() ?? '').isNotEmpty)
@@ -963,8 +1178,8 @@ class _ProyectoAulaChatPageState extends ConsumerState<ProyectoAulaChatPage> {
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: FilledButton.icon(
-                    style: FilledButton.styleFrom(
-                        backgroundColor: senderAccent),
+                    style:
+                        FilledButton.styleFrom(backgroundColor: senderAccent),
                     onPressed: _chatClosed ? null : _enterMeeting,
                     icon: const Icon(Icons.video_call_outlined),
                     label: const Text('Entrar a la reunión de PA'),
@@ -1009,7 +1224,10 @@ class _ProyectoAulaChatPageState extends ConsumerState<ProyectoAulaChatPage> {
   /// Nota de voz (estilo WhatsApp) o documento dentro de la burbuja.
   Widget _attachmentTile(
       Map<String, dynamic> message, String fileName, Color senderAccent) {
-    final audio = _isAudio(message);
+    if (_isAudio(message)) {
+      return _voiceNoteTile(message, fileName, senderAccent);
+    }
+
     return Padding(
       padding: const EdgeInsets.only(top: 6),
       child: InkWell(
@@ -1023,21 +1241,14 @@ class _ProyectoAulaChatPageState extends ConsumerState<ProyectoAulaChatPage> {
             border: Border.all(color: senderAccent.withValues(alpha: 0.18)),
           ),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Icon(audio ? Icons.mic_rounded : _docIcon(fileName),
-                color: senderAccent),
+            Icon(_docIcon(fileName), color: senderAccent),
             const SizedBox(width: 10),
             Flexible(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(audio ? 'Nota de voz' : fileName,
-                      maxLines: 1, overflow: TextOverflow.ellipsis),
-                  Text(
-                      [
-                        if (audio)
-                          fileName.toLowerCase().endsWith('.wav') ? 'WAV' : 'WebM',
-                        _size(message['archivoTamano']),
-                      ].where((e) => e.isNotEmpty).join(' · '),
+                  Text(fileName, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  Text(_size(message['archivoTamano']),
                       style: neuBody(size: 10.5, color: Neu.muted)),
                 ],
               ),
@@ -1046,6 +1257,109 @@ class _ProyectoAulaChatPageState extends ConsumerState<ProyectoAulaChatPage> {
             const Icon(Icons.download_outlined, size: 20),
           ]),
         ),
+      ),
+    );
+  }
+
+  Widget _voiceNoteTile(
+      Map<String, dynamic> message, String fileName, Color senderAccent) {
+    final id = message['id']?.toString() ?? '';
+    final active = id.isNotEmpty && id == _activeAudioMessageId;
+    final loading = id.isNotEmpty && id == _loadingAudioMessageId;
+    final playing = active && _audioPlayer.state == PlayerState.playing;
+    final duration = active ? _audioDuration : Duration.zero;
+    final position = active
+        ? _audioPosition.inMilliseconds
+            .clamp(0, duration.inMilliseconds)
+            .toDouble()
+        : 0.0;
+    final progress =
+        duration.inMilliseconds == 0 ? 0.0 : position / duration.inMilliseconds;
+    final format = fileName.toLowerCase().endsWith('.wav') ? 'WAV' : 'WebM';
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: NeuSurface(
+        radius: 14,
+        color: Neu.bg,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          NeuSurface(
+            radius: 40,
+            sunken: playing,
+            onTap: loading ? null : () => _toggleVoicePlayback(message),
+            padding: const EdgeInsets.all(8),
+            child: SizedBox(
+              width: 24,
+              height: 24,
+              child: Center(
+                child: loading
+                    ? SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: senderAccent,
+                        ),
+                      )
+                    : Icon(
+                        playing
+                            ? Icons.pause_rounded
+                            : Icons.play_arrow_rounded,
+                        color: senderAccent,
+                        size: 24,
+                      ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Flexible(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minWidth: 150, maxWidth: 250),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(children: [
+                    Expanded(
+                      child: Text('Nota de voz',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: neuPoppins(
+                              size: 13,
+                              weight: FontWeight.w600,
+                              color: Neu.heading)),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      '${_audioTime(active ? _audioPosition : Duration.zero)} / '
+                      '${_audioTime(duration)}',
+                      style: neuBody(size: 10, color: Neu.muted),
+                    ),
+                  ]),
+                  const SizedBox(height: 3),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: progress,
+                      minHeight: 4,
+                      color: senderAccent,
+                      backgroundColor: Neu.line,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    [
+                      format,
+                      _size(message['archivoTamano']),
+                    ].where((value) => value.isNotEmpty).join(' · '),
+                    style: neuBody(size: 10, color: Neu.muted),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ]),
       ),
     );
   }
@@ -1059,8 +1373,7 @@ class _ProyectoAulaChatPageState extends ConsumerState<ProyectoAulaChatPage> {
     final meetings = _messages.where((m) => m['tipo'] == 'REUNION').toList();
     final documents = _messages
         .where((m) =>
-            (m['archivoNombre']?.toString() ?? '').isNotEmpty &&
-            !_isAudio(m))
+            (m['archivoNombre']?.toString() ?? '').isNotEmpty && !_isAudio(m))
         .toList();
     final finished = _projectState?['estadoCierre'] == 'FINALIZADO';
     final theme = Theme.of(context).copyWith(
@@ -1077,22 +1390,23 @@ class _ProyectoAulaChatPageState extends ConsumerState<ProyectoAulaChatPage> {
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
-              child: SegmentedButton<_ChatSection>(
-                showSelectedIcon: false,
-                segments: [
-                  ButtonSegment(
-                      value: _ChatSection.videoconferencias,
-                      icon: const Icon(Icons.videocam_outlined),
-                      label: Text('Videollamadas (${meetings.length})')),
-                  ButtonSegment(
-                      value: _ChatSection.documentos,
-                      icon: const Icon(Icons.folder_open_outlined),
-                      label: Text('Documentos (${documents.length})')),
-                ],
-                selected: {_section},
-                onSelectionChanged: (value) =>
-                    setState(() => _section = value.first),
-              ),
+              child: Row(children: [
+                Expanded(
+                  child: _resourceTab(
+                    section: _ChatSection.videoconferencias,
+                    icon: Icons.videocam_outlined,
+                    label: 'Videollamadas (${meetings.length})',
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _resourceTab(
+                    section: _ChatSection.documentos,
+                    icon: Icons.folder_open_outlined,
+                    label: 'Documentos (${documents.length})',
+                  ),
+                ),
+              ]),
             ),
             Flexible(
               child: ListView(
@@ -1165,10 +1479,10 @@ class _ProyectoAulaChatPageState extends ConsumerState<ProyectoAulaChatPage> {
                                 color: _roleAccent),
                             title: Text(m['archivoNombre'].toString(),
                                 maxLines: 1, overflow: TextOverflow.ellipsis),
-                            subtitle: Text(
-                                [_size(m['archivoTamano']), _stamp(m['enviadoEn'])]
-                                    .where((e) => e.isNotEmpty)
-                                    .join(' · ')),
+                            subtitle: Text([
+                              _size(m['archivoTamano']),
+                              _stamp(m['enviadoEn'])
+                            ].where((e) => e.isNotEmpty).join(' · ')),
                             trailing: Icon(Icons.download_outlined,
                                 color: _roleAccent),
                             onTap: () => _download(m),
@@ -1179,6 +1493,36 @@ class _ProyectoAulaChatPageState extends ConsumerState<ProyectoAulaChatPage> {
           ]),
         ),
       ),
+    );
+  }
+
+  Widget _resourceTab({
+    required _ChatSection section,
+    required IconData icon,
+    required String label,
+  }) {
+    final selected = _section == section;
+    return NeuSurface(
+      radius: 14,
+      sunken: selected,
+      onTap: () => setState(() => _section = section),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+      child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+        Icon(icon, size: 18, color: selected ? _roleAccent : Neu.muted),
+        const SizedBox(width: 6),
+        Flexible(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: neuBody(
+              size: 12,
+              weight: selected ? FontWeight.w700 : FontWeight.w500,
+              color: selected ? _roleAccent : Neu.muted,
+            ),
+          ),
+        ),
+      ]),
     );
   }
 

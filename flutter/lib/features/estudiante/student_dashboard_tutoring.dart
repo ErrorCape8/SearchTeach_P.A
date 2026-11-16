@@ -94,6 +94,15 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
     widget.onSectionChanged('sesiones');
   }
 
+  Future<void> _showRatingAfterCall(StudentGroupSession session) =>
+      showStudentTutoringRatingIfNeeded(
+        context,
+        ref,
+        sessionId: session.id,
+        studentId: widget.data.profile.id,
+        subject: session.subject,
+      );
+
   Widget _menu() => ListView(
         padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
         children: [
@@ -965,6 +974,7 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
                     .map((tutor) => tutor.name)
                     .firstOrNull ??
                 session.teacherId,
+            onCallEnded: () => _showRatingAfterCall(session),
             onLeave: () => widget.onLeaveGroupSession(session),
           ),
         ),
@@ -1109,6 +1119,7 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
               _GroupChatAndCallCard(
                 session: session,
                 studentName: widget.data.profile.name,
+                onCallEnded: () => _showRatingAfterCall(session),
               ),
           ],
         ],
@@ -1374,10 +1385,12 @@ class _GroupChatAndCallCard extends StatelessWidget {
   const _GroupChatAndCallCard({
     required this.session,
     required this.studentName,
+    required this.onCallEnded,
   });
 
   final StudentGroupSession session;
   final String studentName;
+  final Future<void> Function() onCallEnded;
 
   @override
   Widget build(BuildContext context) {
@@ -1412,7 +1425,9 @@ class _GroupChatAndCallCard extends StatelessWidget {
             if (session.modality.toUpperCase() != 'PRESENCIAL')
               FilledButton.icon(
                 onPressed: canEnterRoomOrWaiting
-                    ? () => Navigator.of(context).push(MaterialPageRoute(
+                    ? () async {
+                        final result = await Navigator.of(context)
+                            .push<String>(MaterialPageRoute(
                           builder: (_) => LiveKitRoomPage(
                             sessionId: session.id,
                             subject: session.subject,
@@ -1423,7 +1438,9 @@ class _GroupChatAndCallCard extends StatelessWidget {
                             studentMode: true,
                             studentName: studentName,
                           ),
-                        ))
+                        ));
+                        if (result == 'ended') await onCallEnded();
+                      }
                     : null,
                 icon: const Icon(Icons.video_call_outlined),
                 label: Text(

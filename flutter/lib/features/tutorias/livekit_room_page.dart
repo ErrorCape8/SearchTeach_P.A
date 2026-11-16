@@ -78,12 +78,15 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
   bool _attendanceSlow = false;
   String? _attendanceError;
   Timer? _attendanceSlowTimer;
+  Timer? _endWarningTimer;
   Timer? _endTimer;
   Timer? _chatTimer;
   Timer? _roomStatusTimer;
   Timer? _waitingRoomTimer;
   String? _error;
   String? _mediaWarning;
+  bool _studentExitInProgress = false;
+  bool _studentSessionEndedConfirmed = false;
 
   Color get _roomAccent =>
       widget.teacherMode ? _teacherRoomAccent : _studentRoomAccent;
@@ -109,15 +112,22 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
     }
     final endAt = widget.endAt;
     if (endAt != null && !widget.ended) {
-      final delay = endAt.difference(DateTime.now());
-      _endTimer = Timer(delay.isNegative ? Duration.zero : delay, () {
-        if (widget.teacherMode) {
-          _finish('FINALIZACION_AUTOMATICA');
-        } else if (mounted) {
-          _room.disconnect();
-          Navigator.of(context).pop('ended');
-        }
-      });
+      final now = DateTime.now();
+      if (endAt.isAfter(now)) {
+        final warningDelay =
+            endAt.subtract(const Duration(minutes: 2)).difference(now);
+        _endWarningTimer = Timer(
+          warningDelay.isNegative ? Duration.zero : warningDelay,
+          () => _showEndWarning(late: warningDelay.isNegative),
+        );
+      }
+      if (widget.teacherMode) {
+        final delay = endAt.difference(now);
+        _endTimer = Timer(
+          delay.isNegative ? Duration.zero : delay,
+          () => _finish('FINALIZACION_AUTOMATICA'),
+        );
+      }
     }
     if (widget.ended || widget.modality.toUpperCase() == 'PRESENCIAL') {
       _connecting = false;
@@ -208,13 +218,61 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
           );
       if (response.data?['estadoClase'] != 'FINALIZADA' || !mounted) return;
       _roomStatusTimer?.cancel();
-      await _room.disconnect();
-      if (!widget.teacherMode && mounted) {
-        Navigator.of(context).pop('ended');
-      }
+      await _leaveStudentRoom(sessionEnded: true);
     } on DioException {
       // The server-side timer or LiveKit room deletion can still end the call.
     }
+  }
+
+  void _showEndWarning({required bool late}) {
+    if (!mounted || _ended) return;
+    final endAt = widget.endAt;
+    if (endAt == null || !endAt.isAfter(DateTime.now())) return;
+    RoleToast.show(
+      context,
+      message: late
+          ? 'La clase está por finalizar.'
+          : 'Faltan 2 minutos para finalizar la clase.',
+      roleColor: _roomAccent,
+    );
+  }
+
+  Future<void> _leaveStudentRoom({bool? sessionEnded}) async {
+    if (!mounted) return;
+    if (sessionEnded == true) _studentSessionEndedConfirmed = true;
+    if (_studentExitInProgress) return;
+    _studentExitInProgress = true;
+    _roomStatusTimer?.cancel();
+
+    var ended = _studentSessionEndedConfirmed;
+    String? errorMessage;
+    if (sessionEnded == null && !widget.isProjectMeeting) {
+      try {
+        final response = await ref.read(dioProvider).get<Map<String, dynamic>>(
+              '/api/tutorias/grupales/${Uri.encodeComponent(widget.sessionId)}',
+            );
+        _studentSessionEndedConfirmed = _studentSessionEndedConfirmed ||
+            response.data?['estadoClase'] == 'FINALIZADA';
+        ended = _studentSessionEndedConfirmed;
+      } on DioException catch (error) {
+        if (!_studentSessionEndedConfirmed) {
+          final data = error.response?.data;
+          errorMessage = data is Map && data['message'] is String
+              ? data['message'] as String
+              : 'No se pudo confirmar si la tutoría finalizó.';
+        }
+        ended = _studentSessionEndedConfirmed;
+      }
+    }
+
+    if (!mounted) return;
+    if (errorMessage != null) {
+      RoleToast.showSnackBar(
+        context,
+        SnackBar(content: Text(errorMessage)),
+      );
+    }
+    Navigator.of(context).pop(ended ? 'ended' : 'disconnected');
   }
 
   Future<void> _loadChatHistory() async {
@@ -302,8 +360,7 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
       _listener.on<RoomDisconnectedEvent>((_) {
         if (!mounted) return;
         if (!widget.teacherMode) {
-          _roomStatusTimer?.cancel();
-          Navigator.of(context).pop('ended');
+          unawaited(_leaveStudentRoom());
           return;
         }
         setState(() {
@@ -426,9 +483,7 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
         await _connect();
       } else if (state == 'FINALIZADA') {
         _waitingRoomTimer?.cancel();
-        if (mounted) {
-          Navigator.of(context).pop('ended');
-        }
+        await _leaveStudentRoom(sessionEnded: true);
       }
     } on DioException {
       // Reintenta en el siguiente ciclo.
@@ -654,6 +709,7 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
   @override
   void dispose() {
     _attendanceSlowTimer?.cancel();
+    _endWarningTimer?.cancel();
     _endTimer?.cancel();
     _chatTimer?.cancel();
     _roomStatusTimer?.cancel();
@@ -1462,7 +1518,7 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
 
   Future<void> _confirmFinish() async {
     final reasons = <(String, String)>[
-      ('FINALIZADA', 'Tutoría completada'),
+      ('FINALIZADA', 'Temas concluidos'),
       ('FALTA_ESTUDIANTES', 'Falta de estudiantes'),
       ('PROBLEMAS_EXTERNOS', 'Problema técnico u otro'),
       ('PROBLEMAS_INTERNET', 'Error de conexión a internet'),
@@ -1473,13 +1529,13 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, refreshDialog) => AlertDialog(
           icon: Icon(Icons.call_end_rounded, color: _roomAccent),
-          title: const Text('Finalizar tutoría'),
+          title: const Text('Finalizar clase'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               const Align(
                 alignment: Alignment.centerLeft,
-                child: Text('Selecciona por qué finalizas la tutoría:'),
+                child: Text('Selecciona por qué finalizas la clase:'),
               ),
               const SizedBox(height: 8),
               for (final option in reasons)

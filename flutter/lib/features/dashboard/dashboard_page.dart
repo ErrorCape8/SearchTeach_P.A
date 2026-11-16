@@ -56,10 +56,6 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
   bool _filtersExpanded = false;
 
   void _select(int index) {
-    if (index == _projectsMenuItem) {
-      paPush(context, const ProyectosAulaPage(), accent: _purple);
-      return;
-    }
     if (index != _tab) setState(() => _tab = index);
   }
 
@@ -261,6 +257,8 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
     final Widget child;
     if (_tab == _profileTab) {
       child = const DirPerfilView();
+    } else if (_tab == _projectsMenuItem) {
+      child = const DirProyectosAulaView();
     } else {
       child = ref.watch(directorDashboardProvider).when(
             loading: () => const SizedBox(
@@ -287,7 +285,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                   onSemesterChanged: (value) =>
                       setState(() => _semesterFilter = value),
                 ),
-              _ => DirForecastView(
+              3 => DirForecastView(
                   data: data,
                   career: _careerFilter,
                   semester: _semesterFilter,
@@ -304,6 +302,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                     accent: _purple,
                   ),
                 ),
+              _ => const SizedBox.shrink(),
             },
           );
     }

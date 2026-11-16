@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/api_client.dart';
 import '../../core/career_catalog.dart';
 import '../pa/pa_widgets.dart';
-import 'director_dashboard_provider.dart';
 import 'director_widgets.dart';
 
 final proyectosAulaProvider =
@@ -29,31 +28,21 @@ final proyectosAulaProvider =
   }).toList(growable: false);
 });
 
-bool _esMateriaPa(String materia) {
-  final m = materia.toLowerCase();
-  return m.contains('proyecto de aula') ||
-      m.contains('tutoria pa') ||
-      m.contains('tutoría pa');
-}
-
-/// Proyectos de aula (solo lectura) con el estilo neumórfico.
-///
-/// Incluye un filtro por carrera que afecta a la lista de proyectos y al
-/// "Histórico y pronóstico" de grupos nuevos, que va al final en texto.
-class ProyectosAulaPage extends ConsumerStatefulWidget {
-  const ProyectosAulaPage({super.key});
+/// Vista de proyectos de aula integrada en el tablero de dirección.
+class DirProyectosAulaView extends ConsumerStatefulWidget {
+  const DirProyectosAulaView({super.key});
 
   @override
-  ConsumerState<ProyectosAulaPage> createState() => _ProyectosAulaPageState();
+  ConsumerState<DirProyectosAulaView> createState() =>
+      _DirProyectosAulaViewState();
 }
 
-class _ProyectosAulaPageState extends ConsumerState<ProyectosAulaPage> {
+class _DirProyectosAulaViewState extends ConsumerState<DirProyectosAulaView> {
   String? _career;
 
   @override
   Widget build(BuildContext context) {
     final async = ref.watch(proyectosAulaProvider);
-    final dashboard = ref.watch(directorDashboardProvider).asData?.value;
 
     final groups = async.asData?.value ?? const <_TutoriaColectivaVista>[];
     final allProjects = [for (final g in groups) ...g.proyectos];
@@ -62,9 +51,6 @@ class _ProyectosAulaPageState extends ConsumerState<ProyectosAulaPage> {
       ...careerCatalog,
       for (final project in allProjects)
         if (project.tecnologia.trim().isNotEmpty) project.tecnologia.trim(),
-      if (dashboard != null)
-        for (final s in dashboard.tutoriasPorMateria)
-          if (_esMateriaPa(s.materia)) ...s.carreras,
     }.toList();
 
     final projects = _career == null
@@ -103,10 +89,7 @@ class _ProyectosAulaPageState extends ConsumerState<ProyectosAulaPage> {
       },
     );
 
-    return PaScaffold(
-      title: 'Proyectos de aula',
-      subtitle: 'Estado de los proyectos inscritos',
-      children: [
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         _CareerFilter(
           careers: careers,
           selected: _career,
@@ -115,8 +98,7 @@ class _ProyectosAulaPageState extends ConsumerState<ProyectosAulaPage> {
         _HistoricoPronosticoBlock(career: _career),
         const PaSection('Proyectos inscritos'),
         ...projectWidgets,
-      ],
-    );
+      ]);
   }
 }
 
@@ -143,17 +125,6 @@ String _decimal(double v) => v.toStringAsFixed(1).replaceAll('.', ',');
 
 String _etiquetaSemana(DateTime d) =>
     '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}';
-
-/// ¿La semana que empieza ese lunes es la semana actual?
-bool _esSemanaEnCurso(DateTime lunes) {
-  final hoy = DateTime.now();
-  return !hoy.isBefore(lunes) &&
-      hoy.isBefore(lunes.add(const Duration(days: 7)));
-}
-
-/// Semana de lunes a domingo: "del 09/11 al 15/11".
-String _rangoSemana(DateTime lunes) =>
-    'del ${_etiquetaSemana(lunes)} al ${_etiquetaSemana(lunes.add(const Duration(days: 6)))}';
 
 class _PrediccionGrupos {
   const _PrediccionGrupos({
@@ -244,8 +215,7 @@ class _PaGruposVista {
   final List<_SemanaGrupos> historial;
 }
 
-/// "Histórico y pronóstico" en texto: qué pasó en las semanas anteriores y
-/// cuántos grupos nuevos de proyecto de aula estima el modelo para la próxima semana.
+/// Compara los grupos formados por semana con el pronóstico de la siguiente.
 class _HistoricoPronosticoBlock extends ConsumerWidget {
   const _HistoricoPronosticoBlock({required this.career});
 
@@ -265,7 +235,6 @@ class _HistoricoPronosticoBlock extends ConsumerWidget {
   }
 
   Widget _contenido(BuildContext context, _PaGruposVista vista) {
-    final p = NeuPalette.of(context);
     final preds = [
       for (final x in vista.predicciones)
         if (career == null || x.carrera == career) x,
@@ -293,6 +262,9 @@ class _HistoricoPronosticoBlock extends ConsumerWidget {
       for (final e in porSemana.entries)
         if (e.value > 0) e.key,
     ]..sort();
+    final semanasGrafico = semanas.length > 5
+        ? semanas.sublist(semanas.length - 5)
+        : semanas;
 
     final diff = esperados - promedio;
     final tendencia = diff > 0.5
@@ -312,53 +284,33 @@ class _HistoricoPronosticoBlock extends ConsumerWidget {
         if (x.esperados.round() >= 1) x,
     ]..sort((a, b) => b.esperados.compareTo(a.esperados));
 
-    final titulo = neuPoppins(size: 14, color: p.c);
-    final cuerpo = neuBody(size: 14, height: 1.4);
-    final destacado = neuBody(size: 16, weight: FontWeight.w600, height: 1.4);
+    final detalles = [
+      'Cada barra muestra los grupos nuevos formados en la semana indicada. La barra clara es el pronóstico.',
+      prediccion,
+      tendencia,
+      if (preds.length > 1 && porCarrera.isNotEmpty)
+        'Por carrera: ${porCarrera.map((item) => '${item.carrera}: ${_gruposTexto(item.esperados.round())}').join(' · ')}',
+    ].join('\n');
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       const PaSection('Histórico y pronóstico'),
-      PaCard(
-        child: SizedBox(
-          width: double.infinity,
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Grupos formados antes', style: titulo),
-            const SizedBox(height: 6),
-            if (semanas.isEmpty)
-              Text('Todavía no se han formado grupos en las últimas semanas.',
-                  style: cuerpo)
-            else
-              for (final semana in semanas)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 3),
-                  child: Text(
-                      '• ${_rangoSemana(semana)}: '
-                      '${_gruposTexto(porSemana[semana] ?? 0)}'
-                      '${_esSemanaEnCurso(semana) ? ' (semana en curso)' : ''}',
-                      style: cuerpo),
-                ),
-            const SizedBox(height: 16),
-            Text('Próxima semana ${_rangoSemana(semanaPronostico)}',
-                style: titulo),
-            const SizedBox(height: 6),
-            Text(prediccion, style: destacado),
-            const SizedBox(height: 4),
-            Text(tendencia, style: cuerpo),
-            if (preds.length > 1 && porCarrera.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              Text('Por carrera:',
-                  style: cuerpo.copyWith(fontWeight: FontWeight.w600)),
-              const SizedBox(height: 4),
-              for (final item in porCarrera)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 3),
-                  child: Text(
-                      '• ${item.carrera}: ${_gruposTexto(item.esperados.round())}',
-                      style: cuerpo),
-                ),
-            ],
-          ]),
-        ),
+      DirBarChart(
+        height: 160,
+        showValues: true,
+        labelLines: 2,
+        bars: [
+          for (final semana in semanasGrafico)
+            DirBar(
+              _etiquetaSemana(semana),
+              (porSemana[semana] ?? 0).toDouble(),
+            ),
+          DirBar(
+            'Próx.\n${_etiquetaSemana(semanaPronostico)}',
+            esperados,
+            light: true,
+          ),
+        ],
+        caption: detalles,
       ),
     ]);
   }

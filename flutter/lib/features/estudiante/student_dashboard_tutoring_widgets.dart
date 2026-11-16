@@ -58,12 +58,14 @@ class _GroupSessionCard extends StatelessWidget {
     required this.session,
     required this.studentName,
     required this.teacherName,
+    required this.onCallEnded,
     required this.onLeave,
   });
 
   final StudentGroupSession session;
   final String studentName;
   final String teacherName;
+  final Future<void> Function() onCallEnded;
   final VoidCallback onLeave;
 
   @override
@@ -100,20 +102,23 @@ class _GroupSessionCard extends StatelessWidget {
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton(
-                    onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => LiveKitRoomPage(
-                          sessionId: session.id,
-                          subject: session.subject,
-                          modality: session.modality,
-                          teacherMode: false,
-                          students: session.studentIds,
-                          endAt: session.end?.toLocal(),
-                          studentMode: true,
-                          studentName: studentName,
+                    onPressed: () async {
+                      final result = await Navigator.of(context).push<String>(
+                        MaterialPageRoute(
+                          builder: (_) => LiveKitRoomPage(
+                            sessionId: session.id,
+                            subject: session.subject,
+                            modality: session.modality,
+                            teacherMode: false,
+                            students: session.studentIds,
+                            endAt: session.end?.toLocal(),
+                            studentMode: true,
+                            studentName: studentName,
+                          ),
                         ),
-                      ),
-                    ),
+                      );
+                      if (result == 'ended') await onCallEnded();
+                    },
                     style: FilledButton.styleFrom(
                       backgroundColor: const Color(0xFF0D4FC4),
                       minimumSize: const Size(0, 30),
