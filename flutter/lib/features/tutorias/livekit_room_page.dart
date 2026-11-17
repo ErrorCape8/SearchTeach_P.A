@@ -3,6 +3,8 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_background/flutter_background.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart' show Helper;
 import '../../core/widgets/role_toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart';
@@ -604,6 +606,37 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
     final next = !_screenShareEnabled;
     setState(() => _screenShareBusy = true);
     try {
+      if (next && lkPlatformIs(PlatformType.android)) {
+        final hasCapturePermission = await Helper.requestCapturePermission();
+        if (!hasCapturePermission) {
+          _showMediaError(
+              'Debes permitir la captura de pantalla para compartirla.');
+          return;
+        }
+
+        var hasBackgroundPermissions = await FlutterBackground.hasPermissions;
+        if (!hasBackgroundPermissions) {
+          hasBackgroundPermissions = await FlutterBackground.initialize(
+            androidConfig: const FlutterBackgroundAndroidConfig(
+              notificationTitle: 'SearchTeach',
+              notificationText: 'Se está compartiendo tu pantalla.',
+              notificationImportance: AndroidNotificationImportance.normal,
+              notificationIcon: AndroidResource(
+                name: 'ic_launcher',
+                defType: 'mipmap',
+              ),
+            ),
+          );
+        }
+        if (!hasBackgroundPermissions) {
+          throw StateError(
+              'No se concedieron los permisos para compartir pantalla.');
+        }
+        if (!FlutterBackground.isBackgroundExecutionEnabled) {
+          await FlutterBackground.enableBackgroundExecution();
+        }
+      }
+
       await participant.setScreenShareEnabled(
         next,
         screenShareCaptureOptions: const ScreenShareCaptureOptions(
@@ -620,7 +653,7 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
       }
     } catch (error) {
       final details = error.toString().contains('not supported on mobile')
-          ? 'La aplicación requiere un navegador o dispositivo de escritorio para compartir pantalla.'
+          ? 'Compartir pantalla no está disponible en navegadores móviles.'
           : 'Revisa los permisos del navegador y vuelve a intentarlo. ($error)';
       _showMediaError('No se pudo compartir la pantalla. $details');
     } finally {
@@ -1667,8 +1700,7 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
                   active: _cameraEnabled,
                   accent: _roomAccent,
                 ),
-              if (widget.teacherMode &&
-                  widget.modality.toUpperCase() != 'PRESENCIAL')
+              if (widget.modality.toUpperCase() != 'PRESENCIAL')
                 _CallControl(
                   icon: _screenShareEnabled
                       ? Icons.stop_screen_share_outlined

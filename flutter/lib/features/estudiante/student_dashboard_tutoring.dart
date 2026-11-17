@@ -36,6 +36,7 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
   String? _section;
   String _query = '';
   int _semesterFilter = 0;
+  int _publishedSemesterFilter = 0;
   final ScrollController _sessionsScrollController = ScrollController();
   Timer? _groupSessionRefreshTimer;
 
@@ -801,6 +802,10 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
               final semesterPicker = DropdownButtonFormField<int>(
                 initialValue: _semesterFilter,
                 decoration: InputDecoration(
+                  prefixIcon: const Icon(
+                    Icons.filter_list_rounded,
+                    size: 18,
+                  ),
                   filled: true,
                   fillColor: const Color(0xFFEDF1F6),
                   contentPadding:
@@ -1128,6 +1133,61 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
     );
   }
 
+  Widget _publishedSemesterFilterButton({
+    required String label,
+    required int currentSemester,
+    required List<int> availableSemesters,
+  }) {
+    return PopupMenuButton<int>(
+      tooltip: 'Filtrar por semestre',
+      onSelected: (value) => setState(
+        () => _publishedSemesterFilter = value,
+      ),
+      itemBuilder: (context) => [
+        const PopupMenuItem<int>(
+          value: 0,
+          child: Text('Todos los semestres'),
+        ),
+        if (currentSemester > 1)
+          const PopupMenuItem<int>(
+            value: -1,
+            child: Text('Semestres anteriores'),
+          ),
+        for (final semester in availableSemesters)
+          PopupMenuItem<int>(
+            value: semester,
+            child: Text('Semestre $semester'),
+          ),
+      ],
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 40),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: const Color(0xFFEDF1F6),
+          borderRadius: BorderRadius.circular(9),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.filter_list_rounded, size: 18, color: _navy),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: const TextStyle(
+                color: _navy,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(width: 3),
+            const Icon(Icons.keyboard_arrow_down_rounded,
+                size: 18, color: _navy),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _publishedSessionCard(StudentGroupSession session) {
     AvailableTutor? teacher;
     for (final item in widget.data.tutors) {
@@ -1206,21 +1266,49 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
 
   Widget _publishedGroupSessions({ScrollController? scrollController}) {
     final now = DateTime.now();
+    final currentSemester = widget.data.profile.semester;
     final sessions = widget.data.availableGroupSessions.where((session) {
-      return _isToday(session.start, now);
+      if (!_isToday(session.start, now)) return false;
+      if (_publishedSemesterFilter == 0) return true;
+      if (_publishedSemesterFilter == -1) {
+        return currentSemester > 0 &&
+            session.semester > 0 &&
+            session.semester < currentSemester;
+      }
+      return session.semester == _publishedSemesterFilter;
     }).toList()
       ..sort((first, second) =>
           (first.start ?? DateTime(0)).compareTo(second.start ?? DateTime(0)));
+    final availableSemesters = widget.data.availableGroupSessions
+        .where((session) => _isToday(session.start, now))
+        .map((session) => session.semester)
+        .where((semester) => semester > 0)
+        .toSet()
+        .toList()
+      ..sort();
+    final filterLabel = _publishedSemesterFilter == 0
+        ? 'Todos los semestres'
+        : _publishedSemesterFilter == -1
+            ? 'Semestres anteriores'
+            : 'Semestre $_publishedSemesterFilter';
     if (sessions.isEmpty) {
       return ListView(
         controller: scrollController,
         padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
-        children: const [
+        children: [
+          Align(
+            alignment: Alignment.centerRight,
+            child: _publishedSemesterFilterButton(
+              label: filterLabel,
+              currentSemester: currentSemester,
+              availableSemesters: availableSemesters,
+            ),
+          ),
+          const SizedBox(height: 10),
           _EmptyCard(
             icon: Icons.event_busy_outlined,
-            title: 'No hay clases disponibles para hoy',
-            message:
-                'Aquí aparecerán las tutorías programadas para el día de hoy.',
+            title: 'No hay clases disponibles',
+            message: 'No encontramos clases para "$filterLabel" el día de hoy.',
           ),
         ],
       );
@@ -1228,10 +1316,20 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
     return ListView.separated(
       controller: scrollController,
       padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
-      itemCount: sessions.length,
+      itemCount: sessions.length + 1,
       separatorBuilder: (_, __) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
-        final session = sessions[index];
+        if (index == 0) {
+          return Align(
+            alignment: Alignment.centerRight,
+            child: _publishedSemesterFilterButton(
+              label: filterLabel,
+              currentSemester: currentSemester,
+              availableSemesters: availableSemesters,
+            ),
+          );
+        }
+        final session = sessions[index - 1];
         AvailableTutor? teacher;
         for (final item in widget.data.tutors) {
           if (item.teacherId == session.teacherId) teacher = item;
