@@ -10,8 +10,8 @@ class _StudentHeader extends StatelessWidget {
     required this.showProfileShortcut,
     required this.onRefresh,
     required this.onProfile,
+    required this.onSwitchToTeacher,
     required this.onNotifications,
-    required this.onLogout,
     required this.onBack,
   });
 
@@ -21,8 +21,8 @@ class _StudentHeader extends StatelessWidget {
   final bool showProfileShortcut;
   final VoidCallback onRefresh;
   final VoidCallback onProfile;
+  final VoidCallback? onSwitchToTeacher;
   final VoidCallback onNotifications;
-  final VoidCallback onLogout;
   final VoidCallback onBack;
 
   @override
@@ -73,8 +73,12 @@ class _StudentHeader extends StatelessWidget {
               tooltip: 'Volver a Tutorías',
               onTap: onBack,
             )
-          : GestureDetector(
-              onTap: onProfile,
+          : AcademicRoleSwitcher(
+              role: profile.role,
+              activeRole: 'estudiante',
+              onProfile: onProfile,
+              onSwitchToTeacher: onSwitchToTeacher,
+              onSwitchToStudent: () {},
               child: SizedBox(
                 width: 44,
                 height: 44,
@@ -104,11 +108,6 @@ class _StudentHeader extends StatelessWidget {
           icon: Icons.notifications_none_rounded,
           tooltip: 'Avisos',
           onTap: onNotifications,
-        ),
-        NeuCircleButton(
-          icon: Icons.logout_rounded,
-          tooltip: 'Cerrar sesión',
-          onTap: onLogout,
         ),
       ],
     );

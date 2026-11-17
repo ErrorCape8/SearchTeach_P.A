@@ -76,7 +76,7 @@ public class PaGruposDashboardService {
 
 		Map<String, Set<String>> estudiantesPorCarrera = new HashMap<>();
 		for (User usuario : userRepository.findAll()) {
-			if (usuario.getRol() == null || !"estudiante".equals(normalizar(usuario.getRol()))
+			if (usuario.getRol() == null || !normalizar(usuario.getRol()).contains("estudiante")
 					|| usuario.getCarrera() == null || usuario.getCarrera().isBlank()
 					|| (usuario.getEstado() != null && !"activo".equals(normalizar(usuario.getEstado())))) {
 				continue;

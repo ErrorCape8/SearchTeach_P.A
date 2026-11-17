@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/api_client.dart';
 import '../../core/role_theme.dart';
 import '../../core/tutoring_updates.dart';
+import '../../core/widgets/academic_role_switcher.dart';
 import '../../core/widgets/role_toast.dart';
 import '../../core/widgets/start_tutoring_card.dart';
 import '../auth/auth_repository.dart';
@@ -19,7 +20,6 @@ import 'docente_grupos_reportes_section.dart';
 import '../pa/pa_widgets.dart';
 import 'livekit_room_page.dart';
 import 'presencial_tutoria_page.dart';
-import 'tutoria_chat_page.dart';
 import 'tutoria_historial_page.dart';
 
 const _teacherGreen = Color(0xFF16834A);
@@ -99,30 +99,30 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
     return parts.take(2).map((part) => part[0].toUpperCase()).join();
   }
 
-  Widget _profileButton(String teacherName) => Semantics(
-        button: true,
-        label: 'Abrir perfil',
-        child: GestureDetector(
-          onTap: () => setState(() => _tab = 7),
-          child: SizedBox(
-            width: 46,
-            height: 46,
-            child: NeuSurface(
-              radius: 46,
-              shadows: Neu.raiseS,
-              child: Center(
-                child: Text(_initials(teacherName),
-                    style: neuPoppins(
-                        size: 15,
-                        weight: FontWeight.w700,
-                        color: _teacherGreen)),
-              ),
+  Widget _profileButton(String teacherName, String profileRole) =>
+      AcademicRoleSwitcher(
+        role: profileRole,
+        activeRole: 'docente',
+        onProfile: () => setState(() => _tab = 7),
+        onSwitchToTeacher: () {},
+        onSwitchToStudent: () => context.go('/estudiante'),
+        child: SizedBox(
+          width: 46,
+          height: 46,
+          child: NeuSurface(
+            radius: 46,
+            shadows: Neu.raiseS,
+            child: Center(
+              child: Text(_initials(teacherName),
+                  style: neuPoppins(
+                      size: 15, weight: FontWeight.w700, color: _teacherGreen)),
             ),
           ),
         ),
       );
 
-  Widget _header(bool wide, String teacherName, String teacherCareer) {
+  Widget _header(
+      bool wide, String teacherName, String teacherCareer, String profileRole) {
     final home = _tab == 0;
     final unread = ref.watch(notificationUnreadCountProvider).valueOrNull ?? 0;
     return NeuHeader(
@@ -137,7 +137,7 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
                   ? 'Docente'
                   : 'Docente · $teacherCareer'),
       leading: home || _tab == 2
-          ? _profileButton(teacherName)
+          ? _profileButton(teacherName, profileRole)
           : NeuCircleButton(
               icon: Icons.chevron_left_rounded,
               tooltip: 'Volver al inicio',
@@ -173,11 +173,6 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
           badge: unread > 0 ? unread : null,
           onTap: () => setState(() => _tab = 5),
         ),
-        NeuCircleButton(
-          icon: Icons.logout_rounded,
-          tooltip: 'Cerrar sesión',
-          onTap: _logout,
-        ),
       ],
     );
   }
@@ -194,10 +189,12 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
     final teacherCareer = profile?['carrera'] is String
         ? profile!['carrera'] as String
         : 'SearchTeach';
+    final profileRole =
+        profile?['rol'] is String ? profile!['rol'] as String : '';
 
     final content = Column(
       children: [
-        _header(wide, teacherName, teacherCareer),
+        _header(wide, teacherName, teacherCareer, profileRole),
         Expanded(
           child: _content(teacherName),
         ),
@@ -492,23 +489,6 @@ class _DocenteDashboardPageState extends ConsumerState<DocenteDashboardPage>
               spacing: 8,
               runSpacing: 8,
               children: [
-                if (view != _SessionView.start ||
-                    session.modality.toUpperCase() != 'PRESENCIAL')
-                  NeuButton(
-                    'Abrir chat',
-                    kind: NeuButtonKind.alt,
-                    small: true,
-                    expand: false,
-                    icon: Icons.forum_outlined,
-                    onPressed: () =>
-                        Navigator.of(context).push(MaterialPageRoute(
-                      builder: (_) => TutoriaChatPage(
-                        sessionId: session.id,
-                        subject: session.subject,
-                        readOnly: view == _SessionView.history,
-                      ),
-                    )),
-                  ),
                 if (view != _SessionView.scheduled ||
                     (session.start != null &&
                         _isSameDay(session.start!, DateTime.now())))

@@ -173,28 +173,38 @@ class AuthRepository {
       case 'DIRECTOR':
         return '/home';
       case 'USER':
-        try {
-          final response = await _dio.get<Map<String, dynamic>>(
-            '/api/usuarios/perfil',
-            options: Options(extra: const {'skipGlobalError': true}),
-          );
-          final profileRole = response.data?['rol'];
-          if (profileRole is! String || profileRole.trim().isEmpty) {
-            throw AuthFailure('La cuenta no tiene un perfil académico válido.');
-          }
-          final normalized = profileRole.toLowerCase();
-          if (normalized.contains('estudiante')) return '/estudiante';
-          if (normalized.contains('docente')) return '/docente';
-          throw AuthFailure('No reconocemos el rol académico de esta cuenta.');
-        } on DioException catch (error) {
-          debugPrint('PROFILE ERROR -> ${error.message}');
-          throw AuthFailure(
-            'No se pudo cargar el perfil de la cuenta. Inténtalo de nuevo.',
-          );
-        }
+        final profileRole = await academicRole();
+        final normalized = profileRole.toLowerCase();
+        if (normalized.contains('estudiante')) return '/estudiante';
+        if (normalized.contains('docente')) return '/docente';
+        throw AuthFailure('No reconocemos el rol académico de esta cuenta.');
       default:
         throw AuthFailure('El rol de esta cuenta no es válido.');
     }
+  }
+
+  Future<String> academicRole() async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        '/api/usuarios/perfil',
+        options: Options(extra: const {'skipGlobalError': true}),
+      );
+      final profileRole = response.data?['rol'];
+      if (profileRole is! String || profileRole.trim().isEmpty) {
+        throw AuthFailure('La cuenta no tiene un perfil académico válido.');
+      }
+      return profileRole;
+    } on DioException catch (error) {
+      debugPrint('PROFILE ERROR -> ${error.message}');
+      throw AuthFailure(
+        'No se pudo cargar el perfil de la cuenta. Inténtalo de nuevo.',
+      );
+    }
+  }
+
+  Future<bool> hasBothAcademicRoles() async {
+    final role = (await academicRole()).toLowerCase();
+    return role.contains('estudiante') && role.contains('docente');
   }
 
   Future<void> logout() async {

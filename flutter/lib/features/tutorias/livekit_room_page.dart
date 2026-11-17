@@ -53,16 +53,18 @@ class LiveKitRoomPage extends ConsumerStatefulWidget {
 }
 
 class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
-  static const _sharedRoomBackground = Color(0xFF111318);
+  static const _sharedRoomBackground = Neu.bg;
   static const _teacherRoomAccent = Color(0xFF16834A);
   static const _studentRoomAccent = Color(0xFF1769AA);
 
   final Room _room = Room();
   final TextEditingController _message = TextEditingController();
+  final ScrollController _chatScrollController = ScrollController();
   final List<_RoomMessage> _messages = [];
   final Map<String, Map<String, dynamic>> _attendance = {};
   final Map<String, String> _studentNames = {};
   final Map<String, bool> _raisedHands = {};
+  final Set<String> _attendanceSaving = {};
   dynamic _listener;
   bool _connecting = true;
   bool _connected = false;
@@ -70,9 +72,12 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
   bool _microphoneEnabled = true;
   bool _cameraEnabled = true;
   bool _screenShareEnabled = false;
+  bool _screenShareBusy = false;
   bool _handRaised = false;
   bool _showChat = false;
-  bool _showPeople = false;
+  bool _showAttendance = false;
+  bool _sendingMessage = false;
+  bool _finishing = false;
   bool _ended = false;
   bool _attendanceLoading = true;
   bool _attendanceSlow = false;
@@ -95,8 +100,8 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
   void initState() {
     super.initState();
     _ended = widget.ended;
-    _showPeople = widget.teacherMode;
-    _showChat = widget.ended || widget.studentMode || widget.teacherMode;
+    _showAttendance = widget.teacherMode && !widget.ended;
+    _showChat = widget.ended || widget.studentMode;
     _loadChatHistory();
     _chatTimer =
         Timer.periodic(const Duration(seconds: 5), (_) => _loadChatHistory());
@@ -282,34 +287,80 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
           : '/api/tutorias/grupales/${widget.sessionId}/chat';
       final response = await ref.read(dioProvider).get<List<dynamic>>(path);
       if (!mounted) return;
-      setState(() {
-        _messages
-          ..clear()
-          ..addAll((response.data ?? const [])
-              .whereType<Map<String, dynamic>>()
-              .map((message) {
-                final identity = message['emisorId']?.toString() ?? '';
-                final localIdentity = _room.localParticipant?.identity;
-                final isLocal = localIdentity != null &&
-                    identity == localIdentity;
-                return _RoomMessage(
-                  sender: isLocal
-                      ? 'Tú'
-                      : message['nombre']?.toString() ??
-                          (identity.isEmpty ? 'Participante' : identity),
-                  text: message['texto']?.toString() ?? '',
-                  fromTeacher: isLocal
-                      ? widget.teacherMode
-                      : _isTeacherParticipant(identity),
-                );
-              }));
-      });
+      var addedMessage = false;
+      for (final message
+          in (response.data ?? const []).whereType<Map<String, dynamic>>()) {
+        final identity = message['usuarioId']?.toString() ??
+            message['emisorId']?.toString() ??
+            message['autorId']?.toString() ??
+            '';
+        final localIdentity = _room.localParticipant?.identity;
+        final isLocal = localIdentity != null && identity == localIdentity;
+        final text = message['texto']?.toString().trim() ?? '';
+        if (text.isEmpty) continue;
+        final sentAt = DateTime.tryParse(
+              message['enviadoEn']?.toString() ??
+                  message['sentAt']?.toString() ??
+                  '',
+            ) ??
+            DateTime.now();
+        final roomMessage = _RoomMessage(
+          sender: isLocal
+              ? 'Tú'
+              : message['nombre']?.toString() ??
+                  (identity.isEmpty ? 'Participante' : identity),
+          senderId: identity,
+          text: text,
+          sentAt: sentAt,
+          fromTeacher:
+              isLocal ? widget.teacherMode : _isTeacherParticipant(identity),
+        );
+        if (!_hasDuplicateMessage(roomMessage)) {
+          _messages.add(roomMessage);
+          addedMessage = true;
+        }
+      }
+      if (addedMessage) {
+        _messages.sort((a, b) => a.sentAt.compareTo(b.sentAt));
+        setState(() {});
+        _scrollChatToLatest();
+      }
     } on DioException catch (error) {
       if (mounted) {
         setState(() =>
             _mediaWarning = error.message ?? 'No se pudo cargar el chat.');
       }
     }
+  }
+
+  bool _hasDuplicateMessage(_RoomMessage message) => _messages.any((existing) {
+        final sameSender = message.senderId.isNotEmpty
+            ? existing.senderId == message.senderId
+            : existing.sender == message.sender;
+        return sameSender &&
+            existing.text == message.text &&
+            existing.sentAt.difference(message.sentAt).inSeconds.abs() <= 2;
+      });
+
+  void _appendMessage(_RoomMessage message) {
+    if (_hasDuplicateMessage(message)) return;
+    setState(() {
+      _messages.add(message);
+      _messages.sort((a, b) => a.sentAt.compareTo(b.sentAt));
+    });
+    _scrollChatToLatest();
+  }
+
+  void _scrollChatToLatest() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_chatScrollController.hasClients) {
+        _chatScrollController.animateTo(
+          _chatScrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+        );
+      }
+    });
   }
 
   Future<void> _connect() async {
@@ -330,23 +381,49 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
       }
       _listener = _room.createListener();
       _listener.on<DataReceivedEvent>((event) {
+        if (event.topic != 'searchteach.chat' &&
+            event.topic != 'searchteach.hand') {
+          return;
+        }
         try {
           final decoded = jsonDecode(utf8.decode(event.data));
           if (decoded is! Map || !mounted) return;
           final identity = event.participant?.identity ?? '';
-          if (decoded['type'] == 'hand' && decoded['raised'] is bool) {
+          if (event.topic == 'searchteach.hand' &&
+              decoded['type'] == 'hand' &&
+              decoded['raised'] is bool) {
             setState(() => _raisedHands[identity] = decoded['raised'] as bool);
             return;
           }
-          if (decoded['text'] is String) {
-            setState(() => _messages.add(_RoomMessage(
-                  sender: _participantLabel(identity, event.participant?.name),
-                  text: (decoded['text'] as String).trim(),
-                  fromTeacher: _isTeacherParticipant(identity),
-                )));
+          if (event.topic == 'searchteach.chat' && decoded['text'] is String) {
+            final text = (decoded['text'] as String).trim();
+            if (text.isNotEmpty) {
+              _appendMessage(_RoomMessage(
+                sender: _participantLabel(identity, event.participant?.name),
+                senderId: identity,
+                text: text,
+                sentAt: DateTime.tryParse(
+                      decoded['sentAt']?.toString() ?? '',
+                    ) ??
+                    DateTime.now(),
+                fromTeacher: _isTeacherParticipant(identity),
+              ));
+            }
           }
         } on FormatException {
           // Ignore packets that are not SearchTeach chat messages.
+        }
+      });
+      _listener.on<LocalTrackPublishedEvent>((event) {
+        if (event.publication.source == TrackSource.screenShareVideo &&
+            mounted) {
+          setState(() => _screenShareEnabled = true);
+        }
+      });
+      _listener.on<LocalTrackUnpublishedEvent>((event) {
+        if (event.publication.source == TrackSource.screenShareVideo &&
+            mounted) {
+          setState(() => _screenShareEnabled = false);
         }
       });
       _listener.on<ParticipantConnectedEvent>((_) {
@@ -519,15 +596,49 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
 
   Future<void> _toggleScreenShare() async {
     final participant = _room.localParticipant;
-    if (participant == null) return;
-    final next = !_screenShareEnabled;
-    try {
-      await participant.setScreenShareEnabled(next);
-      if (mounted) setState(() => _screenShareEnabled = next);
-    } catch (_) {
-      _showMediaError(
-          'No se pudo compartir la pantalla. Revisa los permisos del navegador o dispositivo.');
+    if (_screenShareBusy) return;
+    if (participant == null) {
+      _showMediaError('Conéctate a la sala antes de compartir pantalla.');
+      return;
     }
+    final next = !_screenShareEnabled;
+    setState(() => _screenShareBusy = true);
+    try {
+      await participant.setScreenShareEnabled(
+        next,
+        screenShareCaptureOptions: const ScreenShareCaptureOptions(
+          captureScreenAudio: false,
+          maxFrameRate: 15,
+          params: VideoParametersPresets.screenShareH1080FPS15,
+        ),
+      );
+      if (mounted) {
+        setState(() {
+          _screenShareEnabled = next;
+          _mediaWarning = null;
+        });
+      }
+    } catch (error) {
+      final details = error.toString().contains('not supported on mobile')
+          ? 'La aplicación requiere un navegador o dispositivo de escritorio para compartir pantalla.'
+          : 'Revisa los permisos del navegador y vuelve a intentarlo. ($error)';
+      _showMediaError('No se pudo compartir la pantalla. $details');
+    } finally {
+      if (mounted) setState(() => _screenShareBusy = false);
+    }
+  }
+
+  void _toggleRoomPanel({required bool attendance}) {
+    final wide = MediaQuery.sizeOf(context).width >= 1180;
+    setState(() {
+      if (attendance) {
+        _showAttendance = !_showAttendance;
+        if (!wide && _showAttendance) _showChat = false;
+      } else {
+        _showChat = !_showChat;
+        if (!wide && _showChat) _showAttendance = false;
+      }
+    });
   }
 
   Future<void> _toggleHand() async {
@@ -579,7 +690,7 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
     if (attendance?['estado'] == 'ENTRO_TARDE') return Colors.amber;
     if (attendance?['asistio'] == true) return Neu.okFg;
     if (attendance?['asistio'] == false) return Neu.errFg;
-    return Colors.white54;
+    return Neu.muted;
   }
 
   void _showMediaError(String message) {
@@ -588,7 +699,8 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
 
   Future<void> _sendMessage() async {
     final text = _message.text.trim();
-    if (text.isEmpty || _ended) return;
+    if (text.isEmpty || _ended || _sendingMessage) return;
+    setState(() => _sendingMessage = true);
     try {
       if (widget.isProjectMeeting) {
         await ref.read(dioProvider).post(
@@ -600,28 +712,53 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
             '/api/tutorias/grupales/${widget.sessionId}/chat',
             data: {'texto': text});
       }
-      if (_room.localParticipant != null) {
-        final payload = utf8.encode(jsonEncode({
-          'text': text,
-          'sentAt': DateTime.now().toUtc().toIso8601String()
-        }));
-        await _room.localParticipant!
-            .publishData(payload, reliable: true, topic: 'searchteach.chat');
-      }
     } on DioException catch (error) {
       if (mounted) {
+        setState(() => _sendingMessage = false);
         RoleToast.showSnackBar(
-            context,
-            SnackBar(
-                content:
-                    Text(error.message ?? 'No se pudo guardar el mensaje.')));
+          context,
+          SnackBar(
+            content: Text(error.message ?? 'No se pudo guardar el mensaje.'),
+          ),
+        );
+      }
+      return;
+    } catch (error) {
+      if (mounted) {
+        setState(() => _sendingMessage = false);
+        RoleToast.showSnackBar(
+          context,
+          SnackBar(content: Text('No se pudo enviar el mensaje: $error')),
+        );
       }
       return;
     }
-    if (mounted) {
-      setState(() => _messages.add(_RoomMessage(
-          sender: 'Tú', text: text, fromTeacher: widget.teacherMode)));
-      _message.clear();
+
+    if (!mounted) return;
+    final sentAt = DateTime.now().toUtc();
+    final identity = _room.localParticipant?.identity ?? '';
+    _appendMessage(_RoomMessage(
+      sender: 'Tú',
+      senderId: identity,
+      text: text,
+      sentAt: sentAt,
+      fromTeacher: widget.teacherMode,
+    ));
+    _message.clear();
+    setState(() => _sendingMessage = false);
+
+    if (_room.localParticipant != null) {
+      try {
+        final payload = utf8.encode(jsonEncode({
+          'text': text,
+          'sentAt': sentAt.toIso8601String(),
+        }));
+        await _room.localParticipant!
+            .publishData(payload, reliable: true, topic: 'searchteach.chat');
+      } catch (error) {
+        _showMediaError(
+            'El mensaje se guardó, pero no se pudo enviar en tiempo real. ($error)');
+      }
     }
   }
 
@@ -643,25 +780,100 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
     return 'Estudiante $index';
   }
 
+  Future<void> _setAttendance(String studentId, bool attended) async {
+    if (_attendanceSaving.contains(studentId) || widget.isProjectMeeting) {
+      return;
+    }
+    setState(() => _attendanceSaving.add(studentId));
+    try {
+      final response = await ref.read(dioProvider).patch<List<dynamic>>(
+        '/api/tutorias/grupales/${Uri.encodeComponent(widget.sessionId)}/asistencia',
+        data: {'estudianteId': studentId, 'asistio': attended},
+      );
+      if (!mounted) return;
+      Map<String, dynamic>? updated;
+      for (final item
+          in (response.data ?? const []).whereType<Map<String, dynamic>>()) {
+        if (item['estudianteId'] == studentId) {
+          updated = item;
+          break;
+        }
+      }
+      setState(() {
+        _attendance[studentId] = updated ??
+            <String, dynamic>{
+              ...?_attendance[studentId],
+              'estudianteId': studentId,
+              'asistio': attended,
+            };
+      });
+    } on DioException catch (error) {
+      if (mounted) {
+        RoleToast.showSnackBar(
+          context,
+          SnackBar(
+            content: Text(error.message ?? 'No se pudo guardar la asistencia.'),
+          ),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        RoleToast.showSnackBar(
+          context,
+          SnackBar(
+            content: Text('No se pudo guardar la asistencia: $error'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _attendanceSaving.remove(studentId));
+    }
+  }
+
   Future<void> _finish(String reason) async {
+    if (_finishing) return;
+    setState(() => _finishing = true);
     try {
       await ref.read(dioProvider).patch(
           '/api/tutorias/grupales/${widget.sessionId}/finalizar',
           data: {'motivo': reason});
-      await _room.disconnect();
-      if (mounted) {
-        RoleToast.show(context,
-            message: 'Tutoría finalizada.', roleColor: _teacherRoomAccent);
-        Navigator.of(context).pop();
-      }
     } on DioException catch (error) {
       if (mounted) {
+        setState(() => _finishing = false);
         RoleToast.showSnackBar(
-            context,
-            SnackBar(
-                content:
-                    Text(error.message ?? 'No se pudo finalizar la tutoría.')));
+          context,
+          SnackBar(
+            content: Text(error.message ?? 'No se pudo finalizar la tutoría.'),
+          ),
+        );
       }
+      return;
+    } catch (error) {
+      if (mounted) {
+        setState(() => _finishing = false);
+        RoleToast.showSnackBar(
+          context,
+          SnackBar(content: Text('No se pudo finalizar la tutoría: $error')),
+        );
+      }
+      return;
+    }
+
+    String? disconnectError;
+    try {
+      await _room.disconnect();
+    } catch (error) {
+      disconnectError = error.toString();
+    }
+    if (mounted) {
+      RoleToast.show(
+        context,
+        message: disconnectError == null
+            ? 'Tutoría finalizada.'
+            : 'Tutoría finalizada, pero hubo un error al cerrar la sala: $disconnectError',
+        roleColor: _teacherRoomAccent,
+      );
+      Navigator.of(context).pop();
     }
   }
 
@@ -673,7 +885,8 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
         final track = publication.track;
         if (track != null) {
           localHasVideo = true;
-          final screenShare = publication.source == TrackSource.screenShareVideo;
+          final screenShare =
+              publication.source == TrackSource.screenShareVideo;
           yield _VideoTile(
             label: screenShare ? 'Tu pantalla' : 'Tú',
             track: screenShare || _cameraEnabled ? track : null,
@@ -688,7 +901,8 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
         final track = publication.track;
         if (track != null) {
           participantHasVideo = true;
-          final screenShare = publication.source == TrackSource.screenShareVideo;
+          final screenShare =
+              publication.source == TrackSource.screenShareVideo;
           yield _VideoTile(
             label: screenShare
                 ? 'Pantalla · ${_participantLabel(participant.identity, participant.name)}'
@@ -715,6 +929,7 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
     _roomStatusTimer?.cancel();
     _waitingRoomTimer?.cancel();
     _message.dispose();
+    _chatScrollController.dispose();
     unawaited(_closeRoom());
     super.dispose();
   }
@@ -780,7 +995,7 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
 
   @override
   Widget build(BuildContext context) {
-    final wide = MediaQuery.sizeOf(context).width >= 900;
+    final wide = MediaQuery.sizeOf(context).width >= 1180;
     if (_ended) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) Navigator.of(context).maybePop('ended');
@@ -943,12 +1158,10 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
     return Scaffold(
       backgroundColor: _sharedRoomBackground,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF161922),
-        foregroundColor: Colors.white,
+        backgroundColor: Neu.bg,
+        foregroundColor: Neu.heading,
         elevation: 0,
-        shape: const Border(
-          bottom: BorderSide(color: Color(0xFF262B37), width: 1),
-        ),
+        surfaceTintColor: Colors.transparent,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -957,7 +1170,7 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
               style: neuPoppins(
                 size: 16,
                 weight: FontWeight.w700,
-                color: Colors.white,
+                color: Neu.heading,
               ),
             ),
             Row(
@@ -974,41 +1187,25 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
                 const SizedBox(width: 6),
                 Text(
                   '${_room.remoteParticipants.length + (_connected ? 1 : 0)} participantes',
-                  style: neuBody(size: 11.5, color: Colors.white70),
+                  style: neuBody(size: 11.5, color: Neu.muted),
                 ),
               ],
             ),
           ],
         ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: IconButton(
-              tooltip: _showChat ? 'Ocultar chat' : 'Mostrar chat',
-              style: IconButton.styleFrom(
-                backgroundColor:
-                    _showChat ? _roomAccent.withOpacity(0.2) : Colors.transparent,
-                foregroundColor: _showChat ? _roomAccent : Colors.white70,
-              ),
-              onPressed: () => setState(() => _showChat = !_showChat),
-              icon: Icon(
-                  _showChat ? Icons.chat_rounded : Icons.chat_outlined),
-            ),
-          ),
-        ],
       ),
       body: Column(
         children: [
           if (_mediaWarning != null)
             MaterialBanner(
-              backgroundColor: const Color(0xFF3A2B18),
+              backgroundColor: const Color(0xFFFFF4E5),
               content: Text(
                 _mediaWarning!,
-                style: const TextStyle(color: Colors.white),
+                style: neuBody(color: Neu.heading, size: 12),
               ),
               leading: const Icon(
                 Icons.warning_amber_rounded,
-                color: Colors.amber,
+                color: Color(0xFFB45309),
               ),
               actions: [
                 TextButton(
@@ -1022,17 +1219,17 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
                 ? Row(
                     children: [
                       Expanded(flex: 4, child: _videoGallery()),
-                      if (_showChat)
-                        SizedBox(width: 320, child: _chatPanel()),
+                      if (_showChat) SizedBox(width: 320, child: _chatPanel()),
+                      if (_showAttendance)
+                        SizedBox(width: 320, child: _attendancePanel()),
                     ],
                   )
                 : Column(
                     children: [
-                      Expanded(
-                        flex: _showChat ? 3 : 1,
-                        child: _videoGallery(),
-                      ),
-                      if (_showChat)
+                      Expanded(child: _videoGallery()),
+                      if (_showAttendance)
+                        SizedBox(height: 220, child: _attendancePanel())
+                      else if (_showChat)
                         SizedBox(height: 220, child: _chatPanel()),
                     ],
                   ),
@@ -1065,256 +1262,107 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
       });
 
   Widget _chatPanel() => Container(
-        decoration: const BoxDecoration(
-          color: Color(0xFF161922),
-          border: Border(
-            left: BorderSide(color: Color(0xFF262B37), width: 1),
-          ),
+        width: 320,
+        margin: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: Neu.raise,
         ),
+        clipBehavior: Clip.antiAlias,
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(10, 10, 10, 4),
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1E222D),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: [
-                    _chatTab(
-                      'Chat (${_messages.length})',
-                      !_showPeople,
-                      () => setState(() => _showPeople = false),
-                    ),
-                    _chatTab(
-                      'Participantes (${widget.students.length + 1})',
-                      _showPeople,
-                      () => setState(() => _showPeople = true),
-                    ),
-                    if (_showPeople && !widget.isProjectMeeting)
-                      IconButton(
-                        tooltip: 'Actualizar participantes',
-                        visualDensity: VisualDensity.compact,
-                        onPressed: _attendanceLoading ? null : _loadAttendance,
-                        icon: _attendanceLoading
-                            ? const SizedBox.square(
-                                dimension: 16,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : const Icon(Icons.refresh,
-                                size: 18, color: Colors.white70),
-                      ),
-                  ],
-                ),
+              padding: const EdgeInsets.fromLTRB(16, 12, 10, 10),
+              child: Row(
+                children: [
+                  Icon(Icons.chat_bubble_outline_rounded,
+                      size: 18, color: _roomAccent),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Chat (${_messages.length})',
+                    style: neuPoppins(
+                        size: 14, weight: FontWeight.w700, color: Neu.heading),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    tooltip: 'Cerrar chat',
+                    onPressed: () => setState(() => _showChat = false),
+                    icon: const Icon(Icons.close_rounded,
+                        size: 20, color: Neu.muted),
+                  ),
+                ],
               ),
             ),
-            if (_showPeople && !widget.isProjectMeeting && _attendanceLoading) ...[
-              LinearProgressIndicator(
-                minHeight: 2,
-                color: _roomAccent,
-                backgroundColor: Colors.white10,
-              ),
-              if (_attendanceSlow)
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(12, 8, 12, 4),
-                  child: Row(
-                    children: [
-                      SizedBox.square(
-                        dimension: 15,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white70,
-                        ),
-                      ),
-                      SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Conectando con el servidor; la primera carga puede tardar hasta un minuto.',
-                          style: TextStyle(fontSize: 11, color: Colors.white70),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
-            if (_showPeople &&
-                !widget.isProjectMeeting &&
-                _attendanceError != null)
-              Material(
-                color: const Color(0xFF382315),
-                child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.warning_amber_rounded,
-                          color: Color(0xFFFFA726), size: 17),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          _attendanceError!,
-                          style: const TextStyle(
-                              fontSize: 11, color: Colors.white),
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: _attendanceLoading ? null : _loadAttendance,
-                        child: const Text('Reintentar',
-                            style: TextStyle(color: Color(0xFFFFA726))),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            const Divider(height: 1, color: Color(0xFF262B37)),
+            const Divider(height: 1, color: Neu.line),
             Expanded(
-              child: _showPeople
-                  ? ListView(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      children: [
-                        if (widget.students.isEmpty)
-                          Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Text(
-                              'Aún no hay estudiantes inscritos.',
-                              textAlign: TextAlign.center,
-                              style: neuBody(size: 12, color: Colors.white54),
-                            ),
-                          ),
-                        ListTile(
-                          dense: true,
-                          leading: CircleAvatar(
-                            radius: widget.teacherMode ? 16 : 13,
-                            backgroundColor: _roomAccent.withOpacity(0.2),
-                            child: Icon(
-                              Icons.school_rounded,
-                              size: widget.teacherMode ? 16 : 13,
-                              color: _roomAccent,
-                            ),
-                          ),
-                          title: Text(
-                            widget.teacherMode ? 'Tú · Docente' : 'Tutor',
-                            style: neuPoppins(
-                              size: widget.teacherMode ? 13 : 11,
-                              weight: FontWeight.w600,
-                              color: Colors.white,
-                            ),
-                          ),
-                          trailing: _handRaised
-                              ? const Icon(Icons.pan_tool_alt_rounded,
-                                  color: Colors.amber, size: 19)
-                              : null,
-                        ),
-                        for (final student in widget.students)
-                          ListTile(
-                            dense: true,
-                            leading: CircleAvatar(
-                              radius: widget.teacherMode ? 16 : 13,
-                              backgroundColor: const Color(0xFF252A36),
-                              child: Icon(
-                                Icons.person_outline_rounded,
-                                size: widget.teacherMode ? 16 : 13,
-                                color: Colors.white70,
-                              ),
-                            ),
-                            title: Text(
-                              _studentNames[student] ?? _studentLabel(student),
-                              style: neuPoppins(
-                                size: widget.teacherMode ? 13 : 11,
-                                weight: FontWeight.w500,
-                                color: Colors.white,
-                              ),
-                            ),
-                            subtitle: !widget.isProjectMeeting
-                                ? Text(
-                                    _attendanceLabel(student),
-                                    style: neuBody(
-                                      size: widget.teacherMode ? 11 : 9,
-                                      color: _attendanceColor(student),
-                                    ),
-                                  )
-                                : null,
-                            trailing: _raisedHands[student] == true
-                                ? const Icon(Icons.pan_tool_alt_rounded,
-                                    color: Colors.amber, size: 19)
-                                : null,
-                          ),
-                      ],
+              child: _messages.isEmpty
+                  ? Center(
+                      child: Text(
+                        'Aún no hay mensajes.',
+                        style: neuBody(color: Neu.muted, size: 13),
+                      ),
                     )
-                  : _messages.isEmpty
-                      ? Center(
-                          child: Text(
-                            'Aún no hay mensajes.',
-                            style: neuBody(
-                              color: Colors.white54,
-                              size: 13,
+                  : ListView.builder(
+                      controller: _chatScrollController,
+                      padding: const EdgeInsets.all(12),
+                      itemCount: _messages.length,
+                      itemBuilder: (context, index) {
+                        final message = _messages[index];
+                        final accent = message.fromTeacher
+                            ? _teacherRoomAccent
+                            : _studentRoomAccent;
+                        final isLocal = message.sender == 'Tú';
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: Align(
+                            alignment: isLocal
+                                ? Alignment.centerRight
+                                : Alignment.centerLeft,
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 280),
+                              child: Column(
+                                crossAxisAlignment: isLocal
+                                    ? CrossAxisAlignment.end
+                                    : CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    message.sender,
+                                    style: neuPoppins(
+                                      color: accent,
+                                      size: 11,
+                                      weight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  Container(
+                                    margin: const EdgeInsets.only(top: 3),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: isLocal
+                                          ? accent.withValues(alpha: 0.12)
+                                          : const Color(0xFFF1F4F9),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: isLocal
+                                            ? accent.withValues(alpha: 0.3)
+                                            : const Color(0xFFE2E8F0),
+                                        width: 0.8,
+                                      ),
+                                    ),
+                                    child: SelectableText(
+                                      message.text,
+                                      style: neuBody(
+                                          size: 12.5, color: Neu.heading),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.all(12),
-                          itemCount: _messages.length,
-                          itemBuilder: (context, index) {
-                            final message = _messages[index];
-                            final accent = message.fromTeacher
-                                ? _teacherRoomAccent
-                                : _studentRoomAccent;
-                            return Align(
-                              alignment: message.fromTeacher
-                                  ? Alignment.centerLeft
-                                  : Alignment.centerRight,
-                              child: ConstrainedBox(
-                                constraints:
-                                    const BoxConstraints(maxWidth: 280),
-                                child: Padding(
-                                  padding: const EdgeInsets.only(bottom: 10),
-                                  child: Column(
-                                    crossAxisAlignment: message.fromTeacher
-                                        ? CrossAxisAlignment.start
-                                        : CrossAxisAlignment.end,
-                                    children: [
-                                      Text(
-                                        message.sender,
-                                        textAlign: message.fromTeacher
-                                            ? TextAlign.left
-                                            : TextAlign.right,
-                                        style: neuPoppins(
-                                          color: accent,
-                                          size: 11,
-                                          weight: FontWeight.w700,
-                                        ),
-                                      ),
-                                      Container(
-                                        margin: const EdgeInsets.only(top: 3),
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 12, vertical: 8),
-                                        decoration: BoxDecoration(
-                                          color: accent.withOpacity(0.16),
-                                          borderRadius:
-                                              BorderRadius.circular(12),
-                                          border: Border.all(
-                                            color: accent.withOpacity(0.42),
-                                            width: 0.8,
-                                          ),
-                                        ),
-                                        child: SelectableText(
-                                          message.text,
-                                          style: neuBody(
-                                            size: 12,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
+                        );
+                      },
+                    ),
             ),
             if (_ended)
               Padding(
@@ -1323,10 +1371,7 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
                   alignment: Alignment.centerLeft,
                   child: Text(
                     'Chat guardado de la sesión. Solo lectura.',
-                    style: neuBody(
-                      color: Colors.white54,
-                      size: widget.teacherMode ? 11 : 9,
-                    ),
+                    style: neuBody(color: Neu.muted, size: 11),
                   ),
                 ),
               )
@@ -1338,63 +1383,33 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
                     Expanded(
                       child: TextField(
                         controller: _message,
+                        enabled: !_sendingMessage,
                         maxLength: 500,
                         onSubmitted: (_) => _sendMessage(),
-                        style: neuBody(
-                          size: widget.teacherMode ? 13 : 10,
-                          color: Colors.white,
-                        ),
+                        style: neuBody(size: 12.5, color: Neu.heading),
                         decoration: InputDecoration(
                           hintText: 'Envía un mensaje…',
-                          hintStyle: neuBody(
-                            size: widget.teacherMode ? 13 : 10,
-                            color: Colors.white38,
-                          ),
+                          hintStyle: neuBody(size: 12.5, color: Neu.muted),
                           counterText: '',
                           filled: true,
-                          fillColor: const Color(0xFF232733),
+                          fillColor: const Color(0xFFF1F4F9),
                           contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 10,
-                          ),
+                              horizontal: 14, vertical: 10),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(20),
-                            borderSide: const BorderSide(
-                              color: Color(0xFF333847),
-                            ),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(20),
-                            borderSide: const BorderSide(
-                              color: Color(0xFF333847),
-                            ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(20),
-                            borderSide: BorderSide(
-                              color: _roomAccent,
-                              width: 1.5,
-                            ),
+                            borderSide: BorderSide.none,
                           ),
                         ),
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Material(
-                      color: _roomAccent,
-                      shape: const CircleBorder(),
-                      child: InkWell(
-                        customBorder: const CircleBorder(),
-                        onTap: _sendMessage,
-                        child: Padding(
-                          padding: const EdgeInsets.all(10),
-                          child: Icon(
-                            Icons.send_rounded,
-                            size: widget.teacherMode ? 18 : 14,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
+                    NeuCircleButton(
+                      size: 38,
+                      icon: _sendingMessage
+                          ? Icons.hourglass_top_rounded
+                          : Icons.send_rounded,
+                      tooltip: 'Enviar mensaje',
+                      onTap: _sendingMessage ? null : _sendMessage,
                     ),
                   ],
                 ),
@@ -1403,27 +1418,216 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
         ),
       );
 
-  Widget _chatTab(String label, bool selected, VoidCallback onTap) => Expanded(
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(10),
-          child: Container(
-            height: 36,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color:
-                  selected ? _roomAccent.withOpacity(0.18) : Colors.transparent,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text(
-              label,
-              style: neuPoppins(
-                color: selected ? _roomAccent : Colors.white60,
-                size: widget.teacherMode ? 12 : 9,
-                weight: selected ? FontWeight.w700 : FontWeight.w500,
+  Widget _attendancePanel() => Container(
+        width: 320,
+        margin: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: Neu.raise,
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 10, 10),
+              child: Row(
+                children: [
+                  Icon(Icons.people_outline_rounded,
+                      size: 18, color: _roomAccent),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      widget.teacherMode
+                          ? 'Asistencia (${widget.students.length})'
+                          : 'Participantes (${widget.students.length + 1})',
+                      style: neuPoppins(
+                          size: 14,
+                          weight: FontWeight.w700,
+                          color: Neu.heading),
+                    ),
+                  ),
+                  if (!widget.isProjectMeeting)
+                    IconButton(
+                      tooltip: 'Actualizar asistencia',
+                      visualDensity: VisualDensity.compact,
+                      onPressed: _attendanceLoading ? null : _loadAttendance,
+                      icon: _attendanceLoading
+                          ? const SizedBox.square(
+                              dimension: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.refresh_rounded,
+                              size: 18, color: Neu.muted),
+                    ),
+                  IconButton(
+                    tooltip: 'Cerrar',
+                    onPressed: () => setState(() => _showAttendance = false),
+                    icon: const Icon(Icons.close_rounded,
+                        size: 20, color: Neu.muted),
+                  ),
+                ],
               ),
             ),
-          ),
+            if (widget.teacherMode && !widget.isProjectMeeting)
+              Container(
+                width: double.infinity,
+                color: _roomAccent.withValues(alpha: 0.08),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                child: Text(
+                  'Presentes: ${_attendance.values.where((v) => v['asistio'] == true).length} · Ausentes: ${_attendance.values.where((v) => v['asistio'] == false).length}',
+                  style: neuPoppins(
+                    color: _roomAccent,
+                    size: 11,
+                    weight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            if (!widget.isProjectMeeting && _attendanceLoading)
+              const LinearProgressIndicator(minHeight: 2),
+            if (!widget.isProjectMeeting && _attendanceSlow)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 8, 14, 4),
+                child: Text(
+                  'Conectando con el servidor; la primera carga puede tardar hasta un minuto.',
+                  style: neuBody(size: 11, color: Neu.muted),
+                ),
+              ),
+            if (!widget.isProjectMeeting && _attendanceError != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
+                child: Row(
+                  children: [
+                    const Icon(Icons.warning_amber_rounded,
+                        color: Neu.errFg, size: 17),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        _attendanceError!,
+                        style: neuBody(size: 11, color: Neu.errFg),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: _attendanceLoading ? null : _loadAttendance,
+                      child: const Text('Reintentar'),
+                    ),
+                  ],
+                ),
+              ),
+            const Divider(height: 1, color: Neu.line),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                children: [
+                  if (widget.students.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Text(
+                        'Aún no hay estudiantes inscritos.',
+                        textAlign: TextAlign.center,
+                        style: neuBody(size: 12, color: Neu.muted),
+                      ),
+                    ),
+                  ListTile(
+                    dense: true,
+                    leading: CircleAvatar(
+                      radius: 14,
+                      backgroundColor: _roomAccent.withValues(alpha: 0.15),
+                      child: Icon(Icons.school_rounded,
+                          size: 15, color: _roomAccent),
+                    ),
+                    title: Text(
+                      widget.teacherMode ? 'Tú · Docente' : 'Tutor',
+                      style: neuPoppins(
+                          size: 12.5,
+                          weight: FontWeight.w600,
+                          color: Neu.heading),
+                    ),
+                    trailing: _handRaised
+                        ? const Icon(Icons.pan_tool_alt_rounded,
+                            color: Colors.amber, size: 19)
+                        : null,
+                  ),
+                  for (final student in widget.students)
+                    ListTile(
+                      dense: true,
+                      leading: const CircleAvatar(
+                        radius: 14,
+                        backgroundColor: Color(0xFFE2E8F0),
+                        child: Icon(Icons.person_outline_rounded,
+                            size: 15, color: Neu.muted),
+                      ),
+                      title: Text(
+                        _studentNames[student] ?? _studentLabel(student),
+                        style: neuPoppins(
+                            size: 12.5,
+                            weight: FontWeight.w500,
+                            color: Neu.heading),
+                      ),
+                      subtitle: !widget.isProjectMeeting
+                          ? Text(
+                              _attendanceLabel(student),
+                              style: neuBody(
+                                size: 11,
+                                color: _attendanceColor(student),
+                              ),
+                            )
+                          : null,
+                      trailing: widget.teacherMode && !widget.isProjectMeeting
+                          ? _attendanceSaving.contains(student)
+                              ? const SizedBox.square(
+                                  dimension: 20,
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : Wrap(
+                                  spacing: 2,
+                                  children: [
+                                    IconButton(
+                                      tooltip: 'Marcar presente',
+                                      visualDensity: VisualDensity.compact,
+                                      onPressed: _attendanceLoading
+                                          ? null
+                                          : () => _setAttendance(student, true),
+                                      icon: Icon(
+                                        Icons.check_circle_rounded,
+                                        color: _attendance[student]
+                                                    ?['asistio'] ==
+                                                true
+                                            ? Neu.okFg
+                                            : Colors.grey[400],
+                                        size: 22,
+                                      ),
+                                    ),
+                                    IconButton(
+                                      tooltip: 'Marcar ausente',
+                                      visualDensity: VisualDensity.compact,
+                                      onPressed: _attendanceLoading
+                                          ? null
+                                          : () =>
+                                              _setAttendance(student, false),
+                                      icon: Icon(
+                                        Icons.cancel_rounded,
+                                        color: _attendance[student]
+                                                    ?['asistio'] ==
+                                                false
+                                            ? Neu.errFg
+                                            : Colors.grey[400],
+                                        size: 22,
+                                      ),
+                                    ),
+                                  ],
+                                )
+                          : _raisedHands[student] == true
+                              ? const Icon(Icons.pan_tool_alt_rounded,
+                                  color: Colors.amber, size: 19)
+                              : null,
+                    ),
+                ],
+              ),
+            ),
+          ],
         ),
       );
   Widget _callControls() => SafeArea(
@@ -1431,10 +1635,14 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
         child: Container(
           width: double.infinity,
           decoration: const BoxDecoration(
-            color: Color(0xFF161922),
-            border: Border(
-              top: BorderSide(color: Color(0xFF262B37), width: 1),
-            ),
+            color: Neu.bg,
+            boxShadow: [
+              BoxShadow(
+                color: Neu.shadowDark,
+                offset: Offset(0, -2),
+                blurRadius: 8,
+              ),
+            ],
           ),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Wrap(
@@ -1445,41 +1653,54 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
             children: [
               if (widget.modality.toUpperCase() != 'PRESENCIAL')
                 _CallControl(
-                    icon: _microphoneEnabled ? Icons.mic : Icons.mic_off,
-                    label: _microphoneEnabled ? 'Silenciar' : 'Activar audio',
-                    onPressed: _toggleMicrophone,
-                    active: _microphoneEnabled),
+                  icon: _microphoneEnabled ? Icons.mic : Icons.mic_off,
+                  label: _microphoneEnabled ? 'Silenciar' : 'Activar audio',
+                  onPressed: _toggleMicrophone,
+                  active: _microphoneEnabled,
+                  accent: _roomAccent,
+                ),
               if (widget.modality.toUpperCase() != 'PRESENCIAL')
                 _CallControl(
-                    icon: _cameraEnabled ? Icons.videocam : Icons.videocam_off,
-                    label: _cameraEnabled ? 'Apagar cámara' : 'Activar cámara',
-                    onPressed: _toggleCamera,
-                    active: _cameraEnabled),
+                  icon: _cameraEnabled ? Icons.videocam : Icons.videocam_off,
+                  label: _cameraEnabled ? 'Apagar cámara' : 'Activar cámara',
+                  onPressed: _toggleCamera,
+                  active: _cameraEnabled,
+                  accent: _roomAccent,
+                ),
               if (widget.teacherMode &&
                   widget.modality.toUpperCase() != 'PRESENCIAL')
                 _CallControl(
                   icon: _screenShareEnabled
                       ? Icons.stop_screen_share_outlined
                       : Icons.screen_share_outlined,
-                  label: _screenShareEnabled
-                      ? 'Dejar de compartir'
-                      : 'Compartir pantalla',
-                  onPressed: _toggleScreenShare,
+                  label: _screenShareBusy
+                      ? 'Procesando…'
+                      : _screenShareEnabled
+                          ? 'Dejar de compartir'
+                          : 'Compartir pantalla',
+                  onPressed: _screenShareBusy ? null : _toggleScreenShare,
                   active: _screenShareEnabled,
+                  accent: _roomAccent,
                 ),
               _CallControl(
                   icon: Icons.chat_outlined,
                   label: _showChat ? 'Cerrar chat' : 'Chat',
-                  onPressed: () => setState(() => _showChat = !_showChat),
-                  active: _showChat),
+                  onPressed: () => _toggleRoomPanel(attendance: false),
+                  active: _showChat,
+                  accent: _roomAccent),
               _CallControl(
-                  icon: Icons.people_outline,
-                  label: 'Participantes',
-                  onPressed: () => setState(() {
-                        _showChat = true;
-                        _showPeople = true;
-                      }),
-                  active: _showPeople),
+                icon: Icons.people_outline,
+                label: _showAttendance
+                    ? (widget.teacherMode && !widget.isProjectMeeting
+                        ? 'Cerrar asistencia'
+                        : 'Cerrar participantes')
+                    : (widget.teacherMode && !widget.isProjectMeeting
+                        ? 'Asistencia'
+                        : 'Participantes'),
+                onPressed: () => _toggleRoomPanel(attendance: true),
+                active: _showAttendance,
+                accent: _roomAccent,
+              ),
               if (!widget.teacherMode)
                 _CallControl(
                   icon: _handRaised
@@ -1488,35 +1709,25 @@ class _LiveKitRoomPageState extends ConsumerState<LiveKitRoomPage> {
                   label: _handRaised ? 'Bajar la mano' : 'Levantar la mano',
                   onPressed: _toggleHand,
                   active: _handRaised,
+                  accent: _roomAccent,
                 ),
               if (widget.teacherMode && !widget.isProjectMeeting)
-                Tooltip(
-                  message: 'Finalizar clase',
-                  child: Material(
-                    color: const Color(0xFFFFECEC),
-                    shape: const CircleBorder(),
-                    child: InkWell(
-                      customBorder: const CircleBorder(),
-                      onTap: _confirmFinish,
-                      child: const Padding(
-                        padding: EdgeInsets.all(12),
-                        child: Icon(
-                          Icons.power_settings_new_rounded,
-                          size: 20,
-                          color: Color(0xFFDC2626),
-                        ),
-                      ),
-                    ),
-                  ),
+                _CallControl(
+                  icon: _finishing
+                      ? Icons.hourglass_top_rounded
+                      : Icons.call_end_rounded,
+                  label: _finishing ? 'Finalizando…' : 'Finalizar clase',
+                  onPressed: _finishing ? null : _confirmFinish,
+                  active: false,
+                  danger: true,
                 )
-              else
-                const SizedBox(width: 44),
             ],
           ),
         ),
       );
 
   Future<void> _confirmFinish() async {
+    if (_finishing) return;
     final reasons = <(String, String)>[
       ('FINALIZADA', 'Temas concluidos'),
       ('FALTA_ESTUDIANTES', 'Falta de estudiantes'),
@@ -1579,9 +1790,9 @@ class _VideoTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
         decoration: BoxDecoration(
-          color: const Color(0xFF1B1E26),
+          color: Neu.bg,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFF2C313E), width: 1.2),
+          boxShadow: Neu.raise,
         ),
         clipBehavior: Clip.antiAlias,
         child: Stack(
@@ -1595,22 +1806,15 @@ class _VideoTile extends StatelessWidget {
                   width: 72,
                   height: 72,
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF2D3342), Color(0xFF1E232E)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
+                    color: Neu.bg,
                     shape: BoxShape.circle,
-                    border: Border.all(
-                      color: const Color(0xFF3F4657),
-                      width: 1.5,
-                    ),
+                    boxShadow: Neu.raiseS,
                   ),
                   alignment: Alignment.center,
                   child: Text(
                     label.isEmpty ? '?' : label.substring(0, 1).toUpperCase(),
                     style: neuPoppins(
-                      color: Colors.white,
+                      color: Neu.muted,
                       size: 26,
                       weight: FontWeight.w700,
                     ),
@@ -1624,9 +1828,9 @@ class _VideoTile extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.65),
+                  color: Colors.white.withValues(alpha: 0.9),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.white12, width: 0.8),
+                  boxShadow: Neu.raiseS,
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -1634,7 +1838,7 @@ class _VideoTile extends StatelessWidget {
                     const Icon(
                       Icons.account_circle_outlined,
                       size: 14,
-                      color: Colors.white70,
+                      color: Neu.muted,
                     ),
                     const SizedBox(width: 5),
                     Text(
@@ -1642,7 +1846,7 @@ class _VideoTile extends StatelessWidget {
                       style: neuBody(
                         size: 12,
                         weight: FontWeight.w600,
-                        color: Colors.white,
+                        color: Neu.heading,
                       ),
                     ),
                   ],
@@ -1662,9 +1866,9 @@ class _WaitingParticipantTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
         decoration: BoxDecoration(
-          color: const Color(0xFF1B1E26),
+          color: Neu.bg,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFF2C313E), width: 1.2),
+          boxShadow: Neu.raise,
         ),
         child: Center(
           child: Padding(
@@ -1674,13 +1878,14 @@ class _WaitingParticipantTile extends StatelessWidget {
               children: [
                 Container(
                   padding: const EdgeInsets.all(14),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF252A36),
+                  decoration: BoxDecoration(
+                    color: Neu.bg,
                     shape: BoxShape.circle,
+                    boxShadow: Neu.raiseS,
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.people_outline_rounded,
-                    color: Colors.white70,
+                    color: Neu.muted,
                     size: 32,
                   ),
                 ),
@@ -1688,7 +1893,7 @@ class _WaitingParticipantTile extends StatelessWidget {
                 Text(
                   message,
                   textAlign: TextAlign.center,
-                  style: neuBody(size: 13, color: Colors.white70),
+                  style: neuBody(size: 13, color: Neu.muted),
                 ),
               ],
             ),
@@ -1703,45 +1908,52 @@ class _CallControl extends StatelessWidget {
     required this.label,
     required this.onPressed,
     required this.active,
+    this.accent = Neu.heading,
     this.danger = false,
   });
 
   final IconData icon;
   final String label;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final bool active;
+  final Color accent;
   final bool danger;
 
   @override
   Widget build(BuildContext context) {
-    final accent = Theme.of(context).colorScheme.primary;
-    final background = danger
-        ? const Color(0xFFDC3545)
+    final iconColor = danger
+        ? Neu.errFg
         : active
             ? accent
-            : const Color(0xFF262B36);
+            : Neu.heading;
 
     return Tooltip(
       message: label,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Material(
-            color: background,
-            shape: const CircleBorder(),
-            elevation: active || danger ? 2 : 0,
-            child: InkWell(
-              customBorder: const CircleBorder(),
-              onTap: onPressed,
-              child: SizedBox(
-                width: 50,
-                height: 50,
-                child: Icon(icon, color: Colors.white, size: 22),
+          NeuSurface(
+            radius: 44,
+            sunken: active,
+            shadows: active ? const [] : Neu.raiseS,
+            onTap: onPressed,
+            child: SizedBox(
+              width: 50,
+              height: 50,
+              child: Center(
+                child: Icon(
+                  icon,
+                  color: iconColor,
+                  size: 22,
+                ),
               ),
             ),
           ),
           const SizedBox(height: 5),
-          Text(label, style: neuBody(size: 11, color: Colors.white70)),
+          Text(
+            label,
+            style: neuBody(size: 11, color: danger ? Neu.errFg : Neu.muted),
+          ),
         ],
       ),
     );
@@ -1751,10 +1963,14 @@ class _CallControl extends StatelessWidget {
 class _RoomMessage {
   const _RoomMessage({
     required this.sender,
+    this.senderId = '',
     required this.text,
+    required this.sentAt,
     required this.fromTeacher,
   });
   final String sender;
+  final String senderId;
   final String text;
+  final DateTime sentAt;
   final bool fromTeacher;
 }

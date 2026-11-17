@@ -28,6 +28,7 @@ class _PresencialTutoriaPageState extends ConsumerState<PresencialTutoriaPage> {
   bool _loadingAttendance = true;
   bool _saving = false;
   bool _ended = false;
+  bool _classEnabled = false;
   String? _error;
 
   String get _sessionPath =>
@@ -47,7 +48,10 @@ class _PresencialTutoriaPageState extends ConsumerState<PresencialTutoriaPage> {
     try {
       await ref.read(dioProvider).patch('$_sessionPath/iniciar-presencial');
       if (!mounted) return;
-      setState(() => _starting = false);
+      setState(() {
+        _starting = false;
+        _classEnabled = true;
+      });
       await _loadAttendance();
     } on DioException catch (error) {
       if (!mounted) return;
@@ -226,9 +230,13 @@ class _PresencialTutoriaPageState extends ConsumerState<PresencialTutoriaPage> {
             Text(_error!, textAlign: TextAlign.center),
             const SizedBox(height: 12),
             FilledButton.icon(
-              onPressed: _enableClass,
+              onPressed: _classEnabled ? _loadAttendance : _enableClass,
               icon: const Icon(Icons.refresh),
-              label: const Text('Reintentar habilitación'),
+              label: Text(
+                _classEnabled
+                    ? 'Actualizar asistencia'
+                    : 'Reintentar habilitación',
+              ),
             ),
           ],
         ),
@@ -253,8 +261,23 @@ class _PresencialTutoriaPageState extends ConsumerState<PresencialTutoriaPage> {
                       ? 'Clase finalizada'
                       : 'Clase presencial habilitada'),
                   const SizedBox(height: 18),
-                  const Text('Lista de asistencia',
-                      style: TextStyle(fontWeight: FontWeight.w700)),
+                  Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'Lista de asistencia',
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Actualizar asistencia',
+                        onPressed: _loadingAttendance || _saving
+                            ? null
+                            : _loadAttendance,
+                        icon: const Icon(Icons.refresh_rounded),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 8),
                   if (_loadingAttendance)
                     const LinearProgressIndicator()

@@ -242,11 +242,6 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
           badge: unread,
           onTap: () => context.push('/notificaciones', extra: _purple),
         ),
-        NeuCircleButton(
-          icon: Icons.logout_rounded,
-          tooltip: 'Cerrar sesión',
-          onTap: _logout,
-        ),
       ]),
     );
   }

@@ -36,7 +36,6 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
   String? _section;
   String _query = '';
   int _semesterFilter = 0;
-  String _modalityFilter = 'Todas';
   final ScrollController _sessionsScrollController = ScrollController();
   Timer? _groupSessionRefreshTimer;
 
@@ -1083,8 +1082,10 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
   }
 
   Widget _groupChatsAndCalls() {
+    final now = DateTime.now();
     final groupSessions = widget.data.groupSessions
-        .where((session) => session.state != 'FINALIZADA')
+        .where((session) =>
+            session.state != 'FINALIZADA' && _isToday(session.start, now))
         .toList()
       ..sort((a, b) =>
           (a.start ?? DateTime(9999)).compareTo(b.start ?? DateTime(9999)));
@@ -1101,13 +1102,13 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
                       color: _blue, size: 48, iconSize: 26),
                   const SizedBox(height: 12),
                   Text(
-                    'No tienes videollamadas activas',
+                    'No tienes clases activas hoy',
                     style: neuPoppins(
                         size: 16, weight: FontWeight.w700, color: Neu.heading),
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Cuando te inscribas en una tutoría grupal virtual, podrás unirte a la videollamada y al chat desde aquí.',
+                    'Las tutorías grupales programadas para hoy aparecerán aquí.',
                     textAlign: TextAlign.center,
                     style: neuBody(size: 13, color: Neu.muted),
                   ),
@@ -1204,9 +1205,12 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
   }
 
   Widget _publishedGroupSessions({ScrollController? scrollController}) {
-    final sessions = widget.data.availableGroupSessions.where((session) =>
-        _modalityFilter == 'Todas' ||
-        session.modality.toUpperCase() == _modalityFilter.toUpperCase());
+    final now = DateTime.now();
+    final sessions = widget.data.availableGroupSessions.where((session) {
+      return _isToday(session.start, now);
+    }).toList()
+      ..sort((first, second) =>
+          (first.start ?? DateTime(0)).compareTo(second.start ?? DateTime(0)));
     if (sessions.isEmpty) {
       return ListView(
         controller: scrollController,
@@ -1214,9 +1218,9 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
         children: const [
           _EmptyCard(
             icon: Icons.event_busy_outlined,
-            title: 'No hay sesiones disponibles',
+            title: 'No hay clases disponibles para hoy',
             message:
-                'Cuando coordinación publique tutorías para tu tecnología, aparecerán aquí.',
+                'Aquí aparecerán las tutorías programadas para el día de hoy.',
           ),
         ],
       );
@@ -1224,40 +1228,10 @@ class _StudentTutoringViewState extends ConsumerState<StudentTutoringView> {
     return ListView.separated(
       controller: scrollController,
       padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
-      itemCount: sessions.length + 1,
+      itemCount: sessions.length,
       separatorBuilder: (_, __) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
-        if (index == 0) {
-          return Wrap(
-            spacing: 8,
-            children: [
-              for (final modality in const [
-                'Todas',
-                'VIRTUAL',
-                'PRESENCIAL',
-                'HIBRIDA',
-              ])
-                ChoiceChip(
-                  label: Text(switch (modality) {
-                    'VIRTUAL' => 'Virtual',
-                    'PRESENCIAL' => 'Presencial',
-                    'HIBRIDA' => 'Híbrida',
-                    _ => modality,
-                  }),
-                  selected: _modalityFilter == modality,
-                  onSelected: (_) => setState(() => _modalityFilter = modality),
-                  selectedColor: _blue,
-                  backgroundColor: Colors.white,
-                  side: BorderSide.none,
-                  labelStyle: TextStyle(
-                    color: _modalityFilter == modality ? Colors.white : _navy,
-                    fontSize: 12,
-                  ),
-                ),
-            ],
-          );
-        }
-        final session = sessions.elementAt(index - 1);
+        final session = sessions[index];
         AvailableTutor? teacher;
         for (final item in widget.data.tutors) {
           if (item.teacherId == session.teacherId) teacher = item;
@@ -1456,18 +1430,6 @@ class _GroupChatAndCallCard extends StatelessWidget {
                               : 'Entrar a sala de espera',
                 ),
               ),
-            OutlinedButton.icon(
-              onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-                builder: (_) => TutoriaChatPage(
-                  sessionId: session.id,
-                  subject: session.subject,
-                  readOnly: session.state == 'FINALIZADA' ||
-                      (end != null && !end.isAfter(now)),
-                ),
-              )),
-              icon: const Icon(Icons.chat_outlined),
-              label: const Text('Abrir chat'),
-            ),
           ]),
         ]),
       ),
@@ -1490,6 +1452,14 @@ String _groupSessionModalityLabel(String value) =>
       'VIRTUAL' => 'Virtual',
       _ => value.isEmpty ? 'Por confirmar' : value,
     };
+
+bool _isToday(DateTime? date, DateTime now) {
+  final local = date?.toLocal();
+  return local != null &&
+      local.year == now.year &&
+      local.month == now.month &&
+      local.day == now.day;
+}
 
 class _MenuTile extends StatelessWidget {
   const _MenuTile({

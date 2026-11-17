@@ -6,6 +6,7 @@ import '../../core/api_client.dart';
 import '../../core/neu/neu.dart';
 import '../../core/role_theme.dart';
 import '../../core/tutoring_updates.dart';
+import '../../core/widgets/academic_role_switcher.dart';
 import '../../core/widgets/role_toast.dart';
 import '../pa/pa_widgets.dart';
 import '../auth/auth_repository.dart';
@@ -115,8 +116,12 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage>
                             ref.invalidate(studentGroupSessionsProvider);
                           },
                           onProfile: () => _selectTab(4),
+                          onSwitchToTeacher: value.profile.role
+                                  .toLowerCase()
+                                  .contains('docente')
+                              ? () => context.go('/docente')
+                              : null,
                           onNotifications: () => _selectTab(5),
-                          onLogout: _logout,
                           onBack: () => _openTutorSection('menu'),
                         ),
                         Expanded(

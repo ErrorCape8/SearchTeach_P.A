@@ -33,6 +33,7 @@ const _publicPaths = {
 };
 String? _guardToken;
 String? _guardHome;
+bool? _guardCanSwitchAcademicRoles;
 
 /// Protege las rutas: sin sesión se envía a /login y, con sesión, solo se
 /// permite el área que corresponde al rol de la cuenta (estudiante, docente,
@@ -45,15 +46,19 @@ Future<String?> _routeGuard(BuildContext context, GoRouterState state) async {
   if (token == null) {
     _guardToken = null;
     _guardHome = null;
+    _guardCanSwitchAcademicRoles = null;
     return '/login';
   }
   if (path == '/notificaciones') return null;
 
   try {
-    if (_guardToken != token || _guardHome == null) {
-      _guardHome = await _container.read(authRepositoryProvider).landingRoute();
+    if (_guardToken != token) {
       _guardToken = token;
+      _guardHome = null;
+      _guardCanSwitchAcademicRoles = null;
     }
+    _guardHome ??=
+        await _container.read(authRepositoryProvider).landingRoute();
   } catch (_) {
     // No se pudo verificar el rol: la pantalla de sesión permite reintentar.
     return '/session';
@@ -62,6 +67,18 @@ Future<String?> _routeGuard(BuildContext context, GoRouterState state) async {
   final home = _guardHome!;
   final segments = state.uri.pathSegments;
   final area = segments.isEmpty ? '/' : '/${segments.first}';
+  const academicAreas = {'/estudiante', '/docente'};
+  if (area != home &&
+      academicAreas.contains(area) &&
+      academicAreas.contains(home)) {
+    try {
+      _guardCanSwitchAcademicRoles ??=
+          await _container.read(authRepositoryProvider).hasBothAcademicRoles();
+    } catch (_) {
+      return '/session';
+    }
+    if (_guardCanSwitchAcademicRoles!) return null;
+  }
   return area == home ? null : home;
 }
 

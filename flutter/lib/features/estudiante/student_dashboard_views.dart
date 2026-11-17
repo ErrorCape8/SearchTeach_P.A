@@ -13,7 +13,6 @@ import '../../core/widgets/start_tutoring_card.dart';
 import 'student_rating_dialog.dart';
 import '../pa/pa_widgets.dart';
 import '../tutorias/proyecto_aula_chat_page.dart';
-import '../tutorias/tutoria_chat_page.dart';
 import 'student_dashboard_models.dart';
 
 part 'student_dashboard_home.dart';

@@ -163,11 +163,6 @@ class _CoordinacionDashboardPageState
           tooltip: 'Notificaciones',
           onTap: () => context.push('/notificaciones', extra: _wine),
         ),
-        NeuCircleButton(
-          icon: Icons.logout_rounded,
-          tooltip: 'Cerrar sesión',
-          onTap: _logout,
-        ),
       ],
     );
   }
